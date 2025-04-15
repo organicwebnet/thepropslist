@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithPopup, OAuthProvider, updateProfile, OAuthCredential } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db, googleProvider, appleProvider } from '../lib/firebase';
+import { auth, db, googleProvider } from '../lib/firebase';
 import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 interface AuthFormProps {
@@ -9,13 +9,6 @@ interface AuthFormProps {
 }
 
 type AuthMode = 'signin' | 'signup' | 'forgot';
-
-interface AppleOAuthCredential extends OAuthCredential {
-  fullName?: {
-    givenName?: string;
-    familyName?: string;
-  };
-}
 
 function RequiredLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -68,67 +61,6 @@ export function AuthForm({ onClose }: AuthFormProps) {
           break;
         case 'auth/operation-not-allowed':
           message = 'Google Sign-In is not enabled. Please contact support.';
-          break;
-        default:
-          if (error.message) {
-            message = error.message;
-          }
-      }
-      
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await signInWithPopup(auth, appleProvider);
-      const user = result.user;
-      const credential = OAuthProvider.credentialFromResult(result) as AppleOAuthCredential;
-
-      // On first sign-in, Apple provides the user's name
-      // We need to save it because Apple won't send it again
-      if (credential?.fullName) {
-        const displayName = `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim();
-        if (displayName) {
-          await updateProfile(user, {
-            displayName: displayName
-          });
-
-          // Update Firestore profile
-          await setDoc(doc(db, 'userProfiles', user.uid), {
-            displayName: displayName,
-            email: user.email || '',
-            provider: 'apple.com',
-            createdAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString()
-          }, { merge: true });
-        }
-      }
-
-      onClose();
-    } catch (error: any) {
-      console.error('Apple sign in error:', error);
-      let message = 'Failed to sign in with Apple. Please try again.';
-      
-      switch (error.code) {
-        case 'auth/popup-closed-by-user':
-          message = 'Sign in cancelled. Please try again.';
-          break;
-        case 'auth/popup-blocked':
-          message = 'Sign in popup was blocked. Please allow popups for this site.';
-          break;
-        case 'auth/cancelled-popup-request':
-          message = 'Another sign in attempt is in progress.';
-          break;
-        case 'auth/operation-not-allowed':
-          message = 'Apple Sign-In is not enabled. Please contact support.';
-          break;
-        case 'auth/internal-error':
-          message = 'Apple Sign-In configuration error. Please contact support.';
           break;
         default:
           if (error.message) {
@@ -400,21 +332,6 @@ export function AuthForm({ onClose }: AuthFormProps) {
                   />
                 </svg>
                 Continue with Google
-              </button>
-
-              <button
-                type="button"
-                onClick={handleAppleSignIn}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-3 px-6 py-2.5 border border-gray-800 rounded-lg text-white hover:border-primary-neon hover:shadow-neon transition-all duration-300 disabled:opacity-50"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.78 1.18-.19 2.31-.89 3.51-.84 1.59.07 2.78.88 3.54 2.24-3.25 2.05-2.72 6.52.87 7.94-.65 1.41-1.51 2.82-3 2.85zm-3.19-15.75c.11 1.48-1.05 3.11-3.03 3.36-.15-1.99 1.06-3.01 3.03-3.36z"
-                  />
-                </svg>
-                Continue with Apple
               </button>
             </div>
 

@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
-import { getAuth, GoogleAuthProvider, OAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -19,13 +19,8 @@ const auth = getAuth(app);
 const storage = getStorage(app);
 const analytics = getAnalytics(app);
 
-// Initialize providers
+// Initialize Google provider
 const googleProvider = new GoogleAuthProvider();
-const appleProvider = new OAuthProvider('apple.com');
-
-// Configure Apple provider
-appleProvider.addScope('email');
-appleProvider.addScope('name');
 
 // Configure Google provider
 googleProvider.addScope('profile');
@@ -95,4 +90,4 @@ export async function fetchStorageImage(url: string): Promise<Blob> {
   throw new Error(errorMessage);
 }
 
-export { db, auth, storage, analytics, googleProvider, appleProvider };
+export { db, auth, storage, analytics, googleProvider };
