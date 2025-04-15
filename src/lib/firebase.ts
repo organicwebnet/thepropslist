@@ -1,8 +1,50 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
+
+interface GoogleButtonConfig {
+  type: 'standard' | 'icon';
+  theme: 'outline' | 'filled_blue' | 'filled_black';
+  size: 'large' | 'medium' | 'small';
+}
+
+// Initialize Google Sign-In with FedCM support
+const loadGoogleScript = () => {
+  return new Promise<void>((resolve, reject) => {
+    if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Google Sign-In script'));
+    document.head.appendChild(script);
+  });
+};
+
+// Validate Firebase config
+const validateFirebaseConfig = () => {
+  const requiredVars = [
+    'VITE_FIREBASE_API_KEY',
+    'VITE_FIREBASE_AUTH_DOMAIN',
+    'VITE_FIREBASE_PROJECT_ID',
+    'VITE_FIREBASE_APP_ID'
+  ];
+
+  const missingVars = requiredVars.filter(varName => !import.meta.env[varName]);
+  if (missingVars.length > 0) {
+    throw new Error(`Missing required Firebase configuration: ${missingVars.join(', ')}`);
+  }
+};
+
+// Validate config before proceeding
+validateFirebaseConfig();
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,38 +55,60 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+console.log('Firebase Config:', {
+  ...firebaseConfig,
+  apiKey: '***' // Hide API key in logs
+});
+
 // Initialize Firebase with proper auth domain handling
 if (window.location.hostname === 'localhost') {
-  // For localhost development
-  firebaseConfig.authDomain = window.location.host;
+  // For localhost, use the Firebase auth domain to avoid third-party cookie issues
+  console.log('Running on localhost - using Firebase authDomain for authentication');
 } else {
-  // Ensure we're using HTTPS for non-localhost
   if (window.location.protocol !== 'https:') {
     window.location.href = window.location.href.replace('http:', 'https:');
   }
 }
 
-const app = initializeApp(firebaseConfig);
+let app;
+try {
+  app = initializeApp(firebaseConfig);
+  console.log('Firebase initialized successfully');
+} catch (error) {
+  console.error('Error initializing Firebase:', error);
+  throw error;
+}
+
 const db = getFirestore(app);
 const auth = getAuth(app);
-
-// Configure auth persistence
-auth.useDeviceLanguage();
-setPersistence(auth, browserLocalPersistence);
-
 const storage = getStorage(app);
 const analytics = getAnalytics(app);
 
-// Initialize Google provider
-const googleProvider = new GoogleAuthProvider();
-
-// Enhanced configuration for Google provider
-googleProvider.addScope('email');
-googleProvider.addScope('profile');
-googleProvider.setCustomParameters({
-  prompt: 'select_account',
-  login_hint: 'user@example.com'
-});
+// Helper function for Google Sign In
+export const signInWithGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/userinfo.email');
+    provider.addScope('https://www.googleapis.com/auth/userinfo.profile');
+    
+    // Use redirect instead of popup for better compatibility
+    await signInWithRedirect(auth, provider);
+    
+    // The redirect result is handled automatically when the page loads
+    const result = await getRedirectResult(auth);
+    if (result) {
+      return result;
+    }
+  } catch (error: any) {
+    console.error('Error in Google sign in:', error);
+    
+    if (error.code === 'auth/unauthorized-domain') {
+      throw new Error(`This domain (${window.location.hostname}) is not authorized for Google Sign-In. Please verify domain configuration in Firebase Console.`);
+    } else {
+      throw error;
+    }
+  }
+};
 
 // Helper function for delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -110,4 +174,5 @@ export async function fetchStorageImage(url: string): Promise<Blob> {
   throw new Error(errorMessage);
 }
 
-export { db, auth, storage, analytics, googleProvider };
+// Export configured instances
+export { db, auth, storage, analytics };

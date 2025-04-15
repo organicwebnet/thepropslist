@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { updateProfile, signOut, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
-import { db, auth, googleProvider } from '../lib/firebase';
+import { updateProfile, signOut } from 'firebase/auth';
+import { db, auth, signInWithGoogle } from '../lib/firebase';
 import { User, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -181,11 +181,19 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
       setLoading(true);
       setError('');
       
-      // Use the shared googleProvider instance
-      await signInWithRedirect(auth, googleProvider);
+      const result = await signInWithGoogle();
+      if (result.user) {
+        // Update profile with Google data
+        setProfile(prev => ({
+          ...prev,
+          displayName: result.user.displayName || prev.displayName,
+          photoURL: result.user.photoURL || prev.photoURL,
+          googleLinked: true
+        }));
+      }
     } catch (error: any) {
-      console.error('Error initiating Google sign-in:', error);
-      setError(error?.message || 'Failed to initiate Google sign-in. Please try again.');
+      console.error('Error linking Google account:', error);
+      setError(error?.message || 'Failed to link Google account');
     } finally {
       setLoading(false);
     }

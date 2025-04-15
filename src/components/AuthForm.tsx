@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithPopup, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, User, UserCredential } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../lib/firebase';
+import { auth, db, signInWithGoogle } from '../lib/firebase';
 import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { GoogleAuthProvider } from 'firebase/auth';
+import { getRedirectResult } from 'firebase/auth';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -33,59 +33,35 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
     setError(null);
 
     try {
-      // Reset any existing auth state
-      if (auth.currentUser) {
-        await auth.signOut();
+      // Check if we have a redirect result
+      const redirectResult = await getRedirectResult(auth);
+      if (redirectResult?.user) {
+        // Update Firestore profile
+        await setDoc(doc(db, 'userProfiles', redirectResult.user.uid), {
+          displayName: redirectResult.user.displayName || '',
+          email: redirectResult.user.email || '',
+          photoURL: redirectResult.user.photoURL || '',
+          provider: 'google.com',
+          createdAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        }, { merge: true });
+
+        onClose();
+        return;
       }
 
-      // Force Google provider configuration
-      googleProvider.setCustomParameters({
-        prompt: 'select_account',
-        auth_type: 'reauthenticate'
-      });
-
-      // Use signInWithPopup with explicit auth instance
-      const result = await signInWithPopup(auth, googleProvider);
-      
-      // Ensure we got a user back
-      if (!result.user) {
-        throw new Error('No user data received');
-      }
-
-      // Get the Google OAuth access token
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (!credential) {
-        throw new Error('No auth credential received');
-      }
-
-      // Update Firestore profile
-      await setDoc(doc(db, 'userProfiles', result.user.uid), {
-        displayName: result.user.displayName || '',
-        email: result.user.email || '',
-        photoURL: result.user.photoURL || '',
-        provider: 'google.com',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      }, { merge: true });
-
-      onClose();
+      // If no redirect result, initiate sign in
+      await signInWithGoogle();
     } catch (error: any) {
       console.error('Google sign in error:', error);
       
       let errorMessage = 'Unable to sign in with Google. Please try again.';
       
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'The sign-in popup was closed. Please try again and keep the window open until sign-in is complete.';
-      } else if (error.code === 'auth/popup-blocked') {
-        errorMessage = 'Popup was blocked by your browser. Please enable popups for this site and try again.';
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        errorMessage = 'Another popup is already open. Please close it and try again.';
-      } else if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = 'This domain is not authorized for Google authentication. Please check your Firebase configuration.';
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = `This domain (${window.location.hostname}) is not authorized for Google Sign-In. Please contact support.`;
       }
       
       setError(errorMessage);
-      console.log('Detailed error:', error);
     } finally {
       setLoading(false);
     }
@@ -348,7 +324,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Continue with Google
+                {loading ? 'Signing in...' : 'Continue with Google'}
               </button>
             </div>
 
@@ -363,9 +339,10 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
 
             <form onSubmit={mode === 'forgot' ? handleForgotPassword : handleSubmit} className="space-y-5">
               {error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm">
-                  {error}
-                </div>
+                <div 
+                  className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm"
+                  dangerouslySetInnerHTML={{ __html: error }}
+                />
               )}
 
               {success && (
