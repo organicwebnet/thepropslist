@@ -4,24 +4,31 @@
 
 :root {
   /* Theme Variables */
-  --gradient-blue: linear-gradient(135deg, #d6001c 0%, #a30016 100%);
+  --gradient-blue: linear-gradient(135deg, rgba(214, 0, 28, 0.9) 0%, rgba(163, 0, 22, 0.9) 100%);
+  --neon-glow: 0 0 15px rgba(235, 12, 42, 0.418);
   
   /* Light theme defaults */
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
   --text-primary: #111827;
   --text-secondary: #4b5563;
-  --border-color: #e5e7eb;
-  --input-bg: #f3f4f6;
+  --border-color: rgba(229, 231, 235, 0.8);
+  --input-bg: rgba(243, 244, 246, 0.9);
+  --button-bg: rgba(214, 0, 28, 0.9);
+  --button-hover: rgba(214, 0, 28, 1);
+  --button-text: #ffffff;
 }
 
 [data-theme="dark"] {
   --bg-primary: #0A0A0A;
-  --bg-secondary: #1A1A1A;
+  --bg-secondary: rgba(26, 26, 26, 0.8);
   --text-primary: #ffffff;
   --text-secondary: #9ca3af;
-  --border-color: #374151;
-  --input-bg: #1A1A1A;
+  --border-color: rgba(55, 65, 81, 0.5);
+  --input-bg: rgba(26, 26, 26, 0.9);
+  --button-bg: rgba(214, 0, 28, 0.7);
+  --button-hover: rgba(214, 0, 28, 0.9);
+  --button-text: rgba(255, 255, 255, 0.95);
 }
 
 /* Lexend font */
@@ -54,14 +61,17 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  text-shadow: var(--neon-glow);
 }
 
 .gradient-border {
   position: relative;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   background: linear-gradient(var(--bg-primary), var(--bg-primary)) padding-box,
               var(--gradient-blue) border-box;
   border: 1px solid transparent;
+  box-shadow: var(--neon-glow);
+  backdrop-filter: blur(8px);
 }
 
 /* Theme-aware input styles */
@@ -71,19 +81,52 @@ input, select, textarea {
   border-color: var(--border-color);
 }
 
+/* Theme-aware button styles */
+.btn-primary {
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.btn-primary:hover {
+  background-color: var(--button-hover);
+  box-shadow: var(--neon-glow);
+}
+
+/* Improved spacing utilities */
+.content-spacing {
+  margin: 1.5rem 0;
+  padding: 1rem 1.5rem;
+}
+
+.section-spacing {
+  margin: 2rem 0;
+  padding: 1.5rem 2rem;
+}
+
 /* Theme transition classes */
 .theme-transition {
-  transition-property: background-color, border-color, color, fill, stroke;
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition-duration: 200ms;
 }
 
 /* Hide scrollbar but maintain scroll functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+}
+
+/* Glass effect for modals and overlays */
+.glass-effect {
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }

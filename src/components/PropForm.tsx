@@ -1,15 +1,34 @@
 import React, { useState } from 'react';
-import { PlusCircle, Save } from 'lucide-react';
+import { PlusCircle, Save, Loader2 } from 'lucide-react';
 import { ImageUpload } from './ImageUpload';
 import { DigitalAssetForm } from './DigitalAssetForm';
-import type { PropFormData, PropFormProps } from '../types';
-import { dimensionUnits, weightUnits } from '../types';
+import type { PropFormData, PropFormProps, PropCategory } from '../types';
+import { dimensionUnits, weightUnits, propCategories } from '../types';
+
+// Define prop categories
+const categories = [
+  'Furniture',
+  'Decoration',
+  'Costume',
+  'Weapon',
+  'Food/Drink',
+  'Book/Paper',
+  'Electronics',
+  'Musical Instrument',
+  'Hand Prop',
+  'Set Dressing',
+  'Special Effects',
+  'Lighting',
+  'Other'
+] as const;
+
+type Category = typeof categories[number];
 
 const initialFormState: PropFormData = {
   name: '',
   price: 0,
   description: '',
-  category: '',
+  category: 'Other' as PropCategory,
   length: undefined,
   width: undefined,
   height: undefined,
@@ -55,6 +74,7 @@ const initialFormState: PropFormData = {
 
 export function PropForm({ onSubmit, disabled = false, initialData, mode = 'create', onCancel }: PropFormProps) {
   const [formData, setFormData] = useState<PropFormData>(initialData || initialFormState);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePriceChange = (value: string) => {
     const cleanValue = value.replace(/[^\d.]/g, '');
@@ -70,14 +90,17 @@ export function PropForm({ onSubmit, disabled = false, initialData, mode = 'crea
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     if (formData.source === 'rented') {
       if (!formData.rentalSource?.trim()) {
         alert('Please enter the rental source');
+        setIsSubmitting(false);
         return;
       }
       if (!formData.rentalDueDate) {
         alert('Please enter the return due date');
+        setIsSubmitting(false);
         return;
       }
     }
@@ -86,91 +109,114 @@ export function PropForm({ onSubmit, disabled = false, initialData, mode = 'crea
     if (mode === 'create') {
       setFormData(initialFormState);
     }
+    setIsSubmitting(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="gradient-border p-6">
-      <div className="grid gap-6">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
-            Name <span className="text-primary">*</span>
-          </label>
-          <input
-            type="text"
-            id="name"
-            required
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder="Enter prop name"
-          />
+    <form onSubmit={handleSubmit} className="gradient-border section-spacing">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-semibold text-white">Add New Prop</h2>
+          {isSubmitting && (
+            <div className="flex items-center gap-2 text-primary/80">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Saving...</span>
+            </div>
+          )}
         </div>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-2">
-            Description <span className="text-primary">*</span>
-          </label>
-          <textarea
-            id="description"
-            required
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            rows={3}
-            placeholder="Enter prop description"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-300 mb-2">
-              Price (per unit) <span className="text-primary">*</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label htmlFor="name" className="block text-sm font-medium text-gray-300">
+              Name
             </label>
             <input
               type="text"
-              id="price"
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              placeholder="Enter prop name"
               required
-              value={formData.price}
-              onChange={(e) => handlePriceChange(e.target.value)}
-              className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Enter price"
             />
           </div>
-          <div>
-            <label htmlFor="quantity" className="block text-sm font-medium text-gray-300 mb-2">
-              Quantity <span className="text-primary">*</span>
+
+          <div className="space-y-2">
+            <label htmlFor="category" className="block text-sm font-medium text-gray-300">
+              Category
+            </label>
+            <select
+              id="category"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value as PropCategory })}
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              required
+            >
+              <option value="">Select a category</option>
+              {propCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="price" className="block text-sm font-medium text-gray-300">
+              Price
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">£</span>
+              <input
+                type="number"
+                id="price"
+                value={formData.price}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg pl-8 pr-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="quantity" className="block text-sm font-medium text-gray-300">
+              Quantity
             </label>
             <input
               type="number"
               id="quantity"
-              required
-              min="1"
               value={formData.quantity}
               onChange={(e) => handleQuantityChange(e.target.value)}
-              className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              placeholder="Enter quantity"
+              min="1"
+              required
             />
           </div>
         </div>
 
-        <div>
-          <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-2">
-            Category <span className="text-primary">*</span>
+        <div className="space-y-2">
+          <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+            Description
           </label>
-          <input
-            type="text"
-            id="category"
-            required
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder="Enter category"
+          <textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors min-h-[100px] resize-y"
+            placeholder="Enter prop description"
           />
         </div>
 
-        <ImageUpload
-          onImagesChange={(images) => setFormData({ ...formData, images })}
-          currentImages={formData.images}
-        />
+        <div className="space-y-4">
+          <ImageUpload
+            onImagesChange={(images) => setFormData({ ...formData, images })}
+            currentImages={formData.images}
+          />
+        </div>
 
         <div className="space-y-4">
           <DigitalAssetForm
@@ -621,30 +667,21 @@ export function PropForm({ onSubmit, disabled = false, initialData, mode = 'crea
           )}
         </div>
 
-        <div className="flex justify-end space-x-3">
-          {mode === 'edit' && onCancel && (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-4 py-2 text-gray-400 hover:text-gray-200"
-            >
-              Cancel
-            </button>
-          )}
+        <div className="pt-4">
           <button
             type="submit"
-            disabled={disabled}
-            className="inline-flex items-center justify-center rounded-md bg-gradient-to-r from-primary to-primary-dark px-6 py-3 text-sm font-medium text-white hover:from-primary-dark hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#0A0A0A] transition-colors disabled:opacity-50"
+            disabled={isSubmitting}
+            className="btn-primary w-full flex items-center justify-center gap-2"
           >
-            {mode === 'edit' ? (
+            {isSubmitting ? (
               <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Adding Prop...</span>
               </>
             ) : (
               <>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Prop
+                <PlusCircle className="h-5 w-5" />
+                <span>Add Prop</span>
               </>
             )}
           </button>

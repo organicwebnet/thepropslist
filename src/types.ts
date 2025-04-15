@@ -27,11 +27,29 @@ export interface DigitalAsset {
   lastChecked?: string;
 }
 
+export const propCategories = [
+  'Furniture',
+  'Decoration',
+  'Costume',
+  'Weapon',
+  'Food/Drink',
+  'Book/Paper',
+  'Electronics',
+  'Musical Instrument',
+  'Hand Prop',
+  'Set Dressing',
+  'Special Effects',
+  'Lighting',
+  'Other'
+] as const;
+
+export type PropCategory = typeof propCategories[number];
+
 export interface PropFormData {
   name: string;
   price: number;
   description: string;
-  category: string;
+  category: PropCategory;
   length?: number;
   width?: number;
   height?: number;

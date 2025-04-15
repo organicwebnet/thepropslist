@@ -248,11 +248,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold gradient-text"> The Props Bible</h1>
+      <div className="container mx-auto px-6 py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
+          <h1 className="text-4xl font-bold gradient-text tracking-tight"> The Props Bible</h1>
           {user && (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <button
                 onClick={async () => {
                   try {
@@ -262,7 +262,7 @@ function App() {
                     alert('Failed to sign out. Please try again.');
                   }
                 }}
-                className="p-2 text-red-500 hover:bg-red-900/20 rounded-full transition-colors flex items-center gap-2"
+                className="btn-primary flex items-center gap-2 opacity-80 hover:opacity-100"
                 title="Sign Out"
               >
                 <LogOut className="h-5 w-5" />
@@ -270,17 +270,17 @@ function App() {
               </button>
               <button
                 onClick={() => setShowProfile(true)}
-                className="p-2 text-gray-400 hover:text-white transition-colors flex items-center gap-2"
+                className="p-2 text-gray-400 hover:text-white transition-colors flex items-center gap-3"
                 title="Profile & Settings"
               >
                 {user.photoURL ? (
                   <img
                     src={user.photoURL}
                     alt={user.displayName || 'User'}
-                    className="w-8 h-8 rounded-full"
+                    className="w-10 h-10 rounded-full border-2 border-primary/20"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary/30">
                     {user.email?.[0].toUpperCase()}
                   </div>
                 )}
@@ -309,13 +309,13 @@ function App() {
               {user && (
                 <>
                   {shows.length > 0 ? (
-                    <div className="lg:grid lg:grid-cols-2 lg:gap-8">
-                      <div className="lg:h-[calc(100vh-6rem)] lg:sticky lg:top-8">
-                        <div className="lg:h-full lg:overflow-y-auto lg:pr-4 scrollbar-hide">
+                    <div className="lg:grid lg:grid-cols-2 lg:gap-12">
+                      <div className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-8">
+                        <div className="lg:h-full lg:overflow-y-auto lg:pr-6 scrollbar-hide">
                           <PropForm onSubmit={handlePropSubmit} />
                         </div>
                       </div>
-                      <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto scrollbar-hide">
+                      <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto scrollbar-hide">
                         <PropList
                           props={filteredProps}
                           onDelete={handleDelete}
