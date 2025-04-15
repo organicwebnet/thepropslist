@@ -195,7 +195,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+    <div className="fixed inset-0 bg-black bg-opacity-90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[100]">
       {/* Dramatic stage background */}
       <div className="fixed inset-0 pointer-events-none">
         {/* Background image */}
@@ -218,17 +218,17 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
 
       <div className="bg-[#1A1A1A]/80 rounded-xl shadow-2xl shadow-neon-lg w-full max-w-4xl flex overflow-hidden border border-primary-neon/20 relative z-10 backdrop-blur-sm">
         {/* Left Panel */}
-        <div className="w-1/2 bg-gradient-to-br from-primary to-primary-dark p-12 text-white hidden md:block relative overflow-hidden">
+        <div className="w-full md:w-1/2 bg-gradient-to-br from-primary to-primary-dark p-6 sm:p-8 md:p-12 text-white hidden md:block relative overflow-hidden">
           {/* Neon glow effect */}
           <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary-neon/20 rounded-full blur-3xl"></div>
           <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-primary-neon/20 rounded-full blur-3xl"></div>
           
           <div className="relative">
-            <h1 className="text-4xl font-bold mb-4 text-white">The Props Bible</h1>
-            <p className="text-lg mb-8 text-white/90">Your complete solution for managing theater props and show inventories</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 text-white">The Props Bible</h1>
+            <p className="text-base sm:text-lg mb-6 sm:mb-8 text-white/90">Your complete solution for managing theater props and show inventories</p>
             
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold mb-4 text-gray-200">Features</h3>
+              <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-200">Features</h3>
               <div className="space-y-3 text-gray-200">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full bg-primary-neon/20 flex items-center justify-center border border-primary-neon/30">
@@ -260,12 +260,12 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
         </div>
 
         {/* Right Panel */}
-        <div className="w-full md:w-1/2 p-8 bg-[#1A1A1A] relative">
+        <div className="w-full md:w-1/2 p-4 sm:p-6 md:p-8 bg-[#1A1A1A] relative">
           {/* Subtle neon glow for the right panel */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary-neon/5 to-transparent opacity-50"></div>
           
-          <div className="max-w-md mx-auto relative">
-            <div className="flex justify-between items-center mb-8">
+          <div className="w-full max-w-md mx-auto relative">
+            <div className="flex justify-between items-center mb-6 sm:mb-8">
               {mode === 'forgot' ? (
                 <div className="flex items-center">
                   <button
@@ -276,12 +276,12 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                     }}
                     className="mr-3 text-gray-400 hover:text-primary-neon transition-colors"
                   >
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
-                  <h2 className="text-2xl font-bold text-white">Reset Password</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white">Reset Password</h2>
                 </div>
               ) : (
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">
                   {mode === 'signup' ? 'Create Account' : 'Sign In'}
                 </h2>
               )}
@@ -293,18 +293,18 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
               </button>
             </div>
 
-            <div className="mb-6">
-              <h3 className="text-xl text-gray-200 mb-2">Welcome to Props Bible</h3>
-              <p className="text-gray-300">Manage your theater props efficiently</p>
+            <div className="mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl text-gray-200 mb-2">Welcome to Props Bible</h3>
+              <p className="text-sm sm:text-base text-gray-300">Manage your theater props efficiently</p>
             </div>
 
             {/* Social Login Buttons */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-3 mb-4 sm:mb-6">
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 px-6 py-2.5 border border-gray-800 rounded-lg text-white hover:border-primary-neon hover:shadow-neon transition-all duration-300 disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 border border-gray-800 rounded-lg text-white hover:border-primary-neon hover:shadow-neon transition-all duration-300 disabled:opacity-50 text-sm sm:text-base"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
@@ -337,16 +337,16 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
               </div>
             </div>
 
-            <form onSubmit={mode === 'forgot' ? handleForgotPassword : handleSubmit} className="space-y-5">
+            <form onSubmit={mode === 'forgot' ? handleForgotPassword : handleSubmit} className="space-y-4 sm:space-y-5">
               {error && (
                 <div 
-                  className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm"
+                  className="p-2.5 sm:p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm"
                   dangerouslySetInnerHTML={{ __html: error }}
                 />
               )}
 
               {success && (
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-300 text-sm">
+                <div className="p-2.5 sm:p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-300 text-sm">
                   {success}
                 </div>
               )}
@@ -359,7 +359,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="hello@example.com"
-                  className="w-full px-4 py-2.5 text-white bg-[#0A0A0A] border border-gray-800 rounded-lg focus:ring-2 focus:ring-primary-neon/20 focus:border-primary-neon transition-all duration-300"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white bg-[#0A0A0A] border border-gray-800 rounded-lg focus:ring-2 focus:ring-primary-neon/20 focus:border-primary-neon transition-all duration-300"
                   required
                 />
               </div>
@@ -374,7 +374,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="w-full px-4 py-2.5 text-white bg-[#0A0A0A] border border-gray-800 rounded-lg focus:ring-2 focus:ring-primary-neon/20 focus:border-primary-neon transition-all duration-300"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white bg-[#0A0A0A] border border-gray-800 rounded-lg focus:ring-2 focus:ring-primary-neon/20 focus:border-primary-neon transition-all duration-300"
                       required
                     />
                     <button
@@ -384,9 +384,9 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                       title={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                        <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       )}
                     </button>
                   </div>
@@ -396,26 +396,26 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white hover:shadow-neon border border-primary-neon/20 hover:border-primary-neon/50 focus:outline-none focus:ring-2 focus:ring-primary-neon/50 focus:ring-offset-2 focus:ring-offset-[#1A1A1A] disabled:opacity-50 transition-all duration-300"
+                className="w-full inline-flex items-center justify-center rounded-lg bg-primary px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-medium text-white hover:shadow-neon border border-primary-neon/20 hover:border-primary-neon/50 focus:outline-none focus:ring-2 focus:ring-primary-neon/50 focus:ring-offset-2 focus:ring-offset-[#1A1A1A] disabled:opacity-50 transition-all duration-300"
               >
                 {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
                 ) : mode === 'signup' ? (
                   <>
-                    <UserPlus className="h-4 w-4 mr-2" />
+                    <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
                     Sign Up
                   </>
                 ) : mode === 'forgot' ? (
                   'Send Reset Link'
                 ) : (
                   <>
-                    <LogIn className="h-4 w-4 mr-2" />
+                    <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
                     Sign In
                   </>
                 )}
               </button>
 
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-1.5 sm:space-y-2">
                 {mode === 'forgot' ? (
                   <button
                     type="button"

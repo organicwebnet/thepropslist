@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, Save, Loader2 } from 'lucide-react';
 import { ImageUpload } from './ImageUpload';
 import { DigitalAssetForm } from './DigitalAssetForm';
-import type { PropFormData, PropFormProps, PropCategory } from '../types';
-import { dimensionUnits, weightUnits, propCategories } from '../types';
+import { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, PropFormProps } from '../types';
+import { dimensionUnits, weightUnits } from '../types';
 
 // Define prop categories
 const categories = [
@@ -72,7 +72,7 @@ const initialFormState: PropFormData = {
   digitalAssets: []
 };
 
-export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: PropFormProps): JSX.Element {
+export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, show, disabled = false }: PropFormProps): JSX.Element {
   // Initialize form data with proper defaults for any missing fields
   const defaultFormData = {
     ...initialFormState,
@@ -123,7 +123,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
     <form onSubmit={handleSubmit} className="gradient-border section-spacing">
       <div className="space-y-6">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-semibold text-white">Add New Prop</h2>
+          <h2 className="text-2xl font-semibold text-[var(--text-primary)]">Add New Prop</h2>
           {isSubmitting && (
             <div className="flex items-center gap-2 text-primary/80">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -132,9 +132,10 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label htmlFor="name" className="block text-sm font-medium text-gray-300">
+        {/* Basic Information */}
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)]">
               Name
             </label>
             <input
@@ -148,8 +149,8 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
             />
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="category" className="block text-sm font-medium text-gray-300">
+          <div>
+            <label htmlFor="category" className="block text-sm font-medium text-[var(--text-secondary)]">
               Category
             </label>
             <select
@@ -168,12 +169,12 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
             </select>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="price" className="block text-sm font-medium text-gray-300">
+          <div>
+            <label htmlFor="price" className="block text-sm font-medium text-[var(--text-secondary)]">
               Price
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">£</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]">£</span>
               <input
                 type="number"
                 id="price"
@@ -188,8 +189,8 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="quantity" className="block text-sm font-medium text-gray-300">
+          <div>
+            <label htmlFor="quantity" className="block text-sm font-medium text-[var(--text-secondary)]">
               Quantity
             </label>
             <input
@@ -206,7 +207,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+          <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)]">
             Description
           </label>
           <textarea
@@ -232,17 +233,18 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
           />
         </div>
 
+        {/* Source Information */}
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Source Information</div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Source Information</div>
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Source Type <span className="text-primary">*</span>
               </label>
               <select
                 value={formData.source}
                 onChange={(e) => setFormData({ ...formData, source: e.target.value as 'bought' | 'made' | 'rented' | 'borrowed' })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="bought">Bought</option>
                 <option value="made">Made</option>
@@ -251,7 +253,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Source Details <span className="text-primary">*</span>
               </label>
               <input
@@ -259,7 +261,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 required
                 value={formData.sourceDetails}
                 onChange={(e) => setFormData({ ...formData, sourceDetails: e.target.value })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder={formData.source === 'bought' ? 'Store/Seller name' : formData.source === 'made' ? 'Maker details' : 'Source details'}
               />
             </div>
@@ -267,23 +269,23 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
 
           {formData.source === 'bought' && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Purchase URL
               </label>
               <input
                 type="url"
                 value={formData.purchaseUrl}
                 onChange={(e) => setFormData({ ...formData, purchaseUrl: e.target.value })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder="https://example.com/product"
               />
             </div>
           )}
 
           {(formData.source === 'rented' || formData.source === 'borrowed') && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                   Return Due Date {formData.source === 'rented' && <span className="text-primary">*</span>}
                 </label>
                 <input
@@ -291,19 +293,19 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                   required={formData.source === 'rented'}
                   value={formData.rentalDueDate}
                   onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })}
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
               {formData.source === 'rented' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                     Reference Number
                   </label>
                   <input
                     type="text"
                     value={formData.rentalReferenceNumber}
                     onChange={(e) => setFormData({ ...formData, rentalReferenceNumber: e.target.value })}
-                    className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     placeholder="Enter reference number"
                   />
                 </div>
@@ -312,55 +314,82 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
           )}
         </div>
 
+        {/* Scene Information */}
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Scene Information</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Scene Information</div>
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={formData.isMultiScene}
               onChange={(e) => setFormData({ ...formData, isMultiScene: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[#1A1A1A] border-gray-800 rounded focus:ring-primary"
+              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
             />
-            <span className="text-gray-300">Used in multiple scenes</span>
+            <span className="text-[var(--text-secondary)]">Used in multiple scenes</span>
           </label>
 
           {!formData.isMultiScene && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  First Used in Act <span className="text-primary">*</span>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                  Act <span className="text-primary">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   required
-                  min="1"
                   value={formData.act}
-                  onChange={(e) => setFormData({ ...formData, act: parseInt(e.target.value) || 1 })}
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
+                  onChange={(e) => {
+                    const actId = parseInt(e.target.value);
+                    const act = show?.acts.find(a => a.id === actId);
+                    setFormData({ 
+                      ...formData, 
+                      act: actId,
+                      scene: act?.scenes[0]?.id || 1,
+                      sceneName: act?.scenes[0]?.name || ''
+                    });
+                  }}
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)]"
+                >
+                  {show?.acts.map((act) => (
+                    <option key={act.id} value={act.id}>
+                      Act {act.id}{act.name ? ` - ${act.name}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  First Used in Scene <span className="text-primary">*</span>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                  Scene <span className="text-primary">*</span>
                 </label>
-                <input
-                  type="number"
+                <select
                   required
-                  min="1"
                   value={formData.scene}
-                  onChange={(e) => setFormData({ ...formData, scene: parseInt(e.target.value) || 1 })}
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
+                  onChange={(e) => {
+                    const sceneId = parseInt(e.target.value);
+                    const scene = show?.acts.find(a => a.id === formData.act)?.scenes.find(s => s.id === sceneId);
+                    setFormData({ 
+                      ...formData, 
+                      scene: sceneId,
+                      sceneName: scene?.name || ''
+                    });
+                  }}
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)]"
+                >
+                  {show?.acts.find(a => a.id === formData.act)?.scenes.map((scene) => (
+                    <option key={scene.id} value={scene.id}>
+                      Scene {scene.id}{scene.name ? ` - ${scene.name}` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
         </div>
 
+        {/* Physical Properties */}
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Physical Properties</div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Physical Properties</div>
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Length
               </label>
               <input
@@ -369,12 +398,12 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 step="0.1"
                 value={formData.length || ''}
                 onChange={(e) => setFormData({ ...formData, length: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder={`Enter length in ${formData.unit}`}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Width
               </label>
               <input
@@ -383,12 +412,12 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 step="0.1"
                 value={formData.width || ''}
                 onChange={(e) => setFormData({ ...formData, width: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder={`Enter width in ${formData.unit}`}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Height
               </label>
               <input
@@ -397,18 +426,18 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 step="0.1"
                 value={formData.height || ''}
                 onChange={(e) => setFormData({ ...formData, height: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder={`Enter height in ${formData.unit}`}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Unit
               </label>
               <select
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 {dimensionUnits.map(unit => (
                   <option key={unit.value} value={unit.value}>
@@ -417,11 +446,8 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Weight
               </label>
               <input
@@ -430,18 +456,18 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 step="0.1"
                 value={formData.weight || ''}
                 onChange={(e) => setFormData({ ...formData, weight: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 placeholder={`Enter weight in ${formData.weightUnit}`}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 Weight Unit
               </label>
               <select
                 value={formData.weightUnit}
                 onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' })}
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 {weightUnits.map(unit => (
                   <option key={unit.value} value={unit.value}>
@@ -454,15 +480,15 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
         </div>
 
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Usage Instructions</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Usage Instructions</div>
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={formData.hasUsageInstructions}
               onChange={(e) => setFormData({ ...formData, hasUsageInstructions: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[#1A1A1A] border-gray-800 rounded focus:ring-primary"
+              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
             />
-            <span className="text-gray-300">Add usage instructions</span>
+            <span className="text-[var(--text-secondary)]">Add usage instructions</span>
           </label>
 
           {formData.hasUsageInstructions && (
@@ -470,22 +496,22 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
               value={formData.usageInstructions}
               onChange={(e) => setFormData({ ...formData, usageInstructions: e.target.value })}
               placeholder="Enter detailed usage instructions"
-              className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               rows={3}
             />
           )}
         </div>
 
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Maintenance</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Maintenance</div>
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={formData.hasMaintenanceNotes}
               onChange={(e) => setFormData({ ...formData, hasMaintenanceNotes: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[#1A1A1A] border-gray-800 rounded focus:ring-primary"
+              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
             />
-            <span className="text-gray-300">Add maintenance notes</span>
+            <span className="text-[var(--text-secondary)]">Add maintenance notes</span>
           </label>
 
           {formData.hasMaintenanceNotes && (
@@ -493,22 +519,22 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
               value={formData.maintenanceNotes}
               onChange={(e) => setFormData({ ...formData, maintenanceNotes: e.target.value })}
               placeholder="Enter maintenance requirements and schedule"
-              className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               rows={3}
             />
           )}
         </div>
 
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Safety</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Safety</div>
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={formData.hasSafetyNotes}
               onChange={(e) => setFormData({ ...formData, hasSafetyNotes: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[#1A1A1A] border-gray-800 rounded focus:ring-primary"
+              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
             />
-            <span className="text-gray-300">Add safety notes</span>
+            <span className="text-[var(--text-secondary)]">Add safety notes</span>
           </label>
 
           {formData.hasSafetyNotes && (
@@ -516,28 +542,28 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
               value={formData.safetyNotes}
               onChange={(e) => setFormData({ ...formData, safetyNotes: e.target.value })}
               placeholder="Enter safety requirements and precautions"
-              className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               rows={3}
             />
           )}
         </div>
 
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Pre-show Setup</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Pre-show Setup</div>
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={formData.requiresPreShowSetup}
               onChange={(e) => setFormData({ ...formData, requiresPreShowSetup: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[#1A1A1A] border-gray-800 rounded focus:ring-primary"
+              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
             />
-            <span className="text-gray-300">Requires pre-show setup</span>
+            <span className="text-[var(--text-secondary)]">Requires pre-show setup</span>
           </label>
 
           {formData.requiresPreShowSetup && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                   Setup Duration (minutes)
                 </label>
                 <input
@@ -545,24 +571,24 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                   min="1"
                   value={formData.preShowSetupDuration || ''}
                   onChange={(e) => setFormData({ ...formData, preShowSetupDuration: parseInt(e.target.value) || undefined })}
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Enter setup time in minutes"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                   Setup Instructions
                 </label>
                 <textarea
                   value={formData.preShowSetupNotes}
                   onChange={(e) => setFormData({ ...formData, preShowSetupNotes: e.target.value })}
                   placeholder="Enter detailed setup instructions"
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   rows={3}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                   Setup Video URL (Optional)
                 </label>
                 <input
@@ -570,7 +596,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                   value={formData.preShowSetupVideo}
                   onChange={(e) => setFormData({ ...formData, preShowSetupVideo: e.target.value })}
                   placeholder="Enter video URL (YouTube, Vimeo, etc.)"
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
             </div>
@@ -578,16 +604,16 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
         </div>
 
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Transport Information</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Transport Information</div>
           <div className="space-y-4">
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 checked={formData.hasOwnShippingCrate}
                 onChange={(e) => setFormData({ ...formData, hasOwnShippingCrate: e.target.checked })}
-                className="form-checkbox h-4 w-4 text-primary bg-[#1A1A1A] border-gray-800 rounded focus:ring-primary"
+                className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
               />
-              <span className="text-gray-300">Has dedicated shipping crate</span>
+              <span className="text-[var(--text-secondary)]">Has dedicated shipping crate</span>
             </label>
 
             {formData.hasOwnShippingCrate && (
@@ -595,7 +621,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 value={formData.shippingCrateDetails}
                 onChange={(e) => setFormData({ ...formData, shippingCrateDetails: e.target.value })}
                 placeholder="Enter shipping crate details and dimensions"
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 rows={2}
               />
             )}
@@ -605,9 +631,9 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 type="checkbox"
                 checked={formData.requiresSpecialTransport}
                 onChange={(e) => setFormData({ ...formData, requiresSpecialTransport: e.target.checked })}
-                className="form-checkbox h-4 w-4 text-primary bg-[#1A1A1A] border-gray-800 rounded focus:ring-primary"
+                className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
               />
-              <span className="text-gray-300">Requires special transport</span>
+              <span className="text-[var(--text-secondary)]">Requires special transport</span>
             </label>
 
             {formData.requiresSpecialTransport && (
@@ -616,11 +642,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                   value={formData.transportNotes}
                   onChange={(e) => setFormData({ ...formData, transportNotes: e.target.value })}
                   placeholder="Enter special transport requirements"
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   rows={2}
                 />
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                     Travel Weight ({formData.weightUnit})
                   </label>
                   <input
@@ -629,7 +655,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                     step="0.1"
                     value={formData.travelWeight || ''}
                     onChange={(e) => setFormData({ ...formData, travelWeight: e.target.value ? Number(e.target.value) : undefined })}
-                    className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     placeholder={`Enter weight in ${formData.weightUnit}`}
                   />
                 </div>
@@ -639,15 +665,15 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
         </div>
 
         <div className="space-y-4">
-          <div className="text-sm font-medium text-gray-300 uppercase tracking-wider">Modifications</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Modifications</div>
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={formData.hasBeenModified}
               onChange={(e) => setFormData({ ...formData, hasBeenModified: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[#1A1A1A] border-gray-800 rounded focus:ring-primary"
+              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
             />
-            <span className="text-gray-300">Prop has been modified</span>
+            <span className="text-[var(--text-secondary)]">Prop has been modified</span>
           </label>
 
           {formData.hasBeenModified && (
@@ -656,18 +682,18 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: P
                 value={formData.modificationDetails}
                 onChange={(e) => setFormData({ ...formData, modificationDetails: e.target.value })}
                 placeholder="Enter modification details"
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 rows={3}
               />
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                   Modification Date
                 </label>
                 <input
                   type="date"
                   value={formData.lastModifiedAt || ''}
                   onChange={(e) => setFormData({ ...formData, lastModifiedAt: e.target.value })}
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useSearchParams } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, addDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc } from 'firebase/firestore';
+import { Routes, Route, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
+import { collection, query, where, onSnapshot, doc, addDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getRedirectResult, GoogleAuthProvider, linkWithCredential } from 'firebase/auth';
 import { AuthForm } from './components/AuthForm';
 import { PropForm } from './components/PropForm';
@@ -9,9 +9,14 @@ import { PropList } from './components/PropList';
 import { UserProfileModal } from './components/UserProfile';
 import { ShareModal } from './components/ShareModal';
 import { PropDetailPage } from './pages/PropDetailPage';
+import { ShowDetailPage } from './pages/ShowDetailPage';
 import { db, auth } from './lib/firebase';
-import type { Prop, PropFormData, Filters, Show } from './types';
-import { LogOut } from 'lucide-react';
+import type { Prop, PropFormData, Filters, Show, ShowFormData } from './types';
+import { LogOut, PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { ShowForm } from './components/ShowForm';
+import { SearchBar } from './components/SearchBar';
+import { PropFilters } from './components/PropFilters';
+import { ExportToolbar } from './components/ExportToolbar';
 
 const initialFilters: Filters = {
   search: '',
@@ -19,6 +24,43 @@ const initialFilters: Filters = {
   scene: undefined,
   category: undefined
 };
+
+function TabNavigation({ activeTab, setActiveTab, navigate }: { activeTab: string; setActiveTab: (tab: 'props' | 'shows') => void; navigate: (path: string) => void }) {
+  return (
+    <div className="mb-6">
+      <div className="border-b border-[var(--border-color)]">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => {
+              setActiveTab('props');
+              navigate('/props');
+            }}
+            className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
+              activeTab === 'props'
+                ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
+            }`}
+          >
+            Props
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('shows');
+              navigate('/shows');
+            }}
+            className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
+              activeTab === 'shows'
+                ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
+            }`}
+          >
+            Shows
+          </button>
+        </nav>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [showAuth, setShowAuth] = useState(false);
@@ -35,6 +77,11 @@ function App() {
     category: searchParams.get('category') || undefined
   });
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'props' | 'shows'>('props');
+  const [selectedProp, setSelectedProp] = useState<Prop | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingShow, setEditingShow] = useState<Show | null>(null);
+  const [showFormMode, setShowFormMode] = useState<'create' | 'edit'>('create');
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -69,7 +116,13 @@ function App() {
     const showsUnsubscribe = onSnapshot(showsQuery, (snapshot) => {
       const showsData: Show[] = [];
       snapshot.forEach((doc) => {
-        showsData.push({ id: doc.id, ...doc.data() } as Show);
+        const data = doc.data();
+        showsData.push({
+          id: doc.id,
+          ...data,
+          acts: Array.isArray(data.acts) ? data.acts : [],
+          collaborators: Array.isArray(data.collaborators) ? data.collaborators : []
+        } as Show);
       });
       setShows(showsData);
     });
@@ -178,6 +231,16 @@ function App() {
     
     handleRedirectResult();
   }, [user]);
+
+  // Add effect to sync activeTab with current route
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path.startsWith('/shows')) {
+      setActiveTab('shows');
+    } else if (path.startsWith('/props')) {
+      setActiveTab('props');
+    }
+  }, [window.location.pathname]);
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
@@ -292,6 +355,63 @@ function App() {
     setSelectedShow(show);
   };
 
+  const handleCreateShow = async () => {
+    if (!user) return;
+    
+    try {
+      const newShow = {
+        name: 'New Show',
+        description: '',
+        acts: [],
+        userId: user.uid,
+        createdAt: new Date().toISOString(),
+        collaborators: [],
+        venues: [],
+        isTouringShow: false,
+        contacts: []
+      };
+      
+      await addDoc(collection(db, 'shows'), newShow);
+    } catch (error) {
+      console.error('Error creating show:', error);
+      alert('Failed to create show. Please try again.');
+    }
+  };
+
+  const handleEditShow = async (id: string, data: ShowFormData) => {
+    if (!user) return;
+    
+    try {
+      await updateDoc(doc(db, 'shows', id), {
+        ...data,
+        lastModifiedAt: new Date().toISOString()
+      });
+      setShowEditModal(false);
+      setEditingShow(null);
+    } catch (error) {
+      console.error('Error updating show:', error);
+      alert('Failed to update show. Please try again.');
+    }
+  };
+
+  const handleDeleteShow = async (showId: string) => {
+    if (!user || !window.confirm('Are you sure you want to delete this show? This will also delete all props associated with it.')) return;
+    
+    try {
+      // First, delete all props associated with this show
+      const propsQuery = query(collection(db, 'props'), where('showId', '==', showId));
+      const propsSnapshot = await getDocs(propsQuery);
+      const deletePromises = propsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      
+      // Then delete the show itself
+      await deleteDoc(doc(db, 'shows', showId));
+    } catch (error) {
+      console.error('Error deleting show:', error);
+      alert('Failed to delete show. Please try again.');
+    }
+  };
+
   const filteredProps = props.filter(prop => {
     const matchesSearch = prop.name.toLowerCase().includes(filters.search.toLowerCase()) ||
       prop.description.toLowerCase().includes(filters.search.toLowerCase());
@@ -316,7 +436,7 @@ function App() {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <div className="container mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
-          <h1 className="text-4xl font-bold gradient-text tracking-tight"> The Props Bible</h1>
+          <h1 className="text-4xl font-bold gradient-text tracking-tight">The Props Bible</h1>
           {user && (
             <div className="flex items-center gap-6">
               <button
@@ -375,42 +495,260 @@ function App() {
               </div>
             )
           } />
+          <Route path="/shows/:id" element={
+            user ? (
+              <ShowDetailPage
+                onEdit={(show) => {
+                  setEditingShow(show);
+                  setShowFormMode('edit');
+                  navigate('/shows');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-red-400">Please sign in to view show details</p>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
+                >
+                  Sign In
+                </button>
+              </div>
+            )
+          } />
           <Route path="/" element={
             <>
               {user && (
                 <>
-                  {shows.length > 0 ? (
-                    <div className="lg:grid lg:grid-cols-2 lg:gap-12">
-                      <div className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-8">
-                        <div className="lg:h-full lg:overflow-y-auto lg:pr-6 scrollbar-hide">
-                          <PropForm onSubmit={handlePropSubmit} />
-                        </div>
-                      </div>
-                      <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto scrollbar-hide">
-                        <PropList
-                          props={filteredProps}
-                          onDelete={handleDelete}
-                          onUpdatePrice={handleUpdatePrice}
-                          onEdit={handleEdit}
-                          onCategoryClick={(category) => handleFilterChange({ ...filters, category })}
-                          onShare={handleShowShare}
-                          onSelect={handleShowSelect}
-                          show={selectedShow || shows[0]}
-                          filters={filters}
-                          onFilterChange={handleFilterChange}
-                          onFilterReset={handleFilterReset}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 gradient-border">
-                      <p className="text-gray-400">No shows yet. Create your first show to get started!</p>
-                      {/* TODO: Add show creation form */}
-                    </div>
-                  )}
+                  <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} navigate={navigate} />
+                  <Navigate to="/props" replace />
                 </>
               )}
             </>
+          } />
+          <Route path="/props" element={
+            user ? (
+              <>
+                <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} navigate={navigate} />
+                <div className="lg:grid lg:grid-cols-2 lg:gap-12">
+                  <div className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-8">
+                    <div className="lg:h-full lg:overflow-y-auto lg:pr-6 scrollbar-hide">
+                      <PropForm 
+                        onSubmit={handlePropSubmit} 
+                        show={selectedShow || shows[0]}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto scrollbar-hide">
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="flex items-center gap-4">
+                        <SearchBar
+                          value={filters.search}
+                          onChange={(value) => setFilters({ ...filters, search: value })}
+                        />
+                        <PropFilters
+                          filters={filters}
+                          onChange={setFilters}
+                          onReset={() => setFilters(initialFilters)}
+                        />
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {(selectedShow || shows[0]) && (
+                          <ExportToolbar show={selectedShow || shows[0]} props={filteredProps} />
+                        )}
+                      </div>
+                    </div>
+                    {(selectedShow || shows[0]) && (
+                      <PropList
+                        props={filteredProps}
+                        onDelete={handleDelete}
+                        onUpdatePrice={handleUpdatePrice}
+                        onEdit={handleEdit}
+                        show={selectedShow || shows[0]}
+                        filters={filters}
+                        onFilterChange={setFilters}
+                        onFilterReset={() => setFilters(initialFilters)}
+                      />
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-red-400">Please sign in to view props</p>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
+                >
+                  Sign In
+                </button>
+              </div>
+            )
+          } />
+          <Route path="/shows" element={
+            user ? (
+              <>
+                <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} navigate={navigate} />
+                <div className="lg:grid lg:grid-cols-2 lg:gap-12">
+                  <div className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-8">
+                    <div className="lg:h-full lg:overflow-y-auto lg:pr-6 scrollbar-hide">
+                      <ShowForm
+                        mode={showFormMode}
+                        initialData={showFormMode === 'edit' && editingShow ? {
+                          name: editingShow.name,
+                          description: editingShow.description,
+                          acts: editingShow.acts,
+                          stageManager: editingShow.stageManager,
+                          stageManagerEmail: editingShow.stageManagerEmail,
+                          stageManagerPhone: editingShow.stageManagerPhone,
+                          propsSupervisor: editingShow.propsSupervisor,
+                          propsSupervisorEmail: editingShow.propsSupervisorEmail,
+                          propsSupervisorPhone: editingShow.propsSupervisorPhone,
+                          productionCompany: editingShow.productionCompany,
+                          productionContactName: editingShow.productionContactName,
+                          productionContactEmail: editingShow.productionContactEmail,
+                          productionContactPhone: editingShow.productionContactPhone,
+                          venues: editingShow.venues,
+                          isTouringShow: editingShow.isTouringShow,
+                          contacts: editingShow.contacts,
+                          imageUrl: editingShow.imageUrl,
+                          logoImage: editingShow.logoImage
+                        } : undefined}
+                        onSubmit={async (data) => {
+                          if (!user) return;
+                          try {
+                            if (showFormMode === 'edit' && editingShow) {
+                              await updateDoc(doc(db, 'shows', editingShow.id), {
+                                ...data,
+                                lastModifiedAt: new Date().toISOString()
+                              });
+                              setEditingShow(null);
+                              setShowFormMode('create');
+                            } else {
+                              await addDoc(collection(db, 'shows'), {
+                                ...data,
+                                userId: user.uid,
+                                createdAt: new Date().toISOString(),
+                                collaborators: []
+                              });
+                            }
+                          } catch (error) {
+                            console.error('Error with show:', error);
+                            alert(`Failed to ${showFormMode} show. Please try again.`);
+                          }
+                        }}
+                        onCancel={() => {
+                          setEditingShow(null);
+                          setShowFormMode('create');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto scrollbar-hide">
+                    <div className="flex justify-between items-center mb-6">
+                      <button
+                        onClick={() => {
+                          setEditingShow(null);
+                          setShowFormMode('create');
+                        }}
+                        className="btn-primary flex items-center gap-2"
+                      >
+                        <PlusCircle className="h-5 w-5" />
+                        <span>New Show</span>
+                      </button>
+                    </div>
+                    <div className="gradient-border p-6">
+                      <div className="space-y-4">
+                        {shows.length > 0 ? (
+                          shows.map((show) => (
+                            <div
+                              key={show.id}
+                              className="flex items-center justify-between p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg hover:border-[var(--highlight-color)] transition-colors cursor-pointer"
+                              onClick={() => navigate(`/shows/${show.id}`)}
+                            >
+                              <div className="flex items-center gap-4">
+                                {show.imageUrl ? (
+                                  <img
+                                    src={show.imageUrl}
+                                    alt={`${show.name} logo`}
+                                    className="w-12 h-12 rounded-lg object-cover border border-[var(--border-color)]"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
+                                    <span className="text-2xl font-semibold text-[var(--text-secondary)]">
+                                      {show.name[0]}
+                                    </span>
+                                  </div>
+                                )}
+                                <div>
+                                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">{show.name}</h3>
+                                  <p className="text-[var(--text-secondary)] text-sm mt-1">
+                                    {Array.isArray(show.acts) ? (
+                                      <>
+                                        {show.acts.length} Acts, {show.acts.reduce((total, act) => total + (Array.isArray(act.scenes) ? act.scenes.length : 0), 0)} Scenes
+                                      </>
+                                    ) : (
+                                      'No acts defined'
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (editingShow?.id === show.id) {
+                                      // If this show is already being edited, cancel the edit
+                                      setEditingShow(null);
+                                      setShowFormMode('create');
+                                    } else {
+                                      // Start editing this show
+                                      setEditingShow(show);
+                                      setShowFormMode('edit');
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                    }
+                                  }}
+                                  className="p-2 text-[var(--text-secondary)] hover:text-[var(--highlight-color)] transition-colors"
+                                  title="Edit show"
+                                >
+                                  <Pencil className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteShow(show.id);
+                                  }}
+                                  className="p-2 text-[var(--text-secondary)] hover:text-red-400 transition-colors"
+                                  title="Delete show"
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-12">
+                            <p className="text-[var(--text-secondary)]">No shows yet. Create your first show using the form.</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-red-400">Please sign in to view shows</p>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
+                >
+                  Sign In
+                </button>
+              </div>
+            )
           } />
         </Routes>
       </div>

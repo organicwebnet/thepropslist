@@ -212,52 +212,27 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-start justify-center p-4 z-[100] overflow-y-auto">
-      <div className={`w-full max-w-4xl bg-${theme === 'dark' ? '[#1A1A1A]' : 'white'} rounded-lg shadow-2xl my-8 border ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
-        {/* Header */}
-        <div className="border-b border-gray-800 p-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <User className="h-8 w-8 text-primary" />
-              <h2 className="text-3xl font-bold gradient-text">Profile & Settings</h2>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={async () => {
-                  try {
-                    await signOut(auth);
-                    onClose();
-                  } catch (error) {
-                    console.error('Error signing out:', error);
-                    setError('Failed to sign out. Please try again.');
-                  }
-                }}
-                className="p-2 hover:bg-red-900/20 text-red-500 rounded-full transition-colors flex items-center gap-2"
-                aria-label="Sign Out"
-                title="Sign Out"
-              >
-                <LogOut className="h-6 w-6" />
-                <span className="text-sm">Sign Out</span>
-              </button>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-800 rounded-full transition-colors"
-                aria-label="Close"
-              >
-                <X className="h-6 w-6 text-gray-400" />
-              </button>
-            </div>
-          </div>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+      <div className="bg-[var(--bg-primary)] rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-[var(--border-color)] relative modal-content">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Profile & Settings</h2>
+          <button
+            onClick={onClose}
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          >
+            ✕
+          </button>
+        </div>
 
-          {/* Tabs */}
-          <div className="mt-6 border-b border-gray-800">
+        <div className="mb-6">
+          <div className="border-b border-[var(--border-color)]">
             <nav className="flex space-x-8">
               <button
                 onClick={() => setActiveTab('basic')}
-                className={`py-4 px-1 inline-flex items-center space-x-2 border-b-2 text-sm font-medium ${
+                className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
                   activeTab === 'basic'
-                    ? 'border-primary text-sky-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                    ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
                 }`}
               >
                 <User className="h-4 w-4" />
@@ -265,10 +240,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
               </button>
               <button
                 onClick={() => setActiveTab('appearance')}
-                className={`py-4 px-1 inline-flex items-center space-x-2 border-b-2 text-sm font-medium ${
+                className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
                   activeTab === 'appearance'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                    ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
                 }`}
               >
                 <Settings className="h-4 w-4" />
@@ -276,10 +251,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
               </button>
               <button
                 onClick={() => setActiveTab('additional')}
-                className={`py-4 px-1 inline-flex items-center space-x-2 border-b-2 text-sm font-medium ${
+                className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
                   activeTab === 'additional'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                    ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
                 }`}
               >
                 <Building className="h-4 w-4" />
@@ -417,7 +392,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       type="text"
                       value={profile.displayName}
                       onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-                      className="flex-1 bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                       placeholder="Enter your name"
                     />
                   </div>
@@ -433,7 +408,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       type="email"
                       value={profile.email}
                       disabled
-                      className="flex-1 bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-gray-400 cursor-not-allowed"
+                      className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-secondary)] cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -445,21 +420,21 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
             <div className="space-y-8">
               {/* Theme Selection */}
               <div>
-                <h3 className="text-xl font-semibold text-gray-200 mb-6">Theme</h3>
+                <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Theme</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => setTheme('light')}
                     className={`p-4 rounded-lg border ${
                       theme === 'light'
-                        ? 'border-primary bg-primary/10'
-                        : 'border-gray-800 hover:border-gray-700'
+                        ? 'border-[var(--highlight-color)] bg-[var(--highlight-bg)]'
+                        : 'border-[var(--border-color)] hover:border-[var(--highlight-color)]'
                     } transition-all`}
                   >
-                    <div className="bg-white rounded-md p-3 mb-2">
-                      <Sun className="h-6 w-6 text-gray-900 mx-auto" />
+                    <div className="bg-[var(--bg-primary)] rounded-md p-3 mb-2">
+                      <Sun className="h-6 w-6 text-[var(--text-primary)] mx-auto" />
                     </div>
-                    <span className="text-sm font-medium text-gray-300">Light</span>
+                    <span className="text-sm font-medium text-[var(--text-primary)]">Light</span>
                   </button>
 
                   <button
@@ -467,14 +442,14 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     onClick={() => setTheme('dark')}
                     className={`p-4 rounded-lg border ${
                       theme === 'dark'
-                        ? 'border-primary bg-primary/10'
-                        : 'border-gray-800 hover:border-gray-700'
+                        ? 'border-[var(--highlight-color)] bg-[var(--highlight-bg)]'
+                        : 'border-[var(--border-color)] hover:border-[var(--highlight-color)]'
                     } transition-all`}
                   >
-                    <div className="bg-gray-900 rounded-md p-3 mb-2">
-                      <Moon className="h-6 w-6 text-white mx-auto" />
+                    <div className="bg-[var(--bg-secondary)] rounded-md p-3 mb-2">
+                      <Moon className="h-6 w-6 text-[var(--text-primary)] mx-auto" />
                     </div>
-                    <span className="text-sm font-medium text-gray-300">Dark</span>
+                    <span className="text-sm font-medium text-[var(--text-primary)]">Dark</span>
                   </button>
                 </div>
               </div>
@@ -482,10 +457,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
               {/* Font Selection */}
               <div>
                 <div className="flex items-center space-x-2 mb-6">
-                  <Type className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-xl font-semibold text-gray-200">Font</h3>
+                  <Type className="h-5 w-5 text-[var(--text-secondary)]" />
+                  <h3 className="text-xl font-semibold text-[var(--text-primary)]">Font</h3>
                 </div>
-                <div className="space-y-4 bg-[#0A0A0A] border border-gray-800 rounded-lg p-4">
+                <div className="space-y-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg p-6">
                   <div className="flex items-center">
                     <input
                       type="radio"
@@ -496,8 +471,8 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       onChange={(e) => setFont(e.target.value as FontOption)}
                       className="mr-3"
                     />
-                    <label htmlFor="font-system" className="text-gray-300">
-                      System Default
+                    <label htmlFor="font-system" className="text-[var(--text-primary)] flex items-center">
+                      <span className="font-preview-system">System Default</span>
                     </label>
                   </div>
                   
@@ -511,8 +486,9 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       onChange={(e) => setFont(e.target.value as FontOption)}
                       className="mr-3"
                     />
-                    <label htmlFor="font-opendyslexic" className="text-gray-300">
-                      OpenDyslexic (Dyslexia-friendly)
+                    <label htmlFor="font-opendyslexic" className="text-[var(--text-primary)] flex items-center gap-2">
+                      <span className="font-preview-opendyslexic">OpenDyslexic</span>
+                      <span className="text-[var(--text-secondary)] text-sm">(Dyslexia-friendly)</span>
                     </label>
                   </div>
 
@@ -526,8 +502,8 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       onChange={(e) => setFont(e.target.value as FontOption)}
                       className="mr-3"
                     />
-                    <label htmlFor="font-arial" className="text-gray-300">
-                      Arial
+                    <label htmlFor="font-arial" className="text-[var(--text-primary)] flex items-center">
+                      <span className="font-preview-arial">Arial</span>
                     </label>
                   </div>
 
@@ -541,8 +517,8 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       onChange={(e) => setFont(e.target.value as FontOption)}
                       className="mr-3"
                     />
-                    <label htmlFor="font-verdana" className="text-gray-300">
-                      Verdana
+                    <label htmlFor="font-verdana" className="text-[var(--text-primary)] flex items-center">
+                      <span className="font-preview-verdana">Verdana</span>
                     </label>
                   </div>
                 </div>
@@ -565,7 +541,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                         type="tel"
                         value={profile.phone}
                         onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                        className="flex-1 bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                         placeholder="Enter your phone number"
                       />
                     </div>
@@ -581,7 +557,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                         type="text"
                         value={profile.location}
                         onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                        className="flex-1 bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                         placeholder="Enter your location"
                       />
                     </div>
@@ -597,7 +573,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                         type="text"
                         value={profile.organization}
                         onChange={(e) => setProfile({ ...profile, organization: e.target.value })}
-                        className="flex-1 bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                         placeholder="Enter your organization"
                       />
                     </div>
@@ -610,7 +586,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     <select
                       value={profile.role}
                       onChange={(e) => setProfile({ ...profile, role: e.target.value })}
-                      className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                     >
                       <option value="">Select your role</option>
                       <option value="props_master">Props Master</option>
@@ -629,7 +605,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     <textarea
                       value={profile.bio}
                       onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                      className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                       rows={4}
                       placeholder="Tell us about yourself"
                     />

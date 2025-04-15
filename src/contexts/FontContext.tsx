@@ -18,6 +18,7 @@ export function FontProvider({ children }: { children: React.ReactNode }): JSX.E
   useEffect(() => {
     localStorage.setItem('font', font);
     document.documentElement.style.setProperty('--font-family', getFontFamily(font));
+    document.documentElement.setAttribute('data-font', font);
   }, [font]);
 
   return (
@@ -38,12 +39,12 @@ export const useFont = (): FontContextType => {
 function getFontFamily(font: FontOption): string {
   switch (font) {
     case 'opendyslexic':
-      return 'OpenDyslexic, system-ui, sans-serif';
+      return "'OpenDyslexic', system-ui, sans-serif";
     case 'arial':
-      return 'Arial, system-ui, sans-serif';
+      return "Arial, system-ui, sans-serif";
     case 'verdana':
-      return 'Verdana, system-ui, sans-serif';
+      return "Verdana, system-ui, sans-serif";
     default:
-      return 'system-ui, -apple-system, sans-serif';
+      return "'Lexend', system-ui, -apple-system, sans-serif";
   }
 } 

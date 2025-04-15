@@ -45,6 +45,19 @@ export const propCategories = [
 
 export type PropCategory = typeof propCategories[number];
 
+export interface Scene {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface Act {
+  id: number;
+  name?: string;
+  description?: string;
+  scenes: Scene[];
+}
+
 export interface PropFormData {
   name: string;
   price: number;
@@ -62,6 +75,7 @@ export interface PropFormData {
   purchaseUrl?: string;
   act: number;
   scene: number;
+  sceneName?: string;
   isMultiScene: boolean;
   isConsumable: boolean;
   quantity: number;
@@ -99,6 +113,7 @@ export interface PropFormProps {
   initialData?: PropFormData;
   mode?: 'create' | 'edit';
   onCancel?: () => void;
+  show?: Show;
 }
 
 export interface Prop extends PropFormData {
@@ -112,30 +127,46 @@ export interface Show {
   id: string;
   name: string;
   description: string;
-  acts: number;
-  scenes: number;
+  acts: Act[];
   userId: string;
   createdAt: string;
   collaborators: ShowCollaborator[];
-  stageManager?: string;
-  propsSupervisor?: string;
-  productionCompany?: string;
+  stageManager: string;
+  stageManagerEmail: string;
+  stageManagerPhone?: string;
+  propsSupervisor: string;
+  propsSupervisorEmail: string;
+  propsSupervisorPhone?: string;
+  productionCompany: string;
+  productionContactName: string;
+  productionContactEmail: string;
+  productionContactPhone?: string;
   venues: Venue[];
   isTouringShow: boolean;
   contacts: Contact[];
+  imageUrl?: string;
+  logoImage?: PropImage;
 }
 
 export interface ShowFormData {
   name: string;
   description: string;
-  acts: number;
-  scenes: number;
-  stageManager?: string;
-  propsSupervisor?: string;
-  productionCompany?: string;
+  acts: Act[];
+  stageManager: string;
+  stageManagerEmail: string;
+  stageManagerPhone?: string;
+  propsSupervisor: string;
+  propsSupervisorEmail: string;
+  propsSupervisorPhone?: string;
+  productionCompany: string;
+  productionContactName: string;
+  productionContactEmail: string;
+  productionContactPhone?: string;
   venues: Venue[];
   isTouringShow: boolean;
   contacts: Contact[];
+  imageUrl?: string;
+  logoImage?: PropImage;
 }
 
 export interface ShowCollaborator {

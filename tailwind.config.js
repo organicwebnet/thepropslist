@@ -7,17 +7,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#1a0404',
-        'primary-dark': '#0d0202',
-        'primary-light': '#ff1a1a',
-        'primary-neon': '#ff0000',
-        'primary-gradient-start': '#1a0404',
-        'primary-gradient-end': '#0d0202',
-        'neon-glow': '#ff000033'
+        // Light theme colors
+        'light-primary': '#0054a6',
+        'light-primary-dark': '#003e8f',
+        'light-primary-light': '#3b82f6',
+        'light-primary-neon': '#60a5fa',
+        'light-neon-glow': '#3b82f633',
+        
+        // Dark theme colors
+        'dark-primary': '#d6001c',
+        'dark-primary-dark': '#a30016',
+        'dark-primary-light': '#ff1a1a',
+        'dark-primary-neon': '#ff0000',
+        'dark-neon-glow': '#ff000033',
+        
+        // Default colors (used by Tailwind classes)
+        primary: '#0054a6',
+        'primary-dark': '#003e8f',
+        'primary-light': '#3b82f6',
+        'primary-neon': '#60a5fa',
+        'neon-glow': '#3b82f633'
       },
       boxShadow: {
-        'neon': '0 0 20px 1px #ff000033',
-        'neon-lg': '0 0 30px 2px #ff000033'
+        'neon': '0 0 20px 1px var(--neon-glow)',
+        'neon-lg': '0 0 30px 2px var(--neon-glow)'
       }
     },
   },
