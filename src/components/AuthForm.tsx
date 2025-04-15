@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithRedirect, getRedirectResult, updateProfile, OAuthCredential } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithPopup, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../lib/firebase';
 import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { GoogleAuthProvider } from 'firebase/auth';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -27,58 +28,64 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Check for redirect result on component mount
-  React.useEffect(() => {
-    const handleRedirectResult = async () => {
-      try {
-        const result = await getRedirectResult(auth);
-        if (result) {
-          const user = result.user;
-          // Update Firestore profile
-          await setDoc(doc(db, 'userProfiles', user.uid), {
-            displayName: user.displayName || '',
-            email: user.email || '',
-            photoURL: user.photoURL || '',
-            provider: 'google.com',
-            createdAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString()
-          }, { merge: true });
-          onClose();
-        }
-      } catch (error) {
-        console.error('Error handling redirect result:', error);
-      }
-    };
-
-    handleRedirectResult();
-  }, [onClose]);
-
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
+
     try {
-      await signInWithRedirect(auth, googleProvider);
-      // The page will redirect to Google sign-in
-      // The result will be handled in the useEffect above
+      // Reset any existing auth state
+      if (auth.currentUser) {
+        await auth.signOut();
+      }
+
+      // Force Google provider configuration
+      googleProvider.setCustomParameters({
+        prompt: 'select_account',
+        auth_type: 'reauthenticate'
+      });
+
+      // Use signInWithPopup with explicit auth instance
+      const result = await signInWithPopup(auth, googleProvider);
+      
+      // Ensure we got a user back
+      if (!result.user) {
+        throw new Error('No user data received');
+      }
+
+      // Get the Google OAuth access token
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      if (!credential) {
+        throw new Error('No auth credential received');
+      }
+
+      // Update Firestore profile
+      await setDoc(doc(db, 'userProfiles', result.user.uid), {
+        displayName: result.user.displayName || '',
+        email: result.user.email || '',
+        photoURL: result.user.photoURL || '',
+        provider: 'google.com',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      }, { merge: true });
+
+      onClose();
     } catch (error: any) {
       console.error('Google sign in error:', error);
-      let message = 'Failed to sign in with Google. Please try again.';
       
-      switch (error.code) {
-        case 'auth/operation-not-allowed':
-          message = 'Google Sign-In is not enabled. Please contact support.';
-          break;
-        case 'auth/unauthorized-domain':
-          message = 'This domain is not authorized for Google Sign-In. Please contact support.';
-          break;
-        default:
-          if (error.message) {
-            message = error.message;
-          }
+      let errorMessage = 'Unable to sign in with Google. Please try again.';
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'The sign-in popup was closed. Please try again and keep the window open until sign-in is complete.';
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Popup was blocked by your browser. Please enable popups for this site and try again.';
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = 'Another popup is already open. Please close it and try again.';
+      } else if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = 'This domain is not authorized for Google authentication. Please check your Firebase configuration.';
       }
       
-      setError(message);
-      console.log('Error details:', error);
+      setError(errorMessage);
+      console.log('Detailed error:', error);
     } finally {
       setLoading(false);
     }

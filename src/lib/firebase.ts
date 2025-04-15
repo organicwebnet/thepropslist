@@ -13,6 +13,11 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
+// Initialize Firebase with custom auth domain for development
+if (window.location.hostname === 'localhost') {
+  firebaseConfig.authDomain = 'props-bible-app-1c1cb.firebaseapp.com'; // Use the actual Firebase auth domain for localhost
+}
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -24,16 +29,15 @@ setPersistence(auth, browserLocalPersistence);
 const storage = getStorage(app);
 const analytics = getAnalytics(app);
 
-// Initialize Google provider with specific settings for Chrome
+// Initialize Google provider
 const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('profile');
-googleProvider.addScope('email');
 
-// Configure for better compatibility with Chrome's privacy settings
+// Enhanced configuration for Google provider
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
 googleProvider.setCustomParameters({
-  prompt: 'consent',  // Force consent screen
-  access_type: 'offline', // Get refresh token
-  client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID
+  prompt: 'select_account',
+  login_hint: 'user@example.com'
 });
 
 // Helper function for delay
