@@ -43,7 +43,6 @@ const validateFirebaseConfig = () => {
   }
 };
 
-// Validate config before proceeding
 validateFirebaseConfig();
 
 const firebaseConfig = {
@@ -82,7 +81,10 @@ try {
 const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
-const analytics = getAnalytics(app);
+let analytics;
+if (typeof window !== 'undefined') {
+  analytics = getAnalytics(app);
+}
 
 // Helper function for Google Sign In
 export const signInWithGoogle = async () => {

@@ -1,5 +1,6 @@
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from './lib/firebase';
+import { testShow } from './data/testData';
 
 const testProducts = [
   {
@@ -105,5 +106,47 @@ export async function addTestData() {
     } catch (error) {
       console.error(`Error adding ${product.name}:`, error);
     }
+  }
+}
+
+export async function addMacbethShow() {
+  // Get the current user's ID from Firebase Auth
+  const auth = (await import('firebase/auth')).getAuth();
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    console.error('No user is signed in. Please sign in before adding the show.');
+    return;
+  }
+
+  try {
+    // Add the show to Firestore
+    const showData = {
+      ...testShow,
+      userId: currentUser.uid,
+      createdAt: new Date().toISOString()
+    };
+
+    const showRef = await addDoc(collection(db, 'shows'), showData);
+    console.log('Added Macbeth show with ID:', showRef.id);
+
+    // Add all the props with the show ID
+    for (const prop of testProducts) {
+      const propData = {
+        ...prop,
+        showId: showRef.id,
+        userId: currentUser.uid,
+        createdAt: new Date().toISOString()
+      };
+
+      await addDoc(collection(db, 'props'), propData);
+      console.log(`Added prop: ${prop.name}`);
+    }
+
+    console.log('Successfully added Macbeth show and all its props!');
+    return showRef.id;
+  } catch (error) {
+    console.error('Error adding Macbeth show:', error);
+    throw error;
   }
 }

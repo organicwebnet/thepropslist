@@ -12,11 +12,13 @@ import { PropDetailPage } from './pages/PropDetailPage';
 import { ShowDetailPage } from './pages/ShowDetailPage';
 import { db, auth } from './lib/firebase';
 import type { Prop, PropFormData, Filters, Show, ShowFormData } from './types';
-import { LogOut, PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { LogOut, PlusCircle, Pencil, Trash2, Plus } from 'lucide-react';
 import { ShowForm } from './components/ShowForm';
 import { SearchBar } from './components/SearchBar';
 import { PropFilters } from './components/PropFilters';
 import { ExportToolbar } from './components/ExportToolbar';
+import { PackingPage } from './pages/PackingPage';
+import { addMacbethShow } from './data/testData';
 
 const initialFilters: Filters = {
   search: '',
@@ -25,7 +27,7 @@ const initialFilters: Filters = {
   category: undefined
 };
 
-function TabNavigation({ activeTab, setActiveTab, navigate }: { activeTab: string; setActiveTab: (tab: 'props' | 'shows') => void; navigate: (path: string) => void }) {
+function TabNavigation({ activeTab, setActiveTab, navigate }: { activeTab: string; setActiveTab: (tab: 'props' | 'shows' | 'packing') => void; navigate: (path: string) => void }) {
   return (
     <div className="mb-6">
       <div className="border-b border-[var(--border-color)]">
@@ -56,6 +58,19 @@ function TabNavigation({ activeTab, setActiveTab, navigate }: { activeTab: strin
           >
             Shows
           </button>
+          <button
+            onClick={() => {
+              setActiveTab('packing');
+              navigate('/packing');
+            }}
+            className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
+              activeTab === 'packing'
+                ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
+                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
+            }`}
+          >
+            Packing
+          </button>
         </nav>
       </div>
     </div>
@@ -77,7 +92,7 @@ function App() {
     category: searchParams.get('category') || undefined
   });
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'props' | 'shows'>('props');
+  const [activeTab, setActiveTab] = useState<'props' | 'shows' | 'packing'>('props');
   const [selectedProp, setSelectedProp] = useState<Prop | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingShow, setEditingShow] = useState<Show | null>(null);
@@ -117,10 +132,24 @@ function App() {
       const showsData: Show[] = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
+        // Ensure acts array is properly initialized with scenes
+        const acts = Array.isArray(data.acts) ? data.acts.map((act: any) => ({
+          ...act,
+          id: act.id || 1,
+          scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
+            ...scene,
+            id: scene.id || 1
+          })) : []
+        })) : [{
+          id: 1,
+          name: 'Act 1',
+          scenes: [{ id: 1, name: 'Scene 1' }]
+        }];
+
         showsData.push({
           id: doc.id,
           ...data,
-          acts: Array.isArray(data.acts) ? data.acts : [],
+          acts,
           collaborators: Array.isArray(data.collaborators) ? data.collaborators : []
         } as Show);
       });
@@ -239,6 +268,8 @@ function App() {
       setActiveTab('shows');
     } else if (path.startsWith('/props')) {
       setActiveTab('props');
+    } else if (path.startsWith('/packing')) {
+      setActiveTab('packing');
     }
   }, [window.location.pathname]);
 
@@ -378,19 +409,27 @@ function App() {
     }
   };
 
-  const handleEditShow = async (id: string, data: ShowFormData) => {
+  const handleShowSubmit = async (data: ShowFormData) => {
     if (!user) return;
-    
     try {
-      await updateDoc(doc(db, 'shows', id), {
-        ...data,
-        lastModifiedAt: new Date().toISOString()
-      });
-      setShowEditModal(false);
-      setEditingShow(null);
+      if (showFormMode === 'edit' && editingShow) {
+        await updateDoc(doc(db, 'shows', editingShow.id), {
+          ...data,
+          lastModifiedAt: new Date().toISOString()
+        });
+        setEditingShow(null);
+        setShowFormMode('create');
+      } else {
+        await addDoc(collection(db, 'shows'), {
+          ...data,
+          userId: user.uid,
+          createdAt: new Date().toISOString(),
+          collaborators: []
+        });
+      }
     } catch (error) {
-      console.error('Error updating show:', error);
-      alert('Failed to update show. Please try again.');
+      console.error('Error with show:', error);
+      alert(`Failed to ${showFormMode} show. Please try again.`);
     }
   };
 
@@ -409,6 +448,16 @@ function App() {
     } catch (error) {
       console.error('Error deleting show:', error);
       alert('Failed to delete show. Please try again.');
+    }
+  };
+
+  const handleAddMacbethShow = async () => {
+    try {
+      await addMacbethShow();
+      console.log('Successfully added Macbeth show');
+    } catch (error) {
+      console.error('Error adding Macbeth show:', error);
+      alert('Failed to add Macbeth show. Please try again.');
     }
   };
 
@@ -593,6 +642,16 @@ function App() {
                 <div className="lg:grid lg:grid-cols-2 lg:gap-12">
                   <div className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-8">
                     <div className="lg:h-full lg:overflow-y-auto lg:pr-6 scrollbar-hide">
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold">Shows</h2>
+                        <button
+                          onClick={handleAddMacbethShow}
+                          className="btn-primary flex items-center gap-2"
+                        >
+                          <Plus className="h-5 w-5" />
+                          <span>Add Macbeth</span>
+                        </button>
+                      </div>
                       <ShowForm
                         mode={showFormMode}
                         initialData={showFormMode === 'edit' && editingShow ? {
@@ -615,34 +674,7 @@ function App() {
                           imageUrl: editingShow.imageUrl,
                           logoImage: editingShow.logoImage
                         } : undefined}
-                        onSubmit={async (data) => {
-                          if (!user) return;
-                          try {
-                            if (showFormMode === 'edit' && editingShow) {
-                              await updateDoc(doc(db, 'shows', editingShow.id), {
-                                ...data,
-                                lastModifiedAt: new Date().toISOString()
-                              });
-                              setEditingShow(null);
-                              setShowFormMode('create');
-                            } else {
-                              await addDoc(collection(db, 'shows'), {
-                                ...data,
-                                userId: user.uid,
-                                createdAt: new Date().toISOString(),
-                                collaborators: []
-                              });
-                            }
-                          } catch (error) {
-                            console.error('Error with show:', error);
-                            alert(`Failed to ${showFormMode} show. Please try again.`);
-                          }
-                        }}
-                        onCancel={() => {
-                          setEditingShow(null);
-                          setShowFormMode('create');
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}
+                        onSubmit={handleShowSubmit}
                       />
                     </div>
                   </div>
@@ -741,6 +773,72 @@ function App() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-red-400">Please sign in to view shows</p>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
+                >
+                  Sign In
+                </button>
+              </div>
+            )
+          } />
+          <Route path="/packing/:showId" element={
+            user ? (
+              <PackingPage />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-red-400">Please sign in to access packing lists</p>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
+                >
+                  Sign In
+                </button>
+              </div>
+            )
+          } />
+          <Route path="/packing" element={
+            user ? (
+              <>
+                <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} navigate={navigate} />
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-bold text-gray-200">Select a Show to Pack</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {shows.map(show => (
+                      <div
+                        key={show.id}
+                        className="flex items-center p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg hover:border-[var(--highlight-color)] transition-colors cursor-pointer"
+                        onClick={() => navigate(`/packing/${show.id}`)}
+                      >
+                        <div className="flex items-center gap-4">
+                          {show.imageUrl ? (
+                            <img
+                              src={show.imageUrl}
+                              alt={`${show.name} logo`}
+                              className="w-12 h-12 rounded-lg object-cover border border-[var(--border-color)]"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
+                              <span className="text-2xl font-semibold text-[var(--text-secondary)]">
+                                {show.name[0]}
+                              </span>
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="font-medium text-gray-200">{show.name}</h3>
+                            <p className="text-sm text-gray-400">
+                              {show.acts.length} Acts • {show.acts.reduce((sum, act) => sum + act.scenes.length, 0)} Scenes
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-red-400">Please sign in to access packing lists</p>
                 <button
                   onClick={() => setShowAuth(true)}
                   className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
