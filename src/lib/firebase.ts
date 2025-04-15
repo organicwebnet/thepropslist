@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -16,15 +16,25 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// Configure auth persistence
+auth.useDeviceLanguage();
+setPersistence(auth, browserLocalPersistence);
+
 const storage = getStorage(app);
 const analytics = getAnalytics(app);
 
-// Initialize Google provider
+// Initialize Google provider with specific settings for Chrome
 const googleProvider = new GoogleAuthProvider();
-
-// Configure Google provider
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
+
+// Configure for better compatibility with Chrome's privacy settings
+googleProvider.setCustomParameters({
+  prompt: 'consent',  // Force consent screen
+  access_type: 'offline', // Get refresh token
+  client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID
+});
 
 // Helper function for delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

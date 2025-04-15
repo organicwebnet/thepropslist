@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithPopup, updateProfile, OAuthCredential } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithRedirect, getRedirectResult, updateProfile, OAuthCredential } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../lib/firebase';
 import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
@@ -27,40 +27,49 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Check for redirect result on component mount
+  React.useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          const user = result.user;
+          // Update Firestore profile
+          await setDoc(doc(db, 'userProfiles', user.uid), {
+            displayName: user.displayName || '',
+            email: user.email || '',
+            photoURL: user.photoURL || '',
+            provider: 'google.com',
+            createdAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+          onClose();
+        }
+      } catch (error) {
+        console.error('Error handling redirect result:', error);
+      }
+    };
+
+    handleRedirectResult();
+  }, [onClose]);
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      // Update Firestore profile
-      await setDoc(doc(db, 'userProfiles', user.uid), {
-        displayName: user.displayName || '',
-        email: user.email || '',
-        photoURL: user.photoURL || '',
-        provider: 'google.com',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      }, { merge: true });
-
-      onClose();
+      await signInWithRedirect(auth, googleProvider);
+      // The page will redirect to Google sign-in
+      // The result will be handled in the useEffect above
     } catch (error: any) {
       console.error('Google sign in error:', error);
       let message = 'Failed to sign in with Google. Please try again.';
       
       switch (error.code) {
-        case 'auth/popup-closed-by-user':
-          message = 'Sign in cancelled. Please try again.';
-          break;
-        case 'auth/popup-blocked':
-          message = 'Sign in popup was blocked. Please allow popups for this site.';
-          break;
-        case 'auth/cancelled-popup-request':
-          message = 'Another sign in attempt is in progress.';
-          break;
         case 'auth/operation-not-allowed':
           message = 'Google Sign-In is not enabled. Please contact support.';
+          break;
+        case 'auth/unauthorized-domain':
+          message = 'This domain is not authorized for Google Sign-In. Please contact support.';
           break;
         default:
           if (error.message) {
@@ -69,6 +78,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
       }
       
       setError(message);
+      console.log('Error details:', error);
     } finally {
       setLoading(false);
     }

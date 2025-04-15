@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useSearchParams } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, addDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { collection, query, where, onSnapshot, doc, addDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged, signOut, getRedirectResult, GoogleAuthProvider, linkWithCredential } from 'firebase/auth';
 import { AuthForm } from './components/AuthForm';
 import { PropForm } from './components/PropForm';
 import { PropList } from './components/PropList';
@@ -112,6 +112,72 @@ function App() {
 
     return () => unsubscribe();
   }, [user, selectedShow]);
+
+  // Handle redirect result from Google Sign-in
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        // Check if there's a redirect result
+        const result = await getRedirectResult(auth);
+        
+        if (result) {
+          console.log('Redirect authentication result:', result);
+
+          // Check if we were trying to link accounts
+          const shouldLink = localStorage.getItem('linkGoogleAccount') === 'true';
+          const linkEmail = localStorage.getItem('linkEmail');
+          
+          if (shouldLink && linkEmail && user) {
+            console.log(`Attempting to link Google account to ${linkEmail}`);
+
+            try {
+              // Check if the Google account email matches the user's email
+              const googleEmail = result.user.email;
+              
+              if (googleEmail !== linkEmail) {
+                console.error('Email mismatch:', { googleEmail, linkEmail });
+                window.alert('Please use the same Google account as your current email.');
+                return;
+              }
+              
+              // Get the credential from the redirect result
+              const credential = GoogleAuthProvider.credentialFromResult(result);
+              
+              if (credential) {
+                // Link the credential to the current user
+                await linkWithCredential(user, credential);
+                
+                // Update the user profile in Firestore
+                await setDoc(doc(db, 'userProfiles', user.uid), {
+                  googleLinked: true,
+                  photoURL: result.user.photoURL || user.photoURL,
+                  displayName: result.user.displayName || user.displayName,
+                  lastUpdated: new Date().toISOString()
+                }, { merge: true });
+                
+                console.log('Successfully linked Google account');
+                window.alert('Successfully linked your Google account!');
+              } else {
+                window.alert('Failed to link Google account. No valid credentials received.');
+              }
+            } catch (error: any) {
+              console.error('Error linking account:', error);
+              window.alert(error?.message || 'Failed to link Google account. The account may already be in use.');
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('Error handling redirect result:', error);
+        window.alert(error?.message || 'An error occurred while handling Google sign-in.');
+      } finally {
+        // Always clear the localStorage flags
+        localStorage.removeItem('linkGoogleAccount');
+        localStorage.removeItem('linkEmail');
+      }
+    };
+    
+    handleRedirectResult();
+  }, [user]);
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);

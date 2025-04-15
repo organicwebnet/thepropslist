@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { updateProfile, signOut } from 'firebase/auth';
-import { db, auth } from '../lib/firebase';
-import { User, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut } from 'lucide-react';
+import { updateProfile, signOut, GoogleAuthProvider, signInWithRedirect } from 'firebase/auth';
+import { db, auth, googleProvider } from '../lib/firebase';
+import { User, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFont, FontOption } from '../contexts/FontContext';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface UserProfileModalProps {
   onClose: () => void;
@@ -14,7 +15,7 @@ interface UserProfileModalProps {
 type TabType = 'basic' | 'appearance' | 'additional';
 
 export function UserProfileModal({ onClose }: UserProfileModalProps) {
-  const [profile, setProfile] = useState<UserProfile>({
+  const [profile, setProfile] = useState<UserProfile & { googleLinked?: boolean }>({
     displayName: auth.currentUser?.displayName || '',
     email: auth.currentUser?.email || '',
     photoURL: auth.currentUser?.photoURL || '',
@@ -22,7 +23,8 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     location: '',
     organization: '',
     role: '',
-    bio: ''
+    bio: '',
+    googleLinked: false
   });
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   const [error, setError] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const { font, setFont } = useFont();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -45,6 +48,12 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
           provider => provider.providerId === 'apple.com'
         );
 
+        // Log provider data for debugging
+        console.log('Auth providers:', currentUser.providerData.map(p => p.providerId));
+        
+        // Check if Google account is linked
+        const hasGoogleProvider = !!googleData;
+        
         // Get existing profile from Firestore
         const profileDoc = await getDoc(doc(db, 'userProfiles', currentUser.uid));
         const existingData = profileDoc.exists() ? profileDoc.data() : {};
@@ -62,6 +71,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                    appleData?.photoURL || 
                    googleData?.photoURL || 
                    currentUser.photoURL || '',
+          googleLinked: hasGoogleProvider || existingData.googleLinked || false
         }));
 
         // If this is the first time setting up the profile, save the provider data
@@ -73,6 +83,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
               email: providerData.email || '',
               photoURL: providerData.photoURL || '',
               provider: providerData.providerId,
+              googleLinked: providerData.providerId === 'google.com',
               createdAt: new Date().toISOString(),
               lastUpdated: new Date().toISOString()
             });
@@ -115,6 +126,68 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
       setError('Failed to update profile. Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !auth.currentUser) return;
+    
+    // Check if file is an image
+    if (!file.type.match('image.*')) {
+      setError('Please select an image file');
+      return;
+    }
+    
+    // Check file size (limit to 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size should be less than 5MB');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Create a temporary URL to show the image immediately
+      const tempURL = URL.createObjectURL(file);
+      setProfile(prev => ({ ...prev, photoURL: tempURL }));
+      
+      // Upload to Firebase Storage
+      const storage = getStorage();
+      const storageRef = ref(storage, `profile_images/${auth.currentUser.uid}`);
+      
+      // Upload the file
+      await uploadBytes(storageRef, file);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Update profile with the permanent URL
+      setProfile(prev => ({ ...prev, photoURL: downloadURL }));
+      
+      // Clean up temporary URL
+      URL.revokeObjectURL(tempURL);
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setError('Failed to upload image. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLink = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      // Use the shared googleProvider instance
+      await signInWithRedirect(auth, googleProvider);
+    } catch (error: any) {
+      console.error('Error initiating Google sign-in:', error);
+      setError(error?.message || 'Failed to initiate Google sign-in. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,7 +248,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                 onClick={() => setActiveTab('basic')}
                 className={`py-4 px-1 inline-flex items-center space-x-2 border-b-2 text-sm font-medium ${
                   activeTab === 'basic'
-                    ? 'border-primary text-primary'
+                    ? 'border-primary text-sky-400'
                     : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
                 }`}
               >
@@ -219,42 +292,74 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
             <div className="space-y-6">
               {/* Sync with Google Button */}
               <div className="mb-6">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const currentUser = auth.currentUser;
-                      if (!currentUser) return;
+                {/* Show different buttons based on whether Google provider is available */}
+                {profile.googleLinked ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const currentUser = auth.currentUser;
+                        if (!currentUser) return;
 
-                      const googleData = currentUser.providerData.find(
-                        provider => provider.providerId === 'google.com'
-                      );
+                        const googleData = currentUser.providerData.find(
+                          provider => provider.providerId === 'google.com'
+                        );
 
-                      if (!googleData) {
-                        setError('No Google account data found. Please make sure you signed in with Google.');
-                        return;
+                        if (!googleData) {
+                          // Check if user's email ends with gmail.com but they didn't sign in with Google
+                          if (currentUser.email?.endsWith('@gmail.com')) {
+                            setError('Your account uses a Gmail address but was not signed in with Google. Please sign out and use the "Sign in with Google" option.');
+                          } else {
+                            setError('No Google account connected. Please sign out and sign in with Google to use this feature.');
+                          }
+                          return;
+                        }
+
+                        // Successfully found Google provider data
+                        setProfile(prev => ({
+                          ...prev,
+                          displayName: googleData.displayName || prev.displayName,
+                          photoURL: googleData.photoURL || prev.photoURL,
+                        }));
+
+                        // Show success message
+                        const oldError = error;
+                        setError('Successfully synced with Google account!');
+                        
+                        // After 3 seconds, clear the success message or restore previous error
+                        setTimeout(() => {
+                          setError(message => message === 'Successfully synced with Google account!' ? null : oldError);
+                        }, 3000);
+                      } catch (err) {
+                        console.error('Error syncing with Google:', err);
+                        setError('Failed to sync with Google account. Please try again.');
                       }
-
-                      setProfile(prev => ({
-                        ...prev,
-                        displayName: googleData.displayName || prev.displayName,
-                        photoURL: googleData.photoURL || prev.photoURL,
-                      }));
-
-                      // Show success message
-                      const oldError = error;
-                      setError('Successfully synced with Google account!');
-                      setTimeout(() => setError(oldError), 3000);
-                    } catch (err) {
-                      console.error('Error syncing with Google:', err);
-                      setError('Failed to sync with Google account. Please try again.');
-                    }
-                  }}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  Sync with Google Account
-                </button>
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Sync with Google Account
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleGoogleLink}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Preparing Sign-in...
+                      </>
+                    ) : (
+                      <>
+                        <LinkIcon className="h-4 w-4" />
+                        Link Google Account
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Profile Picture */}
@@ -272,20 +377,23 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       />
                     ) : (
                       <div className="w-32 h-32 rounded-full bg-gray-800 flex items-center justify-center border-4 border-primary">
-                        <User className="h-16 w-16 text-gray-400" />
+                        <User className="h-16 w-16 text-sky-400" />
                       </div>
                     )}
-                    <div className="absolute bottom-0 right-0 p-2 bg-primary rounded-full shadow-lg">
+                    <div 
+                      className="absolute bottom-0 right-0 p-2 bg-primary rounded-full shadow-lg cursor-pointer hover:bg-primary-dark transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
                       <Camera className="h-5 w-5 text-white" />
                     </div>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
                   </div>
-                  <input
-                    type="url"
-                    value={profile.photoURL}
-                    onChange={(e) => setProfile({ ...profile, photoURL: e.target.value })}
-                    className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder="Enter image URL"
-                  />
                 </div>
               </div>
 
