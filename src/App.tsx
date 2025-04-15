@@ -5,8 +5,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { AuthForm } from './components/AuthForm';
 import { PropForm } from './components/PropForm';
 import { PropList } from './components/PropList';
-import { SearchBar } from './components/SearchBar';
-import { PropFilters } from './components/PropFilters';
+
 import { UserProfileModal } from './components/UserProfile';
 import { ShareModal } from './components/ShareModal';
 import { PropDetailPage } from './pages/PropDetailPage';
@@ -251,7 +250,7 @@ function App() {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold gradient-text">Props Bible</h1>
+          <h1 className="text-3xl font-bold gradient-text"> The Props Bible</h1>
           {user && (
             <div className="flex items-center gap-4">
               <button
@@ -309,26 +308,14 @@ function App() {
             <>
               {user && (
                 <>
-                  <div className="flex items-center space-x-4 mb-8">
-                    <SearchBar 
-                      value={filters.search}
-                      onChange={(value) => handleFilterChange({ ...filters, search: value })}
-                    />
-                    <PropFilters
-                      filters={filters}
-                      onChange={handleFilterChange}
-                      onReset={handleFilterReset}
-                    />
-                  </div>
-
                   {shows.length > 0 ? (
                     <div className="lg:grid lg:grid-cols-2 lg:gap-8">
-                      <div className="lg:h-[calc(100vh-12rem)] lg:sticky lg:top-8">
+                      <div className="lg:h-[calc(100vh-6rem)] lg:sticky lg:top-8">
                         <div className="lg:h-full lg:overflow-y-auto lg:pr-4 scrollbar-hide">
                           <PropForm onSubmit={handlePropSubmit} />
                         </div>
                       </div>
-                      <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-12rem)] lg:overflow-y-auto scrollbar-hide">
+                      <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-6rem)] lg:overflow-y-auto scrollbar-hide">
                         <PropList
                           props={filteredProps}
                           onDelete={handleDelete}
@@ -338,6 +325,9 @@ function App() {
                           onShare={handleShowShare}
                           onSelect={handleShowSelect}
                           show={selectedShow || shows[0]}
+                          filters={filters}
+                          onFilterChange={handleFilterChange}
+                          onFilterReset={handleFilterReset}
                         />
                       </div>
                     </div>

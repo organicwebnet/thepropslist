@@ -37,33 +37,46 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
         const currentUser = auth.currentUser;
         if (!currentUser) return;
 
-        // Get the user's Google provider data
+        // Get the user's provider data
         const googleData = currentUser.providerData.find(
           provider => provider.providerId === 'google.com'
+        );
+        const appleData = currentUser.providerData.find(
+          provider => provider.providerId === 'apple.com'
         );
 
         // Get existing profile from Firestore
         const profileDoc = await getDoc(doc(db, 'userProfiles', currentUser.uid));
         const existingData = profileDoc.exists() ? profileDoc.data() : {};
 
-        // Merge Google data with existing profile data
+        // Merge provider data with existing profile data
         setProfile(prev => ({
           ...prev,
           ...existingData,
-          displayName: existingData.displayName || googleData?.displayName || currentUser.displayName || '',
+          displayName: existingData.displayName || 
+                      appleData?.displayName || 
+                      googleData?.displayName || 
+                      currentUser.displayName || '',
           email: currentUser.email || '',
-          photoURL: existingData.photoURL || googleData?.photoURL || currentUser.photoURL || '',
+          photoURL: existingData.photoURL || 
+                   appleData?.photoURL || 
+                   googleData?.photoURL || 
+                   currentUser.photoURL || '',
         }));
 
-        // If this is the first time setting up the profile, save the Google data
-        if (!profileDoc.exists() && googleData) {
-          await setDoc(doc(db, 'userProfiles', currentUser.uid), {
-            displayName: googleData.displayName || '',
-            email: googleData.email || '',
-            photoURL: googleData.photoURL || '',
-            createdAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString()
-          });
+        // If this is the first time setting up the profile, save the provider data
+        if (!profileDoc.exists()) {
+          const providerData = appleData || googleData;
+          if (providerData) {
+            await setDoc(doc(db, 'userProfiles', currentUser.uid), {
+              displayName: providerData.displayName || '',
+              email: providerData.email || '',
+              photoURL: providerData.photoURL || '',
+              provider: providerData.providerId,
+              createdAt: new Date().toISOString(),
+              lastUpdated: new Date().toISOString()
+            });
+          }
         }
       } catch (error) {
         console.error('Error fetching profile:', error);

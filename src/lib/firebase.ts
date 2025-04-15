@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, OAuthProvider } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -18,6 +18,18 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const storage = getStorage(app);
 const analytics = getAnalytics(app);
+
+// Initialize providers
+const googleProvider = new GoogleAuthProvider();
+const appleProvider = new OAuthProvider('apple.com');
+
+// Configure Apple provider
+appleProvider.addScope('email');
+appleProvider.addScope('name');
+
+// Configure Google provider
+googleProvider.addScope('profile');
+googleProvider.addScope('email');
 
 // Helper function for delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -83,4 +95,4 @@ export async function fetchStorageImage(url: string): Promise<Blob> {
   throw new Error(errorMessage);
 }
 
-export { db, auth, storage, analytics };
+export { db, auth, storage, analytics, googleProvider, appleProvider };

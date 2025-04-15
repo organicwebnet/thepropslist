@@ -1,7 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, Trash2, Theater, Edit, AlertTriangle, Calendar, FileText, Share2, ChevronsUp } from 'lucide-react';
-import type { Prop, PropFormData, Show } from '../types';
+import type { Prop, PropFormData, Show, Filters } from '../types';
+import { ExportToolbar } from './ExportToolbar';
+import { SearchBar } from './SearchBar';
+import { PropFilters } from './PropFilters';
 
 interface PropListProps {
   props: Prop[];
@@ -12,9 +15,24 @@ interface PropListProps {
   onShare?: (show: Show) => void;
   onSelect?: (show: Show) => void;
   show: Show;
+  filters: Filters;
+  onFilterChange: (filters: Filters) => void;
+  onFilterReset: () => void;
 }
 
-export function PropList({ props, onDelete, onUpdatePrice, onEdit, onCategoryClick, onShare, onSelect, show }: PropListProps) {
+export function PropList({ 
+  props, 
+  onDelete, 
+  onUpdatePrice, 
+  onEdit, 
+  onCategoryClick, 
+  onShare, 
+  onSelect, 
+  show,
+  filters,
+  onFilterChange,
+  onFilterReset
+}: PropListProps) {
   const navigate = useNavigate();
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -59,24 +77,90 @@ export function PropList({ props, onDelete, onUpdatePrice, onEdit, onCategoryCli
     }
   };
 
+  const handleMergeProps = async (original: Prop, duplicate: Prop) => {
+    if (!onEdit) return;
+
+    try {
+      // Create merged prop data
+      const mergedData: PropFormData = {
+        ...original,
+        quantity: original.quantity + duplicate.quantity,
+        // If the props are used in different acts/scenes, mark as multi-scene
+        isMultiScene: original.act !== duplicate.act || original.scene !== duplicate.scene
+      };
+
+      // Update the original prop with merged data
+      await onEdit(original.id, mergedData);
+      
+      // Delete the duplicate
+      if (onDelete) {
+        await onDelete(duplicate.id);
+      }
+    } catch (error) {
+      console.error('Error merging props:', error);
+      alert('Failed to merge props. Please try again.');
+    }
+  };
+
+  const handleEditProp = async (propId: string, updates: Partial<Prop>) => {
+    if (!onEdit) return;
+    // Convert Partial<Prop> to PropFormData by ensuring required fields are present
+    const prop = props.find(p => p.id === propId);
+    if (!prop) return;
+    
+    await onEdit(propId, {
+      ...prop,
+      ...updates,
+      // Ensure required fields are present
+      name: updates.name || prop.name,
+      act: updates.act || prop.act,
+      scene: updates.scene || prop.scene,
+      category: updates.category || prop.category,
+      price: updates.price || prop.price,
+      quantity: updates.quantity || prop.quantity
+    });
+  };
+
   return (
     <div className="space-y-4" ref={listRef}>
-      <div className="flex justify-between items-center sticky top-0 bg-[#0A0A0A] z-10 py-2">
-        <h2 
-          className="text-2xl font-bold text-white cursor-pointer hover:text-primary transition-colors"
-          onClick={() => onSelect?.(show)}
-        >
-          {show.name}
-        </h2>
-        {onShare && (
-          <button
-            onClick={() => onShare(show)}
-            className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+      <div className="space-y-4 sticky top-0 bg-[#0A0A0A] z-10 py-2">
+        <div className="flex justify-between items-center">
+          <h2 
+            className="text-3xl font-bold text-white cursor-pointer hover:text-primary transition-colors"
+            onClick={() => onSelect?.(show)}
           >
-            <Share2 className="h-4 w-4 mr-2" />
-            Share Show
-          </button>
-        )}
+            {show.name}
+          </h2>
+          <div className="flex items-center gap-4">
+            <ExportToolbar 
+              props={props} 
+              show={show} 
+              onMergeProps={handleMergeProps}
+              onDeleteProp={onDelete}
+              onEditProp={handleEditProp}
+            />
+            {onShare && (
+              <button
+                onClick={() => onShare(show)}
+                className="inline-flex items-center px-3 py-1.5 text-sm rounded-md bg-primary text-white hover:bg-primary/90 transition-colors"
+              >
+                <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                Share
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center space-x-4">
+          <SearchBar 
+            value={filters.search}
+            onChange={(value) => onFilterChange({ ...filters, search: value })}
+          />
+          <PropFilters
+            filters={filters}
+            onChange={onFilterChange}
+            onReset={onFilterReset}
+          />
+        </div>
       </div>
       {props.map((prop) => (
         <div 
@@ -158,7 +242,23 @@ export function PropList({ props, onDelete, onUpdatePrice, onEdit, onCategoryCli
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-gray-400">{prop.description}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Theater className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">
+                      Act {prop.act}, Scene {prop.scene}
+                    </span>
+                    <span 
+                      className="px-2 py-0.5 text-sm bg-gray-800 text-gray-300 rounded cursor-pointer hover:bg-gray-700"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onCategoryClick?.(prop.category);
+                      }}
+                    >
+                      {prop.category}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-gray-400">{prop.description}</p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -184,39 +284,28 @@ export function PropList({ props, onDelete, onUpdatePrice, onEdit, onCategoryCli
                 </div>
               </div>
 
-              <div className="mt-2 flex items-center gap-3">
-                <span className="text-red-500 text-xl font-semibold">
-                  ${prop.price.toFixed(2)}
-                </span>
-                <span className="text-gray-400">each</span>
-                {onUpdatePrice && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const newPrice = parseFloat(prompt('Enter new price:', prop.price.toString()) || '0');
-                      if (!isNaN(newPrice) && newPrice >= 0) {
-                        onUpdatePrice(prop.id, newPrice);
-                      }
-                    }}
-                    className="text-sm text-gray-400 hover:text-blue-400 transition-colors"
-                  >
-                    Update Price
-                  </button>
-                )}
-                <span 
-                  className="px-2 py-0.5 text-sm bg-gray-800 text-gray-300 rounded"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onCategoryClick?.(prop.category);
-                  }}
-                >
-                  {prop.category}
-                </span>
-              </div>
-
               <div className="mt-4 space-y-2 text-sm text-gray-400">
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-400">
+                    ${prop.price.toFixed(2)} each
+                  </span>
+                  {onUpdatePrice && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const newPrice = parseFloat(prompt('Enter new price:', prop.price.toString()) || '0');
+                        if (!isNaN(newPrice) && newPrice >= 0) {
+                          onUpdatePrice(prop.id, newPrice);
+                        }
+                      }}
+                      className="text-sm text-gray-400 hover:text-blue-400 transition-colors"
+                    >
+                      Update Price
+                    </button>
+                  )}
+                </div>
+
                 {prop.length && prop.width && prop.height && (
                   <div>
                     L: {prop.length} × W: {prop.width} × H: {prop.height} {prop.unit}
@@ -231,11 +320,6 @@ export function PropList({ props, onDelete, onUpdatePrice, onEdit, onCategoryCli
                     </span>
                   </div>
                 )}
-
-                <div className="flex items-center gap-2">
-                  <Theater className="h-4 w-4" />
-                  <span>First used in: Act {prop.act}, Scene {prop.scene}</span>
-                </div>
 
                 {prop.digitalAssets && prop.digitalAssets.length > 0 && (
                   <div className="flex items-center gap-2">
