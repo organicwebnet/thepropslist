@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithPopup, OAuthProvider, updateProfile, OAuthCredential } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db, googleProvider, appleProvider } from '../lib/firebase';
 import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 
 interface AuthFormProps {
@@ -9,9 +10,16 @@ interface AuthFormProps {
 
 type AuthMode = 'signin' | 'signup' | 'forgot';
 
+interface AppleOAuthCredential extends OAuthCredential {
+  fullName?: {
+    givenName?: string;
+    familyName?: string;
+  };
+}
+
 function RequiredLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="block text-sm font-medium text-gray-300 mb-1">
+    <span className="block text-sm font-medium text-gray-300 mb-1.5">
       {children} <span className="text-primary">*</span>
     </span>
   );
@@ -25,6 +33,114 @@ export function AuthForm({ onClose }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Update Firestore profile
+      await setDoc(doc(db, 'userProfiles', user.uid), {
+        displayName: user.displayName || '',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+        provider: 'google.com',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      }, { merge: true });
+
+      onClose();
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      let message = 'Failed to sign in with Google. Please try again.';
+      
+      switch (error.code) {
+        case 'auth/popup-closed-by-user':
+          message = 'Sign in cancelled. Please try again.';
+          break;
+        case 'auth/popup-blocked':
+          message = 'Sign in popup was blocked. Please allow popups for this site.';
+          break;
+        case 'auth/cancelled-popup-request':
+          message = 'Another sign in attempt is in progress.';
+          break;
+        case 'auth/operation-not-allowed':
+          message = 'Google Sign-In is not enabled. Please contact support.';
+          break;
+        default:
+          if (error.message) {
+            message = error.message;
+          }
+      }
+      
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await signInWithPopup(auth, appleProvider);
+      const user = result.user;
+      const credential = OAuthProvider.credentialFromResult(result) as AppleOAuthCredential;
+
+      // On first sign-in, Apple provides the user's name
+      // We need to save it because Apple won't send it again
+      if (credential?.fullName) {
+        const displayName = `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim();
+        if (displayName) {
+          await updateProfile(user, {
+            displayName: displayName
+          });
+
+          // Update Firestore profile
+          await setDoc(doc(db, 'userProfiles', user.uid), {
+            displayName: displayName,
+            email: user.email || '',
+            provider: 'apple.com',
+            createdAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+        }
+      }
+
+      onClose();
+    } catch (error: any) {
+      console.error('Apple sign in error:', error);
+      let message = 'Failed to sign in with Apple. Please try again.';
+      
+      switch (error.code) {
+        case 'auth/popup-closed-by-user':
+          message = 'Sign in cancelled. Please try again.';
+          break;
+        case 'auth/popup-blocked':
+          message = 'Sign in popup was blocked. Please allow popups for this site.';
+          break;
+        case 'auth/cancelled-popup-request':
+          message = 'Another sign in attempt is in progress.';
+          break;
+        case 'auth/operation-not-allowed':
+          message = 'Apple Sign-In is not enabled. Please contact support.';
+          break;
+        case 'auth/internal-error':
+          message = 'Apple Sign-In configuration error. Please contact support.';
+          break;
+        default:
+          if (error.message) {
+            message = error.message;
+          }
+      }
+      
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validateForm = () => {
     const trimmedEmail = email.trim();
@@ -154,155 +270,286 @@ export function AuthForm({ onClose }: AuthFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-      <div className="bg-[#1A1A1A] rounded-lg shadow-xl p-6 w-full max-w-md border border-gray-800">
-        <div className="flex justify-between items-center mb-6">
-          {mode === 'forgot' ? (
-            <div className="flex items-center">
-              <button
-                onClick={() => {
-                  setMode('signin');
-                  setError(null);
-                  setSuccess(null);
-                }}
-                className="mr-3 text-gray-400 hover:text-gray-200"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </button>
-              <h2 className="text-2xl font-bold gradient-text">Reset Password</h2>
-            </div>
-          ) : (
-            <h2 className="text-2xl font-bold gradient-text">
-              {mode === 'signup' ? 'Create Account' : 'Sign In'}
-            </h2>
-          )}
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-200"
-          >
-            ✕
-          </button>
-        </div>
+    <div className="fixed inset-0 bg-black bg-opacity-90 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+      {/* Dramatic stage background */}
+      <div className="fixed inset-0 pointer-events-none">
+        {/* Background image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: 'url("/stage-background.jpg")',
+            backgroundPosition: 'center',
+            backgroundSize: 'cover'
+          }}
+        />
+        {/* Gradient overlays for depth and readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20" />
+        {/* Blue atmospheric fog overlay */}
+        <div className="absolute inset-0 mix-blend-color bg-blue-900/20" />
+        {/* Additional lighting effect */}
+        <div className="absolute inset-0 bg-gradient-radial from-blue-500/10 via-transparent to-transparent opacity-20" />
+      </div>
 
-        <form onSubmit={mode === 'forgot' ? handleForgotPassword : handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="p-3 bg-green-500/10 border border-green-500/20 rounded text-green-400 text-sm">
-              {success}
-            </div>
-          )}
-
-          <div>
-            <RequiredLabel>Email</RequiredLabel>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              required
-            />
-          </div>
-
-          {mode !== 'forgot' && (
-            <div>
-              <RequiredLabel>Password</RequiredLabel>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 p-1"
-                  title={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
+      <div className="bg-[#1A1A1A]/80 rounded-xl shadow-2xl shadow-neon-lg w-full max-w-4xl flex overflow-hidden border border-primary-neon/20 relative z-10 backdrop-blur-sm">
+        {/* Left Panel */}
+        <div className="w-1/2 bg-gradient-to-br from-primary to-primary-dark p-12 text-white hidden md:block relative overflow-hidden">
+          {/* Neon glow effect */}
+          <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary-neon/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-primary-neon/20 rounded-full blur-3xl"></div>
+          
+          <div className="relative">
+            <h1 className="text-4xl font-bold mb-4 text-white">The Props Bible</h1>
+            <p className="text-lg mb-8 text-white/90">Your complete solution for managing theater props and show inventories</p>
+            
+            <div className="space-y-4">
+              <h3 className="text-xl font-semibold mb-4">Features</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-primary-neon/20 flex items-center justify-center border border-primary-neon/30">
+                    <svg className="w-3 h-3 text-primary-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span>Comprehensive Props Management</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-primary-neon/20 flex items-center justify-center border border-primary-neon/30">
+                    <svg className="w-3 h-3 text-primary-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span>Show Organization</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-primary-neon/20 flex items-center justify-center border border-primary-neon/30">
+                    <svg className="w-3 h-3 text-primary-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span>Collaborative Tools</span>
+                </div>
               </div>
             </div>
-          )}
+          </div>
+        </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full inline-flex items-center justify-center rounded-md bg-gradient-to-r from-primary to-primary-dark px-6 py-3 text-sm font-medium text-white hover:from-primary-dark hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#1A1A1A] disabled:opacity-50 transition-colors"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : mode === 'signup' ? (
-              <>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Sign Up
-              </>
-            ) : mode === 'forgot' ? (
-              'Send Reset Link'
-            ) : (
-              <>
-                <LogIn className="h-4 w-4 mr-2" />
-                Sign In
-              </>
-            )}
-          </button>
+        {/* Right Panel */}
+        <div className="w-full md:w-1/2 p-8 bg-[#1A1A1A] relative">
+          {/* Subtle neon glow for the right panel */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-neon/5 to-transparent opacity-50"></div>
+          
+          <div className="max-w-md mx-auto relative">
+            <div className="flex justify-between items-center mb-8">
+              {mode === 'forgot' ? (
+                <div className="flex items-center">
+                  <button
+                    onClick={() => {
+                      setMode('signin');
+                      setError(null);
+                      setSuccess(null);
+                    }}
+                    className="mr-3 text-gray-400 hover:text-primary-neon transition-colors"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                  <h2 className="text-2xl font-bold text-white">Reset Password</h2>
+                </div>
+              ) : (
+                <h2 className="text-2xl font-bold text-white">
+                  {mode === 'signup' ? 'Create Account' : 'Sign In'}
+                </h2>
+              )}
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-primary-neon transition-colors"
+              >
+                ✕
+              </button>
+            </div>
 
-          <div className="text-center space-y-2">
-            {mode === 'forgot' ? (
+            <div className="mb-6">
+              <h3 className="text-xl text-gray-300 mb-2">Welcome to Props Bible</h3>
+              <p className="text-gray-400">Manage your theater props efficiently</p>
+            </div>
+
+            {/* Social Login Buttons */}
+            <div className="space-y-3 mb-6">
               <button
                 type="button"
-                onClick={() => {
-                  setMode('signin');
-                  setError(null);
-                  setSuccess(null);
-                }}
-                className="text-sm text-primary hover:text-primary/80"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-3 px-6 py-2.5 border border-gray-800 rounded-lg text-white hover:border-primary-neon hover:shadow-neon transition-all duration-300 disabled:opacity-50"
               >
-                Back to Sign In
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                Continue with Google
               </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode(mode === 'signup' ? 'signin' : 'signup');
-                    setError(null);
-                    setSuccess(null);
-                  }}
-                  className="text-sm text-primary hover:text-primary/80"
-                >
-                  {mode === 'signup' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
-                </button>
-                {mode === 'signin' && (
+
+              <button
+                type="button"
+                onClick={handleAppleSignIn}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-3 px-6 py-2.5 border border-gray-800 rounded-lg text-white hover:border-primary-neon hover:shadow-neon transition-all duration-300 disabled:opacity-50"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.78 1.18-.19 2.31-.89 3.51-.84 1.59.07 2.78.88 3.54 2.24-3.25 2.05-2.72 6.52.87 7.94-.65 1.41-1.51 2.82-3 2.85zm-3.19-15.75c.11 1.48-1.05 3.11-3.03 3.36-.15-1.99 1.06-3.01 3.03-3.36z"
+                  />
+                </svg>
+                Continue with Apple
+              </button>
+            </div>
+
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-800"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 text-gray-400 bg-[#1A1A1A]">Or continue with email</span>
+              </div>
+            </div>
+
+            <form onSubmit={mode === 'forgot' ? handleForgotPassword : handleSubmit} className="space-y-5">
+              {error && (
+                <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-lg text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg text-green-400 text-sm">
+                  {success}
+                </div>
+              )}
+
+              <div>
+                <RequiredLabel>Email</RequiredLabel>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="hello@example.com"
+                  className="w-full px-4 py-2.5 text-white bg-[#0A0A0A] border border-gray-800 rounded-lg focus:ring-2 focus:ring-primary-neon/20 focus:border-primary-neon transition-all duration-300"
+                  required
+                />
+              </div>
+
+              {mode !== 'forgot' && (
+                <div>
+                  <RequiredLabel>Password</RequiredLabel>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      id="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full px-4 py-2.5 text-white bg-[#0A0A0A] border border-gray-800 rounded-lg focus:ring-2 focus:ring-primary-neon/20 focus:border-primary-neon transition-all duration-300"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-neon transition-colors"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full inline-flex items-center justify-center rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white hover:shadow-neon border border-primary-neon/20 hover:border-primary-neon/50 focus:outline-none focus:ring-2 focus:ring-primary-neon/50 focus:ring-offset-2 focus:ring-offset-[#1A1A1A] disabled:opacity-50 transition-all duration-300"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : mode === 'signup' ? (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Sign Up
+                  </>
+                ) : mode === 'forgot' ? (
+                  'Send Reset Link'
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Sign In
+                  </>
+                )}
+              </button>
+
+              <div className="text-center space-y-2">
+                {mode === 'forgot' ? (
                   <button
                     type="button"
                     onClick={() => {
-                      setMode('forgot');
+                      setMode('signin');
                       setError(null);
                       setSuccess(null);
-                      setPassword('');
                     }}
-                    className="block w-full text-sm text-primary hover:text-primary/80"
+                    className="text-sm text-primary-neon hover:text-primary-light transition-colors"
                   >
-                    Forgot your password?
+                    Back to Sign In
                   </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode(mode === 'signup' ? 'signin' : 'signup');
+                        setError(null);
+                        setSuccess(null);
+                      }}
+                      className="text-sm text-primary-neon hover:text-primary-light transition-colors"
+                    >
+                      {mode === 'signup' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+                    </button>
+                    {mode === 'signin' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode('forgot');
+                          setError(null);
+                          setSuccess(null);
+                          setPassword('');
+                        }}
+                        className="block w-full text-sm text-primary-neon hover:text-primary-light transition-colors"
+                      >
+                        Forgot your password?
+                      </button>
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
