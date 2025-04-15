@@ -8,7 +8,7 @@ interface DigitalAssetFormProps {
   onChange: (assets: DigitalAsset[]) => void;
 }
 
-export function DigitalAssetForm({ assets, onChange }: DigitalAssetFormProps) {
+export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProps) {
   const [validating, setValidating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 

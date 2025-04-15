@@ -2,14 +2,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type FontOption = 'system' | 'opendyslexic' | 'arial' | 'verdana';
 
-interface FontContextType {
+export interface FontContextType {
   font: FontOption;
   setFont: (font: FontOption) => void;
 }
 
 const FontContext = createContext<FontContextType | undefined>(undefined);
 
-export function FontProvider({ children }: { children: React.ReactNode }) {
+export function FontProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const [font, setFont] = useState<FontOption>(() => {
     const saved = localStorage.getItem('font');
     return (saved as FontOption) || 'system';
@@ -27,7 +27,7 @@ export function FontProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const useFont = () => {
+export const useFont = (): FontContextType => {
   const context = useContext(FontContext);
   if (context === undefined) {
     throw new Error('useFont must be used within a FontProvider');

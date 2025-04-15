@@ -22,7 +22,7 @@ const categories = [
   'Other'
 ] as const;
 
-type Category = typeof categories[number];
+export type Category = typeof categories[number];
 
 const initialFormState: PropFormData = {
   name: '',
@@ -72,8 +72,15 @@ const initialFormState: PropFormData = {
   digitalAssets: []
 };
 
-export function PropForm({ onSubmit, disabled = false, initialData, mode = 'create', onCancel }: PropFormProps) {
-  const [formData, setFormData] = useState<PropFormData>(initialData || initialFormState);
+export function PropForm({ onSubmit, initialData, mode = 'create', onCancel }: PropFormProps): JSX.Element {
+  // Initialize form data with proper defaults for any missing fields
+  const defaultFormData = {
+    ...initialFormState,
+    ...initialData,
+    digitalAssets: initialData?.digitalAssets || []
+  };
+  
+  const [formData, setFormData] = useState<PropFormData>(defaultFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handlePriceChange = (value: string) => {
@@ -668,23 +675,34 @@ export function PropForm({ onSubmit, disabled = false, initialData, mode = 'crea
         </div>
 
         <div className="pt-4">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="btn-primary w-full flex items-center justify-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Adding Prop...</span>
-              </>
-            ) : (
-              <>
-                <PlusCircle className="h-5 w-5" />
-                <span>Add Prop</span>
-              </>
+          <div className="flex gap-4">
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="btn-secondary flex-1 flex items-center justify-center gap-2"
+              >
+                Cancel
+              </button>
             )}
-          </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="btn-primary flex-1 flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Adding Prop...</span>
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="h-5 w-5" />
+                  <span>Add Prop</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </form>

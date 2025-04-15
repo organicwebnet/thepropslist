@@ -41,7 +41,11 @@ function App() {
       setUser(user);
       if (!user) {
         setShowAuth(true);
+        setShows([]);
+        setProps([]);
+        setSelectedShow(null);
       }
+      setLoading(false);
     });
 
     return () => unsubscribeAuth();
@@ -49,9 +53,6 @@ function App() {
 
   useEffect(() => {
     if (!user) {
-      setShows([]);
-      setProps([]);
-      setLoading(false);
       return;
     }
 
@@ -79,7 +80,6 @@ function App() {
         propsData.push({ id: doc.id, ...doc.data() } as Prop);
       });
       setProps(propsData);
-      setLoading(false);
     });
 
     return () => {
@@ -292,17 +292,22 @@ function App() {
 
         <Routes>
           <Route path="/props/:id" element={
-            <PropDetailPage
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          } />
-          <Route path="/props/:id/edit" element={
-            <PropDetailPage
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              isEditing={true}
-            />
+            user ? (
+              <PropDetailPage
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-red-400">Please sign in to view prop details</p>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
+                >
+                  Sign In
+                </button>
+              </div>
+            )
           } />
           <Route path="/" element={
             <>

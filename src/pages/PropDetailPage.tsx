@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { VideoPlayer } from '../components/VideoPlayer';
 import { PropForm } from '../components/PropForm';
 import { Package, Edit, Trash2, Calendar, AlertTriangle, ArrowLeft } from 'lucide-react';
@@ -12,31 +12,61 @@ import type { Prop, PropFormData } from '../types';
 interface PropDetailPageProps {
   onEdit?: (id: string, data: PropFormData) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
-  isEditing?: boolean;
 }
 
-export function PropDetailPage({ onEdit, onDelete, isEditing: initialIsEditing = false }: PropDetailPageProps) {
+export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
   const [prop, setProp] = useState<Prop | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(initialIsEditing);
+  const [isEditing, setIsEditing] = useState(false);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchProp() {
+      if (!auth.currentUser) {
+        console.error('No authenticated user');
+        setError('Please sign in to view prop details');
+        setLoading(false);
+        return;
+      }
+
       if (!id) {
+        console.error('No prop ID provided');
+        setError('No prop ID provided');
+        setLoading(false);
         navigate('/');
         return;
       }
 
       try {
+        console.log('Current user:', auth.currentUser.uid);
+        console.log('Fetching prop with ID:', id);
+        
+        // Check if we should be in edit mode (from URL)
+        const urlParams = new URLSearchParams(window.location.search);
+        const editParam = urlParams.get('edit');
+        console.log('Edit param from URL:', editParam);
+        setIsEditing(editParam === 'true');
+
         const docRef = doc(db, 'props', id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setProp({ id: docSnap.id, ...docSnap.data() } as Prop);
+          const propData = docSnap.data();
+          console.log('Prop data found:', propData);
+          
+          // Verify the prop belongs to the current user
+          if (propData.userId !== auth.currentUser.uid) {
+            console.error('Prop does not belong to current user');
+            setError('You do not have permission to view this prop');
+            setLoading(false);
+            return;
+          }
+
+          setProp({ id: docSnap.id, ...propData } as Prop);
         } else {
+          console.error('No prop found with ID:', id);
           setError('Prop not found');
           navigate('/');
         }
@@ -150,7 +180,10 @@ export function PropDetailPage({ onEdit, onDelete, isEditing: initialIsEditing =
           <h1 className="text-2xl font-bold text-white">{prop.name}</h1>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                console.log('Edit button clicked');
+                setIsEditing(true);
+              }}
               className="p-2 text-gray-400 hover:text-primary transition-colors"
               title="Edit prop"
             >

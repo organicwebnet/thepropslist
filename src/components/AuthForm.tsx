@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithPopup, OAuthProvider, updateProfile, OAuthCredential } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, signInWithPopup, updateProfile, OAuthCredential } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../lib/firebase';
 import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
@@ -8,9 +8,9 @@ interface AuthFormProps {
   onClose: () => void;
 }
 
-type AuthMode = 'signin' | 'signup' | 'forgot';
+export type AuthMode = 'signin' | 'signup' | 'forgot';
 
-function RequiredLabel({ children }: { children: React.ReactNode }) {
+function RequiredLabel({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <span className="block text-sm font-medium text-gray-300 mb-1.5">
       {children} <span className="text-primary">*</span>
@@ -18,7 +18,7 @@ function RequiredLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function AuthForm({ onClose }: AuthFormProps) {
+export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -235,8 +235,8 @@ export function AuthForm({ onClose }: AuthFormProps) {
             <p className="text-lg mb-8 text-white/90">Your complete solution for managing theater props and show inventories</p>
             
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold mb-4">Features</h3>
-              <div className="space-y-3">
+              <h3 className="text-xl font-semibold mb-4 text-gray-200">Features</h3>
+              <div className="space-y-3 text-gray-200">
                 <div className="flex items-center gap-2">
                   <div className="w-5 h-5 rounded-full bg-primary-neon/20 flex items-center justify-center border border-primary-neon/30">
                     <svg className="w-3 h-3 text-primary-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -301,8 +301,8 @@ export function AuthForm({ onClose }: AuthFormProps) {
             </div>
 
             <div className="mb-6">
-              <h3 className="text-xl text-gray-300 mb-2">Welcome to Props Bible</h3>
-              <p className="text-gray-400">Manage your theater props efficiently</p>
+              <h3 className="text-xl text-gray-200 mb-2">Welcome to Props Bible</h3>
+              <p className="text-gray-300">Manage your theater props efficiently</p>
             </div>
 
             {/* Social Login Buttons */}
@@ -346,13 +346,13 @@ export function AuthForm({ onClose }: AuthFormProps) {
 
             <form onSubmit={mode === 'forgot' ? handleForgotPassword : handleSubmit} className="space-y-5">
               {error && (
-                <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-lg text-red-400 text-sm">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm">
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg text-green-400 text-sm">
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-300 text-sm">
                   {success}
                 </div>
               )}

@@ -131,7 +131,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-primary hover:text-primary/80 text-sm flex items-center"
+                className="text-primary-light hover:text-primary-light/80 text-sm flex items-center"
               >
                 <ImagePlus className="h-4 w-4 mr-1" />
                 Upload
@@ -140,7 +140,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
               <button
                 type="button"
                 onClick={() => setShowLinkInput(true)}
-                className="text-primary hover:text-primary/80 text-sm flex items-center"
+                className="text-primary-light hover:text-primary-light/80 text-sm flex items-center"
               >
                 <Link className="h-4 w-4 mr-1" />
                 Add Link

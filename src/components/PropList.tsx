@@ -37,6 +37,7 @@ export function PropList({
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
   const [showScrollTop, setShowScrollTop] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const handleScroll = (e: Event) => {
@@ -126,7 +127,7 @@ export function PropList({
       <div className="space-y-4 sticky top-0 bg-[#0A0A0A] z-10 py-2">
         <div className="flex justify-between items-center">
           <h2 
-            className="text-3xl font-bold text-white cursor-pointer hover:text-primary transition-colors"
+            className="text-3xl font-bold text-white cursor-pointer hover:text-primary-light transition-colors"
             onClick={() => onSelect?.(show)}
           >
             {show.name}
@@ -243,8 +244,8 @@ export function PropList({
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <Theater className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-primary">
+                    <Theater className="h-4 w-4 text-primary-light" />
+                    <span className="text-sm font-medium text-primary-light">
                       Act {prop.act}, Scene {prop.scene}
                     </span>
                     <span 
@@ -265,7 +266,8 @@ export function PropList({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      navigate(`/props/${prop.id}/edit`);
+                      console.log(`Navigating to edit form for prop ${prop.id}`);
+                      navigate(`/props/${prop.id}?edit=true`);
                     }}
                     className="p-2 text-gray-400 hover:text-blue-400 transition-colors"
                     title="Edit prop"

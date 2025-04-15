@@ -25,7 +25,7 @@ interface TestResults {
   googleDocs: boolean | null;
 }
 
-interface HelpInfo {
+export interface HelpInfo {
   [key: string]: {
     description: string;
     link?: string;
@@ -79,7 +79,7 @@ const helpInfo: HelpInfo = {
   }
 };
 
-type TabType = 'show' | 'api' | 'appearance';
+export type TabType = 'show' | 'api' | 'appearance';
 
 const getInitialConfig = (): ConfigFormData => {
   const savedConfig = localStorage.getItem('apiConfig');
@@ -104,7 +104,7 @@ const getInitialConfig = (): ConfigFormData => {
   };
 };
 
-export function ConfigForm() {
+export function ConfigForm(): JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('show');
   const [isTesting, setIsTesting] = useState(false);
