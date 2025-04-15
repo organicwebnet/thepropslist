@@ -20,7 +20,33 @@ export default defineConfig({
                 maxAgeSeconds: 7 * 24 * 60 * 60 // 1 week
               }
             }
+          },
+          // Don't cache any Google or Firebase auth endpoints
+          {
+            urlPattern: /^https:\/\/identitytoolkit\.googleapis\.com\//,
+            handler: 'NetworkOnly'
+          },
+          {
+            urlPattern: /^https:\/\/securetoken\.googleapis\.com\//,
+            handler: 'NetworkOnly'
+          },
+          {
+            urlPattern: /^https:\/\/www\.googleapis\.com\/identitytoolkit\//,
+            handler: 'NetworkOnly'
+          },
+          {
+            urlPattern: /^https:\/\/accounts\.google\.com\//,
+            handler: 'NetworkOnly'
           }
+        ],
+        // Exclude authentication-related URLs from caching
+        navigateFallbackDenylist: [
+          /^\/auth/,
+          /^\/oauth/,
+          /^\/api\/auth/,
+          /^\/\/__\/auth/,
+          /^.*?[\/\?].*?authuser.*$/,
+          /^.*?[\/\?].*?oauth2.*$/
         ]
       },
       manifest: {

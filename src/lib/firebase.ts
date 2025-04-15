@@ -13,9 +13,15 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase with custom auth domain for development
+// Initialize Firebase with proper auth domain handling
 if (window.location.hostname === 'localhost') {
-  firebaseConfig.authDomain = 'props-bible-app-1c1cb.firebaseapp.com'; // Use the actual Firebase auth domain for localhost
+  // For localhost development
+  firebaseConfig.authDomain = window.location.host;
+} else {
+  // Ensure we're using HTTPS for non-localhost
+  if (window.location.protocol !== 'https:') {
+    window.location.href = window.location.href.replace('http:', 'https:');
+  }
 }
 
 const app = initializeApp(firebaseConfig);

@@ -6,6 +6,15 @@ import { FontProvider } from './contexts/FontContext';
 import App from './App.tsx';
 import './index.css';
 
+// Unregister any existing service workers first
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(registration => {
+      registration.unregister();
+    });
+  });
+}
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Failed to find root element');
