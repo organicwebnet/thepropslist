@@ -75,8 +75,8 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                   <div className={`${selectedShowId === show.id ? 'bg-primary' : 'bg-gradient-to-r from-primary to-primary-dark'} p-2 rounded-lg`}>
                     <Theater className="h-6 w-6 text-white" />
                   </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-white">{show.name}</h3>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-xl font-semibold text-white line-clamp-2">{show.name}</h3>
                     <div className="flex items-center space-x-4 text-gray-400 mt-1">
                       <span>{show.acts.length} Act{show.acts.length !== 1 ? 's' : ''}</span>
                       <span>•</span>

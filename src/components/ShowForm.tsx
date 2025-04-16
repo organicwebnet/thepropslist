@@ -2,6 +2,7 @@ import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { PlusCircle, MinusCircle, Save, Upload } from 'lucide-react';
 import { VenueForm } from './VenueForm';
 import type { ShowFormData, Act, Scene, PropImage, Show, Venue } from '../types';
+import { WysiwygEditor } from './WysiwygEditor';
 
 interface ShowFormProps {
   mode: 'create' | 'edit';
@@ -141,17 +142,8 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
       newErrors.acts = 'At least one act is required';
     } else {
       formData.acts.forEach((act, actIndex) => {
-        if (!act.name) {
-          newErrors[`act_${actIndex}`] = `Act ${actIndex + 1} name is required`;
-        }
         if (!act.scenes || act.scenes.length === 0) {
           newErrors[`act_${actIndex}_scenes`] = `At least one scene is required in Act ${actIndex + 1}`;
-        } else {
-          act.scenes.forEach((scene, sceneIndex) => {
-            if (!scene.name?.trim()) {
-              newErrors[`act_${actIndex}_scene_${sceneIndex}`] = `Scene ${sceneIndex + 1} name is required in Act ${actIndex + 1}`;
-            }
-          });
         }
       });
     }
@@ -467,16 +459,14 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
             <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Description
             </label>
-            <textarea
-              id="description"
+            <WysiwygEditor
               value={formData.description || ''}
-              onChange={(e) => setFormData(prevData => ({
+              onChange={(value) => setFormData(prevData => ({
                 ...prevData,
-                description: e.target.value
+                description: value
               }))}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-              rows={3}
               placeholder="Enter show description"
+              minHeight={120}
             />
           </div>
 

@@ -1,16 +1,19 @@
 {
-  "name": "project",
+  "name": "props-bible",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A comprehensive props management system for theatrical productions",
+  "main": "index.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint src --ext ts,tsx",
     "preview": "vite preview",
-    "setup-macbeth": "tsx src/setupMacbeth.ts"
+    "test": "jest"
   },
   "dependencies": {
+    "@tinymce/tinymce-react": "^6.1.0",
     "dotenv": "^16.5.0",
     "firebase": "^11.6.0",
     "fontkit": "^2.0.4",

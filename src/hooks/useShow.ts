@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Show } from '../types';
 
@@ -14,22 +14,23 @@ export function useShow(showId?: string) {
       return;
     }
 
-    const fetchShow = async () => {
-      try {
-        const showDoc = await getDoc(doc(db, 'shows', showId));
-        if (showDoc.exists()) {
-          setShow(showDoc.data() as Show);
+    const unsubscribe = onSnapshot(
+      doc(db, 'shows', showId),
+      (doc) => {
+        if (doc.exists()) {
+          setShow({ id: doc.id, ...doc.data() } as Show);
         } else {
           setShow(null);
         }
-      } catch (err) {
+        setLoading(false);
+      },
+      (err) => {
         setError(err as Error);
-      } finally {
         setLoading(false);
       }
-    };
+    );
 
-    fetchShow();
+    return () => unsubscribe();
   }, [showId]);
 
   return { show, loading, error };

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
-import { collection, query, where, onSnapshot, doc, addDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, addDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, getDocs, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getRedirectResult, GoogleAuthProvider, linkWithCredential } from 'firebase/auth';
 import { AuthForm } from './components/AuthForm';
 import { PropForm } from './components/PropForm';
@@ -20,7 +20,7 @@ import { SearchBar } from './components/SearchBar';
 import { PropFilters } from './components/PropFilters';
 import { ExportToolbar } from './components/ExportToolbar';
 import { PackingPage } from './pages/PackingPage';
-import { addMacbethShow } from './data/testData';
+import { OnboardingGuide } from './components/OnboardingGuide';
 
 const initialFilters: Filters = {
   search: '',
@@ -99,6 +99,7 @@ function App() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingShow, setEditingShow] = useState<Show | null>(null);
   const [showFormMode, setShowFormMode] = useState<'create' | 'edit'>('create');
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -122,11 +123,6 @@ function App() {
 
     const showsQuery = query(
       collection(db, 'shows'),
-      where('userId', '==', user.uid)
-    );
-
-    const propsQuery = query(
-      collection(db, 'props'),
       where('userId', '==', user.uid)
     );
 
@@ -158,27 +154,19 @@ function App() {
       setShows(showsData);
     });
 
-    const propsUnsubscribe = onSnapshot(propsQuery, (snapshot) => {
-      const propsData: Prop[] = [];
-      snapshot.forEach((doc) => {
-        propsData.push({ id: doc.id, ...doc.data() } as Prop);
-      });
-      setProps(propsData);
-    });
-
     return () => {
       showsUnsubscribe();
-      propsUnsubscribe();
     };
   }, [user]);
 
-  // Load props for the selected show
   useEffect(() => {
     if (!user || !selectedShow) {
       setProps([]);
       setLoading(false);
       return;
     }
+
+    console.log('Loading props for show:', selectedShow.id);
 
     const propsQuery = query(
       collection(db, 'props'),
@@ -190,6 +178,7 @@ function App() {
       snapshot.forEach((doc) => {
         propsData.push({ id: doc.id, ...doc.data() } as Prop);
       });
+      console.log('Loaded props:', propsData.length);
       setProps(propsData);
       setLoading(false);
     });
@@ -275,6 +264,20 @@ function App() {
     }
   }, []);
 
+  // Check if user needs onboarding
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      if (user) {
+        const profileDoc = await getDoc(doc(db, 'userProfiles', user.uid));
+        if (!profileDoc.exists() || !profileDoc.data().onboardingCompleted) {
+          setShowOnboarding(true);
+        }
+      }
+    };
+
+    checkOnboarding();
+  }, [user]);
+
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
     if (newFilters.category) {
@@ -296,6 +299,7 @@ function App() {
     }
 
     try {
+      console.log('Creating prop for show:', selectedShow.id);
       const propData = {
         ...data,
         userId: user.uid,
@@ -303,7 +307,9 @@ function App() {
         createdAt: new Date().toISOString()
       };
 
+      console.log('Prop data to be created:', propData);
       const docRef = await addDoc(collection(db, 'props'), propData);
+      console.log('Created prop with ID:', docRef.id);
       navigate(`/props/${docRef.id}`);
     } catch (error) {
       console.error('Error adding prop:', error);
@@ -389,26 +395,13 @@ function App() {
   };
 
   const handleCreateShow = async () => {
-    if (!user) return;
-    
-    try {
-      const newShow = {
-        name: 'New Show',
-        description: '',
-        acts: [],
-        userId: user.uid,
-        createdAt: new Date().toISOString(),
-        collaborators: [],
-        venues: [],
-        isTouringShow: false,
-        contacts: []
-      };
-      
-      await addDoc(collection(db, 'shows'), newShow);
-    } catch (error) {
-      console.error('Error creating show:', error);
-      alert('Failed to create show. Please try again.');
+    if (!user) {
+      setShowAuth(true);
+      return;
     }
+    setShowFormMode('create');
+    setEditingShow(null);
+    setShowEditModal(true);
   };
 
   const handleShowSubmit = async (data: Show) => {
@@ -473,38 +466,45 @@ function App() {
   const handleDeleteShow = async (showId: string) => {
     if (!user || !window.confirm('Are you sure you want to delete this show? This will also delete all props associated with it.')) return;
     
+    console.log('=== DELETE SHOW FUNCTION ===');
+    console.log('1. Starting delete for show:', showId);
+    console.log('2. Current user:', user.uid);
+    
     try {
-      // First, delete all props associated with this show
+      // Delete all props associated with this show
+      console.log('3. Querying props for deletion...');
       const propsQuery = query(collection(db, 'props'), where('showId', '==', showId));
       const propsSnapshot = await getDocs(propsQuery);
-      const deletePromises = propsSnapshot.docs.map(doc => deleteDoc(doc.ref));
-      await Promise.all(deletePromises);
+      console.log('4. Found', propsSnapshot.size, 'props to delete');
       
-      // Then delete the show itself
+      const deletePromises = propsSnapshot.docs.map(doc => {
+        console.log('- Deleting prop:', doc.id);
+        return deleteDoc(doc.ref);
+      });
+      await Promise.all(deletePromises);
+      console.log('5. Successfully deleted all props');
+      
+      // Finally delete the show itself
+      console.log('6. Attempting to delete show document...');
       await deleteDoc(doc(db, 'shows', showId));
+      console.log('7. Successfully deleted show');
+      
     } catch (error) {
       console.error('Error deleting show:', error);
-      alert('Failed to delete show. Please try again.');
+      if (error instanceof Error) {
+        alert(`Failed to delete show: ${error.message}`);
+      } else {
+        alert('Failed to delete show. Please try again.');
+      }
     }
   };
 
-  const handleAddMacbethShow = async () => {
-    console.log('=== ADD MACBETH BUTTON CLICKED ===');
-    console.log('1. Starting handleAddMacbethShow function');
-    try {
-      console.log('2. Attempting to add Macbeth show...');
-      const showId = await addMacbethShow();
-      console.log('3. Received showId:', showId);
-      if (showId) {
-        console.log('4. Navigating to show detail page');
-        // Navigate to the show detail page
-        navigate(`/shows/${showId}`);
-      }
-      console.log('5. Successfully completed Macbeth show addition');
-    } catch (error) {
-      console.error('Error adding Macbeth show:', error);
-      alert('Failed to add Macbeth show. Please try again.');
-    }
+  const handleShowClick = (showId: string) => {
+    navigate(`/shows/${showId}`);
+  };
+
+  const handlePackingClick = (showId: string) => {
+    navigate(`/packing/${showId}`);
   };
 
   const filteredProps = props.filter(prop => {
@@ -638,17 +638,6 @@ function App() {
                   <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto scrollbar-hide">
                     <div className="flex justify-between items-center mb-6">
                       <div className="flex items-center gap-4">
-                        <SearchBar
-                          value={filters.search}
-                          onChange={(value) => setFilters({ ...filters, search: value })}
-                        />
-                        <PropFilters
-                          filters={filters}
-                          onChange={setFilters}
-                          onReset={() => setFilters(initialFilters)}
-                        />
-                      </div>
-                      <div className="flex items-center gap-4">
                         {(selectedShow || shows[0]) && (
                           <ExportToolbar show={selectedShow || shows[0]} props={filteredProps} />
                         )}
@@ -690,13 +679,6 @@ function App() {
                     <div className="lg:h-full lg:overflow-y-auto lg:pr-6 scrollbar-hide">
                       <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold">Shows</h2>
-                        <button
-                          onClick={handleAddMacbethShow}
-                          className="btn-primary flex items-center gap-2"
-                        >
-                          <Plus className="h-5 w-5" />
-                          <span>Add Macbeth</span>
-                        </button>
                       </div>
                       <ShowForm
                         mode={showFormMode}
@@ -963,6 +945,13 @@ function App() {
           onAddCollaborator={handleAddCollaborator}
           onRemoveCollaborator={handleRemoveCollaborator}
           currentUserEmail={user?.email || ''}
+        />
+      )}
+      
+      {showOnboarding && (
+        <OnboardingGuide 
+          onClose={() => setShowOnboarding(false)}
+          onComplete={() => setShowOnboarding(false)}
         />
       )}
     </div>

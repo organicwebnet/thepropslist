@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { PackingBox, Prop } from '../types';
 import { PackingService } from '../services/packing';
@@ -17,28 +17,28 @@ export function usePacking(showId?: string) {
       return;
     }
 
-    const fetchBoxes = async () => {
-      try {
-        const boxesQuery = query(
-          collection(db, 'packingBoxes'),
-          where('showId', '==', showId)
-        );
-        
-        const querySnapshot = await getDocs(boxesQuery);
-        const boxesData = querySnapshot.docs.map(doc => ({
+    const boxesQuery = query(
+      collection(db, 'packingBoxes'),
+      where('showId', '==', showId)
+    );
+    
+    const unsubscribe = onSnapshot(
+      boxesQuery,
+      (snapshot) => {
+        const boxesData = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as PackingBox[];
-
         setBoxes(boxesData);
-      } catch (err) {
+        setLoading(false);
+      },
+      (err) => {
         setError(err as Error);
-      } finally {
         setLoading(false);
       }
-    };
+    );
 
-    fetchBoxes();
+    return () => unsubscribe();
   }, [showId]);
 
   const createBox = async (props: Prop[], actNumber: number, sceneNumber: number) => {

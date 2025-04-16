@@ -1,3 +1,5 @@
+import { useParams } from 'react-router-dom';
+
 interface TabNavigationProps {
   activeTab: 'props' | 'shows' | 'packing';
   setActiveTab: (tab: 'props' | 'shows' | 'packing') => void;
@@ -5,15 +7,23 @@ interface TabNavigationProps {
 }
 
 export function TabNavigation({ activeTab, setActiveTab, navigate }: TabNavigationProps) {
+  const { showId } = useParams<{ showId?: string }>();
+
+  const handleTabClick = (tab: 'props' | 'shows' | 'packing') => {
+    setActiveTab(tab);
+    if (showId && tab === 'packing') {
+      navigate(`/packing/${showId}`);
+    } else {
+      navigate(`/${tab}`);
+    }
+  };
+
   return (
     <div className="mb-6">
       <div className="border-b border-[var(--border-color)]">
         <nav className="flex space-x-8">
           <button
-            onClick={() => {
-              setActiveTab('props');
-              navigate('/props');
-            }}
+            onClick={() => handleTabClick('props')}
             className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
               activeTab === 'props'
                 ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
@@ -23,10 +33,7 @@ export function TabNavigation({ activeTab, setActiveTab, navigate }: TabNavigati
             Props
           </button>
           <button
-            onClick={() => {
-              setActiveTab('shows');
-              navigate('/shows');
-            }}
+            onClick={() => handleTabClick('shows')}
             className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
               activeTab === 'shows'
                 ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
@@ -36,10 +43,7 @@ export function TabNavigation({ activeTab, setActiveTab, navigate }: TabNavigati
             Shows
           </button>
           <button
-            onClick={() => {
-              setActiveTab('packing');
-              navigate('/packing');
-            }}
+            onClick={() => handleTabClick('packing')}
             className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
               activeTab === 'packing'
                 ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'

@@ -123,27 +123,27 @@ export function PropList({
   };
 
   return (
-    <div className="space-y-4" ref={listRef}>
+    <div className="space-y-4 overflow-x-hidden" ref={listRef}>
       <div className="bg-[var(--bg-secondary)] sm:sticky sm:top-0 z-10">
         <div className="p-6 border-b border-[var(--border-color)]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 min-w-0">
               {show.imageUrl ? (
                 <img
                   src={show.imageUrl}
                   alt={`${show.name} logo`}
-                  className="w-14 h-14 rounded-lg object-cover border border-[var(--border-color)]"
+                  className="w-14 h-14 flex-shrink-0 rounded-lg object-cover border border-[var(--border-color)]"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
+                <div className="w-14 h-14 flex-shrink-0 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
                   <span className="text-2xl font-semibold text-[var(--text-secondary)]">
                     {show.name[0]}
                   </span>
                 </div>
               )}
-              <div>
+              <div className="min-w-0">
                 <h2 
-                  className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] cursor-pointer hover:text-[var(--highlight-color)] transition-colors line-clamp-2"
+                  className="text-2xl sm:text-3xl font-bold text-[var(--text-primary)] cursor-pointer hover:text-[var(--highlight-color)] transition-colors line-clamp-2 break-words"
                   onClick={() => navigate(`/shows/${show.id}`)}
                 >
                   {show.name}
@@ -180,14 +180,14 @@ export function PropList({
         <div className="px-6 py-4">
           <div className="space-y-3">
             <div className="flex justify-end">
-              <div className="w-[300px]">
+              <div className="w-full max-w-[300px]">
                 <SearchBar 
                   value={filters.search}
                   onChange={(value) => onFilterChange({ ...filters, search: value })}
                 />
               </div>
             </div>
-            <div className="w-full">
+            <div className="w-full overflow-x-auto">
               <PropFilters
                 filters={filters}
                 onChange={onFilterChange}

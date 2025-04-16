@@ -9,8 +9,8 @@ import { TabNavigation } from '../components/TabNavigation';
 export function PackingPage() {
   const navigate = useNavigate();
   const { showId } = useParams<{ showId: string }>();
-  const { show, loading: showLoading } = useShow(showId);
-  const { props, loading: propsLoading } = useProps(showId);
+  const { show, loading: showLoading, error: showError } = useShow(showId);
+  const { props, loading: propsLoading, error: propsError } = useProps(showId);
   const { boxes, loading: boxesLoading, createBox, updateBox, deleteBox } = usePacking(showId);
 
   if (showLoading || propsLoading || boxesLoading) {
@@ -21,10 +21,36 @@ export function PackingPage() {
     );
   }
 
+  // Handle errors
+  if (showError || propsError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-400">Error loading data</p>
+          <p className="text-gray-400 mt-2">{showError?.message || propsError?.message}</p>
+          <button
+            onClick={() => navigate('/packing')}
+            className="mt-4 text-primary hover:text-primary/80"
+          >
+            Back to Show Selection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!show) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Show not found</p>
+        <div className="text-center">
+          <p className="text-gray-400">Show not found</p>
+          <button
+            onClick={() => navigate('/packing')}
+            className="mt-4 text-primary hover:text-primary/80"
+          >
+            Back to Show Selection
+          </button>
+        </div>
       </div>
     );
   }
@@ -43,7 +69,7 @@ export function PackingPage() {
             className="flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-            <span>Back to Shows</span>
+            <span>Back to Show Selection</span>
           </button>
           <h1 className="text-3xl font-bold text-gray-200">{show.name}</h1>
         </div>

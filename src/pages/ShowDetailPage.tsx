@@ -1,11 +1,10 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, onSnapshot, query, collection, where } from 'firebase/firestore';
+import { doc, onSnapshot, query, collection, where, getDoc, updateDoc } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import type { Show, Scene, Act } from '../types';
 import { Pencil, ArrowLeft, UserMinus } from 'lucide-react';
-import { removeMacbethTestCollaborators } from '../data/testData';
 
 export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
   const { id } = useParams();
@@ -92,6 +91,21 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
 
     return () => unsubscribe();
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!show || !window.confirm('Are you sure you want to delete this show?')) return;
+    
+    try {
+      await updateDoc(doc(db, 'shows', show.id), {
+        deleted: true,
+        deletedAt: new Date().toISOString()
+      });
+      navigate('/shows');
+    } catch (error) {
+      console.error('Error deleting show:', error);
+      alert('Failed to delete show. Please try again.');
+    }
+  };
 
   if (loading) {
     return (
@@ -328,26 +342,6 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
               Collaborators
-              {show.name === 'Macbeth' && (
-                <button
-                  onClick={async () => {
-                    if (window.confirm('Are you sure you want to remove all test collaborators?')) {
-                      try {
-                        await removeMacbethTestCollaborators(show.id);
-                        alert('Test collaborators removed successfully!');
-                      } catch (error) {
-                        console.error('Error removing collaborators:', error);
-                        alert('Failed to remove test collaborators.');
-                      }
-                    }
-                  }}
-                  className="ml-4 inline-flex items-center justify-center px-3 py-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-md transition-colors"
-                  title="Remove test collaborators"
-                >
-                  <UserMinus className="h-3 w-3 mr-1" />
-                  Remove Test Data
-                </button>
-              )}
             </h2>
             <div className="space-y-4">
               {show.collaborators.map((collaborator, index) => (

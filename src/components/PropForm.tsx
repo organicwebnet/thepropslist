@@ -4,6 +4,7 @@ import { ImageUpload } from './ImageUpload';
 import { DigitalAssetForm } from './DigitalAssetForm';
 import { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, PropFormProps } from '../types';
 import { dimensionUnits, weightUnits } from '../types';
+import { WysiwygEditor } from './WysiwygEditor';
 
 // Define prop categories
 const categories = [
@@ -229,12 +230,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)]">
             Description
           </label>
-          <textarea
-            id="description"
+          <WysiwygEditor
             value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors min-h-[100px] resize-y"
+            onChange={(value) => setFormData({ ...formData, description: value })}
             placeholder="Enter prop description"
+            minHeight={100}
           />
         </div>
 
@@ -511,12 +511,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </label>
 
           {formData.hasUsageInstructions && (
-            <textarea
-              value={formData.usageInstructions}
-              onChange={(e) => setFormData({ ...formData, usageInstructions: e.target.value })}
+            <WysiwygEditor
+              value={formData.usageInstructions || ''}
+              onChange={(value) => setFormData({ ...formData, usageInstructions: value })}
               placeholder="Enter detailed usage instructions"
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              rows={3}
+              minHeight={100}
             />
           )}
         </div>
@@ -534,12 +533,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </label>
 
           {formData.hasMaintenanceNotes && (
-            <textarea
-              value={formData.maintenanceNotes}
-              onChange={(e) => setFormData({ ...formData, maintenanceNotes: e.target.value })}
+            <WysiwygEditor
+              value={formData.maintenanceNotes || ''}
+              onChange={(value) => setFormData({ ...formData, maintenanceNotes: value })}
               placeholder="Enter maintenance requirements and schedule"
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              rows={3}
+              minHeight={100}
             />
           )}
         </div>
@@ -557,12 +555,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </label>
 
           {formData.hasSafetyNotes && (
-            <textarea
-              value={formData.safetyNotes}
-              onChange={(e) => setFormData({ ...formData, safetyNotes: e.target.value })}
+            <WysiwygEditor
+              value={formData.safetyNotes || ''}
+              onChange={(value) => setFormData({ ...formData, safetyNotes: value })}
               placeholder="Enter safety requirements and precautions"
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              rows={3}
+              minHeight={100}
             />
           )}
         </div>
@@ -598,12 +595,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                   Setup Instructions
                 </label>
-                <textarea
-                  value={formData.preShowSetupNotes}
-                  onChange={(e) => setFormData({ ...formData, preShowSetupNotes: e.target.value })}
+                <WysiwygEditor
+                  value={formData.preShowSetupNotes || ''}
+                  onChange={(value) => setFormData({ ...formData, preShowSetupNotes: value })}
                   placeholder="Enter detailed setup instructions"
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  rows={3}
+                  minHeight={100}
                 />
               </div>
               <div>
@@ -636,12 +632,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
             </label>
 
             {formData.hasOwnShippingCrate && (
-              <textarea
-                value={formData.shippingCrateDetails}
-                onChange={(e) => setFormData({ ...formData, shippingCrateDetails: e.target.value })}
+              <WysiwygEditor
+                value={formData.shippingCrateDetails || ''}
+                onChange={(value) => setFormData({ ...formData, shippingCrateDetails: value })}
                 placeholder="Enter shipping crate details and dimensions"
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                rows={2}
+                minHeight={80}
               />
             )}
 
@@ -657,12 +652,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
             {formData.requiresSpecialTransport && (
               <div className="space-y-4">
-                <textarea
-                  value={formData.transportNotes}
-                  onChange={(e) => setFormData({ ...formData, transportNotes: e.target.value })}
+                <WysiwygEditor
+                  value={formData.transportNotes || ''}
+                  onChange={(value) => setFormData({ ...formData, transportNotes: value })}
                   placeholder="Enter special transport requirements"
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  rows={2}
+                  minHeight={80}
                 />
                 <div>
                   <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
@@ -697,12 +691,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
           {formData.hasBeenModified && (
             <div className="space-y-4">
-              <textarea
-                value={formData.modificationDetails}
-                onChange={(e) => setFormData({ ...formData, modificationDetails: e.target.value })}
+              <WysiwygEditor
+                value={formData.modificationDetails || ''}
+                onChange={(value) => setFormData({ ...formData, modificationDetails: value })}
                 placeholder="Enter modification details"
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                rows={3}
+                minHeight={100}
               />
               <div>
                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">

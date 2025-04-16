@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, GitPullRequest, Bug, Lightbulb, Send, Upload, X } from 'lucide-react';
+import { WysiwygEditor } from './WysiwygEditor';
 
 // GitHub repository details - update these with your actual repo info
 const GITHUB_REPO_OWNER = 'organicweb';
@@ -238,14 +239,11 @@ export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
             <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
               Description <span className="text-primary">*</span>
             </label>
-            <textarea
-              id="description"
+            <WysiwygEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              onChange={(value) => setDescription(value)}
               placeholder={type === 'bug' ? 'Steps to reproduce, expected vs. actual behavior...' : 'Details about your idea...'}
-              required
+              minHeight={150}
             />
           </div>
           

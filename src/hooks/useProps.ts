@@ -15,7 +15,8 @@ export function useProps(showId?: string) {
       return;
     }
 
-    console.log('Fetching props for showId:', showId);
+    console.log('=== PROPS LOADING DEBUG ===');
+    console.log('1. Fetching props for showId:', showId);
 
     // Use onSnapshot for real-time updates
     const propsQuery = query(
@@ -23,15 +24,32 @@ export function useProps(showId?: string) {
       where('showId', '==', showId)
     );
 
+    console.log('2. Created query:', propsQuery);
+
     const unsubscribe = onSnapshot(propsQuery, 
       (snapshot) => {
-        console.log('Props snapshot received:', snapshot.size, 'documents');
+        console.log('3. Props snapshot received. Size:', snapshot.size);
+        console.log('4. Empty snapshot?', snapshot.empty);
+        
+        if (snapshot.empty) {
+          console.log('5. No props found for this show');
+          setProps([]);
+          setLoading(false);
+          return;
+        }
+
         const propsData = snapshot.docs.map(doc => {
           const data = { id: doc.id, ...doc.data() } as Prop;
-          console.log('Prop data:', data);
+          console.log('6. Prop data:', {
+            id: data.id,
+            name: data.name,
+            showId: data.showId,
+            userId: data.userId
+          });
           return data;
         });
-        console.log('Final props data:', propsData);
+        
+        console.log('7. Final props data count:', propsData.length);
         setProps(propsData);
         setLoading(false);
       },
