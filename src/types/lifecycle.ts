@@ -1,0 +1,117 @@
+/**
+ * Prop Lifecycle Management Types
+ * 
+ * This module contains all types and interfaces related to prop lifecycle management.
+ * It's designed to be easily importable in both web and potential future mobile apps.
+ */
+
+/**
+ * Represents the possible lifecycle statuses of a prop
+ */
+export type PropLifecycleStatus = 
+  | 'confirmed'           // Confirmed to be in the show
+  | 'cut'                 // Cut from the show
+  | 'out_for_repair'      // Out for repairs
+  | 'damaged_awaiting_repair' // Damaged, waiting for repair
+  | 'damaged_awaiting_replacement' // Damaged, needs replacement
+  | 'missing'             // Lost or misplaced
+  | 'in_transit'          // Being moved between locations
+  | 'under_maintenance'   // Routine maintenance
+  | 'loaned_out'          // Borrowed by another production
+  | 'on_hold'             // Set aside
+  | 'under_review'        // Being assessed
+  | 'being_modified'      // Being customized/modified
+  | 'backup'              // Backup/alternate prop
+  | 'temporarily_retired' // Stored for future use
+  | 'ready_for_disposal'; // Ready for recycling/disposal
+
+/**
+ * Status labels for UI display
+ */
+export const lifecycleStatusLabels: Record<PropLifecycleStatus, string> = {
+  confirmed: 'Confirmed in Show',
+  cut: 'Cut from Show',
+  out_for_repair: 'Out for Repair',
+  damaged_awaiting_repair: 'Damaged - Awaiting Repair',
+  damaged_awaiting_replacement: 'Damaged - Awaiting Replacement',
+  missing: 'Missing',
+  in_transit: 'In Transit',
+  under_maintenance: 'Under Maintenance',
+  loaned_out: 'Loaned Out',
+  on_hold: 'On Hold',
+  under_review: 'Under Review',
+  being_modified: 'Being Modified',
+  backup: 'Backup/Alternate',
+  temporarily_retired: 'Temporarily Retired',
+  ready_for_disposal: 'Ready for Disposal'
+};
+
+/**
+ * The severity/priority of a status for UI display and filtering
+ */
+export type StatusPriority = 'critical' | 'high' | 'medium' | 'low' | 'info';
+
+/**
+ * Map lifecycle statuses to their severity for UI treatment
+ */
+export const lifecycleStatusPriority: Record<PropLifecycleStatus, StatusPriority> = {
+  missing: 'critical',
+  damaged_awaiting_replacement: 'high',
+  damaged_awaiting_repair: 'high',
+  out_for_repair: 'medium',
+  under_maintenance: 'medium',
+  in_transit: 'medium',
+  loaned_out: 'medium',
+  being_modified: 'medium',
+  under_review: 'low',
+  on_hold: 'low',
+  backup: 'low',
+  temporarily_retired: 'low',
+  ready_for_disposal: 'low',
+  confirmed: 'info',
+  cut: 'info'
+};
+
+/**
+ * Represents a maintenance or repair record for a prop
+ */
+export interface MaintenanceRecord {
+  id: string;
+  date: string;
+  type: 'repair' | 'maintenance' | 'modification' | 'inspection';
+  description: string;
+  performedBy: string;
+  cost?: number;
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+/**
+ * Represents a status change record for a prop
+ */
+export interface PropStatusUpdate {
+  id: string;
+  date: string;
+  previousStatus: PropLifecycleStatus;
+  newStatus: PropLifecycleStatus;
+  updatedBy: string;
+  notes?: string;
+  notified?: string[]; // IDs or emails of notified team members
+  createdAt: string;
+}
+
+/**
+ * Represents the repair priority levels
+ */
+export type RepairPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+/**
+ * Repair priority labels for UI display
+ */
+export const repairPriorityLabels: Record<RepairPriority, string> = {
+  low: 'Low Priority',
+  medium: 'Medium Priority',
+  high: 'High Priority',
+  urgent: 'Urgent'
+}; 

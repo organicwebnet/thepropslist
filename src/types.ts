@@ -1,3 +1,5 @@
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './types/lifecycle';
+
 export interface UserProfile {
   displayName: string;
   email: string;
@@ -106,6 +108,29 @@ export interface PropFormData {
   rentalReferenceNumber?: string;
   digitalAssets: DigitalAsset[];
   travelsUnboxed: boolean;
+  
+  // Lifecycle fields
+  status: PropLifecycleStatus;
+  statusNotes?: string;
+  lastStatusUpdate?: string;
+  maintenanceHistory: MaintenanceRecord[];
+  statusHistory: PropStatusUpdate[];
+  
+  // Tracking fields
+  lastInspectionDate?: string;
+  nextInspectionDue?: string;
+  lastMaintenanceDate?: string;
+  nextMaintenanceDue?: string;
+  
+  // Location tracking
+  currentLocation?: string;
+  expectedReturnDate?: string;
+  
+  // Replacement/repair tracking
+  replacementCost?: number;
+  replacementLeadTime?: number; // in days
+  repairEstimate?: number;
+  repairPriority?: RepairPriority;
 }
 
 export interface PropFormProps {
