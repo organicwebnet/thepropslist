@@ -13,7 +13,7 @@ import { ShowDetailPage } from './pages/ShowDetailPage';
 import { db, auth } from './lib/firebase';
 import type { Prop, PropFormData, Filters, Show, ShowFormData } from './types';
 import { LogOut, PlusCircle, Pencil, Trash2, Plus } from 'lucide-react';
-import { ShowForm } from './components/ShowForm';
+import ShowForm from './components/ShowForm';
 import { SearchBar } from './components/SearchBar';
 import { PropFilters } from './components/PropFilters';
 import { ExportToolbar } from './components/ExportToolbar';
@@ -415,6 +415,8 @@ function App() {
       if (showFormMode === 'edit' && editingShow) {
         await updateDoc(doc(db, 'shows', editingShow.id), {
           ...data,
+          userId: editingShow.userId,
+          id: editingShow.id,
           lastModifiedAt: new Date().toISOString()
         });
         setEditingShow(null);
@@ -659,23 +661,27 @@ function App() {
                       <ShowForm
                         mode={showFormMode}
                         initialData={showFormMode === 'edit' && editingShow ? {
+                          id: editingShow.id,
                           name: editingShow.name,
                           description: editingShow.description,
                           acts: editingShow.acts,
+                          userId: editingShow.userId,
+                          createdAt: editingShow.createdAt,
+                          collaborators: editingShow.collaborators || [],
                           stageManager: editingShow.stageManager,
                           stageManagerEmail: editingShow.stageManagerEmail,
-                          stageManagerPhone: editingShow.stageManagerPhone,
+                          stageManagerPhone: editingShow.stageManagerPhone || '',
                           propsSupervisor: editingShow.propsSupervisor,
                           propsSupervisorEmail: editingShow.propsSupervisorEmail,
-                          propsSupervisorPhone: editingShow.propsSupervisorPhone,
+                          propsSupervisorPhone: editingShow.propsSupervisorPhone || '',
                           productionCompany: editingShow.productionCompany,
                           productionContactName: editingShow.productionContactName,
                           productionContactEmail: editingShow.productionContactEmail,
-                          productionContactPhone: editingShow.productionContactPhone,
-                          venues: editingShow.venues,
-                          isTouringShow: editingShow.isTouringShow,
-                          contacts: editingShow.contacts,
-                          imageUrl: editingShow.imageUrl,
+                          productionContactPhone: editingShow.productionContactPhone || '',
+                          venues: editingShow.venues || [],
+                          isTouringShow: editingShow.isTouringShow || false,
+                          contacts: editingShow.contacts || [],
+                          imageUrl: editingShow.imageUrl || '',
                           logoImage: editingShow.logoImage
                         } : undefined}
                         onSubmit={handleShowSubmit}
