@@ -5,6 +5,8 @@ import { onAuthStateChanged, signOut, getRedirectResult, GoogleAuthProvider, lin
 import { AuthForm } from './components/AuthForm';
 import { PropForm } from './components/PropForm';
 import { PropList } from './components/PropList';
+import { ShowList } from './components/ShowList';
+import { Footer } from './components/Footer';
 
 import { UserProfileModal } from './components/UserProfile';
 import { ShareModal } from './components/ShareModal';
@@ -271,7 +273,7 @@ function App() {
     } else if (path.startsWith('/packing')) {
       setActiveTab('packing');
     }
-  }, [window.location.pathname]);
+  }, []);
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
@@ -409,25 +411,58 @@ function App() {
     }
   };
 
-  const handleShowSubmit = async (data: ShowFormData) => {
+  const handleShowSubmit = async (data: Show) => {
+    console.log('=== HANDLESHOWSUBMIT ===');
+    console.log('1. Received data:', data);
+    
     if (!user) return;
     try {
+      console.log('2. Mode:', showFormMode, 'editingShow:', editingShow?.id);
+      
       if (showFormMode === 'edit' && editingShow) {
-        await updateDoc(doc(db, 'shows', editingShow.id), {
-          ...data,
+        console.log('3. Updating existing show:', editingShow.id);
+        
+        // Remove the id from the data object since Firestore doesn't allow it
+        // Extract only the fields we want to update
+        const updateData = {
+          name: data.name,
+          description: data.description,
+          acts: data.acts,
+          stageManager: data.stageManager,
+          stageManagerEmail: data.stageManagerEmail,
+          stageManagerPhone: data.stageManagerPhone,
+          propsSupervisor: data.propsSupervisor,
+          propsSupervisorEmail: data.propsSupervisorEmail, 
+          propsSupervisorPhone: data.propsSupervisorPhone,
+          productionCompany: data.productionCompany,
+          productionContactName: data.productionContactName,
+          productionContactEmail: data.productionContactEmail,
+          productionContactPhone: data.productionContactPhone,
+          venues: data.venues,
+          isTouringShow: data.isTouringShow,
+          contacts: data.contacts,
+          imageUrl: data.imageUrl,
           userId: editingShow.userId,
-          id: editingShow.id,
           lastModifiedAt: new Date().toISOString()
-        });
+        };
+        
+        console.log('4. Update data:', updateData);
+        
+        await updateDoc(doc(db, 'shows', editingShow.id), updateData);
+        console.log('5. Show updated successfully');
+        
         setEditingShow(null);
         setShowFormMode('create');
       } else {
+        console.log('3. Creating new show');
+        
         await addDoc(collection(db, 'shows'), {
           ...data,
           userId: user.uid,
           createdAt: new Date().toISOString(),
           collaborators: []
         });
+        console.log('4. Show created successfully');
       }
     } catch (error) {
       console.error('Error with show:', error);
@@ -454,13 +489,18 @@ function App() {
   };
 
   const handleAddMacbethShow = async () => {
+    console.log('=== ADD MACBETH BUTTON CLICKED ===');
+    console.log('1. Starting handleAddMacbethShow function');
     try {
+      console.log('2. Attempting to add Macbeth show...');
       const showId = await addMacbethShow();
+      console.log('3. Received showId:', showId);
       if (showId) {
+        console.log('4. Navigating to show detail page');
         // Navigate to the show detail page
         navigate(`/shows/${showId}`);
       }
-      console.log('Successfully added Macbeth show');
+      console.log('5. Successfully completed Macbeth show addition');
     } catch (error) {
       console.error('Error adding Macbeth show:', error);
       alert('Failed to add Macbeth show. Please try again.');
@@ -488,8 +528,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <div className="container mx-auto px-6 py-8">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col">
+      <div className="container mx-auto px-6 py-8 flex-1">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
           <h1 className="text-4xl font-bold gradient-text tracking-tight">The Props Bible</h1>
           {user && (
@@ -707,8 +747,19 @@ function App() {
                           shows.map((show) => (
                             <div
                               key={show.id}
-                              className="flex items-center justify-between p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg hover:border-[var(--highlight-color)] transition-colors"
+                              className={`flex items-center justify-between p-4 border rounded-lg transition-colors relative ${
+                                selectedShow?.id === show.id 
+                                  ? 'bg-primary/5 border-primary border-2 shadow-lg' 
+                                  : 'bg-[var(--bg-secondary)] border-[var(--border-color)] hover:border-[var(--highlight-color)]'
+                              }`}
                             >
+                              {selectedShow?.id === show.id && (
+                                <div className="absolute top-0 left-0 transform -translate-y-1/3 translate-x-1 z-10">
+                                  <div className="bg-primary px-2 py-1 rounded-full text-xs font-medium text-white shadow-md whitespace-nowrap">
+                                    Current Show
+                                  </div>
+                                </div>
+                              )}
                               <div 
                                 className="flex items-center gap-4 flex-1 cursor-pointer"
                                 onClick={() => navigate(`/shows/${show.id}`)}
@@ -717,7 +768,9 @@ function App() {
                                   <img
                                     src={show.imageUrl}
                                     alt={`${show.name} logo`}
-                                    className="w-12 h-12 rounded-lg object-cover border border-[var(--border-color)]"
+                                    className={`w-12 h-12 rounded-lg object-cover border ${
+                                      selectedShow?.id === show.id ? 'border-primary' : 'border-[var(--border-color)]'
+                                    }`}
                                   />
                                 ) : (
                                   <div className="w-12 h-12 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
@@ -747,13 +800,19 @@ function App() {
                                     setActiveTab('props');
                                     navigate('/props');
                                   }}
-                                  className="px-3 py-1.5 text-sm bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
+                                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                    selectedShow?.id === show.id
+                                      ? 'bg-green-600 text-white font-bold' 
+                                      : 'bg-primary text-white hover:bg-primary/90'
+                                  }`}
                                   title="Select for Props"
+                                  disabled={selectedShow?.id === show.id}
                                 >
-                                  Select for Props
+                                  {selectedShow?.id === show.id ? 'Current Show ✓' : 'Select for Props'}
                                 </button>
                                 <button
                                   onClick={(e) => {
+                                    console.log('Edit button clicked for show:', show);
                                     e.stopPropagation();
                                     if (editingShow?.id === show.id) {
                                       setEditingShow(null);
@@ -829,15 +888,28 @@ function App() {
                     {shows.map(show => (
                       <div
                         key={show.id}
-                        className="flex items-center p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg hover:border-[var(--highlight-color)] transition-colors cursor-pointer"
+                        className={`flex items-center p-4 border rounded-lg transition-colors cursor-pointer relative ${
+                          selectedShow?.id === show.id 
+                            ? 'bg-primary/5 border-primary border-2 shadow-lg' 
+                            : 'bg-[var(--bg-secondary)] border-[var(--border-color)] hover:border-[var(--highlight-color)]'
+                        }`}
                         onClick={() => navigate(`/packing/${show.id}`)}
                       >
+                        {selectedShow?.id === show.id && (
+                          <div className="absolute top-0 left-0 transform -translate-y-1/3 translate-x-1 z-10">
+                            <div className="bg-primary px-2 py-1 rounded-full text-xs font-medium text-white shadow-md whitespace-nowrap">
+                              Current Show
+                            </div>
+                          </div>
+                        )}
                         <div className="flex items-center gap-4">
                           {show.imageUrl ? (
                             <img
                               src={show.imageUrl}
                               alt={`${show.name} logo`}
-                              className="w-12 h-12 rounded-lg object-cover border border-[var(--border-color)]"
+                              className={`w-12 h-12 rounded-lg object-cover border ${
+                                selectedShow?.id === show.id ? 'border-primary ring-2 ring-primary' : 'border-[var(--border-color)]'
+                              }`}
                             />
                           ) : (
                             <div className="w-12 h-12 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
@@ -847,10 +919,17 @@ function App() {
                             </div>
                           )}
                           <div>
-                            <h3 className="font-medium text-gray-200">{show.name}</h3>
-                            <p className="text-sm text-gray-400">
-                              {show.acts.length} Acts • {show.acts.reduce((sum, act) => sum + act.scenes.length, 0)} Scenes
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">{show.name}</h3>
+                            <p className="text-[var(--text-secondary)] text-sm mt-1">
+                              {show.venues && show.venues.length > 0 ? show.venues[0].name : 'No venue specified'}
                             </p>
+                            {selectedShow?.id === show.id && (
+                              <div className="mt-2">
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-sm shadow-primary/30">
+                                  Current Show
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -872,6 +951,8 @@ function App() {
           } />
         </Routes>
       </div>
+
+      <Footer />
 
       {showAuth && <AuthForm onClose={() => setShowAuth(false)} />}
       {showProfile && <UserProfileModal onClose={() => setShowProfile(false)} />}
