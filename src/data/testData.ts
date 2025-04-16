@@ -1,5 +1,5 @@
 import { Show, Prop, PropImage, DigitalAsset, Venue, Contact, ShowCollaborator } from '../types';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, doc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { db } from '../lib/firebase';
 
@@ -86,6 +86,24 @@ const collaborators: ShowCollaborator[] = [
   {
     email: 'organicwebnet@gmail.com',
     role: 'editor',
+    addedAt: currentDate,
+    addedBy: 'admin@theatre.com'
+  },
+  {
+    email: 'director@theatre.com',
+    role: 'viewer',
+    addedAt: currentDate,
+    addedBy: 'admin@theatre.com'
+  },
+  {
+    email: 'propmaster@theatre.com',
+    role: 'editor',
+    addedAt: currentDate,
+    addedBy: 'admin@theatre.com'
+  },
+  {
+    email: 'designer@theatre.com',
+    role: 'viewer',
     addedAt: currentDate,
     addedBy: 'admin@theatre.com'
   }
@@ -497,9 +515,13 @@ export const testProps: Prop[] = [
 ];
 
 export async function addMacbethShow() {
+  console.log('=== ADD MACBETH SHOW FUNCTION ===');
+  console.log('1. Starting addMacbethShow function');
+  
   // Get the current user's ID from Firebase Auth
   const auth = getAuth();
   const currentUser = auth.currentUser;
+  console.log('2. Current user:', currentUser?.uid);
 
   if (!currentUser) {
     console.error('No user is signed in. Please sign in before adding the show.');
@@ -507,17 +529,20 @@ export async function addMacbethShow() {
   }
 
   try {
+    console.log('3. Preparing show data with user:', currentUser.uid);
     // Add the show to Firestore
     const showData = {
       ...testShow,
       userId: currentUser.uid, // Use uid instead of email
       createdAt: new Date().toISOString()
     };
+    console.log('4. Show data prepared:', showData);
 
     const showRef = await addDoc(collection(db, 'shows'), showData);
-    console.log('Added Macbeth show with ID:', showRef.id);
+    console.log('5. Added Macbeth show with ID:', showRef.id);
 
     // Add all the props with the show ID
+    console.log('6. Starting to add props...');
     for (const prop of testProps) {
       const propData = {
         ...prop,
@@ -527,13 +552,43 @@ export async function addMacbethShow() {
       };
 
       await addDoc(collection(db, 'props'), propData);
-      console.log(`Added prop: ${prop.name}`);
+      console.log(`7. Added prop: ${prop.name}`);
     }
 
-    console.log('Successfully added Macbeth show and all its props!');
+    console.log('8. Successfully added Macbeth show and all its props!');
     return showRef.id;
   } catch (error) {
-    console.error('Error adding Macbeth show:', error);
+    console.error('Error in addMacbethShow:', error);
+    throw error;
+  }
+}
+
+export async function removeMacbethTestCollaborators(showId: string) {
+  console.log('=== REMOVE TEST COLLABORATORS FUNCTION ===');
+  console.log('1. Starting removeTestCollaborators function for show:', showId);
+  
+  // Get the current user's ID from Firebase Auth
+  const auth = getAuth();
+  const currentUser = auth.currentUser;
+  
+  if (!currentUser) {
+    console.error('No user is signed in. Please sign in before removing collaborators.');
+    return;
+  }
+
+  try {
+    // Get the document reference
+    const showRef = doc(db, 'shows', showId);
+    
+    // Update the document to set collaborators to an empty array
+    await updateDoc(showRef, {
+      collaborators: []
+    });
+    
+    console.log('2. Successfully removed all test collaborators from show:', showId);
+    return true;
+  } catch (error) {
+    console.error('Error removing test collaborators:', error);
     throw error;
   }
 } 

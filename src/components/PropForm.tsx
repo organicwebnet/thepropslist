@@ -69,10 +69,17 @@ const initialFormState: PropFormData = {
   rentalSource: '',
   rentalDueDate: '',
   rentalReferenceNumber: '',
-  digitalAssets: []
+  digitalAssets: [],
+  travelsUnboxed: false,
+  // ... rest of the properties ...
 };
 
 export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, show, disabled = false }: PropFormProps): JSX.Element {
+  console.log('=== PROP FORM MOUNT DEBUG ===');
+  console.log('1. PropForm mounted with mode:', mode);
+  console.log('2. Initial data received:', initialData);
+  console.log('3. Show data received:', show);
+
   // Initialize form data with proper defaults for any missing fields
   const defaultFormData = {
     ...initialFormState,
@@ -82,6 +89,15 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
   
   const [formData, setFormData] = useState<PropFormData>(defaultFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    console.log('=== PROP FORM EFFECT DEBUG ===');
+    console.log('1. Effect triggered with initialData:', initialData);
+    console.log('2. Current formData state:', formData);
+    if (initialData) {
+      setFormData(initialData);
+    }
+  }, [initialData]);
 
   const handlePriceChange = (value: string) => {
     const cleanValue = value.replace(/[^\d.]/g, '');
@@ -97,6 +113,9 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('=== PROP FORM SUBMIT DEBUG ===');
+    console.log('1. Form submission started');
+    console.log('2. Submitting formData:', formData);
     setIsSubmitting(true);
 
     if (formData.source === 'rented') {

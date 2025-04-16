@@ -7,7 +7,7 @@ import { PropForm } from '../components/PropForm';
 import { Package, Edit, Trash2, Calendar, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { DigitalAssetGrid } from '../components/DigitalAssetGrid';
 import { ImageCarousel } from '../components/ImageCarousel';
-import type { Prop, PropFormData } from '../types';
+import type { Prop, PropFormData, Show } from '../types';
 
 interface PropDetailPageProps {
   onEdit?: (id: string, data: PropFormData) => Promise<void>;
@@ -16,6 +16,7 @@ interface PropDetailPageProps {
 
 export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
   const [prop, setProp] = useState<Prop | null>(null);
+  const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -23,7 +24,7 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    async function fetchProp() {
+    async function fetchPropAndShow() {
       if (!auth.currentUser) {
         console.error('No authenticated user');
         setError('Please sign in to view prop details');
@@ -49,11 +50,11 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
         console.log('Edit param from URL:', editParam);
         setIsEditing(editParam === 'true');
 
-        const docRef = doc(db, 'props', id);
-        const docSnap = await getDoc(docRef);
+        const propRef = doc(db, 'props', id);
+        const propSnap = await getDoc(propRef);
 
-        if (docSnap.exists()) {
-          const propData = docSnap.data();
+        if (propSnap.exists()) {
+          const propData = propSnap.data();
           console.log('Prop data found:', propData);
           
           // Verify the prop belongs to the current user
@@ -64,7 +65,23 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
             return;
           }
 
-          setProp({ id: docSnap.id, ...propData } as Prop);
+          setProp({ id: propSnap.id, ...propData } as Prop);
+          console.log('Successfully set prop data:', { id: propSnap.id, ...propData });
+
+          // Fetch the show data
+          const showRef = doc(db, 'shows', propData.showId);
+          console.log('Fetching show with ID:', propData.showId);
+          const showSnap = await getDoc(showRef);
+          
+          if (showSnap.exists()) {
+            const showData = showSnap.data();
+            const fullShowData = { id: showSnap.id, ...showData } as Show;
+            console.log('Successfully fetched show data:', fullShowData);
+            setShow(fullShowData);
+          } else {
+            console.error('No show found for prop');
+            setError('Show not found for this prop');
+          }
         } else {
           console.error('No prop found with ID:', id);
           setError('Prop not found');
@@ -78,7 +95,7 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
       }
     }
 
-    fetchProp();
+    fetchPropAndShow();
   }, [id, navigate]);
 
   const handleEdit = async (data: PropFormData) => {
@@ -135,6 +152,12 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
   }
 
   if (isEditing) {
+    console.log('=== EDIT MODE DEBUG ===');
+    console.log('1. Entering edit mode section');
+    console.log('2. Current prop data:', prop);
+    console.log('3. Current show data:', show);
+    console.log('4. isEditing state:', isEditing);
+    
     return (
       <div className="space-y-6">
         <button
@@ -146,10 +169,17 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
         </button>
 
         <PropForm
-          onSubmit={handleEdit}
+          onSubmit={async (data) => {
+            console.log('=== FORM SUBMISSION DEBUG ===');
+            console.log('1. Form submitted with data:', data);
+            console.log('2. Current prop state:', prop);
+            console.log('3. Current show state:', show);
+            await handleEdit(data);
+          }}
           initialData={prop}
           mode="edit"
           onCancel={() => setIsEditing(false)}
+          show={show || undefined}
         />
       </div>
     );
@@ -182,6 +212,8 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
             <button
               onClick={() => {
                 console.log('Edit button clicked');
+                console.log('Current prop data:', prop);
+                console.log('Current show data:', show);
                 setIsEditing(true);
               }}
               className="p-2 text-gray-400 hover:text-primary transition-colors"

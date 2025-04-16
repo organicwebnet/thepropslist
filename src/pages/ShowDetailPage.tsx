@@ -4,7 +4,8 @@ import { doc, onSnapshot, query, collection, where } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import type { Show, Scene, Act } from '../types';
-import { Pencil, ArrowLeft } from 'lucide-react';
+import { Pencil, ArrowLeft, UserMinus } from 'lucide-react';
+import { removeMacbethTestCollaborators } from '../data/testData';
 
 export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
   const { id } = useParams();
@@ -319,6 +320,69 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Collaborators Section */}
+        {show.collaborators && show.collaborators.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
+              Collaborators
+              {show.name === 'Macbeth' && (
+                <button
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to remove all test collaborators?')) {
+                      try {
+                        await removeMacbethTestCollaborators(show.id);
+                        alert('Test collaborators removed successfully!');
+                      } catch (error) {
+                        console.error('Error removing collaborators:', error);
+                        alert('Failed to remove test collaborators.');
+                      }
+                    }
+                  }}
+                  className="ml-4 inline-flex items-center justify-center px-3 py-1 text-xs bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-md transition-colors"
+                  title="Remove test collaborators"
+                >
+                  <UserMinus className="h-3 w-3 mr-1" />
+                  Remove Test Data
+                </button>
+              )}
+            </h2>
+            <div className="space-y-4">
+              {show.collaborators.map((collaborator, index) => (
+                <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg border-l-4 border-primary">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-[var(--text-primary)]">{collaborator.email}</h3>
+                      <div className="flex items-center mt-1">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          collaborator.role === 'editor' 
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' 
+                            : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
+                        }`}>
+                          {collaborator.role === 'editor' ? 'Editor' : 'Viewer'}
+                        </span>
+                        {collaborator.addedAt && (
+                          <span className="ml-2 text-xs text-[var(--text-secondary)]">
+                            Added {new Date(collaborator.addedAt).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {collaborator.addedBy && (
+                      <div className="text-right text-xs text-[var(--text-secondary)]">
+                        <p>Added by</p>
+                        <p>{collaborator.addedBy}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-sm text-[var(--text-secondary)]">
+              Collaborators can view or edit props based on their assigned role.
+            </p>
           </div>
         )}
       </div>

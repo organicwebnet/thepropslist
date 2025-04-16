@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Theater, User, Building, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Show, ShowFormData } from '../types';
-import { ShowForm } from './ShowForm';
+import ShowForm from './ShowForm';
 import { auth } from '../lib/firebase';
 
 interface ShowListProps {
@@ -18,13 +18,22 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleEdit = (show: Show) => {
+    console.log('=== SHOW EDIT HANDLER ===');
+    console.log('1. handleEdit called with show:', show);
     setEditingId(show.id);
+    console.log('2. Set editingId to:', show.id);
   };
 
   const handleEditSubmit = async (data: ShowFormData) => {
+    console.log('=== HANDLE EDIT SUBMIT ===');
+    console.log('1. Received form data:', data);
+    
     if (editingId && onEdit) {
+      console.log('2. Calling onEdit with editingId:', editingId);
       await onEdit(editingId, data);
+      console.log('3. onEdit function completed');
       setEditingId(null);
+      console.log('4. Reset editingId to null');
     }
   };
 
@@ -45,13 +54,8 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
             <ShowForm
               onSubmit={handleEditSubmit}
               initialData={{
-                name: show.name,
-                acts: show.acts,
-                scenes: show.scenes,
-                description: show.description,
-                stageManager: show.stageManager,
-                propsSupervisor: show.propsSupervisor,
-                productionCompany: show.productionCompany,
+                ...show,
+                // Ensure these fields have default values if they're missing
                 venues: show.venues || [],
                 isTouringShow: show.isTouringShow || false,
                 contacts: show.contacts || []
@@ -62,60 +66,75 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
           ) : (
             <div 
               className={`gradient-border p-6 transition-transform hover:scale-[1.02] cursor-pointer ${
-                selectedShowId === show.id ? 'ring-2 ring-primary' : ''
+                selectedShowId === show.id ? 'ring-2 ring-primary border-2 border-primary shadow-lg shadow-primary/30' : ''
               }`}
               onClick={() => onSelect(show)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="bg-gradient-to-r from-primary to-primary-dark p-2 rounded-lg">
+                  <div className={`${selectedShowId === show.id ? 'bg-primary' : 'bg-gradient-to-r from-primary to-primary-dark'} p-2 rounded-lg`}>
                     <Theater className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-white">{show.name}</h3>
                     <div className="flex items-center space-x-4 text-gray-400 mt-1">
-                      <span>{show.acts} Act{show.acts !== 1 ? 's' : ''}</span>
+                      <span>{show.acts.length} Act{show.acts.length !== 1 ? 's' : ''}</span>
                       <span>•</span>
-                      <span>{show.scenes} Scene{show.scenes !== 1 ? 's' : ''}</span>
+                      <span>
+                        {show.acts.reduce((total, act) => total + act.scenes.length, 0)} Scene
+                        {show.acts.reduce((total, act) => total + act.scenes.length, 0) !== 1 ? 's' : ''}
+                      </span>
                     </div>
+                    {selectedShowId === show.id && (
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary text-white">
+                          Currently Selected
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={(e) => toggleExpand(show.id, e)}
-                    className="p-2 text-gray-400 hover:text-primary transition-colors"
-                    title={expandedId === show.id ? "Show less" : "Show more"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(show);
+                    }}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${
+                      selectedShowId === show.id 
+                        ? 'bg-green-600/20 text-green-400 cursor-default' 
+                        : 'bg-primary hover:bg-primary-dark text-white'
+                    }`}
+                    disabled={selectedShowId === show.id}
                   >
-                    {expandedId === show.id ? (
-                      <ChevronUp className="h-5 w-5" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5" />
-                    )}
+                    {selectedShowId === show.id ? 'Currently Active' : 'Select Show'}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      console.log('=== SHOW EDIT BUTTON CLICKED ===');
+                      console.log('1. Edit button clicked for show:', show);
+                      e.stopPropagation();
+                      console.log('2. Event propagation stopped');
+                      handleEdit(show);
+                      console.log('3. handleEdit called with show data');
+                    }}
+                    className="p-2 text-gray-400 hover:text-primary transition-colors"
+                    title="Edit show"
+                  >
+                    <Pencil className="h-5 w-5" />
                   </button>
                   {isShowOwner(show) && onEdit && onDelete && (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(show);
-                        }}
-                        className="p-2 text-gray-400 hover:text-primary transition-colors"
-                        title="Edit show"
-                      >
-                        <Pencil className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDelete(show.id);
-                        }}
-                        className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                        title="Delete show"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
-                    </>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(show.id);
+                      }}
+                      className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      title="Delete show"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -125,7 +144,6 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                   {show.description && (
                     <p className="text-gray-400">{show.description}</p>
                   )}
-
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {show.stageManager && (
                       <div className="flex items-center space-x-2 text-gray-400">
@@ -146,12 +164,6 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                       </div>
                     )}
                   </div>
-
-                  {show.collaborators?.length > 0 && (
-                    <div className="text-gray-400">
-                      <span>{show.collaborators.length} Collaborator{show.collaborators.length !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
