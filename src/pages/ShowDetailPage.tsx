@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, query, collection, where } from 'firebase/firestore';
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import type { Show, Scene, Act } from '../types';
@@ -11,6 +11,11 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
   const navigate = useNavigate();
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
+  const [propStats, setPropStats] = useState({
+    totalProps: 0,
+    totalValue: 0,
+    totalWeight: 0
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -63,6 +68,29 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
 
     return () => unsubscribe();
   }, [id, navigate]);
+
+  // Add effect to fetch prop statistics
+  useEffect(() => {
+    if (!id) return;
+
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'props'), where('showId', '==', id)),
+      (snapshot) => {
+        const stats = snapshot.docs.reduce((acc, doc) => {
+          const prop = doc.data();
+          return {
+            totalProps: acc.totalProps + 1,
+            totalValue: acc.totalValue + (prop.price || 0),
+            totalWeight: acc.totalWeight + (prop.weight || 0)
+          };
+        }, { totalProps: 0, totalValue: 0, totalWeight: 0 });
+        
+        setPropStats(stats);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [id]);
 
   if (loading) {
     return (
@@ -215,6 +243,28 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
                   <p className="text-[var(--text-primary)]">{venues[0]?.name || 'Not specified'}</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Props Overview</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+              <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-1">Total Props</h3>
+              <p className="text-2xl font-semibold text-[var(--text-primary)]">{propStats.totalProps}</p>
+            </div>
+            <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+              <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-1">Total Value</h3>
+              <p className="text-2xl font-semibold text-[var(--text-primary)]">
+                ${propStats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+              <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-1">Total Weight</h3>
+              <p className="text-2xl font-semibold text-[var(--text-primary)]">
+                {propStats.totalWeight.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
+              </p>
             </div>
           </div>
         </div>

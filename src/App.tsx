@@ -453,7 +453,11 @@ function App() {
 
   const handleAddMacbethShow = async () => {
     try {
-      await addMacbethShow();
+      const showId = await addMacbethShow();
+      if (showId) {
+        // Navigate to the show detail page
+        navigate(`/shows/${showId}`);
+      }
       console.log('Successfully added Macbeth show');
     } catch (error) {
       console.error('Error adding Macbeth show:', error);
@@ -697,10 +701,12 @@ function App() {
                           shows.map((show) => (
                             <div
                               key={show.id}
-                              className="flex items-center justify-between p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg hover:border-[var(--highlight-color)] transition-colors cursor-pointer"
-                              onClick={() => navigate(`/shows/${show.id}`)}
+                              className="flex items-center justify-between p-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg hover:border-[var(--highlight-color)] transition-colors"
                             >
-                              <div className="flex items-center gap-4">
+                              <div 
+                                className="flex items-center gap-4 flex-1 cursor-pointer"
+                                onClick={() => navigate(`/shows/${show.id}`)}
+                              >
                                 {show.imageUrl ? (
                                   <img
                                     src={show.imageUrl}
@@ -731,12 +737,22 @@ function App() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    setSelectedShow(show);
+                                    setActiveTab('props');
+                                    navigate('/props');
+                                  }}
+                                  className="px-3 py-1.5 text-sm bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors"
+                                  title="Select for Props"
+                                >
+                                  Select for Props
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
                                     if (editingShow?.id === show.id) {
-                                      // If this show is already being edited, cancel the edit
                                       setEditingShow(null);
                                       setShowFormMode('create');
                                     } else {
-                                      // Start editing this show
                                       setEditingShow(show);
                                       setShowFormMode('edit');
                                       window.scrollTo({ top: 0, behavior: 'smooth' });
