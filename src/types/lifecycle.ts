@@ -23,7 +23,8 @@ export type PropLifecycleStatus =
   | 'being_modified'      // Being customized/modified
   | 'backup'              // Backup/alternate prop
   | 'temporarily_retired' // Stored for future use
-  | 'ready_for_disposal'; // Ready for recycling/disposal
+  | 'ready_for_disposal'  // Ready for recycling/disposal
+  | 'repaired_back_in_show'; // Repaired and returned to the show
 
 /**
  * Status labels for UI display
@@ -43,7 +44,8 @@ export const lifecycleStatusLabels: Record<PropLifecycleStatus, string> = {
   being_modified: 'Being Modified',
   backup: 'Backup/Alternate',
   temporarily_retired: 'Temporarily Retired',
-  ready_for_disposal: 'Ready for Disposal'
+  ready_for_disposal: 'Ready for Disposal',
+  repaired_back_in_show: 'Repaired - Back in Show'
 };
 
 /**
@@ -69,7 +71,8 @@ export const lifecycleStatusPriority: Record<PropLifecycleStatus, StatusPriority
   temporarily_retired: 'low',
   ready_for_disposal: 'low',
   confirmed: 'info',
-  cut: 'info'
+  cut: 'info',
+  repaired_back_in_show: 'info'
 };
 
 /**
@@ -85,6 +88,8 @@ export interface MaintenanceRecord {
   notes?: string;
   createdAt: string;
   createdBy: string;
+  estimatedReturnDate?: string; // When the prop is expected to be returned from repair
+  repairDeadline?: string; // The deadline by which the prop must be fixed
 }
 
 /**
@@ -99,6 +104,7 @@ export interface PropStatusUpdate {
   notes?: string;
   notified?: string[]; // IDs or emails of notified team members
   createdAt: string;
+  damageImageUrls?: string[]; // URLs of damage documentation images
 }
 
 /**

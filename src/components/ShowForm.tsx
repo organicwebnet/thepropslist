@@ -3,6 +3,7 @@ import { PlusCircle, MinusCircle, Save, Upload } from 'lucide-react';
 import { VenueForm } from './VenueForm';
 import type { ShowFormData, Act, Scene, PropImage, Show, Venue } from '../types';
 import { WysiwygEditor } from './WysiwygEditor';
+import { HelpTooltip } from './HelpTooltip';
 
 interface ShowFormProps {
   mode: 'create' | 'edit';
@@ -437,7 +438,19 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
 
         <div className="space-y-6">
           <div>
-            <RequiredLabel>Show Name</RequiredLabel>
+            <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
+              Show Name <span className="text-primary">*</span>
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Show Name Guidelines:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Use the official production title</li>
+                    <li>Include version/year if applicable</li>
+                    <li>Be consistent with marketing materials</li>
+                  </ul>
+                </div>
+              } />
+            </label>
             <input
               type="text"
               id="name"
@@ -456,8 +469,18 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
           </div>
 
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-              Description
+            <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
+              Description <span className="text-primary">*</span>
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Description Tips:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Brief overview of the production</li>
+                    <li>Key themes or style elements</li>
+                    <li>Special requirements or notes</li>
+                  </ul>
+                </div>
+              } />
             </label>
             <WysiwygEditor
               value={formData.description || ''}
@@ -639,8 +662,18 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
           )}
 
           <div>
-            <label htmlFor="stageManager" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+            <label htmlFor="stageManager" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
               Stage Manager <span className="text-primary">*</span>
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Stage Manager Contact:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Primary point of contact</li>
+                    <li>Responsible for show coordination</li>
+                    <li>Include all contact methods</li>
+                  </ul>
+                </div>
+              } />
             </label>
             <div className="space-y-3">
               <input
@@ -682,8 +715,18 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
           </div>
 
           <div>
-            <label htmlFor="propsSupervisor" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+            <label htmlFor="propsSupervisor" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
               Props Supervisor <span className="text-primary">*</span>
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Props Supervisor Role:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Manages all prop-related matters</li>
+                    <li>Handles maintenance and repairs</li>
+                    <li>Coordinates with production team</li>
+                  </ul>
+                </div>
+              } />
             </label>
             <div className="space-y-3">
               <input
@@ -716,8 +759,18 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
           </div>
 
           <div>
-            <label htmlFor="productionCompany" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+            <label htmlFor="productionCompany" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
               Production Company <span className="text-primary">*</span>
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Production Details:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Official company name</li>
+                    <li>Primary contact person</li>
+                    <li>Billing and legal information</li>
+                  </ul>
+                </div>
+              } />
             </label>
             <div className="space-y-3">
               <input

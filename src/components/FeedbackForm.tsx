@@ -155,7 +155,7 @@ export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
       case 'feature':
         return <Lightbulb className="h-5 w-5 text-yellow-500" />;
       default:
-        return <MessageSquare className="h-5 w-5 text-blue-500" />;
+        return <MessageSquare className="h-5 w-5 text-[var(--highlight-color)]" />;
     }
   };
 
@@ -186,7 +186,7 @@ export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
                 onClick={() => setType('feedback')}
                 className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center ${
                   type === 'feedback' 
-                    ? 'bg-blue-500/10 text-blue-500 ring-1 ring-blue-500' 
+                    ? 'bg-[var(--highlight-bg)] text-[var(--highlight-color)] ring-1 ring-[var(--highlight-color)]' 
                     : 'bg-[var(--input-bg)] text-[var(--text-secondary)] hover:bg-[var(--input-bg)]/80'
                 }`}
               >

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Save, Loader2 } from 'lucide-react';
+import { PlusCircle, Save, Loader2, Upload } from 'lucide-react';
 import { ImageUpload } from './ImageUpload';
 import { DigitalAssetForm } from './DigitalAssetForm';
-import { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, PropFormProps } from '../types';
+import { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, PropFormProps, Show } from '../types';
 import { dimensionUnits, weightUnits } from '../types';
 import { WysiwygEditor } from './WysiwygEditor';
+import { PropLifecycleStatus, lifecycleStatusLabels } from '../types/lifecycle';
+import { HelpTooltip } from './HelpTooltip';
 
 // Define prop categories
 const categories = [
@@ -72,7 +74,22 @@ const initialFormState: PropFormData = {
   rentalReferenceNumber: '',
   digitalAssets: [],
   travelsUnboxed: false,
-  // ... rest of the properties ...
+  
+  // Lifecycle fields
+  status: 'confirmed',
+  statusNotes: '',
+  maintenanceHistory: [],
+  statusHistory: [],
+  currentLocation: '',
+  expectedReturnDate: undefined,
+  lastInspectionDate: undefined,
+  nextInspectionDue: undefined,
+  lastMaintenanceDate: undefined,
+  nextMaintenanceDue: undefined,
+  replacementCost: undefined,
+  replacementLeadTime: undefined,
+  repairEstimate: undefined,
+  repairPriority: undefined,
 };
 
 export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, show, disabled = false }: PropFormProps): JSX.Element {
@@ -81,14 +98,77 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
   console.log('2. Initial data received:', initialData);
   console.log('3. Show data received:', show);
 
-  // Initialize form data with proper defaults for any missing fields
-  const defaultFormData = {
-    ...initialFormState,
-    ...initialData,
-    digitalAssets: initialData?.digitalAssets || []
-  };
-  
-  const [formData, setFormData] = useState<PropFormData>(defaultFormData);
+  const [formData, setFormData] = useState<PropFormData>(() => {
+    if (initialData) {
+      return { ...initialData };
+    }
+    // Set default values for new props
+    return {
+      name: '',
+      description: '',
+      category: 'Other', // Default category
+      subcategory: '',
+      quantity: 1,
+      location: '',
+      notes: '',
+      status: 'confirmed', // Default status for new props
+      statusNotes: 'Added to show', // Default status note
+      tags: [],
+      customFields: {},
+      showId: show?.id || '',
+      images: [],
+      videos: [],
+      digitalAssets: [],
+      price: 0,
+      weightUnit: 'lb',
+      unit: 'inches',
+      source: '',
+      sourceDetails: '', // Additional required field
+      purchaseDate: '',
+      condition: 'new',
+      manufacturer: '',
+      model: '',
+      serialNumber: '',
+      barcode: '',
+      lastMaintenanceDate: '',
+      nextMaintenanceDue: '',
+      warranty: {
+        provider: '',
+        expirationDate: '',
+        details: ''
+      },
+      dimensions: {
+        length: '',
+        width: '',
+        height: '',
+        unit: 'inches'
+      },
+      weight: 0,
+      materials: [],
+      color: '',
+      period: '',
+      style: '',
+      act: '', // Additional required field
+      scene: '', // Additional required field
+      isMultiScene: false, // Additional required field
+      sceneNotes: '', // Additional required field
+      usageNotes: '', // Additional required field
+      handedness: 'either', // Additional required field
+      isConsumable: false, // Additional required field
+      isBreakable: false, // Additional required field
+      isHazardous: false, // Additional required field
+      safetyNotes: '', // Additional required field
+      maintenanceNotes: '', // Additional required field
+      storageRequirements: '', // Additional required field
+      handlingInstructions: '', // Additional required field
+      rentalInfo: {
+        isRental: false,
+        provider: '',
+        rentalPeriod: '',
+        cost: 0
+      }
+    };
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -155,8 +235,18 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
         {/* Basic Information */}
         <div className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)]">
+            <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
               Name
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Prop Name Guidelines:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Be specific and descriptive</li>
+                    <li>Include key identifying features</li>
+                    <li>Use standard terminology</li>
+                  </ul>
+                </div>
+              } />
             </label>
             <input
               type="text"
@@ -170,8 +260,18 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </div>
 
           <div>
-            <label htmlFor="category" className="block text-sm font-medium text-[var(--text-secondary)]">
+            <label htmlFor="category" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
               Category
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Categories help organize props by:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Type of prop</li>
+                    <li>Usage context</li>
+                    <li>Storage requirements</li>
+                  </ul>
+                </div>
+              } />
             </label>
             <select
               id="category"
@@ -190,8 +290,18 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </div>
 
           <div>
-            <label htmlFor="price" className="block text-sm font-medium text-[var(--text-secondary)]">
+            <label htmlFor="price" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
               Price
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Price Information:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Enter the total cost per unit</li>
+                    <li>Include any additional fees</li>
+                    <li>For rentals, enter the rental cost</li>
+                  </ul>
+                </div>
+              } />
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]">£</span>
@@ -210,8 +320,18 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </div>
 
           <div>
-            <label htmlFor="quantity" className="block text-sm font-medium text-[var(--text-secondary)]">
+            <label htmlFor="quantity" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
               Quantity
+              <HelpTooltip content={
+                <div>
+                  <p className="font-medium mb-1">Quantity Guidelines:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Enter total number of identical items</li>
+                    <li>Minimum value is 1</li>
+                    <li>For sets, count individual pieces</li>
+                  </ul>
+                </div>
+              } />
             </label>
             <input
               type="number"
@@ -254,7 +374,20 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
         {/* Source Information */}
         <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Source Information</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
+            Source Information
+            <HelpTooltip content={
+              <div>
+                <p className="font-medium mb-1">Source Types:</p>
+                <ul className="space-y-2">
+                  <li><span className="font-medium">Bought:</span> Purchased from a store/seller</li>
+                  <li><span className="font-medium">Made:</span> Created in-house</li>
+                  <li><span className="font-medium">Rented:</span> Temporary use with return date</li>
+                  <li><span className="font-medium">Borrowed:</span> Borrowed from another production</li>
+                </ul>
+              </div>
+            } />
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
@@ -405,7 +538,19 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
         {/* Physical Properties */}
         <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Physical Properties</div>
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
+            Physical Properties
+            <HelpTooltip content={
+              <div>
+                <p className="font-medium mb-1">Measurements:</p>
+                <ul className="space-y-2">
+                  <li><span className="font-medium">Length/Width/Height:</span> Main dimensions</li>
+                  <li><span className="font-medium">Weight:</span> Important for transport</li>
+                  <li><span className="font-medium">Units:</span> Choose appropriate units</li>
+                </ul>
+              </div>
+            } />
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
@@ -712,35 +857,83 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           )}
         </div>
 
-        <div className="pt-4">
-          <div className="flex gap-4">
-            {onCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="btn-secondary flex-1 flex items-center justify-center gap-2"
-              >
-                Cancel
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn-primary flex-1 flex items-center justify-center gap-2"
+        {/* Lifecycle Status */}
+        <div className="space-y-4">
+          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Lifecycle Status</div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+              Status
+            </label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as PropLifecycleStatus })}
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Adding Prop...</span>
-                </>
-              ) : (
-                <>
-                  <PlusCircle className="h-5 w-5" />
-                  <span>Add Prop</span>
-                </>
-              )}
-            </button>
+              {Object.entries(lifecycleStatusLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+              Status Notes
+            </label>
+            <textarea
+              value={formData.statusNotes || ''}
+              onChange={(e) => setFormData({ ...formData, statusNotes: e.target.value })}
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              placeholder="Notes about the current status"
+              rows={3}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+              Current Location
+            </label>
+            <input
+              type="text"
+              value={formData.currentLocation || ''}
+              onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              placeholder="Where is this prop currently located?"
+            />
+          </div>
+
+          {formData.status === 'loaned_out' && (
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                Expected Return Date
+              </label>
+              <input
+                type="date"
+                value={formData.expectedReturnDate || ''}
+                onChange={(e) => setFormData({ ...formData, expectedReturnDate: e.target.value })}
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              />
+            </div>
+          )}
+
+          {(formData.status === 'damaged_awaiting_repair' || formData.status === 'out_for_repair') && (
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+                Repair Priority
+              </label>
+              <select
+                value={formData.repairPriority || 'medium'}
+                onChange={(e) => setFormData({ ...formData, repairPriority: e.target.value as 'low' | 'medium' | 'high' | 'urgent' })}
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              >
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
     </form>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { MaintenanceRecord } from '../../types/lifecycle';
-import { Wrench, ClipboardList } from 'lucide-react';
+import { Wrench, ClipboardList, Calendar, Clock, AlertTriangle } from 'lucide-react';
 
 interface MaintenanceHistoryProps {
   records: MaintenanceRecord[];
@@ -29,7 +29,7 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
       case 'maintenance':
         return { 
           icon: <ClipboardList className="h-4 w-4" />, 
-          color: 'bg-blue-500/10 text-blue-500',
+          color: 'bg-[var(--highlight-bg)] text-[var(--highlight-color)]',
           label: 'Maintenance'
         };
       case 'modification':
@@ -45,6 +45,14 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
           label: 'Inspection'
         };
     }
+  };
+
+  // Check if a date is in the future
+  const isDateInFuture = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time portion for accurate date comparison
+    return date > today;
   };
 
   if (records.length === 0) {
@@ -73,7 +81,7 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <p className="text-[var(--text-secondary)] text-sm">
-                    {new Date(record.date).toLocaleDateString()}
+                    Recorded on {new Date(record.date).toLocaleDateString()}
                   </p>
                   <div className="flex items-center mt-1">
                     <span className="font-medium text-[var(--text-primary)]">{record.performedBy}</span>
@@ -84,6 +92,39 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
                   {typeDetails.label}
                 </span>
               </div>
+              
+              {/* Show repair timeline information if this is a repair record */}
+              {record.type === 'repair' && (
+                <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {record.repairDeadline && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-yellow-400" />
+                      <span className={
+                        isDateInFuture(record.repairDeadline) 
+                          ? 'text-[var(--text-secondary)]' 
+                          : 'text-red-400 font-medium'
+                      }>
+                        Deadline: {new Date(record.repairDeadline).toLocaleDateString()}
+                        {!isDateInFuture(record.repairDeadline) && ' (Past due)'}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {record.estimatedReturnDate && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-[var(--text-secondary)]" />
+                      <span className={
+                        isDateInFuture(record.estimatedReturnDate) 
+                          ? 'text-[var(--text-secondary)]' 
+                          : 'text-red-400'
+                      }>
+                        Expected return: {new Date(record.estimatedReturnDate).toLocaleDateString()}
+                        {!isDateInFuture(record.estimatedReturnDate) && ' (Overdue)'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
               
               <div className="mt-3 text-sm text-[var(--text-primary)] bg-[var(--bg-primary)] p-3 rounded border border-[var(--border-color)]">
                 <div dangerouslySetInnerHTML={{ __html: record.description }} />
@@ -109,7 +150,7 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
 
       {hasMoreItems && (
         <button 
-          className="w-full text-center py-2 text-sm text-primary hover:text-primary/80"
+          className="w-full text-center py-2 text-sm text-[var(--highlight-color)] hover:text-[var(--highlight-color)]/80"
           onClick={() => {
             // This would be connected to a state handler for viewing full history
             // For now, it's just a placeholder

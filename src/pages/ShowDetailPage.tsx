@@ -61,7 +61,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
           productionContactPhone: data.productionContactPhone || ''
         } as Show);
       } else {
-        navigate('/');
+        navigate('/shows');
       }
       setLoading(false);
     });
@@ -128,7 +128,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/shows')}
         className="flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6"
       >
         <ArrowLeft className="h-5 w-5 mr-2" />

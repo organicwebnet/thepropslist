@@ -222,6 +222,7 @@ export interface Filters {
   act?: number;
   scene?: number;
   category?: string;
+  status?: PropLifecycleStatus;
 }
 
 export interface Currency {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
 import { Editor as TinyMCEEditor } from 'tinymce';
 
@@ -8,16 +8,6 @@ interface WysiwygEditorProps {
   placeholder?: string;
   minHeight?: number;
   disabled?: boolean;
-}
-
-// Add types for the image upload handler
-interface BlobInfo {
-  id: () => string;
-  name: () => string;
-  filename: () => string;
-  blob: () => Blob;
-  base64: () => string;
-  blobUri: () => string;
 }
 
 export function WysiwygEditor({

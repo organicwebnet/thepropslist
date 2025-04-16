@@ -1,5 +1,5 @@
 import React from 'react';
-import { PropStatusUpdate, lifecycleStatusLabels, lifecycleStatusPriority, StatusPriority } from '../../types/lifecycle';
+import { PropStatusUpdate, lifecycleStatusLabels, lifecycleStatusPriority, StatusPriority, PropLifecycleStatus } from '../../types/lifecycle';
 import { History, MoveRight } from 'lucide-react';
 
 interface StatusHistoryProps {
@@ -18,7 +18,10 @@ export function StatusHistory({ history, maxItems = 5 }: StatusHistoryProps) {
   const hasMoreItems = sortedHistory.length > maxItems;
 
   // Get status color
-  const getStatusColor = (priority: StatusPriority): string => {
+  const getStatusColor = (status: string): string => {
+    const statusKey = status as PropLifecycleStatus;
+    const priority = lifecycleStatusPriority[statusKey] || 'info';
+    
     switch (priority) {
       case 'critical':
         return 'text-red-500';
@@ -27,7 +30,7 @@ export function StatusHistory({ history, maxItems = 5 }: StatusHistoryProps) {
       case 'medium':
         return 'text-yellow-500';
       case 'low':
-        return 'text-blue-500';
+        return 'text-[var(--highlight-color)]';
       default:
         return 'text-green-500';
     }
@@ -69,7 +72,7 @@ export function StatusHistory({ history, maxItems = 5 }: StatusHistoryProps) {
                 </div>
               </div>
               {item.notified && item.notified.length > 0 && (
-                <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-500">
+                <span className="text-xs px-2 py-1 rounded-full bg-[var(--highlight-bg)] text-[var(--highlight-color)]">
                   Team notified
                 </span>
               )}
@@ -85,7 +88,7 @@ export function StatusHistory({ history, maxItems = 5 }: StatusHistoryProps) {
 
       {hasMoreItems && (
         <button 
-          className="w-full text-center py-2 text-sm text-primary hover:text-primary/80"
+          className="w-full text-center py-2 text-sm text-[var(--highlight-color)] hover:text-[var(--highlight-color)]/80"
           onClick={() => {
             // This would be connected to a state handler for viewing full history
             // For now, it's just a placeholder

@@ -152,12 +152,18 @@ function App() {
         } as Show);
       });
       setShows(showsData);
+      
+      // Automatically select the first show if no show is currently selected
+      if (showsData.length > 0 && !selectedShow) {
+        console.log('Auto-selecting first show:', showsData[0].id);
+        setSelectedShow(showsData[0]);
+      }
     });
 
     return () => {
       showsUnsubscribe();
     };
-  }, [user]);
+  }, [user, selectedShow]);
 
   useEffect(() => {
     if (!user || !selectedShow) {
@@ -167,19 +173,32 @@ function App() {
     }
 
     console.log('Loading props for show:', selectedShow.id);
+    console.log('Current user ID:', user.uid);
 
     const propsQuery = query(
       collection(db, 'props'),
       where('showId', '==', selectedShow.id)
     );
 
+    console.log('Creating listener for props with query:', { showId: selectedShow.id });
+
     const unsubscribe = onSnapshot(propsQuery, (snapshot) => {
-      const propsData: Prop[] = [];
-      snapshot.forEach((doc) => {
-        propsData.push({ id: doc.id, ...doc.data() } as Prop);
-      });
-      console.log('Loaded props:', propsData.length);
-      setProps(propsData);
+      try {
+        console.log('Props snapshot received, document count:', snapshot.docs.length);
+        const propsData: Prop[] = [];
+        snapshot.forEach((doc) => {
+          console.log('Processing prop document:', doc.id);
+          propsData.push({ id: doc.id, ...doc.data() } as Prop);
+        });
+        console.log('Loaded props:', propsData.length);
+        setProps(propsData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error processing props data:', error);
+        setLoading(false);
+      }
+    }, (error) => {
+      console.error('Error in props snapshot listener:', error);
       setLoading(false);
     });
 
@@ -320,7 +339,7 @@ function App() {
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'props', id));
-      navigate('/');
+      navigate('/props');
     } catch (error) {
       console.error('Error deleting prop:', error);
       alert('Failed to delete prop. Please try again.');
@@ -513,7 +532,8 @@ function App() {
     const matchesAct = !filters.act || prop.act === filters.act;
     const matchesScene = !filters.scene || prop.scene === filters.scene;
     const matchesCategory = !filters.category || prop.category.toLowerCase() === filters.category.toLowerCase();
-    return matchesSearch && matchesAct && matchesScene && matchesCategory;
+    const matchesStatus = !filters.status || prop.status === filters.status;
+    return matchesSearch && matchesAct && matchesScene && matchesCategory && matchesStatus;
   });
 
   if (loading) {
@@ -613,14 +633,19 @@ function App() {
             )
           } />
           <Route path="/" element={
-            <>
-              {user && (
-                <>
-                  <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} navigate={navigate} />
-                  <Navigate to="/props" replace />
-                </>
-              )}
-            </>
+            user ? (
+              <Navigate to="/props" replace />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-red-400">Please sign in to view props</p>
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
+                >
+                  Sign In
+                </button>
+              </div>
+            )
           } />
           <Route path="/props" element={
             user ? (

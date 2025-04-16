@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { doc, updateDoc, arrayUnion, Timestamp, getDoc } from 'firebase/firestore';
+import { db, auth, storage } from '../lib/firebase';
 import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate } from '../types/lifecycle';
 import { v4 as uuidv4 } from 'uuid';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface UsePropLifecycleProps {
   propId: string;
@@ -13,11 +14,28 @@ export function usePropLifecycle({ propId }: UsePropLifecycleProps) {
   const [isAddingMaintenance, setIsAddingMaintenance] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Upload images and get their URLs
+  const uploadDamageImages = async (images: File[]): Promise<string[]> => {
+    if (!images.length) return [];
+    
+    const imageUrls: string[] = [];
+    
+    for (const image of images) {
+      const imageRef = ref(storage, `props/${propId}/damage-images/${Date.now()}-${image.name}`);
+      await uploadBytes(imageRef, image);
+      const url = await getDownloadURL(imageRef);
+      imageUrls.push(url);
+    }
+    
+    return imageUrls;
+  };
+
   // Update prop status
   const updatePropStatus = async (
     newStatus: PropLifecycleStatus, 
     notes: string, 
-    notifyTeam: boolean
+    notifyTeam: boolean,
+    damageImages?: File[]
   ): Promise<void> => {
     if (!auth.currentUser) {
       setError('You must be signed in to update prop status');
@@ -29,38 +47,71 @@ export function usePropLifecycle({ propId }: UsePropLifecycleProps) {
 
     try {
       const propRef = doc(db, 'props', propId);
+      
+      // Get the current prop data to get the current status
+      const propSnap = await getDoc(propRef);
+      if (!propSnap.exists()) {
+        throw new Error('Prop not found');
+      }
+      const propData = propSnap.data();
+      const currentStatus = propData.status as PropLifecycleStatus || 'confirmed'; // Default to 'confirmed' if no status
+      
       const now = new Date().toISOString();
       
-      // Get current values from the component that renders this hook
-      // We don't fetch the document here to avoid unnecessary reads
+      // Upload damage images if provided
+      let damageImageUrls: string[] = [];
+      if (damageImages && damageImages.length > 0) {
+        damageImageUrls = await uploadDamageImages(damageImages);
+      }
       
-      // Create status update record
+      // Create base status update record with required fields
       const statusUpdate: PropStatusUpdate = {
         id: uuidv4(),
         date: now,
-        previousStatus: 'confirmed', // This will be set by the component using the hook
+        previousStatus: currentStatus,
         newStatus,
         updatedBy: auth.currentUser.uid,
-        notes: notes || undefined,
-        notified: notifyTeam ? [] : undefined, // We'd add actual notification data here
         createdAt: now
       };
 
+      // Only add optional fields if they have non-empty values
+      if (notes && notes.trim()) {
+        statusUpdate.notes = notes.trim();
+      }
+
+      if (notifyTeam) {
+        statusUpdate.notified = []; // Initialize as empty array
+      }
+
+      if (damageImageUrls.length > 0) {
+        statusUpdate.damageImageUrls = damageImageUrls;
+      }
+
       // Update the prop document
-      await updateDoc(propRef, {
+      const updateData: Record<string, any> = {
         status: newStatus,
-        statusNotes: notes || '',
-        lastStatusUpdate: now,
-        statusHistory: arrayUnion(statusUpdate)
-      });
+        lastStatusUpdate: now
+      };
+
+      // Only add non-empty notes to the main document
+      if (notes && notes.trim()) {
+        updateData.statusNotes = notes.trim();
+      }
+
+      // Add the status update to history
+      updateData.statusHistory = arrayUnion(statusUpdate);
+
+      // Only add damage image URLs if they exist
+      if (damageImageUrls.length > 0) {
+        updateData.damageImageUrls = arrayUnion(...damageImageUrls);
+      }
+
+      await updateDoc(propRef, updateData);
 
       // If we should notify the team, we would handle that here
-      // This could include sending emails, creating notifications, etc.
       if (notifyTeam) {
         // Implement notification logic
         console.log('Notification would be sent to team for status update');
-        // Update the status update with notified information
-        // This would be done in a real implementation
       }
     } catch (err) {
       console.error('Error updating prop status:', err);

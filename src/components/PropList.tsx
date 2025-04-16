@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, Trash2, Theater, Edit, AlertTriangle, Calendar, FileText, Share2, ChevronsUp } from 'lucide-react';
+import { Package, Trash2, Theater, Edit, AlertTriangle, Calendar, FileText, Share2, ChevronsUp, Activity, HelpCircle } from 'lucide-react';
 import type { Prop, PropFormData, Show, Filters } from '../types';
 import { ExportToolbar } from './ExportToolbar';
 import { SearchBar } from './SearchBar';
 import { PropFilters } from './PropFilters';
+import { lifecycleStatusLabels, lifecycleStatusPriority } from '../types/lifecycle';
 
 interface PropListProps {
   props: Prop[];
@@ -156,27 +157,6 @@ export function PropList({
           </div>
         </div>
 
-        <div className="px-6 py-4 border-b border-[var(--border-color)]">
-          <div className="flex items-center justify-end gap-3">
-            <ExportToolbar 
-              props={props} 
-              show={show} 
-              onMergeProps={handleMergeProps}
-              onDeleteProp={onDelete}
-              onEditProp={handleEditProp}
-            />
-            {onShare && (
-              <button
-                onClick={() => onShare(show)}
-                className="inline-flex items-center px-3 py-1.5 text-sm rounded-md bg-[var(--button-bg)] text-[var(--button-text)] hover:bg-[var(--button-hover)] transition-colors whitespace-nowrap flex-shrink-0"
-              >
-                <Share2 className="h-3.5 w-3.5 mr-1.5" />
-                Share
-              </button>
-            )}
-          </div>
-        </div>
-
         <div className="px-6 py-4">
           <div className="space-y-3">
             <div className="flex justify-end">
@@ -259,6 +239,18 @@ export function PropList({
                       >
                         {prop.category}
                       </span>
+                      {prop.status && prop.status !== 'confirmed' && (
+                        <span className={`px-2 py-0.5 text-sm rounded flex items-center gap-1 ${
+                          lifecycleStatusPriority[prop.status] === 'critical' ? 'bg-red-500/10 text-red-500' :
+                          lifecycleStatusPriority[prop.status] === 'high' ? 'bg-orange-500/10 text-orange-500' :
+                          lifecycleStatusPriority[prop.status] === 'medium' ? 'bg-yellow-500/10 text-yellow-500' :
+                          lifecycleStatusPriority[prop.status] === 'low' ? 'bg-[var(--highlight-color)]/10 text-[var(--highlight-color)]' :
+                          'bg-green-500/10 text-green-500'
+                        }`}>
+                          <Activity className="h-3 w-3" />
+                          {lifecycleStatusLabels[prop.status]}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -291,21 +283,6 @@ export function PropList({
                     <span className="text-[var(--text-primary)]">
                       ${prop.price.toFixed(2)} each
                     </span>
-                    {onUpdatePrice && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const newPrice = parseFloat(prompt('Enter new price:', prop.price.toString()) || '0');
-                          if (!isNaN(newPrice) && newPrice >= 0) {
-                            onUpdatePrice(prop.id, newPrice);
-                          }
-                        }}
-                        className="text-sm text-[var(--text-secondary)] hover:text-[var(--highlight-color)] transition-colors"
-                      >
-                        Update Price
-                      </button>
-                    )}
                   </div>
 
                   {prop.length && prop.width && prop.height && (
@@ -404,6 +381,18 @@ export function PropList({
                       >
                         {prop.category}
                       </span>
+                      {prop.status && prop.status !== 'confirmed' && (
+                        <span className={`px-2 py-0.5 text-sm rounded flex items-center gap-1 ${
+                          lifecycleStatusPriority[prop.status] === 'critical' ? 'bg-red-500/10 text-red-500' :
+                          lifecycleStatusPriority[prop.status] === 'high' ? 'bg-orange-500/10 text-orange-500' :
+                          lifecycleStatusPriority[prop.status] === 'medium' ? 'bg-yellow-500/10 text-yellow-500' :
+                          lifecycleStatusPriority[prop.status] === 'low' ? 'bg-[var(--highlight-color)]/10 text-[var(--highlight-color)]' :
+                          'bg-green-500/10 text-green-500'
+                        }`}>
+                          <Activity className="h-3 w-3" />
+                          {lifecycleStatusLabels[prop.status]}
+                        </span>
+                      )}
                     </div>
                     <p className="mt-2 text-[var(--text-secondary)]">{prop.description}</p>
                   </div>
@@ -437,21 +426,6 @@ export function PropList({
                     <span className="text-[var(--text-primary)]">
                       ${prop.price.toFixed(2)} each
                     </span>
-                    {onUpdatePrice && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const newPrice = parseFloat(prompt('Enter new price:', prop.price.toString()) || '0');
-                          if (!isNaN(newPrice) && newPrice >= 0) {
-                            onUpdatePrice(prop.id, newPrice);
-                          }
-                        }}
-                        className="text-sm text-[var(--text-secondary)] hover:text-[var(--highlight-color)] transition-colors"
-                      >
-                        Update Price
-                      </button>
-                    )}
                   </div>
 
                   {prop.length && prop.width && prop.height && (

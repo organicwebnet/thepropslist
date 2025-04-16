@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PropStatusUpdate as PropStatusUpdateType, MaintenanceRecord, PropLifecycleStatus, lifecycleStatusLabels, lifecycleStatusPriority, RepairPriority, repairPriorityLabels } from '../../types/lifecycle';
 import { PropStatusUpdate } from './PropStatusUpdate';
 import { MaintenanceRecordForm } from './MaintenanceRecordForm';
@@ -51,6 +51,36 @@ export function PropLifecycle({
 }: PropLifecycleProps) {
   const [activeTab, setActiveTab] = useState<'status' | 'maintenance'>('status');
 
+  // Add custom CSS to override any leftover blue styles
+  useEffect(() => {
+    // Create a style element
+    const style = document.createElement('style');
+    
+    // Add CSS to override blue tabs with the highlight color
+    style.textContent = `
+      .border-primary.text-primary {
+        border-color: var(--highlight-color) !important;
+        color: var(--highlight-color) !important;
+      }
+      
+      button.border-primary {
+        border-color: var(--highlight-color) !important;
+      }
+      
+      button.text-primary {
+        color: var(--highlight-color) !important;
+      }
+    `;
+    
+    // Append the style to the document head
+    document.head.appendChild(style);
+    
+    // Clean up when component unmounts
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   // Get status color
   const getStatusColor = () => {
     const priority = lifecycleStatusPriority[status];
@@ -62,7 +92,7 @@ export function PropLifecycle({
       case 'medium':
         return 'text-yellow-500 bg-yellow-500/10';
       case 'low':
-        return 'text-blue-500 bg-blue-500/10';
+        return 'text-[var(--highlight-color)] bg-[var(--highlight-bg)]';
       default:
         return 'text-green-500 bg-green-500/10';
     }
@@ -204,7 +234,7 @@ export function PropLifecycle({
                 ${repairPriority === 'urgent' ? 'text-red-500' : 
                 repairPriority === 'high' ? 'text-orange-500' : 
                 repairPriority === 'medium' ? 'text-yellow-500' : 
-                'text-blue-500'}`}>
+                'text-[var(--highlight-color)]'}`}>
                 Priority: {repairPriorityLabels[repairPriority]}
               </p>
             )}
@@ -224,7 +254,7 @@ export function PropLifecycle({
           <button
             className={`py-2 px-4 border-b-2 font-medium text-sm ${
               activeTab === 'status'
-                ? 'border-primary text-primary'
+                ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
                 : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
             }`}
             onClick={() => setActiveTab('status')}
@@ -234,7 +264,7 @@ export function PropLifecycle({
           <button
             className={`py-2 px-4 border-b-2 font-medium text-sm ${
               activeTab === 'maintenance'
-                ? 'border-primary text-primary'
+                ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
                 : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
             }`}
             onClick={() => setActiveTab('maintenance')}
