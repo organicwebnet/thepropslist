@@ -1,15 +1,23 @@
 import React from 'react';
 import { TouchableOpacity, View, Text, Image, StyleSheet } from 'react-native';
 import type { Prop } from '../types';
-import { Clock, HandCoins } from 'lucide-react-native';
+import { Clock, HandCoins, Edit, Trash } from 'lucide-react-native';
 
 interface PropCardProps {
   prop: Prop;
-  onPress: () => void;
+  onPress?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
   compact?: boolean;
 }
 
-export const PropCard: React.FC<PropCardProps> = ({ prop, onPress, compact = false }) => {
+export const PropCard: React.FC<PropCardProps> = ({ 
+  prop, 
+  onPress, 
+  onEdit,
+  onDelete,
+  compact = false 
+}) => {
   const renderSourceIcon = () => {
     if (prop.source === 'rented') {
       return (
@@ -27,12 +35,47 @@ export const PropCard: React.FC<PropCardProps> = ({ prop, onPress, compact = fal
     return null;
   };
 
+  const renderStatus = () => {
+    const statusStyles = {
+      'Cut from Show': {
+        container: [styles.statusBadge, { backgroundColor: 'rgba(220, 38, 38, 0.2)' }],
+        text: { color: '#DC2626' }
+      },
+      'Modified Prop': {
+        container: [styles.statusBadge, { backgroundColor: 'rgba(234, 179, 8, 0.2)' }],
+        text: { color: '#EAB308' }
+      },
+      'new': {
+        container: [styles.statusBadge, { backgroundColor: 'rgba(34, 197, 94, 0.2)' }],
+        text: { color: '#22C55E' }
+      }
+    };
+
+    const status = prop.status || 'new';
+    const style = statusStyles[status] || statusStyles['new'];
+
+    return (
+      <View style={style.container}>
+        <Text style={[styles.statusText, style.text]}>{status}</Text>
+      </View>
+    );
+  };
+
   return (
     <TouchableOpacity
       onPress={onPress}
       style={[styles.container, compact ? styles.compactContainer : null]}
     >
-      {renderSourceIcon()}
+      <View style={styles.header}>
+        <View style={styles.locationInfo}>
+          <Text style={styles.actScene}>
+            Act {prop.act}, Scene {prop.scene}
+          </Text>
+          <Text style={styles.location}>{prop.location}</Text>
+        </View>
+        {renderStatus()}
+      </View>
+
       <View style={styles.contentContainer}>
         {prop.imageUrl ? (
           <Image
@@ -48,22 +91,31 @@ export const PropCard: React.FC<PropCardProps> = ({ prop, onPress, compact = fal
         )}
         <View style={styles.textContainer}>
           <Text style={styles.name}>{prop.name}</Text>
-          <Text style={styles.details}>
-            Act {prop.act}, Scene {prop.scene} • {prop.category}
+          <Text style={styles.description} numberOfLines={2}>
+            {prop.description || 'No description provided'}
           </Text>
-          <View style={styles.metaContainer}>
-            {prop.quantity > 1 && (
-              <Text style={[styles.meta, styles.quantityText]}>
-                Qty: {prop.quantity}
-              </Text>
-            )}
-            {prop.weight && (
-              <Text style={styles.meta}>
-                {prop.weight} {prop.weightUnit}
-              </Text>
-            )}
-          </View>
+          {prop.price && (
+            <Text style={styles.price}>${prop.price.toFixed(2)} each</Text>
+          )}
+          {prop.dimensions && (
+            <Text style={styles.dimensions}>
+              L: {prop.dimensions.length} × W: {prop.dimensions.width} × H: {prop.dimensions.height} {prop.dimensions.unit}
+            </Text>
+          )}
         </View>
+      </View>
+
+      <View style={styles.actions}>
+        {onEdit && (
+          <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
+            <Edit size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+        )}
+        {onDelete && (
+          <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
+            <Trash size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -72,8 +124,7 @@ export const PropCard: React.FC<PropCardProps> = ({ prop, onPress, compact = fal
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 16,
     borderRadius: 8,
     backgroundColor: '#1A1A1A',
     borderWidth: 1,
@@ -82,6 +133,37 @@ const styles = StyleSheet.create({
   },
   compactContainer: {
     marginBottom: 8
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12
+  },
+  locationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  actScene: {
+    fontSize: 14,
+    color: '#DC2626',
+    fontWeight: '500'
+  },
+  location: {
+    fontSize: 14,
+    color: '#9CA3AF'
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '500'
   },
   sourceIconContainer: {
     position: 'absolute',
@@ -93,19 +175,18 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    flex: 1
+    alignItems: 'flex-start',
+    gap: 16
   },
   image: {
-    width: 64,
-    height: 64,
+    width: 80,
+    height: 80,
     borderRadius: 8,
     backgroundColor: '#000'
   },
   imagePlaceholder: {
-    width: 64,
-    height: 64,
+    width: 80,
+    height: 80,
     borderRadius: 8,
     backgroundColor: '#1F2937',
     alignItems: 'center',
@@ -116,28 +197,40 @@ const styles = StyleSheet.create({
     color: '#9CA3AF'
   },
   textContainer: {
-    flex: 1
+    flex: 1,
+    gap: 4
   },
   name: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#E5E7EB'
   },
-  details: {
+  description: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    lineHeight: 20
+  },
+  price: {
+    fontSize: 14,
+    color: '#22C55E',
+    fontWeight: '500',
+    marginTop: 4
+  },
+  dimensions: {
     fontSize: 14,
     color: '#9CA3AF',
     marginTop: 4
   },
-  metaContainer: {
+  actions: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4
+    gap: 12
   },
-  meta: {
-    fontSize: 14,
-    color: '#9CA3AF'
-  },
-  quantityText: {
-    marginRight: 8
+  actionButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)'
   }
 }); 

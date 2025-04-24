@@ -1,6 +1,40 @@
-import { FirebaseService, FirebaseError } from '../firebase/types';
-import { InventoryProp } from './inventoryService';
-import { QRCodeService } from '../qr/qrService';
+import { FirebaseService } from '../firebase/types';
+import { InventoryService } from './inventoryService';
+import { QRCodeService, QRCodeData } from '../qr/qrService';
+import { 
+  DocumentData, 
+  CollectionReference, 
+  DocumentReference,
+  QueryDocumentSnapshot,
+  Firestore,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  WhereFilterOp,
+  getFirestore,
+  Query,
+  WithFieldValue,
+  PartialWithFieldValue,
+  FirestoreDataConverter,
+  SetOptions
+} from 'firebase/firestore';
+
+export class FirebaseError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public originalError?: unknown
+  ) {
+    super(message);
+    this.name = 'FirebaseError';
+  }
+}
 
 export interface PackingContainer {
   id: string;
@@ -74,13 +108,13 @@ export interface PackingLabel {
 
 export interface PackListService {
   createPackList(packList: Omit<PackList, 'id' | 'metadata'>): Promise<string>;
-  updatePackList(id: string, updates: Partial<PackList>): Promise<void>;
+  updatePackList(id: string, updates: Partial<Omit<PackList, 'id' | 'metadata'>>): Promise<void>;
   getPackList(id: string): Promise<PackList>;
   listPackLists(filters?: PackListFilters): Promise<PackList[]>;
   deletePackList(id: string): Promise<void>;
   
   addContainer(packListId: string, container: Omit<PackingContainer, 'id' | 'metadata'>): Promise<string>;
-  updateContainer(packListId: string, containerId: string, updates: Partial<PackingContainer>): Promise<void>;
+  updateContainer(packListId: string, containerId: string, updates: Partial<Omit<PackingContainer, 'id' | 'metadata'>>): Promise<void>;
   removeContainer(packListId: string, containerId: string): Promise<void>;
   
   addPropToContainer(packListId: string, containerId: string, propId: string, quantity?: number): Promise<void>;
@@ -92,36 +126,75 @@ export interface PackListService {
   generatePackingLabels(packListId: string): Promise<PackingLabel[]>;
 }
 
+export type PackListDocument = Omit<PackList, 'id'>;
+
+// Create a proper Firestore converter
+const createFirestoreConverter = <T>(): FirestoreDataConverter<T> => ({
+  toFirestore: (
+    modelObject: WithFieldValue<T> | PartialWithFieldValue<T>,
+    options?: SetOptions
+  ): DocumentData => {
+    if ((modelObject as any).id) {
+      const { id, ...rest } = modelObject as any;
+      return rest;
+    }
+    return modelObject as DocumentData;
+  },
+  fromFirestore: (
+    snapshot: QueryDocumentSnapshot<DocumentData>
+  ): T => {
+    const data = snapshot.data();
+    return {
+      ...data,
+      id: snapshot.id,
+    } as T;
+  }
+});
+
+// Helper to create typed collection references
+const getTypedCollection = <T>(
+  db: Firestore,
+  path: string
+): CollectionReference<T> => {
+  return collection(db, path).withConverter(createFirestoreConverter<T>());
+};
+
 export class DigitalPackListService implements PackListService {
-  private firebase: FirebaseService;
-  private qrService: QRCodeService;
-  private collection = 'packLists';
-  private baseUrl: string;
+  private readonly firebase: FirebaseService;
+  private readonly qrService: QRCodeService;
+  private readonly inventoryService: InventoryService;
+  private readonly collectionName = 'packLists';
+  private readonly baseUrl: string;
+  private readonly packListsCollection: CollectionReference<PackListDocument>;
 
   constructor(
     firebase: FirebaseService,
     qrService: QRCodeService,
+    inventoryService: InventoryService,
     baseUrl: string
   ) {
     this.firebase = firebase;
     this.qrService = qrService;
+    this.inventoryService = inventoryService;
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    this.packListsCollection = getTypedCollection<PackListDocument>(this.firebase.firestore(), this.collectionName);
   }
 
-  async createPackList(packList: Omit<PackList, 'id' | 'metadata'>): Promise<string> {
+  private getCollection(): CollectionReference<PackListDocument> {
+    return this.packListsCollection;
+  }
+
+  async createPackList(data: PackListDocument): Promise<string> {
     try {
-      const metadata = {
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdBy: this.firebase.auth().currentUser?.uid || 'system',
-        updatedBy: this.firebase.auth().currentUser?.uid || 'system'
-      };
-
-      const doc = await this.firebase.firestore()
-        .collection(this.collection)
-        .add({ ...packList, metadata });
-
-      return doc.id;
+      const docRef = await addDoc(this.getCollection(), {
+        ...data,
+        metadata: {
+          ...data.metadata,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+      return docRef.id;
     } catch (error) {
       throw new FirebaseError(
         'pack-list/create-failed',
@@ -131,79 +204,49 @@ export class DigitalPackListService implements PackListService {
     }
   }
 
-  async updatePackList(id: string, updates: Partial<PackList>): Promise<void> {
-    try {
-      const metadata = {
-        updatedAt: new Date(),
-        updatedBy: this.firebase.auth().currentUser?.uid || 'system'
-      };
-
-      await this.firebase.firestore()
-        .collection(this.collection)
-        .doc(id)
-        .update({
-          ...updates,
-          'metadata.updatedAt': metadata.updatedAt,
-          'metadata.updatedBy': metadata.updatedBy
-        });
-    } catch (error) {
-      throw new FirebaseError(
-        'pack-list/update-failed',
-        'Failed to update pack list',
-        error
-      );
-    }
-  }
-
   async getPackList(id: string): Promise<PackList> {
-    try {
-      const doc = await this.firebase.firestore()
-        .collection(this.collection)
-        .doc(id)
-        .get();
-
-      const data = await doc.data();
-      
-      if (!data) {
-        throw new FirebaseError(
-          'pack-list/not-found',
-          `Pack list with ID ${id} not found`
-        );
-      }
-
-      return {
-        id,
-        ...data as Omit<PackList, 'id'>
-      };
-    } catch (error) {
-      throw new FirebaseError(
-        'pack-list/get-failed',
-        'Failed to get pack list',
-        error
-      );
+    const docRef = doc(this.getCollection(), id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      throw new Error(`Pack list with id ${id} not found`);
     }
+
+    const data = docSnap.data();
+    return {
+      ...data,
+      id: docSnap.id
+    };
   }
 
   async listPackLists(filters?: PackListFilters): Promise<PackList[]> {
     try {
-      let query = this.firebase.firestore().collection(this.collection);
+      let q: Query<PackListDocument> = this.getCollection();
+      const conditions = [];
 
       if (filters) {
         if (filters.status?.length) {
-          query = query.where('status', 'in', filters.status);
+          conditions.push(where('status', 'in' as WhereFilterOp, filters.status));
         }
         if (filters.showId) {
-          query = query.where('showId', '==', filters.showId);
+          conditions.push(where('showId', '==' as WhereFilterOp, filters.showId));
+        }
+        if (filters.labels?.length) {
+          conditions.push(where('labels', 'array-contains-any' as WhereFilterOp, filters.labels));
         }
         if (filters.updatedAfter) {
-          query = query.where('metadata.updatedAt', '>=', filters.updatedAfter);
+          conditions.push(where('metadata.updatedAt', '>=' as WhereFilterOp, filters.updatedAfter));
+        }
+
+        if (conditions.length > 0) {
+          q = query(q, ...conditions);
         }
       }
 
-      const snapshot = await query.get();
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<PackList, 'id'>
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id
       }));
     } catch (error) {
       throw new FirebaseError(
@@ -214,12 +257,26 @@ export class DigitalPackListService implements PackListService {
     }
   }
 
+  async updatePackList(id: string, data: Partial<Omit<PackList, 'id'>>): Promise<void> {
+    try {
+      const docRef = doc(this.getCollection(), id);
+      await updateDoc(docRef, {
+        ...data,
+        'metadata.updatedAt': new Date()
+      });
+    } catch (error) {
+      throw new FirebaseError(
+        'pack-list/update-failed',
+        'Failed to update pack list',
+        error
+      );
+    }
+  }
+
   async deletePackList(id: string): Promise<void> {
     try {
-      await this.firebase.firestore()
-        .collection(this.collection)
-        .doc(id)
-        .delete();
+      const docRef = doc(this.getCollection(), id);
+      await deleteDoc(docRef);
     } catch (error) {
       throw new FirebaseError(
         'pack-list/delete-failed',
@@ -235,7 +292,12 @@ export class DigitalPackListService implements PackListService {
   ): Promise<string> {
     try {
       const packList = await this.getPackList(packListId);
-      const containerId = this.firebase.firestore().collection('temp').doc().id;
+      if (!packList) {
+        throw new Error(`Pack list with id ${packListId} not found`);
+      }
+
+      const tempRef = doc(collection(this.firebase.firestore(), 'temp'));
+      const containerId = tempRef.id;
 
       const newContainer: PackingContainer = {
         ...container,
@@ -243,8 +305,8 @@ export class DigitalPackListService implements PackListService {
         metadata: {
           createdAt: new Date(),
           updatedAt: new Date(),
-          createdBy: this.firebase.auth().currentUser?.uid || 'system',
-          updatedBy: this.firebase.auth().currentUser?.uid || 'system'
+          createdBy: 'system',
+          updatedBy: 'system'
         }
       };
 
@@ -265,91 +327,60 @@ export class DigitalPackListService implements PackListService {
   async updateContainer(
     packListId: string,
     containerId: string,
-    updates: Partial<PackingContainer>
+    updates: Partial<Omit<PackingContainer, 'id' | 'metadata'>>
   ): Promise<void> {
-    try {
-      const packList = await this.getPackList(packListId);
-      const containerIndex = packList.containers.findIndex(c => c.id === containerId);
+    const packList = await this.getPackList(packListId);
+    const containerIndex = packList.containers.findIndex(c => c.id === containerId);
 
-      if (containerIndex === -1) {
-        throw new FirebaseError(
-          'pack-list/container-not-found',
-          `Container with ID ${containerId} not found in pack list ${packListId}`
-        );
-      }
-
-      const updatedContainer = {
-        ...packList.containers[containerIndex],
-        ...updates,
-        metadata: {
-          ...packList.containers[containerIndex].metadata,
-          updatedAt: new Date(),
-          updatedBy: this.firebase.auth().currentUser?.uid || 'system'
-        }
-      };
-
-      const updatedContainers = [...packList.containers];
-      updatedContainers[containerIndex] = updatedContainer;
-
-      await this.updatePackList(packListId, { containers: updatedContainers });
-    } catch (error) {
-      throw new FirebaseError(
-        'pack-list/update-container-failed',
-        'Failed to update container',
-        error
-      );
+    if (containerIndex === -1) {
+      throw new Error(`Container with ID ${containerId} not found in pack list ${packListId}`);
     }
+
+    const updatedContainer = {
+      ...packList.containers[containerIndex],
+      ...updates,
+      metadata: {
+        ...packList.containers[containerIndex].metadata,
+        updatedAt: new Date(),
+        updatedBy: 'system'
+      }
+    };
+
+    const updatedContainers = [...packList.containers];
+    updatedContainers[containerIndex] = updatedContainer;
+
+    await this.updatePackList(packListId, { containers: updatedContainers });
   }
 
   async removeContainer(packListId: string, containerId: string): Promise<void> {
-    try {
-      const packList = await this.getPackList(packListId);
-      const updatedContainers = packList.containers.filter(c => c.id !== containerId);
-
-      await this.updatePackList(packListId, { containers: updatedContainers });
-    } catch (error) {
-      throw new FirebaseError(
-        'pack-list/remove-container-failed',
-        'Failed to remove container',
-        error
-      );
-    }
+    const packList = await this.getPackList(packListId);
+    const updatedContainers = packList.containers.filter(c => c.id !== containerId);
+    await this.updatePackList(packListId, { containers: updatedContainers });
   }
 
   async addPropToContainer(
     packListId: string,
     containerId: string,
     propId: string,
-    quantity: number = 1
+    quantity = 1
   ): Promise<void> {
-    try {
-      const packList = await this.getPackList(packListId);
-      const containerIndex = packList.containers.findIndex(c => c.id === containerId);
+    const packList = await this.getPackList(packListId);
+    const containerIndex = packList.containers.findIndex(c => c.id === containerId);
 
-      if (containerIndex === -1) {
-        throw new FirebaseError(
-          'pack-list/container-not-found',
-          `Container with ID ${containerId} not found in pack list ${packListId}`
-        );
-      }
-
-      const container = packList.containers[containerIndex];
-      const existingPropIndex = container.props.findIndex(p => p.propId === propId);
-
-      if (existingPropIndex !== -1) {
-        container.props[existingPropIndex].quantity += quantity;
-      } else {
-        container.props.push({ propId, quantity });
-      }
-
-      await this.updateContainer(packListId, containerId, { props: container.props });
-    } catch (error) {
-      throw new FirebaseError(
-        'pack-list/add-prop-failed',
-        'Failed to add prop to container',
-        error
-      );
+    if (containerIndex === -1) {
+      throw new Error(`Container with ID ${containerId} not found in pack list ${packListId}`);
     }
+
+    const container = packList.containers[containerIndex];
+    const existingPropIndex = container.props.findIndex(p => p.propId === propId);
+
+    if (existingPropIndex !== -1) {
+      container.props[existingPropIndex].quantity += quantity;
+    } else {
+      container.props.push({ propId, quantity });
+    }
+
+    await this.updateContainer(packListId, containerId, { props: container.props });
   }
 
   async removePropFromContainer(
@@ -373,6 +404,9 @@ export class DigitalPackListService implements PackListService {
 
       await this.updateContainer(packListId, containerId, { props: updatedProps });
     } catch (error) {
+      if (error instanceof FirebaseError) {
+        throw error;
+      }
       throw new FirebaseError(
         'pack-list/remove-prop-failed',
         'Failed to remove prop from container',
@@ -418,6 +452,9 @@ export class DigitalPackListService implements PackListService {
 
       await this.updateContainer(packListId, containerId, { props: updatedProps });
     } catch (error) {
+      if (error instanceof FirebaseError) {
+        throw error;
+      }
       throw new FirebaseError(
         'pack-list/update-prop-failed',
         'Failed to update prop in container',
@@ -427,10 +464,26 @@ export class DigitalPackListService implements PackListService {
   }
 
   async calculateContainerWeight(containerId: string): Promise<number> {
-    // This is a placeholder implementation
-    // You would need to fetch prop weights from the inventory service
-    // and calculate the total weight
-    return 0;
+    try {
+      const props = await this.inventoryService.listProps();
+      const container = await this.getContainerById(containerId);
+      
+      let totalWeight = 0;
+      for (const prop of container.props) {
+        const propData = props.find(p => p.id === prop.propId);
+        if (propData?.weight?.value) {
+          totalWeight += propData.weight.value * (prop.quantity || 0);
+        }
+      }
+      
+      return totalWeight;
+    } catch (error) {
+      throw new FirebaseError(
+        'pack-list/weight-calculation-failed',
+        'Failed to calculate container weight',
+        error
+      );
+    }
   }
 
   async validateContainerCapacity(
@@ -438,50 +491,72 @@ export class DigitalPackListService implements PackListService {
     propId: string,
     quantity: number
   ): Promise<boolean> {
-    // This is a placeholder implementation
-    // You would need to check the container's capacity against
-    // the total weight of existing props plus the new prop
-    return true;
-  }
-
-  async generatePackingLabels(packListId: string): Promise<PackingLabel[]> {
     try {
-      const packList = await this.getPackList(packListId);
-      const labels: PackingLabel[] = [];
-
-      for (const container of packList.containers) {
-        const url = `${this.baseUrl}/pack-lists/${packListId}/containers/${container.id}`;
-        
-        const qrData = {
-          propId: container.id,
-          name: container.name,
-          packListId: packList.id,
-          url
-        };
-
-        const qrCode = await this.qrService.generateQRCode(qrData);
-
-        labels.push({
-          id: `${packListId}-${container.id}`,
-          containerId: container.id,
-          packListId,
-          qrCode,
-          containerName: container.name,
-          containerStatus: container.status,
-          propCount: container.props.length,
-          labels: container.labels,
-          url,
-          generatedAt: new Date()
-        });
+      const container = await this.getContainerById(containerId);
+      const prop = await this.inventoryService.getProp(propId);
+      
+      if (!container.maxWeight?.value || !prop.weight?.value) {
+        return true;
       }
-
-      return labels;
+      
+      const currentWeight = await this.calculateContainerWeight(containerId);
+      const additionalWeight = prop.weight.value * quantity;
+      
+      return currentWeight + additionalWeight <= container.maxWeight.value;
     } catch (error) {
       throw new FirebaseError(
-        'pack-list/label-generation-failed',
-        'Failed to generate packing labels',
+        'pack-list/capacity-validation-failed',
+        'Failed to validate container capacity',
         error
       );
     }
+  }
+
+  async generatePackingLabels(packListId: string): Promise<PackingLabel[]> {
+    const packList = await this.getPackList(packListId);
+    if (!packList) {
+      throw new Error(`Pack list with id ${packListId} not found`);
+    }
+
+    const labels: PackingLabel[] = [];
+    for (const container of packList.containers) {
+      const containerUrl = `${this.baseUrl}/container/${packList.id}/${container.id}`;
+      const qrCode = await this.qrService.generateQRCode({
+        type: 'container',
+        id: container.id,
+        packListId: packList.id,
+        url: containerUrl,
+        name: container.name
+      });
+
+      labels.push({
+        id: `${container.id}-${Date.now()}`,
+        containerId: container.id,
+        packListId: packList.id,
+        qrCode,
+        containerName: container.name,
+        containerStatus: container.status,
+        propCount: container.props.reduce((sum, prop) => sum + prop.quantity, 0),
+        labels: container.labels || [],
+        url: containerUrl,
+        generatedAt: new Date()
+      });
+    }
+
+    return labels;
+  }
+
+  private async getContainerById(containerId: string): Promise<PackingContainer> {
+    const allPackLists = await this.listPackLists();
+    for (const packList of allPackLists) {
+      const container = packList.containers.find(c => c.id === containerId);
+      if (container) {
+        return container;
+      }
+    }
+    throw new FirebaseError(
+      'pack-list/container-not-found',
+      `Container with ID ${containerId} not found`
+    );
   }
 } 

@@ -1,239 +1,187 @@
-import { FirebaseApp, FirebaseOptions, initializeApp } from 'firebase/app';
-import { Auth, getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, User, onAuthStateChanged } from 'firebase/auth';
-import {
-  getFirestore,
-  Firestore,
-  collection,
-  doc,
-  CollectionReference,
-  DocumentReference,
-  DocumentData,
-  query,
-  where,
-  WhereFilterOp,
-  getDocs,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  orderBy as firestoreOrderBy,
-  OrderByDirection,
-  limit as firestoreLimit,
-  Query
-} from 'firebase/firestore';
-import {
-  getStorage,
-  FirebaseStorage as NativeFirebaseStorage,
-  ref,
-  StorageReference,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject
-} from 'firebase/storage';
-import {
-  FirebaseAuth,
-  FirebaseFirestore,
-  FirestoreCollection,
-  FirestoreDocument,
-  FirebaseService,
-  FirebaseError,
-  FirebaseStorage,
-  OfflineSync
-} from '../../../shared/services/firebase/types';
-import Constants from 'expo-constants';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import storage, { FirebaseStorageTypes } from '@react-native-firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { 
+  FirebaseService, 
+  FirebaseError, 
+  FirebaseDocument,
+  OfflineSync,
+  PendingOperation,
+  QueueStatus,
+  SyncStatus
+} from '../../../shared/services/firebase/types';
 
 export class MobileFirebaseService implements FirebaseService {
-  private _app: FirebaseApp | null = null;
-  private _auth: Auth | null = null;
-  private _firestore: Firestore | null = null;
-  private _storage: NativeFirebaseStorage | null = null;
+  protected _auth: FirebaseAuthTypes.Module;
+  protected _firestore: FirebaseFirestoreTypes.Module;
+  protected _storage: FirebaseStorageTypes.Module;
+  private syncEnabled = true;
+  private offlineQueue: OfflineSync;
+
+  constructor() {
+    this._auth = auth();
+    this._firestore = firestore();
+    this._storage = storage();
+
+    this.offlineQueue = {
+      initialize: async () => {
+        // Initialize offline queue
+      },
+      getItem: async <T>(key: string): Promise<T | null> => {
+        const value = await AsyncStorage.getItem(key);
+        return value ? JSON.parse(value) : null;
+      },
+      setItem: async <T>(key: string, value: T): Promise<void> => {
+        await AsyncStorage.setItem(key, JSON.stringify(value));
+      },
+      removeItem: async (key: string): Promise<void> => {
+        await AsyncStorage.removeItem(key);
+      },
+      clear: async (): Promise<void> => {
+        await AsyncStorage.clear();
+      },
+      enableSync: async (): Promise<void> => {
+        // Enable sync
+      },
+      disableSync: async (): Promise<void> => {
+        // Disable sync
+      },
+      getSyncStatus: async (): Promise<SyncStatus> => {
+        return {
+          isEnabled: this.syncEnabled,
+          isOnline: true,
+          pendingOperations: 0,
+          lastSyncTimestamp: null
+        };
+      },
+      queueOperation: async (operation: PendingOperation): Promise<void> => {
+        // Queue operation
+      },
+      getQueueStatus: async (): Promise<QueueStatus> => {
+        return {
+          pending: 0,
+          processing: 0,
+          lastProcessed: null,
+          failedOperations: 0
+        };
+      }
+    };
+  }
+
+  private createError(error: unknown): FirebaseError {
+    const err = error as { code?: string; message?: string };
+    return {
+      code: err.code || 'unknown',
+      message: err.message || 'An unknown error occurred',
+      originalError: error,
+      name: 'FirebaseError'
+    };
+  }
 
   async initialize(): Promise<void> {
-    try {
-      const config: FirebaseOptions = {
-        apiKey: process.env.FIREBASE_API_KEY,
-        authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.FIREBASE_APP_ID
-      };
-
-      this._app = initializeApp(config);
-      this._auth = getAuth(this._app);
-      this._firestore = getFirestore(this._app);
-      this._storage = getStorage(this._app);
-    } catch (error) {
-      throw new FirebaseError('initialization-failed', 'Failed to initialize Firebase');
-    }
+    await this.offlineQueue.initialize();
   }
 
-  protected getStorageRef(path: string): StorageReference {
-    if (!this._storage) {
-      throw new FirebaseError('not-initialized', 'Firebase Storage is not initialized');
-    }
-    return ref(this._storage, path);
+  async enableSync(): Promise<void> {
+    this.syncEnabled = true;
+    await this.offlineQueue.enableSync();
   }
 
-  auth(): FirebaseAuth {
-    if (!this._auth) {
-      throw new FirebaseError('not-initialized', 'Firebase Auth is not initialized');
-    }
+  async disableSync(): Promise<void> {
+    this.syncEnabled = false;
+    await this.offlineQueue.disableSync();
+  }
 
-    return {
-      currentUser: this._auth.currentUser,
-      signIn: async (email: string, password: string): Promise<void> => {
-        await signInWithEmailAndPassword(this._auth!, email, password);
+  getSyncStatus(): boolean {
+    return this.syncEnabled;
+  }
+
+  listenToDocument<T extends FirebaseFirestoreTypes.DocumentData>(
+    path: string,
+    onNext: (doc: FirebaseDocument<T>) => void,
+    onError?: (error: Error) => void
+  ): () => void {
+    const docRef = firestore().doc(path) as FirebaseFirestoreTypes.DocumentReference<T>;
+    
+    return docRef.onSnapshot(
+      (snapshot: FirebaseFirestoreTypes.DocumentSnapshot<T>) => {
+        if (snapshot.exists) {
+          onNext({
+            id: snapshot.id,
+            data: snapshot.data() as T,
+            ref: docRef
+          });
+        }
       },
-      signOut: async (): Promise<void> => {
-        await signOut(this._auth!);
-      },
-      createUser: async (email: string, password: string): Promise<void> => {
-        await createUserWithEmailAndPassword(this._auth!, email, password);
-      },
-      onAuthStateChanged: (callback: (user: User | null) => void) => {
-        return onAuthStateChanged(this._auth!, callback);
+      (error: Error) => {
+        if (onError) {
+          onError(this.createError(error));
+        }
       }
-    };
+    );
   }
 
-  firestore(): FirebaseFirestore {
-    if (!this._firestore) {
-      throw new FirebaseError('not-initialized', 'Firebase Firestore is not initialized');
-    }
-
-    return {
-      collection: (path: string): FirestoreCollection => {
-        const collectionRef = collection(this._firestore!, path);
-        return this.createCollectionWrapper(collectionRef, path);
+  listenToCollection<T extends FirebaseFirestoreTypes.DocumentData>(
+    path: string,
+    onNext: (docs: FirebaseDocument<T>[]) => void,
+    onError?: (error: Error) => void
+  ): () => void {
+    const collectionRef = firestore().collection(path) as FirebaseFirestoreTypes.CollectionReference<T>;
+    
+    return collectionRef.onSnapshot(
+      (snapshot: FirebaseFirestoreTypes.QuerySnapshot<T>) => {
+        const docs: FirebaseDocument<T>[] = [];
+        snapshot.forEach((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot<T>) => {
+          docs.push({
+            id: doc.id,
+            data: doc.data(),
+            ref: doc.ref as FirebaseFirestoreTypes.DocumentReference<T>
+          });
+        });
+        onNext(docs);
       },
-      doc: (path: string): FirestoreDocument => {
-        return this.createDocumentWrapper(doc(this._firestore!, path));
+      (error: Error) => {
+        if (onError) {
+          onError(this.createError(error));
+        }
       }
-    };
+    );
   }
 
-  storage(): FirebaseStorage {
-    if (!this._storage) {
-      throw new FirebaseError('not-initialized', 'Firebase Storage is not initialized');
-    }
-    return {
-      upload: async (path: string, file: Blob): Promise<string> => {
-        const storageRef = ref(this._storage!, path);
-        await uploadBytes(storageRef, file);
-        return getDownloadURL(storageRef);
-      },
-      delete: async (path: string): Promise<void> => {
-        const storageRef = ref(this._storage!, path);
-        await deleteObject(storageRef);
-      },
-      getDownloadURL: async (path: string): Promise<string> => {
-        const storageRef = ref(this._storage!, path);
-        return getDownloadURL(storageRef);
-      }
-    };
+  async runTransaction<T>(
+    updateFunction: (transaction: FirebaseFirestoreTypes.Transaction) => Promise<T>
+  ): Promise<T> {
+    return this._firestore.runTransaction(updateFunction);
+  }
+
+  batch(): FirebaseFirestoreTypes.WriteBatch {
+    return this._firestore.batch();
+  }
+
+  getStorageRef(path: string): FirebaseStorageTypes.Reference {
+    return this._storage.ref(path);
+  }
+
+  createDocumentWrapper<T extends FirebaseFirestoreTypes.DocumentData>(
+    path: string
+  ): FirebaseFirestoreTypes.DocumentReference<T> {
+    return this._firestore.doc(path) as FirebaseFirestoreTypes.DocumentReference<T>;
   }
 
   offline(): OfflineSync {
-    return {
-      enableSync: async (): Promise<void> => {
-        // Implement offline sync enablement
-      },
-      disableSync: async (): Promise<void> => {
-        // Implement offline sync disablement
-      },
-      getSyncStatus: async (): Promise<boolean> => {
-        // Return current sync status
-        return false;
-      }
-    };
+    return this.offlineQueue;
   }
 
-  private createCollectionWrapper(collectionRef: CollectionReference, path: string): FirestoreCollection {
-    const self = this;
-    return {
-      doc: (id: string) => self.createDocumentWrapper(doc(collectionRef, id)),
-      add: async (data: DocumentData) => {
-        const docRef = doc(collectionRef);
-        await setDoc(docRef, data);
-        return self.createDocumentWrapper(docRef);
-      },
-      get: async () => {
-        const snapshot = await getDocs(collectionRef);
-        return snapshot.docs.map(doc => self.createDocumentWrapper(doc.ref));
-      },
-      where: (field: string, operator: WhereFilterOp, value: any): FirestoreCollection => {
-        const queryRef = query(collectionRef, where(field, operator, value));
-        return this.createQueryWrapper(queryRef, path);
-      },
-      orderBy: (field: string, direction: OrderByDirection = 'asc'): FirestoreCollection => {
-        const queryRef = query(collectionRef, firestoreOrderBy(field, direction));
-        return this.createQueryWrapper(queryRef, path);
-      },
-      limit: (n: number): FirestoreCollection => {
-        const queryRef = query(collectionRef, firestoreLimit(n));
-        return this.createQueryWrapper(queryRef, path);
-      }
-    };
+  auth(): FirebaseAuthTypes.Module {
+    return this._auth;
   }
 
-  private createQueryWrapper(queryRef: Query, path: string): FirestoreCollection {
-    return {
-      doc: (id: string) => this.createDocumentWrapper(doc(queryRef.firestore, `${path}/${id}`)),
-      add: async (data: DocumentData) => {
-        const docRef = doc(queryRef.firestore, path);
-        await setDoc(docRef, data);
-        return this.createDocumentWrapper(docRef);
-      },
-      get: async () => {
-        const snapshot = await getDocs(queryRef);
-        return Promise.all(snapshot.docs.map(doc => this.createDocumentWrapper(doc.ref)));
-      },
-      where: (field: string, operator: WhereFilterOp, value: any): FirestoreCollection => {
-        const newQueryRef = query(queryRef, where(field, operator, value));
-        return this.createQueryWrapper(newQueryRef, path);
-      },
-      orderBy: (field: string, direction: OrderByDirection = 'asc'): FirestoreCollection => {
-        const newQueryRef = query(queryRef, firestoreOrderBy(field, direction));
-        return this.createQueryWrapper(newQueryRef, path);
-      },
-      limit: (n: number): FirestoreCollection => {
-        const newQueryRef = query(queryRef, firestoreLimit(n));
-        return this.createQueryWrapper(newQueryRef, path);
-      }
-    };
+  firestore(): FirebaseFirestoreTypes.Module {
+    return this._firestore;
   }
 
-  protected createDocumentWrapper(docRef: DocumentReference): FirestoreDocument {
-    return {
-      id: docRef.id,
-      data: async () => {
-        const snapshot = await getDoc(docRef);
-        return snapshot.data();
-      },
-      exists: () => {
-        // Since we can't synchronously check existence, default to true
-        // The actual existence check will happen when data() is called
-        return true;
-      },
-      get: async () => {
-        const snapshot = await getDoc(docRef);
-        return {
-          id: snapshot.id,
-          data: snapshot.data(),
-          exists: snapshot.exists()
-        };
-      },
-      set: async (data: DocumentData) => {
-        await setDoc(docRef, data);
-      },
-      update: async (data: DocumentData) => {
-        await updateDoc(docRef, data);
-      },
-      delete: async () => {
-        await deleteDoc(docRef);
-      }
-    };
+  storage(): FirebaseStorageTypes.Module {
+    return this._storage;
   }
 } 

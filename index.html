@@ -40,6 +40,12 @@
         to { transform: rotate(360deg); }
       }
     </style>
+    <script>
+      // Polyfill for global
+      if (typeof global === 'undefined') {
+        window.global = window;
+      }
+    </script>
   </head>
   <body>
     <div id="root">

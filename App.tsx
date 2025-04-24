@@ -1,32 +1,43 @@
-import React from 'react';
-import { RootNavigator } from './src/navigation/RootNavigator';
-import FirebaseTest from './src/components/__tests__/FirebaseTest';
-import RBACTest from './src/components/__tests__/RBACTest';
-import OfflineSyncTest from './src/components/__tests__/OfflineSyncTest';
+import * as React from 'react';
+import { useCallback } from 'react';
+import { Text, View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { RichTextEditor } from './src/platforms/mobile/components/RichTextEditor';
 import { AuthProvider } from './src/contexts/AuthContext';
 
+const Stack = createNativeStackNavigator();
+
+SplashScreen.preventAutoHideAsync();
+
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    'OpenDyslexic': require('./assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf'),
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <AuthProvider>
-      <div style={{ padding: '20px' }}>
-        <h1 style={{ 
-          color: '#1e40af',
-          textAlign: 'center',
-          marginBottom: '40px'
-        }}>
-          Props Bible Testing Dashboard
-        </h1>
-        <div style={{ 
-          display: 'grid',
-          gap: '40px',
-          maxWidth: '1200px',
-          margin: '0 auto'
-        }}>
-          <FirebaseTest />
-          <RBACTest />
-          <OfflineSyncTest />
-        </div>
-      </div>
+      <NavigationContainer>
+        <Stack.Navigator>
+          <Stack.Screen 
+            name="Editor" 
+            component={RichTextEditor}
+            options={{ title: 'Rich Text Editor' }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
     </AuthProvider>
   );
 } 

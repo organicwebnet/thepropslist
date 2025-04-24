@@ -1,74 +1,46 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
+import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'firebase-storage',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 7 * 24 * 60 * 60 // 1 week
-              }
-            }
-          },
-          // Don't cache any Google or Firebase auth endpoints
-          {
-            urlPattern: /^https:\/\/identitytoolkit\.googleapis\.com\//,
-            handler: 'NetworkOnly'
-          },
-          {
-            urlPattern: /^https:\/\/securetoken\.googleapis\.com\//,
-            handler: 'NetworkOnly'
-          },
-          {
-            urlPattern: /^https:\/\/www\.googleapis\.com\/identitytoolkit\//,
-            handler: 'NetworkOnly'
-          },
-          {
-            urlPattern: /^https:\/\/accounts\.google\.com\//,
-            handler: 'NetworkOnly'
-          }
-        ],
-        // Exclude authentication-related URLs from caching
-        navigateFallbackDenylist: [
-          /^\/auth/,
-          /^\/oauth/,
-          /^\/api\/auth/,
-          /^\/\/__\/auth/,
-          /^.*?[\/\?].*?authuser.*$/,
-          /^.*?[\/\?].*?oauth2.*$/
-        ]
+  plugins: [react()],
+  resolve: {
+    alias: {
+      'react-native': 'react-native-web',
+    },
+  },
+  optimizeDeps: {
+    include: ['react-native-web'],
+    esbuildOptions: {
+      resolveExtensions: ['.web.js', '.js', '.ts', '.jsx', '.tsx'],
+    },
+  },
+  define: {
+    global: 'window',
+    'process.env': {
+      ...process.env,
+      FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+      FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+      FIREBASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      FIREBASE_MESSAGING_SENDER_ID: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      FIREBASE_APP_ID: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+      GOOGLE_SHEETS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_SHEETS_API_KEY,
+      GOOGLE_DOCS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_DOCS_API_KEY,
+    },
+    __DEV__: process.env.NODE_ENV !== 'production',
+  },
+  server: {
+    port: 3000,
+    open: true
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
       },
-      manifest: {
-        name: 'Props Bible',
-        short_name: 'Props Bible',
-        description: 'A comprehensive props management system for theatrical productions',
-        theme_color: '#d6001c',
-        background_color: '#0A0A0A',
-        display: 'standalone',
-        icons: [
-          {
-            src: '/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: '/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
-    })
-  ]
+    },
+  }
 });

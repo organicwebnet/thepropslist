@@ -12,7 +12,14 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["react-native"]
+    "types": [
+      "react-native",
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
+      "@react-native-firebase/firestore",
+      "@react-native-firebase/storage",
+      "@react-native-async-storage/async-storage"
+    ]
   },
   "include": [
     "src/platforms/mobile/**/*",

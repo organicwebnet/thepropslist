@@ -41,7 +41,7 @@ export async function initGoogleApi() {
       });
     });
 
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID;
+    const clientId = import.meta.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     
     if (!clientId) {
       throw new Error('Google Client ID is not configured. Please check your environment variables.');

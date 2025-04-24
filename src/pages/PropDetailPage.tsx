@@ -30,8 +30,8 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // Use the prop lifecycle hook
-  const lifecycle = id ? usePropLifecycle({ propId: id }) : null;
+  // Always call the Hook, but pass undefined if no ID
+  const lifecycle = usePropLifecycle({ propId: id || undefined });
 
   // Change the tab state to include three options
   const [activeTab, setActiveTab] = useState<'details' | 'statusUpdates' | 'maintenanceRecords'>('details');
@@ -43,7 +43,7 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
     console.log('2. Lifecycle hook:', lifecycle);
     console.log('3. Current prop data:', prop);
     
-    if (!id || !lifecycle) {
+    if (!id || !lifecycle?.updatePropStatus) {
       console.error('4. Missing required data - ID or lifecycle:', { id, lifecycle });
       return;
     }
@@ -78,7 +78,7 @@ export function PropDetailPage({ onEdit, onDelete }: PropDetailPageProps) {
 
   // Handle adding maintenance record
   const handleAddMaintenanceRecord = async (record: Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>) => {
-    if (!id || !lifecycle) return;
+    if (!id || !lifecycle?.addMaintenanceRecord) return;
     
     try {
       await lifecycle.addMaintenanceRecord(record);

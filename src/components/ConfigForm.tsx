@@ -89,18 +89,18 @@ const getInitialConfig = (): ConfigFormData => {
 
   // Initialize with environment variables
   return {
-    FIREBASE_API_KEY: import.meta.env.VITE_FIREBASE_API_KEY || '',
-    FIREBASE_AUTH_DOMAIN: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-    FIREBASE_PROJECT_ID: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-    FIREBASE_STORAGE_BUCKET: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-    FIREBASE_MESSAGING_SENDER_ID: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-    FIREBASE_APP_ID: import.meta.env.VITE_FIREBASE_APP_ID || '',
-    GOOGLE_SHEETS_API_KEY: import.meta.env.VITE_GOOGLE_SHEETS_API_KEY || '',
-    GOOGLE_DOCS_API_KEY: import.meta.env.VITE_GOOGLE_DOCS_API_KEY || '',
-    CURRENCY: import.meta.env.VITE_CURRENCY || 'USD',
-    SHOW_NAME: import.meta.env.VITE_SHOW_NAME || '',
-    SHOW_ACTS: parseInt(import.meta.env.VITE_SHOW_ACTS || '1', 10),
-    SHOW_SCENES: parseInt(import.meta.env.VITE_SHOW_SCENES || '1', 10)
+    FIREBASE_API_KEY: import.meta.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
+    FIREBASE_AUTH_DOMAIN: import.meta.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+    FIREBASE_PROJECT_ID: import.meta.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
+    FIREBASE_STORAGE_BUCKET: import.meta.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+    FIREBASE_MESSAGING_SENDER_ID: import.meta.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+    FIREBASE_APP_ID: import.meta.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
+    GOOGLE_SHEETS_API_KEY: import.meta.env.EXPO_PUBLIC_GOOGLE_SHEETS_API_KEY || '',
+    GOOGLE_DOCS_API_KEY: import.meta.env.EXPO_PUBLIC_GOOGLE_DOCS_API_KEY || '',
+    CURRENCY: import.meta.env.EXPO_PUBLIC_CURRENCY || 'USD',
+    SHOW_NAME: import.meta.env.EXPO_PUBLIC_SHOW_NAME || '',
+    SHOW_ACTS: parseInt(import.meta.env.EXPO_PUBLIC_SHOW_ACTS || '1', 10),
+    SHOW_SCENES: parseInt(import.meta.env.EXPO_PUBLIC_SHOW_SCENES || '1', 10)
   };
 };
 

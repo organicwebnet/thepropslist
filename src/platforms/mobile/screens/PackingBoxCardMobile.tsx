@@ -1,21 +1,43 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { PackingContainer } from '../../../shared/services/inventory/packListService';
 import { PrintLabelButton } from '../../../shared/components/PropCard/PrintLabelButton';
+import { PackingBoxCardBaseProps, PackingBoxState, generateContainerUrl, calculateIsHeavy } from '../../../shared/types/packing';
 
-interface PackingBoxCardMobileProps {
-  container: PackingContainer;
-  packListId: string;
-  onUpdateNotes?: (notes: string) => void;
-  onError?: (error: string) => void;
-}
-
-export const PackingBoxCardMobile: React.FC<PackingBoxCardMobileProps> = ({
+export const PackingBoxCardMobile: React.FC<PackingBoxCardBaseProps> = ({
   container,
   packListId,
   onUpdateNotes,
-  onError
+  onError,
+  baseUrl,
+  onPrintLabel,
+  onShare,
+  onScan
 }) => {
+  const [state, setState] = useState<PackingBoxState>({
+    isLoading: false,
+    error: null,
+    isSyncing: false
+  });
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        title: `Box: ${container.name}`,
+        message: `View details for box ${container.name}`,
+        url: generateContainerUrl(baseUrl, packListId, container.id)
+      });
+      onShare?.();
+    } catch (error) {
+      console.error('Error sharing:', error);
+      onError?.('Failed to share box details');
+    }
+  };
+
+  const handleScan = () => {
+    onScan?.();
+  };
+
   const label = {
     id: `${packListId}-${container.id}`,
     containerId: container.id,
@@ -25,13 +47,11 @@ export const PackingBoxCardMobile: React.FC<PackingBoxCardMobileProps> = ({
     containerStatus: container.status,
     propCount: container.props.length,
     labels: container.labels,
-    url: `https://your-domain.com/pack-lists/${packListId}/containers/${container.id}`, // Replace with your domain
+    url: generateContainerUrl(baseUrl, packListId, container.id),
     generatedAt: new Date()
   };
 
-  const isHeavy = container.maxWeight && 
-    container.currentWeight && 
-    container.currentWeight.value >= container.maxWeight.value * 0.9;
+  const isHeavy = calculateIsHeavy(container);
 
   return (
     <View style={styles.container}>
@@ -41,11 +61,25 @@ export const PackingBoxCardMobile: React.FC<PackingBoxCardMobileProps> = ({
           <Text style={styles.subtitle}>Status: {container.status}</Text>
           <Text style={styles.subtitle}>Props: {container.props.length}</Text>
         </View>
-        <PrintLabelButton
-          label={label}
-          onError={onError}
-          style={styles.printButton}
-        />
+        <View style={styles.buttonContainer}>
+          <PrintLabelButton
+            label={label}
+            onError={onError}
+            style={styles.button}
+          />
+          <TouchableOpacity
+            onPress={handleShare}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>Share</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleScan}
+            style={styles.button}
+          >
+            <Text style={styles.buttonText}>Scan</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {container.labels.length > 0 && (
@@ -98,6 +132,10 @@ export const PackingBoxCardMobile: React.FC<PackingBoxCardMobileProps> = ({
           )}
         </View>
       )}
+
+      {state.error && (
+        <Text style={styles.error}>{state.error}</Text>
+      )}
     </View>
   );
 };
@@ -127,6 +165,23 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#9CA3AF',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  button: {
+    backgroundColor: '#262626',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#E5E5E5',
+    fontSize: 14,
+    fontWeight: '500',
   },
   labelsContainer: {
     flexDirection: 'row',
@@ -174,10 +229,6 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 8,
   },
-  printButton: {
-    marginLeft: 12,
-    backgroundColor: '#262626',
-  },
   weightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -188,5 +239,10 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     fontWeight: '500',
     marginLeft: 8,
+  },
+  error: {
+    color: '#EF4444',
+    fontSize: 14,
+    marginTop: 12,
   },
 }); 

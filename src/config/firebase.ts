@@ -1,48 +1,13 @@
-import firebase from '@react-native-firebase/app';
-import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+import { FirebaseOptions } from 'firebase/app';
 
-// Debug: Log all available environment variables
-console.log('DEBUG: Available environment variables:', {
-  FIREBASE_API_KEY: process.env.VITE_FIREBASE_API_KEY,
-  FIREBASE_PROJECT_ID: process.env.VITE_FIREBASE_PROJECT_ID,
-});
-
-if (!process.env.VITE_FIREBASE_API_KEY || !process.env.VITE_FIREBASE_PROJECT_ID) {
-  throw new Error('Missing required Firebase configuration. Please check your environment variables.');
-}
-
-const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY,
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-  appId: '1:123456789:web:abcdef', // This will be replaced with your actual App ID
-};
-
-console.log('DEBUG: Firebase config:', {
-  ...firebaseConfig,
-  apiKey: firebaseConfig.apiKey ? '***' : undefined,
-  projectId: firebaseConfig.projectId || 'MISSING',
-});
-
-// Initialize Firebase if not already initialized
-if (!firebase.apps.length) {
-  try {
-    firebase.initializeApp(firebaseConfig);
-    console.log('Firebase initialized successfully');
-  } catch (error) {
-    console.error('Error initializing Firebase:', error);
-    throw error;
-  }
-}
-
-// Get Firestore instance
-const db = firestore();
-
-// Enable offline persistence
-firestore().settings({
-  persistence: true,
-  cacheSizeBytes: firestore.CACHE_SIZE_UNLIMITED
-});
-
-export { firebase, db };
-export default { firebase, db }; 
+export function getFirebaseConfig(): FirebaseOptions {
+  return {
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  };
+} 

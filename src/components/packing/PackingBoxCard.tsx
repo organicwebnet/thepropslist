@@ -1,22 +1,46 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PackingContainer } from '../../shared/services/inventory/packListService';
 import { PrintLabelButton } from '../../shared/components/PropCard/PrintLabelButton';
+import { PackingBoxCardBaseProps, PackingBoxState, generateContainerUrl, calculateIsHeavy } from '../../shared/types/packing';
 
-interface PackingBoxCardProps {
-  container: PackingContainer;
-  packListId: string;
-  onUpdateNotes?: (notes: string) => void;
-  onError?: (error: string) => void;
-}
-
-export const PackingBoxCard: React.FC<PackingBoxCardProps> = ({
+export const PackingBoxCard: React.FC<PackingBoxCardBaseProps> = ({
   container,
   packListId,
   onUpdateNotes,
-  onError
+  onError,
+  baseUrl,
+  onPrintLabel,
+  onShare,
+  onScan
 }) => {
+  const [state, setState] = useState<PackingBoxState>({
+    isLoading: false,
+    error: null,
+    isSyncing: false
+  });
+
   const handleNotesChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     onUpdateNotes?.(event.target.value);
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Box: ${container.name}`,
+          text: `View details for box ${container.name}`,
+          url: generateContainerUrl(baseUrl, packListId, container.id)
+        });
+        onShare?.();
+      } catch (error) {
+        console.error('Error sharing:', error);
+        onError?.('Failed to share box details');
+      }
+    }
+  };
+
+  const handleScan = () => {
+    onScan?.();
   };
 
   const label = {
@@ -28,9 +52,11 @@ export const PackingBoxCard: React.FC<PackingBoxCardProps> = ({
     containerStatus: container.status,
     propCount: container.props.length,
     labels: container.labels,
-    url: `${window.location.origin}/pack-lists/${packListId}/containers/${container.id}`,
+    url: generateContainerUrl(baseUrl, packListId, container.id),
     generatedAt: new Date()
   };
+
+  const isHeavy = calculateIsHeavy(container);
 
   return (
     <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-4">
@@ -40,11 +66,27 @@ export const PackingBoxCard: React.FC<PackingBoxCardProps> = ({
           <p className="text-sm text-gray-400">Status: {container.status}</p>
           <p className="text-sm text-gray-400">Props: {container.props.length}</p>
         </div>
-        <PrintLabelButton
-          label={label}
-          onError={onError}
-          className="bg-gray-800 hover:bg-gray-700 text-gray-200"
-        />
+        <div className="flex gap-2">
+          <PrintLabelButton
+            label={label}
+            onError={onError}
+            className="bg-gray-800 hover:bg-gray-700 text-gray-200"
+          />
+          <button
+            onClick={handleShare}
+            className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded"
+            title="Share box details"
+          >
+            Share
+          </button>
+          <button
+            onClick={handleScan}
+            className="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded"
+            title="Scan QR code"
+          >
+            Scan
+          </button>
+        </div>
       </div>
 
       {container.labels.length > 0 && (
@@ -101,11 +143,15 @@ export const PackingBoxCard: React.FC<PackingBoxCardProps> = ({
         <div className="mt-2 text-sm text-gray-400">
           <p>
             Current Weight: {container.currentWeight.value} {container.currentWeight.unit}
-            {container.maxWeight && container.currentWeight.value >= container.maxWeight.value * 0.9 && (
+            {isHeavy && (
               <span className="text-yellow-500 ml-2 font-medium">(Heavy)</span>
             )}
           </p>
         </div>
+      )}
+
+      {state.error && (
+        <div className="mt-4 text-red-500 text-sm">{state.error}</div>
       )}
     </div>
   );

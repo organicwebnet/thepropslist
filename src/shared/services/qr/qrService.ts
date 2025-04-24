@@ -1,12 +1,13 @@
 import { FirebaseError } from '../firebase/types';
 
 export interface QRCodeData {
-  propId: string;
-  name: string;
-  category: string;
+  type: 'container' | 'prop' | 'location';
+  id: string;
+  packListId?: string;
+  url: string;
+  name?: string;
+  category?: string;
   location?: string;
-  boxId?: string;
-  showId?: string;
 }
 
 export interface QRCodeOptions {
