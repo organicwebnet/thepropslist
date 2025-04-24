@@ -33,6 +33,9 @@ export default {
     'expo-font'
   ],
   extra: {
+    eas: {
+      projectId: '2f290c3d-90db-4054-ae40-b68113f8c621'
+    },
     FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
     FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
     FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
