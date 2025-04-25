@@ -1,87 +1,190 @@
-# Known Issues
+# Known Issues (Updated 2024)
 
-## TypeScript and Jest Mocking Issues
+## Critical Issues
 
-### 1. Test File: `src/components/__tests__/OfflineSync.test.ts`
+### 1. Build System Issues
+**Status**: Active  
+**Priority**: High  
+**Impact**: Development & Production  
 
-#### Issue Description
-The test file contains several TypeScript type inference issues related to Jest mocks and Firebase service interfaces. These issues don't affect the functionality of the tests but cause TypeScript compiler warnings.
+#### Description
+1. Metro bundler configuration issues:
+   - MIME type errors in web bundle loading
+   - Incorrect configuration for web platform
+   - Missing platform-specific entry points
 
-#### Specific Issues
+2. Android SDK configuration:
+   - Incorrect SDK path
+   - Missing platform tools
+   - Emulator setup issues
 
-1. **Jest Mock Type Constraints**
-   ```typescript
-   type MockedPromise<T> = jest.Mock<Promise<T>>;
+#### Required Changes
+1. Metro Configuration Updates:
+   ```javascript
+   // metro.config.js needs:
+   - Web platform support
+   - Proper MIME type handling
+   - Asset loading configuration
    ```
-   - Error: Type 'Promise<T>' does not satisfy the constraint 'FunctionLike'
-   - Impact: TypeScript compiler cannot properly infer return types for mocked promises
-   - Current Workaround: Using type assertions
 
-2. **Generic Type Parameters**
-   ```typescript
-   const createMockPromise = <T>(value: T): MockedPromise<T>
+2. Android Setup:
+   ```bash
+   - Configure ANDROID_HOME
+   - Install platform tools
+   - Setup emulator
    ```
-   - Error: Argument of type 'T' is not assignable to parameter of type 'never'
-   - Impact: Type safety for mock function parameters is reduced
-   - Current Workaround: Type assertions on mock implementations
 
-3. **Firebase Service Interface Mocks**
-   ```typescript
-   const mockFirebaseService: FirebaseService
-   ```
-   - Error: Type mismatches between mock implementations and Firebase service interfaces
-   - Impact: TypeScript cannot verify mock implementations match service contracts
-   - Current Workaround: Using type assertions with `as` keyword
+#### Action Items
+- [ ] Update Metro configuration for web
+- [ ] Fix MIME type handling
+- [ ] Setup proper Android environment
+- [ ] Configure platform tools
 
-4. **Mock Function Return Types**
-   ```typescript
-   jest.fn().mockReturnValue(value)
-   ```
-   - Error: Type 'Mock<UnknownFunction>' not assignable to expected types
-   - Impact: Return type inference for mock functions is incomplete
-   - Current Workaround: Explicit type assertions
+### 2. Dependency Conflicts
+**Status**: Active  
+**Priority**: High  
+**Impact**: Build & Runtime  
 
-#### Root Causes
+#### Description
+1. Version conflicts:
+   - Multiple Metro versions (^0.73.5)
+   - React version mismatches
+   - Navigation library conflicts
 
-1. Jest's TypeScript definitions don't fully support all mocking scenarios
-2. Complex Firebase service interfaces with nested types
-3. Generic type constraints in TypeScript's type system
-4. Limitations in type inference for mock functions
+2. Peer dependency issues:
+   - React version requirements
+   - Expo SDK compatibility
+   - Navigation dependencies
 
-#### Proposed Solutions
+#### Required Changes
+1. Package.json updates:
+   - Resolve version conflicts
+   - Update peer dependencies
+   - Standardize navigation implementation
 
-1. **Short Term**
-   - Add `@ts-ignore` comments for specific error cases
-   - Use type assertions where necessary
-   - Document type issues in test files
+2. Dependency cleanup:
+   - Remove duplicate packages
+   - Update to compatible versions
+   - Fix peer dependency issues
 
-2. **Medium Term**
-   - Create custom type definitions for mock functions
-   - Implement test utilities to handle common mocking patterns
-   - Refactor test setup to use more TypeScript-friendly patterns
+#### Action Items
+- [ ] Audit dependencies
+- [ ] Update package versions
+- [ ] Fix peer dependencies
+- [ ] Test compatibility
 
-3. **Long Term**
-   - Consider using a mocking library with better TypeScript support
-   - Simplify service interfaces to reduce type complexity
-   - Create dedicated test utility package with proper types
+### 3. Font Loading Issues
+**Status**: Active  
+**Priority**: Medium  
+**Impact**: User Experience  
 
-#### Priority
-- **Severity**: Low (Tests are functional, only TypeScript warnings)
-- **Impact**: Developer experience only
-- **Urgency**: Can be addressed in future sprints
+#### Description
+1. Font loading implementation:
+   - Incomplete error handling
+   - Platform-specific issues
+   - Loading performance
 
-#### Related Files
-- `src/components/__tests__/OfflineSync.test.ts`
-- `src/shared/services/firebase/types.ts`
+2. Asset management:
+   - Font file accessibility
+   - Platform-specific font loading
+   - Cache management
 
-#### Next Steps
-1. Create a dedicated task in the issue tracker
-2. Add comments in affected test files
-3. Document workarounds for other developers
-4. Research alternative mocking approaches
-5. Plan for comprehensive fix in future sprint
+#### Required Changes
+1. Font loading system:
+   - Implement proper error handling
+   - Add platform-specific loading
+   - Optimize performance
 
-#### References
-- [Jest TypeScript Documentation](https://jestjs.io/docs/getting-started#using-typescript)
-- [TypeScript Handbook - Generic Constraints](https://www.typescriptlang.org/docs/handbook/generics.html#generic-constraints)
-- [Firebase TypeScript Support](https://firebase.google.com/docs/reference/js) 
+2. Asset configuration:
+   - Update asset bundling
+   - Configure caching
+   - Implement fallbacks
+
+#### Action Items
+- [ ] Improve font loading
+- [ ] Add error handling
+- [ ] Setup proper caching
+- [ ] Implement fallbacks
+
+## Development Environment Issues
+
+### 1. Build Tools
+**Status**: Active  
+**Priority**: Medium  
+**Impact**: Development  
+
+#### Description
+- Inconsistent build behavior
+- Missing development tools
+- Configuration issues
+
+#### Action Items
+- [ ] Setup proper build tools
+- [ ] Configure development environment
+- [ ] Document setup process
+
+### 2. Testing Infrastructure
+**Status**: Pending  
+**Priority**: Medium  
+**Impact**: Quality Assurance  
+
+#### Description
+- Incomplete test coverage
+- Platform-specific testing issues
+- CI/CD configuration needed
+
+#### Action Items
+- [ ] Setup testing infrastructure
+- [ ] Add platform-specific tests
+- [ ] Configure CI/CD pipeline
+
+## Documentation Issues
+
+### 1. Setup Instructions
+**Status**: Pending  
+**Priority**: Medium  
+**Impact**: Development  
+
+#### Description
+- Missing setup documentation
+- Incomplete troubleshooting guides
+- Platform-specific instructions needed
+
+#### Action Items
+- [ ] Create setup documentation
+- [ ] Add troubleshooting guides
+- [ ] Document platform specifics
+
+## Performance Issues
+
+### 1. Bundle Size
+**Status**: Pending  
+**Priority**: Low  
+**Impact**: Production  
+
+#### Description
+- Large bundle sizes
+- Slow initial load times
+- Resource optimization needed
+
+#### Action Items
+- [ ] Optimize bundle size
+- [ ] Implement code splitting
+- [ ] Add performance monitoring
+
+## Resolution Timeline
+
+### Immediate (24-48 hours)
+1. Fix build system issues
+2. Resolve dependency conflicts
+3. Setup development environment
+
+### Short Term (1 week)
+1. Implement proper font loading
+2. Setup testing infrastructure
+3. Create documentation
+
+### Long Term (2-4 weeks)
+1. Optimize performance
+2. Enhance user experience
+3. Add advanced features 

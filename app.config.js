@@ -1,4 +1,4 @@
-export default {
+const config = {
   name: 'Props Bible',
   slug: 'props-bible',
   version: '1.0.0',
@@ -11,36 +11,42 @@ export default {
     backgroundColor: '#ffffff'
   },
   assetBundlePatterns: [
-    '**/*'
+    '**/*',
+    'assets/fonts/**/*',
+    'assets/fonts/OpenDyslexic/**/*'
   ],
-  ios: {
-    supportsTablet: true,
-    bundleIdentifier: 'com.propsbible.app',
-    jsEngine: 'hermes'
-  },
-  android: {
-    adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#ffffff'
-    },
-    package: 'com.propsbible.app',
-    jsEngine: 'hermes'
-  },
-  web: {
-    favicon: './assets/favicon.png'
-  },
   plugins: [
     'expo-font'
   ],
   extra: {
     eas: {
       projectId: '2f290c3d-90db-4054-ae40-b68113f8c621'
+    }
+  },
+  updates: {
+    fallbackToCacheTimeout: 0,
+    url: 'https://u.expo.dev/2f290c3d-90db-4054-ae40-b68113f8c621'
+  },
+  runtimeVersion: {
+    policy: 'sdkVersion'
+  },
+  scheme: 'propsbible'
+};
+
+// Only include native config if we're not in a prebuild environment
+if (!process.env.EAS_BUILD_PLATFORM) {
+  config.ios = {
+    supportsTablet: true,
+    bundleIdentifier: 'com.propsbible.app'
+  };
+  config.android = {
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#ffffff'
     },
-    FIREBASE_API_KEY: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-    FIREBASE_AUTH_DOMAIN: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    FIREBASE_PROJECT_ID: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-    FIREBASE_STORAGE_BUCKET: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    FIREBASE_MESSAGING_SENDER_ID: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    FIREBASE_APP_ID: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
-  }
-}; 
+    package: 'com.propsbible.app',
+    jsEngine: 'hermes'
+  };
+}
+
+export default config; 

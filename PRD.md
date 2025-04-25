@@ -220,10 +220,15 @@ Production teams face significant challenges in managing, tracking, and coordina
 - Offline functionality for essential features
 - Camera integration for prop documentation
 - Barcode/QR code scanning capability
+
 - Push notifications
 - Secure local storage
 - Cloud sync when online
 
+#####3.2.1.1 prop finder
+- allow users to quickly scan a qr code group of qr codes until you identfy the correct box with the prop
+- find it in a group photo of all the boxes
+- show the box title
 #### 3.2.2 User Interface
 - Material Design 3 implementation
 - Dark/Light mode support
@@ -277,20 +282,19 @@ Production teams face significant challenges in managing, tracking, and coordina
 
 ## 6. Timeline and Phases
 
-### Phase 1 - Core Foundation (Q2 2025)
-- Basic props management
+### Phase 1 - Core Foundation 
 - User authentication
 - Essential mobile features
 - Basic offline functionality
 - Show management essentials
 
-### Phase 2 - Enhanced Features (Q3 2025)
+### Phase 2 - Enhanced Features 
 - Advanced collaboration tools
 - Complete offline mode
 - Budget tracking
 - Advanced search and filters
 
-### Phase 3 - Advanced Features (Q4 2025)
+### Phase 3 - Advanced Features 
 - AI integration
 - Analytics dashboard
 - Third-party integrations

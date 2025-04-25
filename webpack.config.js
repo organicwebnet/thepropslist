@@ -4,7 +4,20 @@ const { ProgressPlugin } = require('webpack');
 const path = require('path');
 
 module.exports = async function (env, argv) {
-  const config = await createExpoWebpackConfigAsync(env, argv);
+  const config = await createExpoWebpackConfigAsync({
+    ...env,
+    babel: {
+      dangerouslyAddModulePathsToTranspile: [
+        '@react-native',
+        '@react-native-community',
+        '@expo/vector-icons',
+        'expo-font',
+        'expo',
+        'expo-modules-core',
+        '@react-native/assets-registry'
+      ]
+    }
+  }, argv);
 
   // Add React Refresh plugin for development
   if (env.mode === 'development') {
@@ -43,43 +56,125 @@ module.exports = async function (env, argv) {
       os: require.resolve('os-browserify/browser'),
       path: require.resolve('path-browserify'),
     },
-    extensions: ['.web.js', '.js', '.jsx', '.ts', '.tsx', '.json'],
+    extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js', '.json'],
+    alias: {
+      ...config.resolve.alias,
+      '@components': path.resolve(__dirname, 'src/components'),
+      '@screens': path.resolve(__dirname, 'src/screens'),
+      '@utils': path.resolve(__dirname, 'src/utils'),
+      '@assets': path.resolve(__dirname, 'assets'),
+      '@shared': path.resolve(__dirname, 'src/shared'),
+      '@platforms': path.resolve(__dirname, 'src/platforms'),
+      'react-native$': 'react-native-web',
+      'react-native-web': path.resolve(__dirname, 'node_modules/react-native-web'),
+    },
   };
 
   // Configure module rules for handling various file types
-  config.module.rules.push({
-    test: /\.(js|jsx|ts|tsx)$/,
-    exclude: /node_modules/,
-    use: {
-      loader: 'babel-loader',
-      options: {
-        presets: ['@babel/preset-env', '@babel/preset-react', '@babel/preset-typescript'],
-        plugins: [
-          '@babel/plugin-transform-runtime',
-          'babel-plugin-transform-import-meta',
-        ],
+  config.module.rules = [
+    {
+      test: /\.(js|jsx|ts|tsx|mjs)$/,
+      include: [
+        path.resolve(__dirname, 'src'),
+        path.resolve(__dirname, 'App.tsx'),
+        path.resolve(__dirname, 'node_modules/@react-native'),
+        path.resolve(__dirname, 'node_modules/@react-native-community'),
+        path.resolve(__dirname, 'node_modules/expo'),
+        path.resolve(__dirname, 'node_modules/expo-modules-core'),
+        path.resolve(__dirname, 'node_modules/@expo'),
+        path.resolve(__dirname, 'node_modules/react-native-reanimated'),
+        path.resolve(__dirname, 'node_modules/react-native-web'),
+      ],
+      use: {
+        loader: 'babel-loader',
+        options: {
+          presets: [
+            ['@babel/preset-env', { targets: { node: 'current' } }],
+            '@babel/preset-react',
+            '@babel/preset-typescript',
+            'babel-preset-expo'
+          ],
+          plugins: [
+            '@babel/plugin-transform-runtime',
+            'babel-plugin-transform-import-meta',
+            ['@babel/plugin-transform-class-properties', { loose: true }],
+            ['@babel/plugin-transform-private-methods', { loose: true }],
+            ['@babel/plugin-transform-private-property-in-object', { loose: true }]
+          ],
+          cacheDirectory: true,
+          cacheCompression: false,
+        },
       },
     },
-  });
+    {
+      test: /\.(woff|woff2|eot|ttf|otf)$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/fonts/[name].[hash][ext]'
+      }
+    },
+    {
+      test: /\.(png|jpg|jpeg|gif|svg)$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/images/[name].[hash][ext]'
+      }
+    },
+  ];
 
-  // Configure environment variables
-  config.plugins.forEach(plugin => {
-    if (plugin.constructor.name === 'DefinePlugin') {
-      const processEnv = plugin.definitions['process.env'] || {};
-      plugin.definitions['process.env'] = {
-        ...processEnv,
-        NODE_ENV: JSON.stringify(process.env.NODE_ENV),
-        FIREBASE_API_KEY: JSON.stringify(process.env.EXPO_PUBLIC_FIREBASE_API_KEY),
-        FIREBASE_AUTH_DOMAIN: JSON.stringify(process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN),
-        FIREBASE_PROJECT_ID: JSON.stringify(process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID),
-        FIREBASE_STORAGE_BUCKET: JSON.stringify(process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET),
-        FIREBASE_MESSAGING_SENDER_ID: JSON.stringify(process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
-        FIREBASE_APP_ID: JSON.stringify(process.env.EXPO_PUBLIC_FIREBASE_APP_ID),
-        GOOGLE_SHEETS_API_KEY: JSON.stringify(process.env.EXPO_PUBLIC_GOOGLE_SHEETS_API_KEY),
-        GOOGLE_DOCS_API_KEY: JSON.stringify(process.env.EXPO_PUBLIC_GOOGLE_DOCS_API_KEY),
-      };
+  // Configure output
+  config.output = {
+    ...config.output,
+    filename: 'static/js/[name].[contenthash].js',
+    chunkFilename: 'static/js/[name].[contenthash].chunk.js',
+    assetModuleFilename: 'static/media/[name].[hash][ext]',
+    publicPath: '/',
+    clean: true,
+  };
+
+  // Configure development server with improved MIME type handling
+  config.devServer = {
+    ...config.devServer,
+    historyApiFallback: true,
+    hot: true,
+    compress: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
+    },
+    static: {
+      directory: path.join(__dirname, 'public'),
+      publicPath: '/',
+      serveIndex: true,
+      watch: true,
+    },
+    client: {
+      overlay: {
+        errors: true,
+        warnings: false,
+      },
+      progress: true,
+    },
+    devMiddleware: {
+      writeToDisk: true,
+    },
+    setupMiddlewares: (middlewares, devServer) => {
+      if (!devServer) {
+        throw new Error('webpack-dev-server is not defined');
+      }
+
+      // Handle all JavaScript files with proper MIME type
+      devServer.app.use((req, res, next) => {
+        if (req.url.match(/\.(js|jsx|ts|tsx|bundle)$/)) {
+          res.set('Content-Type', 'application/javascript');
+        }
+        next();
+      });
+
+      return middlewares;
     }
-  });
+  };
 
   return config;
 }; 

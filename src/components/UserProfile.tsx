@@ -5,7 +5,6 @@ import { db, auth, signInWithGoogle } from '../lib/firebase';
 import { User, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { useFont, FontOption } from '../contexts/FontContext';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface UserProfileModalProps {
@@ -31,7 +30,6 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
-  const { font, setFont } = useFont();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -451,76 +449,6 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     </div>
                     <span className="text-sm font-medium text-[var(--text-primary)]">Dark</span>
                   </button>
-                </div>
-              </div>
-
-              {/* Font Selection */}
-              <div>
-                <div className="flex items-center space-x-2 mb-6">
-                  <Type className="h-5 w-5 text-[var(--text-secondary)]" />
-                  <h3 className="text-xl font-semibold text-[var(--text-primary)]">Font</h3>
-                </div>
-                <div className="space-y-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-lg p-6">
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="font-system"
-                      name="font"
-                      value="system"
-                      checked={font === 'system'}
-                      onChange={(e) => setFont(e.target.value as FontOption)}
-                      className="mr-3"
-                    />
-                    <label htmlFor="font-system" className="text-[var(--text-primary)] flex items-center">
-                      <span className="font-preview-system">System Default</span>
-                    </label>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="font-opendyslexic"
-                      name="font"
-                      value="opendyslexic"
-                      checked={font === 'opendyslexic'}
-                      onChange={(e) => setFont(e.target.value as FontOption)}
-                      className="mr-3"
-                    />
-                    <label htmlFor="font-opendyslexic" className="text-[var(--text-primary)] flex items-center gap-2">
-                      <span className="font-preview-opendyslexic">OpenDyslexic</span>
-                      <span className="text-[var(--text-secondary)] text-sm">(Dyslexia-friendly)</span>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="font-arial"
-                      name="font"
-                      value="arial"
-                      checked={font === 'arial'}
-                      onChange={(e) => setFont(e.target.value as FontOption)}
-                      className="mr-3"
-                    />
-                    <label htmlFor="font-arial" className="text-[var(--text-primary)] flex items-center">
-                      <span className="font-preview-arial">Arial</span>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="font-verdana"
-                      name="font"
-                      value="verdana"
-                      checked={font === 'verdana'}
-                      onChange={(e) => setFont(e.target.value as FontOption)}
-                      className="mr-3"
-                    />
-                    <label htmlFor="font-verdana" className="text-[var(--text-primary)] flex items-center">
-                      <span className="font-preview-verdana">Verdana</span>
-                    </label>
-                  </div>
                 </div>
               </div>
             </div>
