@@ -1,179 +1,87 @@
 const createExpoWebpackConfigAsync = require('@expo/webpack-config');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-const { ProgressPlugin } = require('webpack');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = async function (env, argv) {
-  const config = await createExpoWebpackConfigAsync({
-    ...env,
-    babel: {
-      dangerouslyAddModulePathsToTranspile: [
-        '@react-native',
-        '@react-native-community',
-        '@expo/vector-icons',
-        'expo-font',
-        'expo',
-        'expo-modules-core',
-        '@react-native/assets-registry'
-      ]
-    }
-  }, argv);
+  const config = await createExpoWebpackConfigAsync(env, argv);
 
-  // Add React Refresh plugin for development
-  if (env.mode === 'development') {
-    config.plugins.push(
-      new ReactRefreshWebpackPlugin({
-        overlay: false,
-      })
-    );
-  }
+  // Remove existing HtmlWebpackPlugin instances
+  config.plugins = config.plugins.filter(plugin => !(plugin instanceof HtmlWebpackPlugin));
 
-  // Add progress plugin
+  // Add new HtmlWebpackPlugin with proper configuration
   config.plugins.push(
-    new ProgressPlugin({
-      activeModules: true,
-      modules: true,
-      dependencies: true,
-      entries: true,
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, 'public/index.html'),
+      filename: 'index.html',
+      inject: true,
+      minify: env.mode === 'production' ? {
+        removeComments: true,
+        collapseWhitespace: true,
+        removeRedundantAttributes: true,
+        useShortDoctype: true,
+        removeEmptyAttributes: true,
+        removeStyleLinkTypeAttributes: true,
+        keepClosingSlash: true,
+        minifyJS: true,
+        minifyCSS: true,
+        minifyURLs: true,
+      } : false,
+      templateParameters: {
+        lang: 'en',
+        title: 'Props Bible',
+        description: 'Digital companion for theater production professionals',
+      },
     })
   );
 
-  // Configure module resolution
-  config.resolve = {
-    ...config.resolve,
-    fallback: {
-      ...config.resolve.fallback,
-      fs: false,
-      net: false,
-      tls: false,
-      crypto: require.resolve('crypto-browserify'),
-      stream: require.resolve('stream-browserify'),
-      url: require.resolve('url/'),
-      zlib: require.resolve('browserify-zlib'),
-      http: require.resolve('stream-http'),
-      https: require.resolve('https-browserify'),
-      assert: require.resolve('assert/'),
-      os: require.resolve('os-browserify/browser'),
-      path: require.resolve('path-browserify'),
-    },
-    extensions: ['.web.tsx', '.web.ts', '.web.jsx', '.web.js', '.tsx', '.ts', '.jsx', '.js', '.json'],
-    alias: {
-      ...config.resolve.alias,
-      '@components': path.resolve(__dirname, 'src/components'),
-      '@screens': path.resolve(__dirname, 'src/screens'),
-      '@utils': path.resolve(__dirname, 'src/utils'),
-      '@assets': path.resolve(__dirname, 'assets'),
-      '@shared': path.resolve(__dirname, 'src/shared'),
-      '@platforms': path.resolve(__dirname, 'src/platforms'),
-      'react-native$': 'react-native-web',
-      'react-native-web': path.resolve(__dirname, 'node_modules/react-native-web'),
-    },
+  // Add Node.js polyfills
+  config.plugins.push(
+    new NodePolyfillPlugin(),
+    new webpack.ProvidePlugin({
+      process: 'process/browser',
+      Buffer: ['buffer', 'Buffer'],
+    })
+  );
+
+  // Configure fallbacks for Node.js core modules
+  config.resolve.fallback = {
+    ...config.resolve.fallback,
+    vm: require.resolve('vm-browserify'),
+    buffer: require.resolve('buffer/'),
+    stream: require.resolve('stream-browserify'),
+    path: require.resolve('path-browserify'),
+    crypto: require.resolve('crypto-browserify'),
   };
 
-  // Configure module rules for handling various file types
-  config.module.rules = [
-    {
-      test: /\.(js|jsx|ts|tsx|mjs)$/,
-      include: [
-        path.resolve(__dirname, 'src'),
-        path.resolve(__dirname, 'App.tsx'),
-        path.resolve(__dirname, 'node_modules/@react-native'),
-        path.resolve(__dirname, 'node_modules/@react-native-community'),
-        path.resolve(__dirname, 'node_modules/expo'),
-        path.resolve(__dirname, 'node_modules/expo-modules-core'),
-        path.resolve(__dirname, 'node_modules/@expo'),
-        path.resolve(__dirname, 'node_modules/react-native-reanimated'),
-        path.resolve(__dirname, 'node_modules/react-native-web'),
-      ],
-      use: {
-        loader: 'babel-loader',
+  // Configure module rules for HTML
+  config.module.rules.push({
+    test: /\.html$/,
+    use: [
+      {
+        loader: 'html-loader',
         options: {
-          presets: [
-            ['@babel/preset-env', { targets: { node: 'current' } }],
-            '@babel/preset-react',
-            '@babel/preset-typescript',
-            'babel-preset-expo'
-          ],
-          plugins: [
-            '@babel/plugin-transform-runtime',
-            'babel-plugin-transform-import-meta',
-            ['@babel/plugin-transform-class-properties', { loose: true }],
-            ['@babel/plugin-transform-private-methods', { loose: true }],
-            ['@babel/plugin-transform-private-property-in-object', { loose: true }]
-          ],
-          cacheDirectory: true,
-          cacheCompression: false,
+          minimize: env.mode === 'production',
         },
       },
-    },
-    {
-      test: /\.(woff|woff2|eot|ttf|otf)$/,
-      type: 'asset/resource',
-      generator: {
-        filename: 'static/fonts/[name].[hash][ext]'
-      }
-    },
-    {
-      test: /\.(png|jpg|jpeg|gif|svg)$/,
-      type: 'asset/resource',
-      generator: {
-        filename: 'static/images/[name].[hash][ext]'
-      }
-    },
-  ];
+    ],
+  });
 
-  // Configure output
-  config.output = {
-    ...config.output,
-    filename: 'static/js/[name].[contenthash].js',
-    chunkFilename: 'static/js/[name].[contenthash].chunk.js',
-    assetModuleFilename: 'static/media/[name].[hash][ext]',
-    publicPath: '/',
-    clean: true,
-  };
+  // Ensure proper MIME types
+  config.output.devtoolModuleFilenameTemplate = '[absolute-resource-path]';
+  config.output.clean = true;
 
-  // Configure development server with improved MIME type handling
+  // Configure dev server
   config.devServer = {
     ...config.devServer,
     historyApiFallback: true,
     hot: true,
-    compress: true,
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
     },
-    static: {
-      directory: path.join(__dirname, 'public'),
-      publicPath: '/',
-      serveIndex: true,
-      watch: true,
-    },
-    client: {
-      overlay: {
-        errors: true,
-        warnings: false,
-      },
-      progress: true,
-    },
-    devMiddleware: {
-      writeToDisk: true,
-    },
-    setupMiddlewares: (middlewares, devServer) => {
-      if (!devServer) {
-        throw new Error('webpack-dev-server is not defined');
-      }
-
-      // Handle all JavaScript files with proper MIME type
-      devServer.app.use((req, res, next) => {
-        if (req.url.match(/\.(js|jsx|ts|tsx|bundle)$/)) {
-          res.set('Content-Type', 'application/javascript');
-        }
-        next();
-      });
-
-      return middlewares;
-    }
   };
 
   return config;

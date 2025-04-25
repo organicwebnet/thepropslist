@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.js": "/static/js/main.23788635f5d20f7d95b7.js",
+    "main.js": "/static/js/main.a5f53534b1a0ba2df0e9.js",
     "static/fonts/OpenDyslexic-Italic.otf": "/static/fonts/OpenDyslexic-Italic.5ff9ce0dd64351704ef0.otf",
     "static/fonts/OpenDyslexic-Regular.otf": "/static/fonts/OpenDyslexic-Regular.59a86b216c044c283e23.otf",
     "static/fonts/OpenDyslexic-Bold.otf": "/static/fonts/OpenDyslexic-Bold.1082cfdbbc04743cc3f1.otf",
@@ -8,9 +8,9 @@
     "index.html": "/index.html",
     "favicon-32.png": "/favicon-32.png",
     "favicon-16.png": "/favicon-16.png",
-    "main.js.map": "/static/js/main.23788635f5d20f7d95b7.js.map"
+    "main.js.map": "/static/js/main.a5f53534b1a0ba2df0e9.js.map"
   },
   "entrypoints": [
-    "static/js/main.23788635f5d20f7d95b7.js"
+    "static/js/main.a5f53534b1a0ba2df0e9.js"
   ]
 }

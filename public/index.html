@@ -1,29 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= lang %>">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="theme-color" content="#000000" />
-    <title>Props Bible</title>
+    <meta name="description" content="<%= description %>" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <link rel="manifest" href="<%= publicPath %>manifest.json" />
+    <link rel="shortcut icon" href="<%= publicPath %>favicon.ico" />
+    
+    <!-- Preload fonts -->
+    <link rel="preload" href="/assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="/assets/fonts/OpenDyslexic/OpenDyslexic-Bold.otf" as="font" type="font/otf" crossorigin />
+    <link rel="preload" href="/assets/fonts/OpenDyslexic/OpenDyslexic-Italic.otf" as="font" type="font/otf" crossorigin />
+    
+    <title><%= title %></title>
     <style>
         /* Ensure proper font loading */
         @font-face {
             font-family: 'OpenDyslexic-Regular';
-            src: url('/assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf') format('opentype');
+            src: url('<%= publicPath %>fonts/OpenDyslexic/OpenDyslexic-Regular.otf') format('opentype');
             font-weight: normal;
             font-style: normal;
             font-display: swap;
         }
         @font-face {
             font-family: 'OpenDyslexic-Bold';
-            src: url('/assets/fonts/OpenDyslexic/OpenDyslexic-Bold.otf') format('opentype');
+            src: url('<%= publicPath %>fonts/OpenDyslexic/OpenDyslexic-Bold.otf') format('opentype');
             font-weight: bold;
             font-style: normal;
             font-display: swap;
         }
         @font-face {
             font-family: 'OpenDyslexic-Italic';
-            src: url('/assets/fonts/OpenDyslexic/OpenDyslexic-Italic.otf') format('opentype');
+            src: url('<%= publicPath %>fonts/OpenDyslexic/OpenDyslexic-Italic.otf') format('opentype');
             font-weight: normal;
             font-style: italic;
             font-display: swap;
@@ -34,10 +45,112 @@
             margin: 0;
             padding: 0;
         }
+        /* Loading styles */
+        .loading-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #0A0A0A;
+            color: #FAFAFA;
+        }
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid #2563eb;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+        .loading-text {
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            color: #9CA3AF;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        /* Error styles */
+        .error-container {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #0A0A0A;
+            color: #FAFAFA;
+            text-align: center;
+            padding: 20px;
+        }
+        .error-container.visible {
+            display: flex;
+        }
+        .error-message {
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #EF4444;
+            margin-bottom: 16px;
+        }
+        .error-details {
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #9CA3AF;
+            font-size: 14px;
+        }
+        /* Initial loading styles */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        #root {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background-color: #f5f5f5;
+        }
+        .loading-text {
+            margin-top: 16px;
+            font-size: 18px;
+            color: #333;
+        }
+        @media (prefers-color-scheme: dark) {
+            .loading {
+                background-color: #1a1a1a;
+            }
+            .loading-text {
+                color: #fff;
+            }
+        }
     </style>
 </head>
 <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
+    <noscript>
+        <div class="error-container visible">
+            <div>
+                <p class="error-message">JavaScript Required</p>
+                <p class="error-details">Please enable JavaScript to use Props Bible.</p>
+            </div>
+        </div>
+    </noscript>
+    <div id="root">
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading Props Bible...</div>
+        </div>
+    </div>
+    <div id="error-root" class="error-container" role="alert" aria-live="assertive">
+        <div>
+            <p class="error-message">Unable to Load Application</p>
+            <p class="error-details">Please refresh the page or try again later.</p>
+        </div>
+    </div>
 </body>
 </html> 

@@ -1,117 +1,126 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <!-- 
-      This viewport works for phones with notches.
-      It's optimized for gestures by disabling global zoom.
-     -->
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1.00001, viewport-fit=cover"
-    />
-    <title>Props Bible</title>
-    <style>
-      /**
-       * Extend the react-native-web reset:
-       * https://github.com/necolas/react-native-web/blob/master/packages/react-native-web/src/exports/StyleSheet/initialRules.js
-       */
-      html,
-      body,
-      #root {
-        width: 100%;
-        /* To smooth any scrolling behavior */
-        -webkit-overflow-scrolling: touch;
-        margin: 0px;
-        padding: 0px;
-        /* Allows content to fill the viewport and go beyond the bottom */
-        min-height: 100%;
-      }
-      #root {
-        flex-shrink: 0;
-        flex-basis: auto;
-        flex-grow: 1;
-        display: flex;
-        flex: 1;
-      }
-
-      html {
-        scroll-behavior: smooth;
-        /* Prevent text size change on orientation change https://gist.github.com/tfausak/2222823#file-ios-8-web-app-html-L138 */
-        -webkit-text-size-adjust: 100%;
-        height: calc(100% + env(safe-area-inset-top));
-      }
-
-      body {
-        display: flex;
-        /* Allows you to scroll below the viewport; default value is visible */
-        overflow-y: auto;
-        overscroll-behavior-y: none;
-        text-rendering: optimizeLegibility;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        -ms-overflow-style: scrollbar;
-      }
-      /* Enable for apps that support dark-theme */
-      /*@media (prefers-color-scheme: dark) {
-        body {
-          background-color: black;
-        }
-      }*/
-    </style>
-  <meta name="description" content="A comprehensive Props management system for theatrical productions"><link rel="icon" type="image/png" sizes="16x16" href="\favicon-16.png"></link><link rel="icon" type="image/png" sizes="32x32" href="\favicon-32.png"></link><link rel="shortcut icon" href="\favicon.ico"></link><script defer src="/static/js/main.23788635f5d20f7d95b7.js"></script></head>
-
-  <body>
-    <!-- 
-      A generic no script element with a reload button and a message.
-      Feel free to customize this however you'd like.
-    -->
-    <noscript>
-      <form
-        action=""
-        style="
-          background-color: #fff;
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          z-index: 9999;
-        "
-      >
-        <div
-          style="
-            font-size: 18px;
-            font-family: Helvetica, sans-serif;
-            line-height: 24px;
-            margin: 10%;
-            width: 80%;
-          "
-        >
-          <p>Oh no! It looks like JavaScript is not enabled in your browser.</p>
-          <p style="margin: 20px 0;">
-            <button
-              type="submit"
-              style="
-                background-color: #4630eb;
-                border-radius: 100px;
-                border: none;
-                box-shadow: none;
-                color: #fff;
-                cursor: pointer;
-                font-weight: bold;
-                line-height: 20px;
-                padding: 6px 16px;
-              "
-            >
-              Reload
-            </button>
-          </p>
-        </div>
-      </form>
-    </noscript>
-    <!-- The root element for your Expo app. -->
-    <div id="root"></div>
-  </body>
-</html>
+<head><link rel="icon" type="image/png" sizes="16x16" href="\favicon-16.png"></link><link rel="icon" type="image/png" sizes="32x32" href="\favicon-32.png"></link><link rel="shortcut icon" href="\favicon.ico"></link><script defer src="/static/js/main.a5f53534b1a0ba2df0e9.js"></script></head>Html Webpack Plugin:
+<pre>
+  Error: Child compilation failed:
+  Module not found: Error: Can't resolve 'html-loader' in 'C:\project'
+  ModuleNotFoundError: Module not found: Error: Can't resolve 'html-loader' in 'C:\project'
+      at C:\project\node_modules\webpack\lib\Compilation.js:2231:28
+      at C:\project\node_modules\webpack\lib\NormalModuleFactory.js:928:13
+      at eval (eval at create (C:\project\node_modules\tapable\lib\HookCodeFactory.js:33:10), <anonymous>:10:1  )
+      at C:\project\node_modules\webpack\lib\NormalModuleFactory.js:338:22
+      at eval (eval at create (C:\project\node_modules\tapable\lib\HookCodeFactory.js:33:10), <anonymous>:9:1)      at C:\project\node_modules\webpack\lib\NormalModuleFactory.js:651:15
+      at C:\project\node_modules\webpack\lib\NormalModuleFactory.js:155:10
+      at C:\project\node_modules\webpack\lib\NormalModuleFactory.js:727:8
+      at C:\project\node_modules\neo-async\async.js:2830:7
+      at done (C:\project\node_modules\neo-async\async.js:2925:13)
+      at C:\project\node_modules\webpack\lib\NormalModuleFactory.js:1197:23
+      at finishWithoutResolve (C:\project\node_modules\enhanced-resolve\lib\Resolver.js:567:11)
+      at C:\project\node_modules\enhanced-resolve\lib\Resolver.js:656:15
+      at C:\project\node_modules\enhanced-resolve\lib\Resolver.js:718:5
+      at eval (eval at create (C:\project\node_modules\tapable\lib\HookCodeFactory.js:33:10), <anonymous>:16:1  )
+      at C:\project\node_modules\enhanced-resolve\lib\Resolver.js:718:5
+      at eval (eval at create (C:\project\node_modules\tapable\lib\HookCodeFactory.js:33:10), <anonymous>:27:1  )
+      at C:\project\node_modules\enhanced-resolve\lib\DescriptionFilePlugin.js:89:43
+      at C:\project\node_modules\enhanced-resolve\lib\Resolver.js:718:5
+      at eval (eval at create (C:\project\node_modules\tapable\lib\HookCodeFactory.js:33:10), <anonymous>:15:1  )
+      at C:\project\node_modules\enhanced-resolve\lib\Resolver.js:718:5
+      at eval (eval at create (C:\project\node_modules\tapable\lib\HookCodeFactory.js:33:10), <anonymous>:15:1  )
+      at C:\project\node_modules\enhanced-resolve\lib\Resolver.js:718:5
+      at eval (eval at create (C:\project\node_modules\tapable\lib\HookCodeFactory.js:33:10), <anonymous>:42:1  )
+      at C:\project\node_modules\enhanced-resolve\lib\ConditionalPlugin.js:53:42
+      at C:\project\node_modules\enhanced-resolve\lib\Resolver.js:718:5
+      at eval (eval at create (C:\project\node_modules\tapable\lib\HookCodeFactory.js:33:10), <anonymous>:16:1  )
+      at C:\project\node_modules\enhanced-resolve\lib\forEachBail.js:39:13
+      at C:\project\node_modules\enhanced-resolve\lib\ModulesInHierarchicalDirectoriesPlugin.js:79:16
+      at processTicksAndRejections (node:internal/process/task_queues:89:21)
+  
+  - Compilation.js:2231 
+    [project]/[webpack]/lib/Compilation.js:2231:28
+  
+  - NormalModuleFactory.js:928 
+    [project]/[webpack]/lib/NormalModuleFactory.js:928:13
+  
+  
+  - NormalModuleFactory.js:338 
+    [project]/[webpack]/lib/NormalModuleFactory.js:338:22
+  
+  
+  - NormalModuleFactory.js:651 
+    [project]/[webpack]/lib/NormalModuleFactory.js:651:15
+  
+  - NormalModuleFactory.js:155 
+    [project]/[webpack]/lib/NormalModuleFactory.js:155:10
+  
+  - NormalModuleFactory.js:727 
+    [project]/[webpack]/lib/NormalModuleFactory.js:727:8
+  
+  - async.js:2830 
+    [project]/[neo-async]/async.js:2830:7
+  
+  - async.js:2925 done
+    [project]/[neo-async]/async.js:2925:13
+  
+  - NormalModuleFactory.js:1197 
+    [project]/[webpack]/lib/NormalModuleFactory.js:1197:23
+  
+  - Resolver.js:567 finishWithoutResolve
+    [project]/[enhanced-resolve]/lib/Resolver.js:567:11
+  
+  - Resolver.js:656 
+    [project]/[enhanced-resolve]/lib/Resolver.js:656:15
+  
+  - Resolver.js:718 
+    [project]/[enhanced-resolve]/lib/Resolver.js:718:5
+  
+  
+  - Resolver.js:718 
+    [project]/[enhanced-resolve]/lib/Resolver.js:718:5
+  
+  
+  - DescriptionFilePlugin.js:89 
+    [project]/[enhanced-resolve]/lib/DescriptionFilePlugin.js:89:43
+  
+  - Resolver.js:718 
+    [project]/[enhanced-resolve]/lib/Resolver.js:718:5
+  
+  
+  - Resolver.js:718 
+    [project]/[enhanced-resolve]/lib/Resolver.js:718:5
+  
+  
+  - Resolver.js:718 
+    [project]/[enhanced-resolve]/lib/Resolver.js:718:5
+  
+  
+  - ConditionalPlugin.js:53 
+    [project]/[enhanced-resolve]/lib/ConditionalPlugin.js:53:42
+  
+  - Resolver.js:718 
+    [project]/[enhanced-resolve]/lib/Resolver.js:718:5
+  
+  
+  - forEachBail.js:39 
+    [project]/[enhanced-resolve]/lib/forEachBail.js:39:13
+  
+  - ModulesInHierarchicalDirectoriesPlugin.js:79 
+    [project]/[enhanced-resolve]/lib/ModulesInHierarchicalDirectoriesPlugin.js:79:16
+  
+  - task_queues:89 processTicksAndRejections
+    node:internal/process/task_queues:89:21
+  
+  - child-compiler.js:211 
+    [project]/[html-webpack-plugin]/lib/child-compiler.js:211:18
+  
+  - Compiler.js:625 finalCallback
+    [project]/[webpack]/lib/Compiler.js:625:5
+  
+  - Compiler.js:661 
+    [project]/[webpack]/lib/Compiler.js:661:11
+  
+  - Compiler.js:1347 
+    [project]/[webpack]/lib/Compiler.js:1347:17
+  
+  
+  - task_queues:105 processTicksAndRejections
+    node:internal/process/task_queues:105:5
+  
+</pre>

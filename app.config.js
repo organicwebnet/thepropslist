@@ -1,52 +1,49 @@
-const config = {
+module.exports = {
   name: 'Props Bible',
   slug: 'props-bible',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
-  userInterfaceStyle: 'light',
+  userInterfaceStyle: 'automatic',
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
     backgroundColor: '#ffffff'
   },
   assetBundlePatterns: [
-    '**/*',
-    'assets/fonts/**/*',
-    'assets/fonts/OpenDyslexic/**/*'
+    "**/*",
+    "assets/fonts/**/*"
   ],
-  plugins: [
-    'expo-font'
-  ],
-  extra: {
-    eas: {
-      projectId: '2f290c3d-90db-4054-ae40-b68113f8c621'
-    }
-  },
-  updates: {
-    fallbackToCacheTimeout: 0,
-    url: 'https://u.expo.dev/2f290c3d-90db-4054-ae40-b68113f8c621'
-  },
-  runtimeVersion: {
-    policy: 'sdkVersion'
-  },
-  scheme: 'propsbible'
-};
-
-// Only include native config if we're not in a prebuild environment
-if (!process.env.EAS_BUILD_PLATFORM) {
-  config.ios = {
+  ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.propsbible.app'
-  };
-  config.android = {
+  },
+  android: {
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#ffffff'
     },
-    package: 'com.propsbible.app',
-    jsEngine: 'hermes'
-  };
-}
-
-export default config; 
+    package: 'com.propsbible.app'
+  },
+  web: {
+    favicon: './assets/favicon.png',
+    bundler: 'metro'
+  },
+  plugins: [
+    [
+      'expo-font',
+      {
+        fonts: [
+          './assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf',
+          './assets/fonts/OpenDyslexic/OpenDyslexic-Bold.otf',
+          './assets/fonts/OpenDyslexic/OpenDyslexic-Italic.otf'
+        ]
+      }
+    ]
+  ],
+  extra: {
+    eas: {
+      projectId: 'your-project-id'
+    }
+  }
+}; 

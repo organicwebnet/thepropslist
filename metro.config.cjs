@@ -2,41 +2,20 @@ const { getDefaultConfig } = require('@expo/metro-config');
 const path = require('path');
 
 /** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname, {
-  // Enable CSS support for web
-  isCSSEnabled: true
-});
+const config = getDefaultConfig(__dirname);
 
-// Add support for web-specific extensions
-config.resolver.sourceExts = [
-  'web.tsx',
-  'web.ts',
-  'web.jsx',
-  'web.js',
-  'tsx',
-  'ts',
-  'jsx',
-  'js',
-  'mjs',
-  'cjs'
-];
+// Enable CSS support
+config.transformer.babelTransformerPath = require.resolve('react-native-css-transformer');
 
-// Add support for web assets and fonts
-config.resolver.assetExts = [
-  'otf',
-  'ttf',
-  'svg',
-  'woff',
-  'woff2',
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'mp4',
-  'webp',
-  'wav',
-  'mp3'
-];
+// Configure resolver for web
+config.resolver.sourceExts = [...config.resolver.sourceExts, 'css', 'scss', 'sass'];
+config.resolver.assetExts = [...config.resolver.assetExts, 'ttf', 'otf'];
+
+// Configure platforms
+config.resolver.platforms = ['ios', 'android', 'web'];
+
+// Add web-specific configurations
+config.resolver.resolverMainFields = ['browser', 'main', 'module'];
 
 // Configure proper MIME types for web
 config.transformer = {
@@ -65,10 +44,9 @@ config.server = {
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, content-type, Authorization');
       
-      // Handle all JavaScript files
-      if (req.url.match(/\.(js|jsx|ts|tsx|bundle)$/)) {
+      // Handle MIME types for web assets
+      if (req.url.endsWith('.js')) {
         res.setHeader('Content-Type', 'application/javascript');
-        res.setHeader('X-Content-Type-Options', 'nosniff');
       }
       
       return middleware(req, res, next);
@@ -79,8 +57,6 @@ config.server = {
 // Configure resolver
 config.resolver = {
   ...config.resolver,
-  resolverMainFields: ['browser', 'main'],
-  platforms: ['web', 'android', 'ios'],
   resolveRequest: (context, moduleName, platform) => {
     if (moduleName.endsWith('.web.js') || moduleName.endsWith('.web.tsx')) {
       return {
