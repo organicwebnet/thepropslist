@@ -1,8 +1,34 @@
-const appJson = require('./app.json');
-
 module.exports = ({ config }) => {
   return {
-    ...appJson.expo,
+    name: "Props Bible",
+    slug: "props-bible",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/icon.png",
+    userInterfaceStyle: "automatic",
+    splash: {
+      image: "./assets/splash.png",
+      resizeMode: "contain",
+      backgroundColor: "#ffffff"
+    },
+    assetBundlePatterns: [
+      "**/*"
+    ],
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.propsbible.app"
+    },
+    android: {
+      adaptiveIcon: {
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#ffffff"
+      },
+      package: "com.propsbible.app"
+    },
+    web: {
+      bundler: "metro",
+      favicon: "./assets/favicon.png"
+    },
     hooks: {
       postPublish: [
         {
@@ -15,10 +41,8 @@ module.exports = ({ config }) => {
         },
       ],
     },
-    // Make sure expo-router configuration is preserved
     scheme: "propsbible",
     plugins: [
-      ...((appJson.expo && appJson.expo.plugins) || []),
       "expo-router"
     ],
     experiments: {

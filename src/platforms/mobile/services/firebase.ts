@@ -15,17 +15,13 @@ import {
 } from '../../../shared/services/firebase/types';
 
 export class MobileFirebaseService implements FirebaseService {
-  protected _auth: FirebaseAuthTypes.Module;
-  protected _firestore: FirebaseFirestoreTypes.Module;
-  protected _storage: FirebaseStorageTypes.Module;
+  protected _auth: FirebaseAuthTypes.Module | undefined;
+  protected _firestore: FirebaseFirestoreTypes.Module | undefined;
+  protected _storage: FirebaseStorageTypes.Module | undefined;
   private syncEnabled = true;
   private offlineQueue: OfflineSync;
 
   constructor() {
-    this._auth = auth();
-    this._firestore = firestore();
-    this._storage = storage();
-
     this.offlineQueue = {
       initialize: async () => {
         // Initialize offline queue
@@ -71,6 +67,14 @@ export class MobileFirebaseService implements FirebaseService {
     };
   }
 
+  async initializeService(): Promise<void> {
+    if (!this._auth) this._auth = auth();
+    if (!this._firestore) this._firestore = firestore();
+    if (!this._storage) this._storage = storage();
+    await this.offlineQueue.initialize();
+    console.log("MobileFirebaseService modules initialized.");
+  }
+
   private createError(error: unknown): FirebaseError {
     const err = error as { code?: string; message?: string };
     return {
@@ -82,7 +86,7 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   async initialize(): Promise<void> {
-    await this.offlineQueue.initialize();
+    console.log("MobileFirebaseService initialize() called (should be potentially removed or rely on initializeService).");
   }
 
   async enableSync(): Promise<void> {
@@ -104,7 +108,8 @@ export class MobileFirebaseService implements FirebaseService {
     onNext: (doc: FirebaseDocument<T>) => void,
     onError?: (error: Error) => void
   ): () => void {
-    const docRef = firestore().doc(path) as FirebaseFirestoreTypes.DocumentReference<T>;
+    if (!this._firestore) throw new Error("Firestore not initialized");
+    const docRef = this._firestore.doc(path) as FirebaseFirestoreTypes.DocumentReference<T>;
     
     return docRef.onSnapshot(
       (snapshot: FirebaseFirestoreTypes.DocumentSnapshot<T>) => {
@@ -126,7 +131,8 @@ export class MobileFirebaseService implements FirebaseService {
     onNext: (docs: FirebaseDocument<T>[]) => void,
     onError?: (error: Error) => void
   ): () => void {
-    const collectionRef = firestore().collection(path) as FirebaseFirestoreTypes.CollectionReference<T>;
+    if (!this._firestore) throw new Error("Firestore not initialized");
+    const collectionRef = this._firestore.collection(path) as FirebaseFirestoreTypes.CollectionReference<T>;
     
     return collectionRef.onSnapshot(
       (snapshot: FirebaseFirestoreTypes.QuerySnapshot<T>) => {
@@ -147,14 +153,17 @@ export class MobileFirebaseService implements FirebaseService {
   async runTransaction<T>(
     updateFunction: (transaction: FirebaseFirestoreTypes.Transaction) => Promise<T>
   ): Promise<T> {
+    if (!this._firestore) throw new Error("Firestore not initialized");
     return this._firestore.runTransaction(updateFunction);
   }
 
   batch(): FirebaseFirestoreTypes.WriteBatch {
+    if (!this._firestore) throw new Error("Firestore not initialized");
     return this._firestore.batch();
   }
 
   getStorageRef(path: string): FirebaseStorageTypes.Reference {
+    if (!this._storage) throw new Error("Storage not initialized");
     return this._storage.ref(path);
   }
 
@@ -187,14 +196,17 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   auth(): FirebaseAuthTypes.Module {
+    if (!this._auth) throw new Error("Auth not initialized");
     return this._auth;
   }
 
   firestore(): FirebaseFirestoreTypes.Module {
+    if (!this._firestore) throw new Error("Firestore not initialized");
     return this._firestore;
   }
 
   storage(): FirebaseStorageTypes.Module {
+    if (!this._storage) throw new Error("Storage not initialized");
     return this._storage;
   }
 } 

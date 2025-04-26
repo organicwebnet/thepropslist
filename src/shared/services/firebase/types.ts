@@ -113,9 +113,10 @@ export class FirebaseError extends Error {
 
 export interface FirebaseService {
   initialize(): Promise<void>;
+  initializeService?(): Promise<void>;
   auth(): CustomAuth; // Updated type
   firestore(): CustomFirestore; // Updated type
-  storage(): CustomStorage; // Updated type
+  storage(): FirebaseStorage | CustomStorage; // Updated type
   offline(): OfflineSync;
   runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T>; // Updated type
   batch(): CustomWriteBatch; // Updated type
@@ -133,4 +134,7 @@ export interface FirebaseService {
     docRef: CustomDocumentReference<T>
   ): FirebaseDocument<T>; // Use the updated FirebaseDocument type
   getStorageRef(path: string): CustomStorageReference; // Updated return type
+  getSyncStatus?(): boolean;
+  enableSync?(): Promise<void>;
+  disableSync?(): Promise<void>;
 } 

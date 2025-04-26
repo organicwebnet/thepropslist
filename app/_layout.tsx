@@ -5,57 +5,25 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
 import { PropsProvider } from '../src/contexts/PropsContext';
 import { ShowsProvider } from '../src/contexts/ShowsContext';
+import { AuthProvider } from '../src/contexts/AuthContext';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+// Comment out SplashScreen and Linking for now
+// SplashScreen.preventAutoHideAsync();
+// const prefix = Linking.createURL('/');
 
-// Add scheme configuration
-export const scheme = "propsbible";
-
-// Enhanced router settings
+// Keep unstable_settings with initialRouteName set
 export const unstable_settings = {
-  // Ensure any reloading uses the default route
-  initialRouteName: '(tabs)',
-  // Make sure navigation links work correctly
+  initialRouteName: '(tabs)/props', 
   router: {
     unstable_enableDirectoryLinks: true,
   },
 };
 
-// Setup safe URL handling for Android
-const prefix = Linking.createURL('/');
-
-// Set up a safer URL parser for expo-router (this helps with the hostname error)
-const getSafeUrl = () => {
-  try {
-    const url = Linking.useURL();
-    if (!url) return null;
-    return url;
-  } catch (e) {
-    console.warn('Error parsing URL:', e);
-    return null;
-  }
-};
-
 function RootLayoutNav() {
-  // Use the safe URL parser
-  const url = getSafeUrl();
-
-  // Fallback navigation in case of URL parsing errors
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      // Ensure we have a valid initial route on Android
-      try {
-        router.navigate('(tabs)');
-      } catch (e) {
-        console.warn('Navigation error:', e);
-      }
-    }
-  }, []);
-
+  // ... (Keep the Stack navigator definition as is)
   return (
     <Stack
       screenOptions={{
@@ -86,16 +54,19 @@ function RootLayoutNav() {
   );
 }
 
+// Restore ErrorBoundary and its styles correctly
 type ErrorBoundaryProps = PropsWithChildren<{
-  error?: Error;
+  error?: Error | null; // Allow null as error type
 }>;
 
 function ErrorBoundary({ error, children }: ErrorBoundaryProps) {
   if (error) {
+    console.error("ErrorBoundary caught error:", error); // Log the error
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorTitle}>Something went wrong!</Text>
-        <Text style={styles.errorMessage}>{error.message}</Text>
+        {/* Safely render error message */}
+        <Text style={styles.errorMessage}>{String(error.message || 'Unknown error')}</Text>
       </View>
     );
   }
@@ -104,6 +75,7 @@ function ErrorBoundary({ error, children }: ErrorBoundaryProps) {
 }
 
 const styles = StyleSheet.create({
+  // Ensure styles are definitely uncommented
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -120,46 +92,22 @@ const styles = StyleSheet.create({
 });
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({
-    'OpenDyslexic': require('../assets/fonts/OpenDyslexic-Regular.otf'),
-  });
+  // ... keep font loading commented for now ...
 
-  useEffect(() => {
-    const handleInitialization = async () => {
-      try {
-        if (error) {
-          console.error('Error loading fonts:', error);
-          await SplashScreen.hideAsync();
-        } else if (loaded) {
-          await SplashScreen.hideAsync();
-        }
-      } catch (e) {
-        console.error('Error handling initialization:', e);
-      }
-    };
-
-    handleInitialization();
-  }, [error, loaded]);
-
-  if (!loaded && !error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
-
+  // Keep ErrorBoundary commented, keep GestureHandler, Keep Auth/Theme Providers, comment out Props/Shows Providers
   return (
-    <ErrorBoundary error={error || undefined}>
+    // <ErrorBoundary error={undefined}> 
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <ThemeProvider>
-          <PropsProvider>
-            <ShowsProvider>
-              <RootLayoutNav />
-            </ShowsProvider>
-          </PropsProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            {/* <PropsProvider>
+              <ShowsProvider> */}
+                <RootLayoutNav />
+              {/* </ShowsProvider>
+            </PropsProvider> */}
+          </ThemeProvider>
+        </AuthProvider>
       </GestureHandlerRootView>
-    </ErrorBoundary>
+    // </ErrorBoundary>
   );
 } 

@@ -271,4 +271,19 @@ export class WebFirebaseService implements FirebaseService {
     }    
     throw new Error(`${message}: ${error instanceof Error ? error.message : String(error)}`);
   }
+
+  async initializeService(): Promise<void> {
+    console.log("WebFirebaseService initializeService() called.");
+  }
+
+  private createError(error: unknown): FirebaseError {
+    const err = error as { code?: string; message?: string };
+    const firebaseError: FirebaseError = {
+      code: err.code || 'unknown',
+      message: err.message || 'An unknown web error occurred',
+      originalError: error,
+      name: 'FirebaseError'
+    };
+    return firebaseError;
+  }
 } 
