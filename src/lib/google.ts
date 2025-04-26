@@ -35,10 +35,10 @@ export async function initGoogleApi() {
 
     // Initialize the client
     await new Promise<void>((resolve, reject) => {
-      window.gapi.load('client:auth2', {
-        callback: resolve,
-        onerror: () => reject(new Error('Failed to load client:auth2')),
-      });
+      window.gapi.load('client:auth2', { 
+          callback: resolve,
+          onerror: reject,
+      } as any);
     });
 
     const clientId = import.meta.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
@@ -55,10 +55,11 @@ export async function initGoogleApi() {
     });
 
     // Initialize Google Identity Services
+    console.log('Google Sign-In script loaded.');
     window.google.accounts.id.initialize({
       client_id: clientId,
-      callback: (response) => {
-        console.log('Google Identity Services initialized');
+      callback: (response: GoogleCredentialResponse) => {
+        console.log('Google Identity Services initialized', response);
       }
     });
 
@@ -119,7 +120,12 @@ export async function getGoogleAuthToken(): Promise<string> {
       if (retries < MAX_RETRIES) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
       } else {
-        throw new Error(`Failed to get auth token after ${MAX_RETRIES} attempts: ${error.message}`);
+        console.error('Error fetching Google Auth Token:', error);
+        if (error instanceof Error) {
+          throw new Error(`Failed to get auth token after ${MAX_RETRIES} attempts: ${error.message}`);
+        } else {
+          throw new Error(`Failed to get auth token after ${MAX_RETRIES} attempts: Unknown error`);
+        }
       }
     }
   }

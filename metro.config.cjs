@@ -2,51 +2,61 @@ const { getDefaultConfig } = require('@expo/metro-config');
 const path = require('path');
 
 /** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+const config = getDefaultConfig(__dirname, {
+  // Enable CSS support for web
+  isCSSEnabled: true
+});
 
-// Enable CSS support
-config.transformer.babelTransformerPath = require.resolve('react-native-css-transformer');
+// Configure resolver for web and native
+config.resolver.sourceExts = [
+  // JS/TS extensions
+  'js',
+  'jsx',
+  'ts',
+  'tsx',
+  // Web-specific extensions
+  'web.js',
+  'web.jsx',
+  'web.ts',
+  'web.tsx',
+  // Module extensions
+  'cjs',
+  'mjs'
+];
 
-// Configure resolver for web
-config.resolver.sourceExts = [...config.resolver.sourceExts, 'css', 'scss', 'sass'];
+// Add support for web assets
 config.resolver.assetExts = [...config.resolver.assetExts, 'ttf', 'otf'];
 
 // Configure platforms
 config.resolver.platforms = ['ios', 'android', 'web'];
 
-// Add web-specific configurations
-config.resolver.resolverMainFields = ['browser', 'main', 'module'];
-
-// Configure proper MIME types for web
+// Configure transformer
 config.transformer = {
   ...config.transformer,
   assetPlugins: ['expo-asset/tools/hashAssetFiles'],
   babelTransformerPath: require.resolve('metro-react-native-babel-transformer'),
   minifierConfig: {
-    // Enable proper MIME type handling
     mangle: {
       keep_fnames: true
     }
-  },
-  // Add proper source map handling
-  sourceMaps: true,
-  experimentalImportSupport: false,
-  unstable_disableES6Transforms: false,
+  }
 };
 
-// Configure proper web bundling
+// Configure server
 config.server = {
   ...config.server,
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
-      // Set proper headers for all responses
+      // Set proper CORS headers
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, content-type, Authorization');
       
       // Handle MIME types for web assets
-      if (req.url.endsWith('.js')) {
-        res.setHeader('Content-Type', 'application/javascript');
+      if (req.url.endsWith('.js') || req.url.endsWith('.jsx') || req.url.endsWith('.ts') || req.url.endsWith('.tsx')) {
+        res.setHeader('Content-Type', 'text/javascript');
+      } else if (req.url.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      } else if (req.url.endsWith('.json')) {
+        res.setHeader('Content-Type', 'application/json');
       }
       
       return middleware(req, res, next);

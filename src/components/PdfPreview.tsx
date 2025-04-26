@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Download, Loader2 } from 'lucide-react';
-import type { Prop, Show } from '../types';
+import type { Prop } from '@/shared/types/props';
+import type { Show } from '@/types';
 import { generatePDF } from '../lib/pdf';
 
 interface PdfPreviewProps {

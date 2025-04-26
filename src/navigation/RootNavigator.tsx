@@ -2,8 +2,8 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Home } from '../pages/Home';
-import { PropDetailPage } from '../pages/PropDetailPage';
-import { ShowDetailPage } from '../pages/ShowDetailPage';
+import PropDetailPage from '../pages/PropDetailPage';
+import ShowDetailPage from '../pages/ShowDetailPage';
 import type { RootStackParamList } from './types';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -52,6 +52,8 @@ export function RootNavigator() {
                 title: 'Show Details',
               }}
             />
+            {/* Add PackingPage route if necessary */}
+            {/* <Stack.Screen name="PackingDetail" component={PackingPage} /> */}
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

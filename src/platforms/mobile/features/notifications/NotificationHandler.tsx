@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { NotificationService } from './NotificationService';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../../../../navigation/types';
 
 export function NotificationHandler() {
   const notificationService = NotificationService.getInstance();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
@@ -70,13 +71,13 @@ export function NotificationHandler() {
       case 'PROP_STATUS_UPDATE':
         // Navigate to prop details
         if (data.propId) {
-          navigation.navigate('PropForm', { id: data.propId });
+          navigation.navigate<'PropForm'>('PropForm', { id: data.propId });
         }
         break;
       case 'MAINTENANCE_REMINDER':
         // Navigate to maintenance screen
         if (data.propId) {
-          navigation.navigate('PropForm', { id: data.propId, tab: 'maintenance' });
+          navigation.navigate<'PropForm'>('PropForm', { id: data.propId, tab: 'maintenance' });
         }
         break;
       case 'SHOW_REMINDER':

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Maximize } from 'lucide-react';
-import type { PropImage } from '../types';
+import { Platform, View, Text, StyleSheet } from 'react-native';
+import type { PropImage } from '@/shared/types/props';
 
 interface ImageCarouselProps {
   images: PropImage[];
@@ -8,6 +9,15 @@ interface ImageCarouselProps {
 }
 
 export function ImageCarousel({ images, altText = "Image" }: ImageCarouselProps) {
+  if (Platform.OS !== 'web') {
+    console.warn('ImageCarousel: Attempted to render web component on native platform. Rendering placeholder instead.');
+    return (
+      <View style={styles.nativePlaceholder}>
+        <Text style={styles.nativePlaceholderText}>Image Carousel (Web Only)</Text>
+      </View>
+    );
+  }
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fullScreenMode, setFullScreenMode] = useState(false);
   
@@ -147,4 +157,22 @@ export function ImageCarousel({ images, altText = "Image" }: ImageCarouselProps)
       )}
     </div>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  nativePlaceholder: {
+    aspectRatio: 16 / 9,
+    width: '100%',
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#555',
+    marginBottom: 8,
+  },
+  nativePlaceholderText: {
+    color: '#aaa',
+    fontSize: 14,
+  },
+}); 

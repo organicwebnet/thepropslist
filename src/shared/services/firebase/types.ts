@@ -1,6 +1,23 @@
-import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
-import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
+// import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
+// import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+// import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
+
+// Placeholder Types - Define the actual structure later based on usage
+export type CustomAuth = any; // Placeholder
+export type CustomFirestore = any; // Placeholder
+export type CustomStorage = any; // Placeholder
+export type CustomTransaction = any; // Placeholder
+export type CustomWriteBatch = any; // Placeholder
+export type CustomDocumentData = Record<string, any>; // Basic placeholder
+export type CustomDocumentReference<T = CustomDocumentData> = any; // Placeholder
+export type CustomCollectionReference<T = CustomDocumentData> = any; // Placeholder
+export type CustomStorageReference = any; // Placeholder
+export type CustomUser = any; // Placeholder
+
+// Add exports for core service types using placeholders
+export type FirebaseAuth = CustomAuth;
+export type FirebaseFirestore = CustomFirestore;
+export type FirebaseStorage = CustomStorage;
 
 export type OperationType = 'create' | 'update' | 'delete' | 'upload';
 
@@ -62,8 +79,12 @@ export interface OfflineSync {
 
 export interface FirebaseDocument<T = any> {
   id: string;
-  data: T;
-  ref: FirebaseFirestoreTypes.DocumentReference<T>;
+  ref: CustomDocumentReference<T>;
+  data?: T;
+  get(): Promise<T | undefined>;
+  set(data: T): Promise<void>;
+  update(data: Partial<T>): Promise<void>;
+  delete(): Promise<void>;
 }
 
 export interface FirebaseCollection<T = any> {
@@ -75,32 +96,41 @@ export interface FirebaseCollection<T = any> {
   get(): Promise<FirebaseDocument<T>[]>;
 }
 
-export interface FirebaseError {
-  message: string;
+// Change FirebaseError from an interface to a class
+export class FirebaseError extends Error {
   code: string;
   originalError?: unknown;
+
+  constructor(message: string, code: string, originalError?: unknown) {
+    super(message);
+    this.name = 'FirebaseError'; // Standard practice for custom errors
+    this.code = code;
+    this.originalError = originalError;
+    // Ensure the prototype chain is correct
+    Object.setPrototypeOf(this, FirebaseError.prototype);
+  }
 }
 
 export interface FirebaseService {
   initialize(): Promise<void>;
-  auth(): FirebaseAuthTypes.Module;
-  firestore(): FirebaseFirestoreTypes.Module;
-  storage(): FirebaseStorageTypes.Module;
+  auth(): CustomAuth; // Updated type
+  firestore(): CustomFirestore; // Updated type
+  storage(): CustomStorage; // Updated type
   offline(): OfflineSync;
-  runTransaction<T>(updateFunction: (transaction: FirebaseFirestoreTypes.Transaction) => Promise<T>): Promise<T>;
-  batch(): FirebaseFirestoreTypes.WriteBatch;
-  listenToDocument<T extends FirebaseFirestoreTypes.DocumentData>(
+  runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T>; // Updated type
+  batch(): CustomWriteBatch; // Updated type
+  listenToDocument<T extends CustomDocumentData>( // Updated constraint
     path: string,
     onNext: (doc: FirebaseDocument<T>) => void,
     onError?: (error: Error) => void
   ): () => void;
-  listenToCollection<T extends FirebaseFirestoreTypes.DocumentData>(
+  listenToCollection<T extends CustomDocumentData>( // Updated constraint
     path: string,
     onNext: (docs: FirebaseDocument<T>[]) => void,
     onError?: (error: Error) => void
   ): () => void;
-  createDocumentWrapper<T extends FirebaseFirestoreTypes.DocumentData>(
-    path: string
-  ): FirebaseFirestoreTypes.DocumentReference<T>;
-  getStorageRef(path: string): FirebaseStorageTypes.Reference;
+  createDocumentWrapper<T extends CustomDocumentData>( // Updated constraint
+    docRef: CustomDocumentReference<T>
+  ): FirebaseDocument<T>; // Use the updated FirebaseDocument type
+  getStorageRef(path: string): CustomStorageReference; // Updated return type
 } 

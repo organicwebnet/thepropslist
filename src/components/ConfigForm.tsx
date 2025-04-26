@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import type { ConfigFormData, Currency } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
-import { useFont, FontOption } from '../contexts/FontContext';
+// import { useFont, FontOption } from '../contexts/FontContext'; // Commented out missing import
 
 const currencies: Currency[] = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -116,7 +116,7 @@ export function ConfigForm(): JSX.Element {
   });
   const [config, setConfig] = useState<ConfigFormData>(getInitialConfig());
   const { theme, setTheme } = useTheme();
-  const { font, setFont } = useFont();
+  // const { currentFont, setFont, availableFonts } = useFont(); // Commented out
 
   useEffect(() => {
     setConfig(getInitialConfig());
@@ -236,6 +236,10 @@ export function ConfigForm(): JSX.Element {
       <CheckCircle className="h-5 w-5 text-green-500" /> : 
       <XCircle className="h-5 w-5 text-red-500" />;
   };
+
+  // const handleFontChange = (event: React.ChangeEvent<HTMLSelectElement>) => { // Commented out
+  //   setFont(event.target.value as FontOption);
+  // };
 
   return (
     <div className="relative">
@@ -592,6 +596,8 @@ export function ConfigForm(): JSX.Element {
                     </div>
                   </div>
 
+                  {/* Font Preference Section - Entire block commented out */}
+                  {/*
                   <div>
                     <div className="flex items-center space-x-2 mb-4">
                       <Type className="h-5 w-5 text-gray-400" />
@@ -604,7 +610,7 @@ export function ConfigForm(): JSX.Element {
                           id="font-system"
                           name="font"
                           value="system"
-                          checked={font === 'system'}
+                          checked={currentFont === 'system'}
                           onChange={(e) => setFont(e.target.value as FontOption)}
                           className="mr-3"
                         />
@@ -619,7 +625,7 @@ export function ConfigForm(): JSX.Element {
                           id="font-opendyslexic"
                           name="font"
                           value="opendyslexic"
-                          checked={font === 'opendyslexic'}
+                          checked={currentFont === 'opendyslexic'}
                           onChange={(e) => setFont(e.target.value as FontOption)}
                           className="mr-3"
                         />
@@ -634,7 +640,7 @@ export function ConfigForm(): JSX.Element {
                           id="font-arial"
                           name="font"
                           value="arial"
-                          checked={font === 'arial'}
+                          checked={currentFont === 'arial'}
                           onChange={(e) => setFont(e.target.value as FontOption)}
                           className="mr-3"
                         />
@@ -649,7 +655,7 @@ export function ConfigForm(): JSX.Element {
                           id="font-verdana"
                           name="font"
                           value="verdana"
-                          checked={font === 'verdana'}
+                          checked={currentFont === 'verdana'}
                           onChange={(e) => setFont(e.target.value as FontOption)}
                           className="mr-3"
                         />
@@ -659,6 +665,7 @@ export function ConfigForm(): JSX.Element {
                       </div>
                     </div>
                   </div>
+                  */}
                 </div>
               )}
 

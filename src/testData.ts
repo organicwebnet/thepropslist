@@ -1,6 +1,5 @@
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from './lib/firebase';
-import { testShow } from './data/testData';
 
 const testProducts = [
   {
@@ -82,6 +81,31 @@ const testProducts = [
   }
 ];
 
+// Define the testShow object based on the Show interface from src/types.ts
+const testShow = {
+  // id: '', // ID will be assigned by Firestore
+  name: 'Macbeth Test Show',
+  description: 'A test production of Macbeth.',
+  acts: [
+    { id: 1, name: 'Act I', scenes: [{ id: 1, name: 'Scene 1' }, { id: 2, name: 'Scene 2' }, { id: 3, name: 'Scene 3' }] },
+    { id: 2, name: 'Act II', scenes: [{ id: 1, name: 'Scene 1' }, { id: 2, name: 'Scene 2' }, { id: 3, name: 'Scene 3' }, { id: 4, name: 'Scene 4' }] },
+    // Add more acts/scenes as needed
+  ],
+  // userId: '', // Will be set later
+  // createdAt: '', // Will be set later
+  collaborators: [],
+  stageManager: 'Jane Doe',
+  stageManagerEmail: 'jane.doe@example.com',
+  propsSupervisor: 'John Smith',
+  propsSupervisorEmail: 'john.smith@example.com',
+  productionCompany: 'Test Theatre Co.',
+  productionContactName: 'Test Contact',
+  productionContactEmail: 'contact@testtheatre.com',
+  venues: [],
+  isTouringShow: false,
+  contacts: [],
+};
+
 export async function addTestData() {
   // Get the current user's ID from Firebase Auth
   const auth = (await import('firebase/auth')).getAuth();
@@ -122,7 +146,7 @@ export async function addMacbethShow() {
   try {
     // Add the show to Firestore
     const showData = {
-      ...testShow,
+      ...testShow, // Use the defined testShow object
       userId: currentUser.uid,
       createdAt: new Date().toISOString()
     };

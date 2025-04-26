@@ -3,7 +3,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { useShows } from './ShowsContext';
-import type { Prop } from '../types';
+import type { Prop } from '@shared/types/props';
 
 interface PropsContextType {
   props: Prop[];

@@ -2,79 +2,59 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { PropSelector } from '../PropSelector';
-import { Prop } from '../../../types';
+import { Prop } from '@/shared/types/props';
 
 const mockProps: Prop[] = [
   {
-    id: 'prop1',
+    id: '1',
+    name: 'Old Chair',
     userId: 'user1',
     showId: 'show1',
-    name: 'Test Prop 1',
-    description: 'A test prop',
-    category: 'Hand Prop',
-    price: 100,
+    category: 'Furniture',
+    price: 50,
+    quantity: 1,
     source: 'bought',
-    sourceDetails: 'Purchased from store',
+    status: 'confirmed',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: [{ id: 'img1', url: 'https://example.com/prop1.jpg' }],
     act: 1,
     scene: 1,
     isMultiScene: false,
-    isConsumable: false,
-    quantity: 1,
-    imageUrl: 'https://example.com/prop1.jpg',
-    images: [],
-    hasUsageInstructions: false,
-    hasMaintenanceNotes: false,
-    hasSafetyNotes: false,
-    requiresPreShowSetup: false,
-    hasOwnShippingCrate: false,
-    requiresSpecialTransport: false,
-    hasBeenModified: false,
-    modificationDetails: '',
-    isRented: false,
-    digitalAssets: [],
-    travelsUnboxed: false,
-    status: 'confirmed',
-    maintenanceHistory: [],
-    statusHistory: [],
-    weightUnit: 'kg',
-    unit: 'cm',
-    createdAt: new Date().toISOString()
   },
   {
-    id: 'prop2',
+    id: '2',
+    name: 'Fake Blood Packets',
     userId: 'user1',
     showId: 'show1',
-    name: 'Test Prop 2',
-    description: 'Another test prop',
-    category: 'Furniture',
-    price: 150,
-    source: 'bought',
-    sourceDetails: 'Purchased from store',
+    category: 'Special Effects',
+    price: 5,
+    quantity: 10,
+    source: 'made',
+    status: 'confirmed',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     act: 1,
     scene: 2,
     isMultiScene: false,
-    isConsumable: false,
-    quantity: 2,
-    imageUrl: undefined,
-    images: [],
-    hasUsageInstructions: false,
-    hasMaintenanceNotes: false,
-    hasSafetyNotes: false,
-    requiresPreShowSetup: false,
-    hasOwnShippingCrate: false,
-    requiresSpecialTransport: false,
-    hasBeenModified: false,
-    modificationDetails: '',
-    isRented: false,
-    digitalAssets: [],
-    travelsUnboxed: false,
+  },
+  {
+    id: '3',
+    name: 'Rented Lamp',
+    userId: 'user1',
+    showId: 'show1',
+    category: 'Lighting',
+    price: 25,
+    quantity: 1,
+    source: 'rented',
     status: 'confirmed',
-    maintenanceHistory: [],
-    statusHistory: [],
-    weightUnit: 'kg',
-    unit: 'cm',
-    createdAt: new Date().toISOString()
-  }
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: [],
+    act: 1,
+    scene: 1,
+    isMultiScene: false,
+  },
 ];
 
 describe('PropSelector', () => {
@@ -93,9 +73,9 @@ describe('PropSelector', () => {
       />
     );
 
-    expect(getByText('Test Prop 1')).toBeInTheDocument();
-    expect(queryByText('Test Prop 2')).toBeInTheDocument();
-    expect(getByText('Hand Prop')).toBeInTheDocument();
+    expect(getByText('Old Chair')).toBeInTheDocument();
+    expect(queryByText('Fake Blood Packets')).toBeInTheDocument();
+    expect(getByText('Furniture')).toBeInTheDocument();
     expect(getByText('Qty: 2')).toBeInTheDocument();
   });
 
@@ -108,7 +88,7 @@ describe('PropSelector', () => {
       />
     );
 
-    fireEvent.click(getByText('Test Prop 1'));
+    fireEvent.click(getByText('Old Chair'));
     expect(mockOnChange).toHaveBeenCalledWith([mockProps[0]]);
   });
 
@@ -121,7 +101,7 @@ describe('PropSelector', () => {
       />
     );
 
-    fireEvent.click(getByText('Test Prop 1'));
+    fireEvent.click(getByText('Old Chair'));
     expect(mockOnChange).toHaveBeenCalledWith([]);
   });
 
@@ -147,7 +127,7 @@ describe('PropSelector', () => {
       />
     );
 
-    const button = getByText('Test Prop 1').closest('button');
+    const button = getByText('Old Chair').closest('button');
     expect(button).toBeDisabled();
   });
 }); 

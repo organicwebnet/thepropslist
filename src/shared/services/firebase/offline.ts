@@ -14,7 +14,7 @@ import {
   DocumentData,
   QuerySnapshot
 } from 'firebase/firestore';
-import { FirestoreDocument } from './types';
+import { FirebaseDocument } from './types';
 
 interface SyncMetadata {
   lastSyncTimestamp: number;
@@ -55,7 +55,7 @@ export class OfflineSyncService {
     localStorage.setItem(this.syncMetadataKey, JSON.stringify(metadata));
   }
 
-  private async getCollectionDocs(collectionName: string, afterTimestamp: number): Promise<FirestoreDocument[]> {
+  private async getCollectionDocs(collectionName: string, afterTimestamp: number): Promise<FirebaseDocument[]> {
     const db = this.firebase.firestore();
     const collectionRef = db.collection(collectionName);
     const docs = await collectionRef.where('updatedAt', '>', new Date(afterTimestamp)).get();
@@ -77,7 +77,9 @@ export class OfflineSyncService {
       // Cache documents locally
       for (const doc of docs) {
         const data = await doc.get();
-        await this.cacheDocument(collectionName, doc.id, data);
+        if (data) {
+          await this.cacheDocument(collectionName, doc.id, data);
+        }
       }
 
     } catch (error) {
@@ -159,10 +161,10 @@ export class OfflineSyncService {
     syncedCollections: string[];
   }> {
     const metadata = await this.getSyncMetadata();
-    const isEnabled = await this.firebase.offline().getSyncStatus();
+    const syncStatus = await this.firebase.offline().getSyncStatus();
 
     return {
-      isEnabled,
+      isEnabled: syncStatus.isEnabled,
       lastSync: metadata.lastSyncTimestamp,
       syncedCollections: metadata.collections
     };

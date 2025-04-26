@@ -78,11 +78,17 @@ export function PhotoImport({ onPhotosSelected }: PhotoImportProps) {
     // Load Google API Client
     const script = document.createElement('script');
     script.src = 'https://apis.google.com/js/api.js';
+    script.async = true;
+    script.defer = true;
     script.onload = () => {
+      // Load the auth2 library
       window.gapi.load('auth2', () => {
+        // Initialize the auth2 library
         window.gapi.auth2.init({
-          client_id: process.env.VITE_GOOGLE_CLIENT_ID,
+          client_id: process.env.VITE_GOOGLE_CLIENT_ID || '',
           scope: 'https://www.googleapis.com/auth/photoslibrary.readonly'
+        }).then(() => {
+          console.log('Google Auth2 initialized successfully');
         });
       });
     };

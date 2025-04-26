@@ -1,5 +1,5 @@
 import { DigitalInventoryService, InventoryProp, PropLocation, PropMaintenance } from '../inventoryService';
-import { FirebaseService, FirebaseDocument, FirebaseCollection } from '../../../shared/services/firebase/types';
+import { FirebaseService, FirebaseDocument, FirebaseCollection } from '../../firebase/types';
 import { VisionAPIService } from '../../ai/vision';
 import { QRCodeService } from '../../qr/qrService';
 import { Firestore, DocumentData } from 'firebase/firestore';

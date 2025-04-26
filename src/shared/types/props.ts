@@ -1,35 +1,195 @@
-export type PropSource = 'owned' | 'rented' | 'borrowed' | 'created';
-export type PropStatus = 'available' | 'in-use' | 'maintenance' | 'lost';
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle';
+
+export type PropSource = 'bought' | 'made' | 'rented' | 'borrowed' | 'owned' | 'created';
 export type WeightUnit = 'kg' | 'lb' | 'g' | 'oz';
+export type DimensionUnit = 'cm' | 'in' | 'm' | 'ft';
+
+export interface PropImage {
+  id: string;
+  url: string;
+  caption?: string;
+  isMain?: boolean;
+}
+
+export interface DigitalAsset {
+  id: string;
+  name: string;
+  title?: string;
+  url: string;
+  type: 'image' | 'video' | 'document' | 'other';
+}
+
+export const propCategories = [
+  'Furniture',
+  'Decoration',
+  'Costume',
+  'Weapon',
+  'Food/Drink',
+  'Book/Paper',
+  'Electronics',
+  'Musical Instrument',
+  'Hand Prop',
+  'Set Dressing',
+  'Special Effects',
+  'Lighting',
+  'Other'
+] as const;
+export type PropCategory = typeof propCategories[number];
+
+export interface PropFormData {
+  name: string;
+  price: number;
+  description?: string;
+  category: PropCategory;
+  length?: number;
+  width?: number;
+  height?: number;
+  depth?: number;
+  weight?: number;
+  weightUnit?: WeightUnit;
+  unit?: DimensionUnit;
+  source: PropSource;
+  sourceDetails?: string;
+  purchaseUrl?: string;
+  act?: number;
+  scene?: number;
+  sceneName?: string;
+  isMultiScene?: boolean;
+  isConsumable?: boolean;
+  quantity: number;
+  imageUrl?: string;
+  images?: PropImage[];
+  hasUsageInstructions?: boolean;
+  usageInstructions?: string;
+  hasMaintenanceNotes?: boolean;
+  maintenanceNotes?: string;
+  hasSafetyNotes?: boolean;
+  safetyNotes?: string;
+  handlingInstructions?: string;
+  requiresPreShowSetup?: boolean;
+  preShowSetupNotes?: string;
+  preShowSetupVideo?: string;
+  preShowSetupDuration?: number;
+  hasOwnShippingCrate?: boolean;
+  shippingCrateDetails?: string;
+  transportNotes?: string;
+  requiresSpecialTransport?: boolean;
+  travelWeight?: number;
+  hasBeenModified?: boolean;
+  modificationDetails?: string;
+  lastModifiedAt?: string;
+  isRented?: boolean;
+  rentalSource?: string;
+  rentalDueDate?: string;
+  rentalReferenceNumber?: string;
+  digitalAssets?: DigitalAsset[];
+  travelsUnboxed?: boolean;
+  status: PropLifecycleStatus;
+  statusNotes?: string;
+  lastStatusUpdate?: string;
+  maintenanceHistory?: MaintenanceRecord[];
+  statusHistory?: PropStatusUpdate[];
+  lastInspectionDate?: string;
+  nextInspectionDue?: string;
+  lastMaintenanceDate?: string;
+  nextMaintenanceDue?: string;
+  location?: string;
+  currentLocation?: string;
+  expectedReturnDate?: string;
+  replacementCost?: number;
+  replacementLeadTime?: number;
+  repairEstimate?: number;
+  repairPriority?: RepairPriority;
+  subcategory?: string;
+  notes?: string;
+  tags?: string[];
+  customFields?: Record<string, any>;
+  videos?: string[];
+  purchaseDate?: string;
+  condition?: string;
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  barcode?: string;
+  warranty?: {
+    provider?: string;
+    expirationDate?: string;
+    details?: string;
+  };
+  materials?: string[];
+  color?: string;
+  period?: string;
+  style?: string;
+  sceneNotes?: string;
+  usageNotes?: string;
+  handedness?: string;
+  isBreakable?: boolean;
+  isHazardous?: boolean;
+  storageRequirements?: string;
+  rentalInfo?: {
+    isRental?: boolean;
+    provider?: string;
+    rentalPeriod?: string;
+    cost?: number;
+  };
+}
 
 export interface Prop {
   id: string;
+  userId: string;
+  showId: string;
   name: string;
   description?: string;
-  imageUrl?: string;
-  category: string;
-  act: number;
-  scene: number;
+  category: PropCategory;
+  price: number;
   quantity: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  depth?: number;
+  unit?: DimensionUnit;
   weight?: number;
   weightUnit?: WeightUnit;
-  dimensions?: {
-    length: number;
-    width: number;
-    height: number;
-    unit: 'cm' | 'in';
-  };
+  travelWeight?: number;
   source: PropSource;
-  status: PropStatus;
+  sourceDetails?: string;
+  purchaseUrl?: string;
+  rentalDueDate?: string;
+  act?: number;
+  scene?: number;
+  sceneName?: string;
+  isMultiScene?: boolean;
+  isConsumable?: boolean;
+  imageUrl?: string;
+  usageInstructions?: string;
+  maintenanceNotes?: string;
+  safetyNotes?: string;
+  handlingInstructions?: string;
+  requiresPreShowSetup?: boolean;
+  preShowSetupDuration?: number;
+  preShowSetupNotes?: string;
+  preShowSetupVideo?: string;
+  setupTime?: number;
+  hasOwnShippingCrate?: boolean;
+  shippingCrateDetails?: string;
+  requiresSpecialTransport?: boolean;
+  transportMethod?: string;
+  transportNotes?: string;
+  status: PropLifecycleStatus;
   location?: string;
   notes?: string;
   tags?: string[];
+  images?: PropImage[];
+  digitalAssets?: DigitalAsset[];
+  statusHistory?: PropStatusUpdate[];
+  maintenanceHistory?: MaintenanceRecord[];
+  nextMaintenanceDue?: string;
+  hasBeenModified?: boolean;
+  modificationDetails?: string;
+  lastModifiedAt?: string;
   createdAt: string;
   updatedAt: string;
   lastUsedAt?: string;
-  maintenanceHistory?: {
-    date: string;
-    description: string;
-    cost?: number;
-  }[];
+  condition?: string;
+  lastUpdated?: Date;
 } 

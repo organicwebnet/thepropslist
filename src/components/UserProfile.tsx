@@ -180,12 +180,12 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
       setError('');
       
       const result = await signInWithGoogle();
-      if (result.user) {
+      if (result?.user) {
         // Update profile with Google data
         setProfile(prev => ({
           ...prev,
-          displayName: result.user.displayName || prev.displayName,
-          photoURL: result.user.photoURL || prev.photoURL,
+          displayName: result?.user.displayName || prev.displayName,
+          photoURL: result?.user.photoURL || prev.photoURL,
           googleLinked: true
         }));
       }

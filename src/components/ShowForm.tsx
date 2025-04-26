@@ -1,9 +1,9 @@
 import React, { useState, useEffect, FormEvent, useRef } from 'react';
 import { PlusCircle, MinusCircle, Save, Upload } from 'lucide-react';
 import { VenueForm } from './VenueForm';
-import type { ShowFormData, Act, Scene, PropImage, Show, Venue } from '../types';
 import { WysiwygEditor } from './WysiwygEditor';
 import { HelpTooltip } from './HelpTooltip';
+import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types';
 
 interface ShowFormProps {
   mode: 'create' | 'edit';
@@ -25,13 +25,7 @@ const initialFormState: Show = {
   createdAt: new Date().toISOString(),
   collaborators: [],
   isTouringShow: false,
-  venues: [{
-    name: '',
-    address: '',
-    startDate: '',
-    endDate: '',
-    notes: ''
-  }],
+  venues: [],
   stageManager: '',
   stageManagerEmail: '',
   stageManagerPhone: '',
@@ -43,7 +37,8 @@ const initialFormState: Show = {
   productionContactEmail: '',
   productionContactPhone: '',
   contacts: [],
-  imageUrl: ''
+  imageUrl: '',
+  logoImage: undefined,
 };
 
 function RequiredLabel({ children }: { children: React.ReactNode }) {
@@ -142,7 +137,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
     if (!formData.acts || formData.acts.length === 0) {
       newErrors.acts = 'At least one act is required';
     } else {
-      formData.acts.forEach((act, actIndex) => {
+      formData.acts.forEach((act: Act, actIndex: number) => {
         if (!act.scenes || act.scenes.length === 0) {
           newErrors[`act_${actIndex}_scenes`] = `At least one scene is required in Act ${actIndex + 1}`;
         }
@@ -194,7 +189,8 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
         venues: formData.isTouringShow ? (formData.venues || []) : [(formData.venues && formData.venues[0]) || { name: '', address: '', startDate: '', endDate: '', notes: '' }],
         isTouringShow: !!formData.isTouringShow,
         contacts: formData.contacts || [],
-        imageUrl: formData.imageUrl || ''
+        imageUrl: formData.imageUrl || '',
+        logoImage: formData.logoImage,
       };
 
       console.log('Submitting data:', submissionData);
@@ -219,50 +215,29 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
 
   const handleVenueChange = (index: number, value: string) => {
     console.log(`Changing venue ${index} name to:`, value);
-    // Create a new copy of venues only once
     const updatedVenues = [...(formData.venues || [])];
-    
-    // Check if the venue exists, if not create it
     if (!updatedVenues[index]) {
-      updatedVenues[index] = {
-        name: value,
-        address: '',
-        startDate: '',
-        endDate: '',
-        notes: ''
-      };
+      updatedVenues[index] = { name: value, address: '', startDate: '', endDate: '', notes: '' };
     } else {
-      // If it exists, just update the name without creating a new object
       updatedVenues[index].name = value;
     }
-    
-    // Update the form data once with the new venues array
-    setFormData(prevData => ({
-      ...prevData,
-      venues: updatedVenues
-    }));
+    setFormData((prevData: Show) => ({ ...prevData, venues: updatedVenues }));
   };
 
   const addVenue = () => {
     if (formData.isTouringShow) {
-      const newVenue: Venue = {
-        name: '',
-        address: '',
-        startDate: '',
-        endDate: '',
-        notes: ''
-      };
-      setFormData({
-        ...formData,
-        venues: [...formData.venues, newVenue]
-      });
+      const newVenue: Venue = { name: '', address: '', startDate: '', endDate: '', notes: '' };
+      setFormData((prevData: Show) => ({ ...prevData, venues: [...(prevData.venues || []), newVenue] }));
     }
   };
 
   const removeVenue = (index: number) => {
     if (formData.venues.length > 1) {
-      const updatedVenues = formData.venues.filter((_, i) => i !== index);
-      setFormData({ ...formData, venues: updatedVenues });
+      const updatedVenues = formData.venues.filter((venue: Venue, i: number) => i !== index);
+      setFormData((prevData: Show) => ({ 
+        ...prevData, 
+        venues: updatedVenues 
+      }));
     }
   };
 
@@ -277,7 +252,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
     
     // Update state with a slight delay to prevent focus loss
     setTimeout(() => {
-      setFormData(prevData => {
+      setFormData((prevData: Show) => {
         const updatedActs = [...(prevData.acts || [])];
         
         if (!updatedActs[actIndex]) {
@@ -309,7 +284,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
     
     // Update state with a slight delay to prevent focus loss
     setTimeout(() => {
-      setFormData(prevData => {
+      setFormData((prevData: Show) => {
         const updatedActs = [...(prevData.acts || [])];
         
         if (!updatedActs[actIndex]) {
@@ -343,13 +318,13 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
 
   const addAct = () => {
     const newAct: Act = {
-      id: formData.acts.length + 1,
+      id: (formData.acts?.length || 0) + 1,
       name: '',
       scenes: [{ id: 1, name: '' }]
     };
     
     // Use functional update to prevent focus loss
-    setFormData(prevData => ({
+    setFormData((prevData: Show) => ({
       ...prevData,
       acts: [...(prevData.acts || []), newAct]
     }));
@@ -357,7 +332,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
 
   const addScene = (actIndex: number) => {
     // Use functional update to prevent focus loss
-    setFormData(prevData => {
+    setFormData((prevData: Show) => {
       const updatedActs = [...(prevData.acts || [])];
       if (!updatedActs[actIndex]) {
         return prevData; // Act doesn't exist
@@ -383,15 +358,15 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
 
   const removeAct = (actIndex: number) => {
     // Use functional update to prevent focus loss
-    setFormData(prevData => {
+    setFormData((prevData: Show) => {
       if (!(prevData.acts || []).length || (prevData.acts || []).length <= 1) {
         return prevData; // Don't remove if it's the last act
       }
       
-      const updatedActs = (prevData.acts || []).filter((_, i) => i !== actIndex);
+      const updatedActs = (prevData.acts || []).filter((act: Act, i: number) => i !== actIndex);
       
       // Ensure act IDs are sequential
-      updatedActs.forEach((act, idx) => {
+      updatedActs.forEach((act: Act, idx: number) => {
         act.id = idx + 1;
       });
       
@@ -404,7 +379,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
 
   const removeScene = (actIndex: number, sceneIndex: number) => {
     // Use functional update to prevent focus loss
-    setFormData(prevData => {
+    setFormData((prevData: Show) => {
       const updatedActs = [...(prevData.acts || [])];
       if (!updatedActs[actIndex] || 
           !updatedActs[actIndex].scenes || 
@@ -412,10 +387,10 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
         return prevData; // Don't remove if it's the last scene
       }
       
-      const updatedScenes = updatedActs[actIndex].scenes.filter((_, i) => i !== sceneIndex);
+      const updatedScenes = updatedActs[actIndex].scenes.filter((scene: Scene, i: number) => i !== sceneIndex);
       
       // Ensure scene IDs are sequential
-      updatedScenes.forEach((scene, idx) => {
+      updatedScenes.forEach((scene: Scene, idx: number) => {
         scene.id = idx + 1;
       });
       
@@ -425,6 +400,34 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
         acts: updatedActs
       };
     });
+  };
+
+  const handleDescriptionChange = (content: string) => {
+    setFormData((prevData: Show) => ({...prevData, description: content}));
+  };
+  
+  const handleContactChange = (index: number, field: keyof Contact, value: string) => {
+    setFormData((prevData: Show) => {
+      const updatedContacts = [...(prevData.contacts || [])];
+      if (updatedContacts[index]) {
+        updatedContacts[index] = { ...updatedContacts[index], [field]: value };
+      }
+      return { ...prevData, contacts: updatedContacts };
+    });
+  };
+
+  const addContact = () => {
+    setFormData((prevData: Show) => ({ 
+      ...prevData, 
+      contacts: [...(prevData.contacts || []), { name: '', role: '', email: '' }] 
+    }));
+  };
+
+  const removeContact = (index: number) => {
+    setFormData((prevData: Show) => ({ 
+      ...prevData, 
+      contacts: (prevData.contacts || []).filter((contact: Contact, i: number) => i !== index) // Added Contact type
+    }));
   };
 
   return (
@@ -484,10 +487,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
             </label>
             <WysiwygEditor
               value={formData.description || ''}
-              onChange={(value) => setFormData(prevData => ({
-                ...prevData,
-                description: value
-              }))}
+              onChange={handleDescriptionChange}
               placeholder="Enter show description"
               minHeight={120}
             />

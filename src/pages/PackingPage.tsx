@@ -1,88 +1,84 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { PackingList } from '../components/packing';
-import { useShow } from '../hooks/useShow';
-import { useProps } from '../hooks/useProps';
+import React from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { PackingList } from '../components/packing/PackingList';
 import { usePacking } from '../hooks/usePacking';
-import { ArrowLeft } from 'lucide-react';
-import { TabNavigation } from '../components/TabNavigation';
+import type { Prop } from '@shared/types';
+import type { Show, PackedProp } from '../types';
 
-export function PackingPage() {
-  const navigate = useNavigate();
-  const { showId } = useParams<{ showId: string }>();
-  const { show, loading: showLoading, error: showError } = useShow(showId);
-  const { props, loading: propsLoading, error: propsError } = useProps(showId);
-  const { boxes, loading: boxesLoading, createBox, updateBox, deleteBox } = usePacking(showId);
+interface PackingPageProps {
+  props: Prop[];
+  show: Show;
+}
 
-  if (showLoading || propsLoading || boxesLoading) {
+export function PackingPage({ props: allProps, show }: PackingPageProps) {
+  const router = useRouter();
+  const { boxes, loading: boxesLoading, createBox, updateBox, deleteBox } = usePacking(show.id);
+
+  const handleCreateBox = (packedProps: PackedProp[], act: number, scene: number): void => {
+    console.log(`Creating box for Act ${act}, Scene ${scene} with ${packedProps.length} items`);
+
+    const selectedFullProps = packedProps.map(packedProp => {
+      const fullProp = allProps.find(p => p.id === packedProp.propId);
+      if (!fullProp) {
+        console.warn(`Could not find full prop data for packed prop ID: ${packedProp.propId}`);
+        return null;
+      }
+      return fullProp;
+    }).filter((p): p is Prop => p !== null);
+
+    if (selectedFullProps.length !== packedProps.length) {
+      console.error('Mismatch finding full props for packing list items.');
+      return;
+    }
+
+    createBox(selectedFullProps, act, scene)
+      .then(newBox => {
+        if (newBox) {
+          console.log('Box created successfully:', newBox.id);
+        } else {
+          console.warn('createBox function returned undefined');
+        }
+      })
+      .catch(error => {
+        console.error('Error creating box:', error);
+      });
+  };
+
+  if (boxesLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  // Handle errors
-  if (showError || propsError) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-red-400">Error loading data</p>
-          <p className="text-gray-400 mt-2">{showError?.message || propsError?.message}</p>
-          <button
-            onClick={() => navigate('/packing')}
-            className="mt-4 text-primary hover:text-primary/80"
-          >
-            Back to Show Selection
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!show) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-gray-400">Show not found</p>
-          <button
-            onClick={() => navigate('/packing')}
-            className="mt-4 text-primary hover:text-primary/80"
-          >
-            Back to Show Selection
-          </button>
-        </div>
-      </div>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="var(--highlight-color)" />
+      </View>
     );
   }
 
   return (
-    <>
-      <TabNavigation 
-        activeTab="packing" 
-        setActiveTab={(tab: 'props' | 'shows' | 'packing') => navigate(`/${tab}`)} 
-        navigate={navigate} 
+    <View style={styles.container}>
+      <PackingList
+        show={show}
+        props={allProps}
+        boxes={boxes}
+        isLoading={boxesLoading}
+        onCreateBox={handleCreateBox}
+        onUpdateBox={updateBox}
+        onDeleteBox={deleteBox}
       />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => navigate('/packing')}
-            className="flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Back to Show Selection</span>
-          </button>
-          <h1 className="text-3xl font-bold text-gray-200">{show.name}</h1>
-        </div>
-        <PackingList
-          show={show}
-          props={props}
-          boxes={boxes}
-          isLoading={showLoading || propsLoading || boxesLoading}
-          onCreateBox={createBox}
-          onUpdateBox={updateBox}
-          onDeleteBox={deleteBox}
-        />
-      </div>
-    </>
+    </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'var(--bg-primary)'
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: 'var(--bg-primary)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  }
+});
+
+export default PackingPage; 

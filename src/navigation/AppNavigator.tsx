@@ -3,11 +3,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Props, Shows, Packing } from '../pages';
-import { PropDetailPage } from '../pages/PropDetailPage';
-import { ShowDetailPage } from '../pages/ShowDetailPage';
+import PropDetailPage from '../pages/PropDetailPage';
+import ShowDetailPage from '../pages/ShowDetailPage';
 import { PackingPage } from '../pages/PackingPage';
 import { Package, Theater, Box } from 'lucide-react-native';
 import type { RootStackParamList } from './types';
+import { Show } from '../types';
+import { Prop } from '@/shared/types/props';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
@@ -82,23 +84,46 @@ export function AppNavigator() {
           name="PropDetail"
           component={PropDetailPage}
           options={({ route }) => ({
-            title: route.params?.prop?.name || 'Prop Details',
+            title: route.params?.prop?.name ? `Prop - ${route.params.prop.name}` : 'Prop Detail',
           })}
         />
         <Stack.Screen
           name="ShowDetail"
           component={ShowDetailPage}
           options={({ route }) => ({
-            title: route.params?.show?.name || 'Show Details',
+            title: route.params?.show?.name ? `Show - ${route.params.show.name}` : 'Show Detail',
           })}
         />
-        <Stack.Screen
+        {/* Comment out screens for potentially missing pages */}
+        {/* <Stack.Screen
+          name="AddProp"
+          component={AddPropPage}
+          options={({ route }) => ({
+            title: route.params?.showId ? 'Add Prop to Show' : 'Add New Prop',
+          })}
+        /> */}
+        {/* <Stack.Screen
+          name="EditProp"
+          component={EditPropPage}
+          options={{ title: 'Edit Prop' }}
+        /> */}
+        {/* <Stack.Screen
+          name="AddShow"
+          component={AddShowPage}
+          options={{ title: 'Add New Show' }}
+        /> */}
+        {/* <Stack.Screen
+          name="EditShow"
+          component={EditShowPage}
+          options={{ title: 'Edit Show' }}
+        /> */}
+        {/* <Stack.Screen
           name="PackingDetail"
-          component={PackingPage}
+          component={PackingPage} // PackingPage might also be missing/renamed
           options={({ route }) => ({
             title: route.params?.show?.name ? `Packing - ${route.params.show.name}` : 'Packing',
           })}
-        />
+        /> */}
       </Stack.Navigator>
     </NavigationContainer>
   );

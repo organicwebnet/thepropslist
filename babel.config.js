@@ -4,6 +4,8 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
+      // The expo-router/babel plugin is deprecated and included in babel-preset-expo
+      // require.resolve("expo-router/babel"), 
       ['module-resolver', {
         root: ['.'],
         extensions: [
@@ -20,6 +22,7 @@ module.exports = function (api) {
           '.json'
         ],
         alias: {
+          '@': './src',
           '@components': './src/components',
           '@screens': './src/screens',
           '@utils': './src/utils',

@@ -1,4 +1,5 @@
 import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './types/lifecycle';
+import { WeightUnit } from '@/shared/types/props';
 
 export interface UserProfile {
   displayName: string;
@@ -12,41 +13,6 @@ export interface UserProfile {
   updatedAt?: string;
 }
 
-export interface PropImage {
-  id: string;
-  url: string;
-  isMain: boolean;
-  uploadedAt: string;
-  caption: string;
-}
-
-export interface DigitalAsset {
-  id: string;
-  title: string;
-  url: string;
-  createdAt: string;
-  status: 'active' | 'inactive';
-  lastChecked?: string;
-}
-
-export const propCategories = [
-  'Furniture',
-  'Decoration',
-  'Costume',
-  'Weapon',
-  'Food/Drink',
-  'Book/Paper',
-  'Electronics',
-  'Musical Instrument',
-  'Hand Prop',
-  'Set Dressing',
-  'Special Effects',
-  'Lighting',
-  'Other'
-] as const;
-
-export type PropCategory = typeof propCategories[number];
-
 export interface Scene {
   id: number;
   name: string;
@@ -58,95 +24,6 @@ export interface Act {
   name?: string;
   description?: string;
   scenes: Scene[];
-}
-
-export interface PropFormData {
-  name: string;
-  price: number;
-  description: string;
-  category: PropCategory;
-  length?: number;
-  width?: number;
-  height?: number;
-  depth?: number;
-  weight?: number;
-  weightUnit: 'kg' | 'lb';
-  unit: string;
-  source: 'bought' | 'made' | 'rented' | 'borrowed';
-  sourceDetails: string;
-  purchaseUrl?: string;
-  act: number;
-  scene: number;
-  sceneName?: string;
-  isMultiScene: boolean;
-  isConsumable: boolean;
-  quantity: number;
-  imageUrl?: string;
-  images: PropImage[];
-  hasUsageInstructions: boolean;
-  usageInstructions?: string;
-  hasMaintenanceNotes: boolean;
-  maintenanceNotes?: string;
-  hasSafetyNotes: boolean;
-  safetyNotes?: string;
-  handlingInstructions?: string;
-  requiresPreShowSetup: boolean;
-  preShowSetupNotes?: string;
-  preShowSetupVideo?: string;
-  preShowSetupDuration?: number;
-  hasOwnShippingCrate: boolean;
-  shippingCrateDetails?: string;
-  transportNotes?: string;
-  requiresSpecialTransport: boolean;
-  travelWeight?: number;
-  hasBeenModified: boolean;
-  modificationDetails: string;
-  lastModifiedAt?: string;
-  isRented: boolean;
-  rentalSource?: string;
-  rentalDueDate?: string;
-  rentalReferenceNumber?: string;
-  digitalAssets: DigitalAsset[];
-  travelsUnboxed: boolean;
-  
-  // Lifecycle fields
-  status: PropLifecycleStatus;
-  statusNotes?: string;
-  lastStatusUpdate?: string;
-  maintenanceHistory: MaintenanceRecord[];
-  statusHistory: PropStatusUpdate[];
-  
-  // Tracking fields
-  lastInspectionDate?: string;
-  nextInspectionDue?: string;
-  lastMaintenanceDate?: string;
-  nextMaintenanceDue?: string;
-  
-  // Location tracking
-  currentLocation?: string;
-  expectedReturnDate?: string;
-  
-  // Replacement/repair tracking
-  replacementCost?: number;
-  replacementLeadTime?: number; // in days
-  repairEstimate?: number;
-  repairPriority?: RepairPriority;
-}
-
-export interface PropFormProps {
-  onSubmit: (prop: PropFormData) => Promise<void>;
-  disabled?: boolean;
-  initialData?: PropFormData;
-  mode?: 'create' | 'edit';
-  onCancel?: () => void;
-  show?: Show;
-}
-
-export interface Prop extends PropFormData {
-  id: string;
-  userId: string;
-  showId: string;
-  createdAt: string;
 }
 
 export interface Show {
@@ -171,7 +48,7 @@ export interface Show {
   isTouringShow: boolean;
   contacts: Contact[];
   imageUrl?: string;
-  logoImage?: PropImage;
+  logoImage?: { id: string; url: string; caption?: string };
 }
 
 export interface ShowFormData {
@@ -192,7 +69,7 @@ export interface ShowFormData {
   isTouringShow: boolean;
   contacts: Contact[];
   imageUrl?: string;
-  logoImage?: PropImage;
+  logoImage?: { id: string; url: string; caption?: string };
 }
 
 export interface ShowCollaborator {
@@ -246,17 +123,6 @@ export interface ConfigFormData {
   SHOW_SCENES: number;
 }
 
-export const dimensionUnits = [
-  { value: 'cm', label: 'cm' },
-  { value: 'in', label: 'in' },
-  { value: 'mm', label: 'mm' }
-] as const;
-
-export const weightUnits = [
-  { value: 'kg', label: 'kg' },
-  { value: 'lb', label: 'lb' }
-] as const;
-
 export interface PackingBox {
   id: string;
   name: string;
@@ -277,7 +143,7 @@ export interface PackedProp {
   name: string;
   quantity: number;
   weight: number;
-  weightUnit: 'kg' | 'lb';
+  weightUnit: WeightUnit;
   isFragile: boolean;
 }
 

@@ -3,6 +3,7 @@ import { User } from 'firebase/auth';
 import { WebFirebaseService } from '../platforms/web/services/firebase';
 import { AuthService } from '../shared/services/firebase/auth';
 import { UserProfile, UserPermissions } from '../shared/types/auth';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -40,10 +41,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Set up auth state listener
         const auth = firebase.auth();
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
-          setUser(user);
-          if (user) {
-            const profile = await authService.getUserProfile(user.uid);
+        const unsubscribe = auth.onAuthStateChanged(async (rnFirebaseUser: FirebaseAuthTypes.User | null) => {
+          setUser(rnFirebaseUser as User | null);
+          if (rnFirebaseUser) {
+            const profile = await authService.getUserProfile(rnFirebaseUser.uid);
             setProfile(profile);
           } else {
             setProfile(null);

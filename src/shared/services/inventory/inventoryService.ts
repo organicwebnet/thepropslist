@@ -1,4 +1,4 @@
-import { FirebaseService, FirebaseError, FirestoreDocument, FirestoreCollection } from '../firebase/types';
+import { FirebaseService, FirebaseError, FirebaseDocument, FirebaseCollection } from '../firebase/types';
 import { VisionAPIService } from '../ai/vision';
 import { QRCodeService, QRCodeData } from '../qr/qrService';
 
@@ -262,10 +262,12 @@ export class DigitalInventoryService implements InventoryService {
     try {
       const prop = await this.getProp(propId);
       const qrData: QRCodeData = {
-        propId,
+        id: propId,
+        type: 'prop',
         name: prop.name,
         category: prop.category,
-        location: prop.location.name
+        location: prop.location.name,
+        url: `/props/${propId}`
       };
 
       return this.qrCode.generateQRCode(qrData);

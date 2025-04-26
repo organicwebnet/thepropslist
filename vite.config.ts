@@ -7,6 +7,12 @@ export default defineConfig({
   resolve: {
     alias: {
       'react-native': 'react-native-web',
+      '@components': resolve(__dirname, './src/components'),
+      '@screens': resolve(__dirname, './src/screens'),
+      '@utils': resolve(__dirname, './src/utils'),
+      '@assets': resolve(__dirname, './assets'),
+      '@shared': resolve(__dirname, './src/shared'),
+      '@platforms': resolve(__dirname, './src/platforms'),
     },
   },
   optimizeDeps: {

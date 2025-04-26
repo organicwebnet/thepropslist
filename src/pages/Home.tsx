@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { PropList } from '../components/PropList';
 import type { RootStackScreenProps } from '../navigation/types';
-import type { Prop, Filters } from '../types';
+import type { Filters } from '../types';
+import type { Prop } from '@shared/types';
 import { Plus } from 'phosphor-react-native';
 import { useLayoutEffect } from 'react';
 import { useProps } from '../hooks/useProps';
 import firestore from '@react-native-firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
+import type { Show } from '../types';
 
 export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const [filters, setFilters] = React.useState<Filters>({
@@ -15,6 +19,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const [showId, setShowId] = React.useState<string | null>(null);
   const [isLoadingShows, setIsLoadingShows] = React.useState(true);
   const [connectionError, setConnectionError] = React.useState<string | null>(null);
+  const [showData, setShowData] = useState<Show | null>(null);
 
   // Test Firebase connection
   React.useEffect(() => {
@@ -53,6 +58,30 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
 
   // Use the useProps hook to fetch props
   const { props, loading, error } = useProps(showId || undefined);
+
+  // Fetch Show data when showId changes
+  useEffect(() => {
+    if (showId) {
+      const fetchShow = async () => {
+        try {
+          const docRef = firestore().collection('shows').doc(showId);
+          const docSnap = await docRef.get();
+          if (docSnap.exists) {
+            setShowData({ id: docSnap.id, ...docSnap.data() } as Show);
+          } else {
+            console.log("No such document!");
+            setShowData(null); // Or handle error appropriately
+          }
+        } catch (e) {
+          console.error("Error getting document:", e);
+          setShowData(null);
+        }
+      };
+      fetchShow();
+    } else {
+      setShowData(null);
+    }
+  }, [showId]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -153,10 +182,10 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
     <View style={styles.container}>
       <PropList
         props={props}
-        onPropPress={handlePropPress}
         filters={filters}
         onFilterChange={setFilters}
-        isLoading={loading}
+        show={showData ?? {} as Show}
+        onFilterReset={() => setFilters({ search: '' })}
       />
     </View>
   );

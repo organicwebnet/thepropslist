@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { ImagePlus, Link, X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { ImagePlus, Link, X, Loader2, Image as ImageIcon, Star } from 'lucide-react';
 import { uploadImage } from '../lib/cloudinary';
-import type { PropImage } from '../types';
+import type { PropImage } from '@/shared/types/props';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ImageUploadProps {
@@ -33,9 +33,12 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
           id: uuidv4(),
           url: uploadedUrl,
           isMain: newImages.length === 0,
-          uploadedAt: new Date().toISOString(),
           caption: ''
         });
+      }
+
+      if (newImages.length > 0 && !newImages.some(img => img.isMain) && !currentImages.some(img => img.isMain)) {
+        newImages[0].isMain = true;
       }
 
       onImagesChange(newImages);
@@ -53,7 +56,6 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
   const handleRemoveImage = (imageId: string) => {
     const newImages = currentImages.filter(img => img.id !== imageId);
     
-    // If we removed the main image, make the first remaining image the main one
     if (newImages.length > 0 && !newImages.some(img => img.isMain)) {
       newImages[0].isMain = true;
     }
@@ -61,10 +63,10 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
     onImagesChange(newImages);
   };
 
-  const handleSetMainImage = (imageId: string) => {
+  const handleSetMain = (id: string) => {
     const newImages = currentImages.map(img => ({
       ...img,
-      isMain: img.id === imageId
+      isMain: img.id === id
     }));
     onImagesChange(newImages);
   };
@@ -106,13 +108,17 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
       return;
     }
 
-    const newImages = [...currentImages, {
+    const newImage: PropImage = {
       id: uuidv4(),
       url: imageLink,
       isMain: currentImages.length === 0,
-      uploadedAt: new Date().toISOString(),
       caption: ''
-    }];
+    };
+    const newImages = [...currentImages, newImage];
+
+    if (newImages.length > 0 && !newImages.some(img => img.isMain) && !currentImages.some(img => img.isMain)) {
+      newImages[0].isMain = true;
+    }
 
     onImagesChange(newImages);
     setShowLinkInput(false);
@@ -214,7 +220,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
               <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
                 {!image.isMain && (
                   <button
-                    onClick={() => handleSetMainImage(image.id)}
+                    onClick={() => handleSetMain(image.id)}
                     className="p-2 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors"
                     title="Set as main image"
                   >

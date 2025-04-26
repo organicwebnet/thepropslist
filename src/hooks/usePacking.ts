@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { PackingBox, Prop } from '../types';
+import { PackingBox } from '../types';
+import type { Prop } from '@shared/types';
 import { PackingService } from '../services/packing';
 
 export function usePacking(showId?: string) {

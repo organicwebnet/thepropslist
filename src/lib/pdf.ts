@@ -1,7 +1,9 @@
 import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { fetchStorageImage } from './firebase';
-import type { Prop, Show } from '../types';
+import type { Show } from '../types';
+import type { Prop } from '@shared/types';
 
 // Font sizes
 const FONT_SIZES = {
@@ -44,11 +46,15 @@ function sortProps(props: Prop[]): Prop[] {
     if (!a.isMultiScene && b.isMultiScene) return -1;
     if (a.isMultiScene && b.isMultiScene) return 0;
 
-    // Sort by act first
-    if (a.act !== b.act) return a.act - b.act;
+    // Sort by act first (handle undefined)
+    const actA = a.act ?? Infinity;
+    const actB = b.act ?? Infinity;
+    if (actA !== actB) return actA - actB;
     
-    // Then by scene
-    return a.scene - b.scene;
+    // Then by scene (handle undefined)
+    const sceneA = a.scene ?? Infinity;
+    const sceneB = b.scene ?? Infinity;
+    return sceneA - sceneB;
   });
 }
 
@@ -107,7 +113,7 @@ async function processPropForPDF(doc: jsPDF, prop: Prop, index: number, currentY
   const details: (string | string[])[] = [
     `${index + 1}. ${prop.name}`,
     '',
-    prop.description,
+    prop.description ?? '',
     '',
     `Category: ${prop.category}`,
     `Price: $${prop.price.toFixed(2)}`,
@@ -119,7 +125,7 @@ async function processPropForPDF(doc: jsPDF, prop: Prop, index: number, currentY
     prop.purchaseUrl ? `Purchase URL: ${prop.purchaseUrl}` : '',
     '',
     'Scene Information:',
-    `Act ${prop.act}, Scene ${prop.scene}`,
+    `Act ${prop.act ?? 'N/A'}, Scene ${prop.scene ?? 'N/A'}`,
     prop.isMultiScene ? '(Used in multiple scenes)' : '',
     '',
     'Physical Properties:',
@@ -128,36 +134,36 @@ async function processPropForPDF(doc: jsPDF, prop: Prop, index: number, currentY
     prop.height ? `Height: ${prop.height}${prop.unit}` : '',
     prop.weight ? `Weight: ${prop.weight}${prop.weightUnit}` : '',
     '',
-    ...(prop.hasUsageInstructions ? [
+    (prop.usageInstructions ? [
       'Usage Instructions:',
-      prop.usageInstructions || ''
+      prop.usageInstructions
     ] : []),
     '',
-    ...(prop.hasMaintenanceNotes ? [
+    (prop.maintenanceNotes ? [
       'Maintenance Notes:',
-      prop.maintenanceNotes || ''
+      prop.maintenanceNotes
     ] : []),
     '',
-    ...(prop.hasSafetyNotes ? [
+    (prop.safetyNotes ? [
       'Safety Notes:',
-      prop.safetyNotes || ''
+      prop.safetyNotes
     ] : []),
     '',
-    ...(prop.requiresPreShowSetup ? [
+    (prop.requiresPreShowSetup ? [
       'Pre-show Setup:',
-      `Setup Time: ${prop.preShowSetupDuration} minutes`,
+      `Setup Time: ${prop.preShowSetupDuration ?? prop.setupTime ?? 'N/A'} minutes`,
       prop.preShowSetupNotes ? `Setup Instructions: ${prop.preShowSetupNotes}` : ''
     ] : []),
     '',
-    ...(prop.hasOwnShippingCrate ? [
+    (prop.hasOwnShippingCrate ? [
       'Transport Information:',
       prop.shippingCrateDetails ? `Shipping Crate: ${prop.shippingCrateDetails}` : '',
       prop.transportNotes ? `Transport Notes: ${prop.transportNotes}` : ''
     ] : []),
     '',
-    ...(prop.hasBeenModified ? [
+    (prop.hasBeenModified ? [
       '⚠️ Modifications:',
-      prop.modificationDetails,
+      prop.modificationDetails ?? '',
       prop.lastModifiedAt ? `Modified on: ${new Date(prop.lastModifiedAt).toLocaleDateString()}` : ''
     ] : [])
   ];
@@ -191,7 +197,7 @@ async function processPropForPDF(doc: jsPDF, prop: Prop, index: number, currentY
   }
 
   // Add images
-  if (prop.images?.length > 0) {
+  if (prop.images && prop.images.length > 0) {
     currentY += MARGINS.CONTENT_SPACING;
     
     for (const image of prop.images) {
@@ -270,9 +276,13 @@ export async function generatePDF(props: Prop[], show: Show, previewMode = false
     doc.setFontSize(FONT_SIZES.BODY);
     doc.setTextColor(COLORS.TEXT[0], COLORS.TEXT[1], COLORS.TEXT[2]);
 
+    // Calculate total scenes
+    const totalActs = show.acts.length;
+    const totalScenes = show.acts.reduce((sum, act) => sum + act.scenes.length, 0);
+
     const showDetails = [
-      `Acts: ${show.acts}`,
-      `Scenes: ${show.scenes}`,
+      `Total Acts: ${totalActs}`,
+      `Total Scenes: ${totalScenes}`,
       show.stageManager ? `Stage Manager: ${show.stageManager}` : null,
       show.propsSupervisor ? `Props Supervisor: ${show.propsSupervisor}` : null,
       show.productionCompany ? `Production Company: ${show.productionCompany}` : null,

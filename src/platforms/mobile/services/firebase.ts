@@ -9,7 +9,9 @@ import {
   OfflineSync,
   PendingOperation,
   QueueStatus,
-  SyncStatus
+  SyncStatus,
+  CustomDocumentData, 
+  CustomDocumentReference
 } from '../../../shared/services/firebase/types';
 
 export class MobileFirebaseService implements FirebaseService {
@@ -107,11 +109,8 @@ export class MobileFirebaseService implements FirebaseService {
     return docRef.onSnapshot(
       (snapshot: FirebaseFirestoreTypes.DocumentSnapshot<T>) => {
         if (snapshot.exists) {
-          onNext({
-            id: snapshot.id,
-            data: snapshot.data() as T,
-            ref: docRef
-          });
+          const wrappedDoc = this.createDocumentWrapper(docRef) as FirebaseDocument<T>;
+          onNext(wrappedDoc);
         }
       },
       (error: Error) => {
@@ -131,13 +130,9 @@ export class MobileFirebaseService implements FirebaseService {
     
     return collectionRef.onSnapshot(
       (snapshot: FirebaseFirestoreTypes.QuerySnapshot<T>) => {
-        const docs: FirebaseDocument<T>[] = [];
-        snapshot.forEach((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot<T>) => {
-          docs.push({
-            id: doc.id,
-            data: doc.data(),
-            ref: doc.ref as FirebaseFirestoreTypes.DocumentReference<T>
-          });
+        const docs = snapshot.docs.map((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot<T>) => {
+          const wrappedDoc = this.createDocumentWrapper(doc.ref) as FirebaseDocument<T>;
+          return wrappedDoc;
         });
         onNext(docs);
       },
@@ -163,10 +158,28 @@ export class MobileFirebaseService implements FirebaseService {
     return this._storage.ref(path);
   }
 
-  createDocumentWrapper<T extends FirebaseFirestoreTypes.DocumentData>(
-    path: string
-  ): FirebaseFirestoreTypes.DocumentReference<T> {
-    return this._firestore.doc(path) as FirebaseFirestoreTypes.DocumentReference<T>;
+  createDocumentWrapper(
+    docRef: FirebaseFirestoreTypes.DocumentReference<FirebaseFirestoreTypes.DocumentData>
+  ): FirebaseDocument<any> {
+    const firestoreDocRef = docRef;
+    return {
+      id: firestoreDocRef.id,
+      ref: firestoreDocRef as any,
+      data: undefined,
+      get: async () => {
+        const snapshot = await firestoreDocRef.get();
+        return snapshot.exists ? snapshot.data() : undefined;
+      },
+      set: async (data: any) => {
+        await firestoreDocRef.set(data);
+      },
+      update: async (data: any) => {
+        await firestoreDocRef.update(data);
+      },
+      delete: async () => {
+        await firestoreDocRef.delete();
+      },
+    };
   }
 
   offline(): OfflineSync {

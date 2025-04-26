@@ -1,7 +1,10 @@
-import React from 'react';
-import { TouchableOpacity, View, Text, Image, StyleSheet } from 'react-native';
-import type { Prop } from '../types';
+import React, { useState } from 'react';
+import { TouchableOpacity, View, Text, Image, StyleSheet, Platform } from 'react-native';
+import { Prop } from '@/shared/types/props';
 import { Clock, HandCoins, Edit, Trash } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
+import defaultImage from '@/assets/images/prop-placeholder.png';
+import { PropLifecycleStatus } from '../types/lifecycle';
 
 interface PropCardProps {
   prop: Prop;
@@ -36,7 +39,9 @@ export const PropCard: React.FC<PropCardProps> = ({
   };
 
   const renderStatus = () => {
-    const statusStyles = {
+    type HandledStatus = 'Cut from Show' | 'Modified Prop' | 'new';
+    
+    const statusStyles: Record<HandledStatus, { container: any; text: any }> = {
       'Cut from Show': {
         container: [styles.statusBadge, { backgroundColor: 'rgba(220, 38, 38, 0.2)' }],
         text: { color: '#DC2626' }
@@ -51,12 +56,16 @@ export const PropCard: React.FC<PropCardProps> = ({
       }
     };
 
-    const status = prop.status || 'new';
-    const style = statusStyles[status] || statusStyles['new'];
+    const statusKey: HandledStatus = 
+      prop.status && Object.prototype.hasOwnProperty.call(statusStyles, prop.status) 
+      ? prop.status as HandledStatus 
+      : 'new';
+
+    const style = statusStyles[statusKey];
 
     return (
       <View style={style.container}>
-        <Text style={[styles.statusText, style.text]}>{status}</Text>
+        <Text style={[styles.statusText, style.text]}>{prop.status || statusKey}</Text>
       </View>
     );
   };
@@ -77,9 +86,9 @@ export const PropCard: React.FC<PropCardProps> = ({
       </View>
 
       <View style={styles.contentContainer}>
-        {prop.imageUrl ? (
+        {prop.images?.[0]?.url ? (
           <Image
-            source={{ uri: prop.imageUrl }}
+            source={{ uri: prop.images[0].url }}
             style={styles.image}
           />
         ) : (
@@ -97,9 +106,12 @@ export const PropCard: React.FC<PropCardProps> = ({
           {prop.price && (
             <Text style={styles.price}>${prop.price.toFixed(2)} each</Text>
           )}
-          {prop.dimensions && (
+          {(prop.length || prop.width || prop.height) && (
             <Text style={styles.dimensions}>
-              L: {prop.dimensions.length} × W: {prop.dimensions.width} × H: {prop.dimensions.height} {prop.dimensions.unit}
+              {[prop.length && `L: ${prop.length}`, 
+                prop.width && `W: ${prop.width}`, 
+                prop.height && `H: ${prop.height}`].filter(Boolean).join(' × ')}
+              {prop.unit && ` ${prop.unit}`}
             </Text>
           )}
         </View>

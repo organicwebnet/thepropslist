@@ -5,8 +5,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFirebase } from '../../../contexts/FirebaseContext';
-import { Prop } from '../../../shared/types/props';
-import { PropCard } from '../../../shared/components/PropCard';
+import { useProps } from '../../../hooks/useProps';
+import { ActivityIndicator, IconButton } from 'react-native-paper';
+import { FAB } from 'react-native-paper';
+import { useFocusEffect } from '@react-navigation/native';
+import PropCard from '../../../shared/components/PropCard';
+import { Filters } from '../../../types';
+import { Prop } from '@/shared/types/props';
 import { FirebaseDocument } from '../../../shared/services/firebase/types';
 
 type RootStackParamList = {
@@ -88,9 +93,8 @@ export function PropsListScreen() {
         data={props}
         renderItem={({ item }) => (
           <PropCard
-            prop={item.data}
+            prop={item as unknown as Prop}
             onPress={() => handlePropPress(item.id)}
-            style={styles.propCard}
           />
         )}
         keyExtractor={(item) => item.id}

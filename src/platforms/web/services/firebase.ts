@@ -4,7 +4,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
   onAuthStateChanged,
   Auth,
   User
@@ -16,6 +15,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  addDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -26,7 +26,13 @@ import {
   CollectionReference,
   DocumentReference,
   Query,
-  WhereFilterOp
+  WhereFilterOp,
+  enableIndexedDbPersistence,
+  runTransaction as webRunTransaction,
+  writeBatch as webWriteBatch,
+  onSnapshot,
+  DocumentSnapshot,
+  QuerySnapshot
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -34,26 +40,33 @@ import {
   uploadBytes,
   getDownloadURL as getStorageDownloadURL,
   deleteObject,
-  StorageReference
+  StorageReference,
+  FirebaseStorage
 } from 'firebase/storage';
-import { enableIndexedDbPersistence } from 'firebase/firestore';
-import { BaseFirebaseService } from '../../../shared/services/firebase/base';
 import type {
   FirebaseService,
-  FirebaseAuth,
-  FirebaseFirestore,
-  FirebaseStorage,
   OfflineSync,
-  FirestoreCollection,
-  FirestoreDocument
+  FirebaseDocument,
+  CustomAuth,
+  CustomFirestore,
+  CustomStorage,
+  CustomTransaction,
+  CustomWriteBatch,
+  CustomDocumentData,
+  CustomDocumentReference,
+  CustomStorageReference,
+  SyncStatus,
+  FirebaseError
 } from '../../../shared/services/firebase/types';
 
-export class WebFirebaseService extends BaseFirebaseService {
-  private storageInstance: ReturnType<typeof getStorage>;
+export class WebFirebaseService implements FirebaseService {
+  private app: FirebaseApp | null = null;
+  private authInstance: Auth | null = null;
+  private dbInstance: Firestore | null = null;
+  private storageInstance: FirebaseStorage | null = null;
+  private isInitialized = false;
 
   constructor() {
-    super();
-    this.storageInstance = null as any;
   }
 
   async initialize(): Promise<void> {
@@ -68,200 +81,194 @@ export class WebFirebaseService extends BaseFirebaseService {
       appId: import.meta.env.EXPO_PUBLIC_FIREBASE_APP_ID
     };
 
+    if (!firebaseConfig.apiKey) {
+      console.error('Firebase configuration is missing. Ensure environment variables are set.');
+      throw new Error('Firebase configuration missing');
+    }
+
     try {
       this.app = initializeApp(firebaseConfig);
       this.authInstance = getAuth(this.app);
       this.dbInstance = getFirestore(this.app);
       this.storageInstance = getStorage(this.app);
       
-      // Enable offline persistence
-      await enableIndexedDbPersistence(this.dbInstance);
+      await enableIndexedDbPersistence(this.dbInstance)
+        .catch((err) => { 
+          if (err.code == 'failed-precondition') {
+            console.warn('Firestore Persistence failed precondition. Multiple tabs open?');
+          } else if (err.code == 'unimplemented') {
+            console.warn('Firestore Persistence not available in this browser.');
+          } else {
+            console.error('Firestore Persistence error:', err);
+          }
+        });
       
       this.isInitialized = true;
       console.log('Firebase Web initialized successfully');
     } catch (error) {
-      console.error('Firebase initialization error:', error);
+      console.error('Firebase Web initialization error:', error);
+      this.isInitialized = false;
       throw error;
     }
   }
 
-  auth(): FirebaseAuth {
-    if (!this.isInitialized) throw new Error('Firebase not initialized');
-    
-    const auth = this.authInstance;
-    return {
-      currentUser: auth.currentUser,
-      async signIn(email: string, password: string) {
-        await signInWithEmailAndPassword(auth, email, password);
-      },
-      async signOut() {
-        await signOut(auth);
-      },
-      async createUser(email: string, password: string) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      },
-      onAuthStateChanged(callback: (user: User | null) => void) {
-        return onAuthStateChanged(auth, callback);
-      }
-    };
+  auth(): CustomAuth {
+    if (!this.isInitialized || !this.authInstance) throw new Error('Firebase not initialized');
+    return this.authInstance as CustomAuth;
   }
 
-  firestore(): FirebaseFirestore {
-    if (!this.isInitialized) throw new Error('Firebase not initialized');
-
-    return {
-      collection: (path: string): FirestoreCollection => {
-        const collectionRef = collection(this.dbInstance, path);
-        const self = this;
-        
-        return {
-          doc: (id: string) => {
-            const docRef = doc(collectionRef, id);
-            return self.createDocumentWrapper(docRef);
-          },
-          async add(data: any) {
-            const docRef = doc(collectionRef);
-            await setDoc(docRef, data);
-            return self.createDocumentWrapper(docRef);
-          },
-          async get() {
-            const snapshot = await getDocs(collectionRef);
-            return snapshot.docs.map(doc => ({
-              id: doc.id,
-              data: () => doc.data(),
-              exists: () => doc.exists(),
-              get: async () => doc.data(),
-              set: async (data: any) => setDoc(doc.ref, data),
-              update: async (data: any) => updateDoc(doc.ref, data),
-              delete: async () => deleteDoc(doc.ref)
-            }));
-          },
-          where: (field: string, operator: WhereFilterOp, value: any) => {
-            const queryRef = query(collectionRef, where(field, operator, value));
-            return this.createQueryWrapper(queryRef);
-          },
-          orderBy: (field: string, direction?: 'asc' | 'desc') => {
-            const queryRef = query(collectionRef, orderBy(field, direction));
-            return this.createQueryWrapper(queryRef);
-          },
-          limit: (limitCount: number) => {
-            const queryRef = query(collectionRef, limit(limitCount));
-            return this.createQueryWrapper(queryRef);
-          }
-        };
-      },
-      doc: (path: string) => this.createDocumentWrapper(doc(this.dbInstance, path))
-    };
+  firestore(): CustomFirestore {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    return this.dbInstance as CustomFirestore;
   }
 
-  storage(): FirebaseStorage {
-    if (!this.isInitialized) throw new Error('Firebase not initialized');
-    const storage = this.storageInstance;
-
-    return {
-      async upload(path: string, file: File): Promise<string> {
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, file);
-        return await getStorageDownloadURL(storageRef);
-      },
-      async getDownloadURL(path: string): Promise<string> {
-        const storageRef = ref(storage, path);
-        return await getStorageDownloadURL(storageRef);
-      },
-      async delete(path: string): Promise<void> {
-        const storageRef = ref(storage, path);
-        await deleteObject(storageRef);
-      }
-    };
-  }
-
-  protected getStorageRef(path: string): StorageReference {
-    if (!this.isInitialized || !this.storageInstance) {
-      throw new Error('Firebase not initialized');
-    }
-    return ref(this.storageInstance, path);
+  storage(): CustomStorage {
+    if (!this.isInitialized || !this.storageInstance) throw new Error('Firebase not initialized');
+    return this.storageInstance as CustomStorage;
   }
 
   offline(): OfflineSync {
-    if (!this.isInitialized) throw new Error('Firebase not initialized');
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
     const db = this.dbInstance;
 
     return {
-      async enableSync() {
-        await enableIndexedDbPersistence(db);
+      initialize: async () => { /* Web might not need explicit init here */ },
+      getItem: async <T>(key: string): Promise<T | null> => {
+        console.warn('Web OfflineSync getItem not implemented'); return null;
       },
-      async disableSync() {
-        // Web version doesn't support disabling sync once enabled
-        console.warn('Disabling offline sync is not supported in web version');
+      setItem: async <T>(key: string, value: T): Promise<void> => {
+        console.warn('Web OfflineSync setItem not implemented');
       },
-      async getSyncStatus() {
-        return true; // Web version always has sync enabled when initialized
+      removeItem: async (key: string): Promise<void> => {
+        console.warn('Web OfflineSync removeItem not implemented');
+      },
+      clear: async (): Promise<void> => {
+        console.warn('Web OfflineSync clear not implemented');
+      },
+      enableSync: async () => {
+        console.log('Web Firestore persistence already enabled during initialization.');
+      },
+      disableSync: async () => {
+        console.warn('Disabling offline sync/network is not directly supported in Firebase Web SDK once enabled.');
+      },
+      getSyncStatus: async (): Promise<SyncStatus> => {
+        return {
+          isEnabled: true,
+          isOnline: navigator.onLine,
+          pendingOperations: 0,
+          lastSyncTimestamp: null
+        };
+      },
+      queueOperation: async (): Promise<void> => {
+         console.warn('Web OfflineSync queueOperation not implemented');
+      },
+      getQueueStatus: async (): Promise<any> => {
+         console.warn('Web OfflineSync getQueueStatus not implemented');
+         return { pending: 0, processing: 0, lastProcessed: null };
       }
     };
   }
 
-  private createDocumentWrapper(docRef: DocumentReference): FirestoreDocument {
+  async runTransaction<T>(
+    updateFunction: (transaction: CustomTransaction) => Promise<T>
+  ): Promise<T> {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    return webRunTransaction(this.dbInstance, (transaction) => updateFunction(transaction as CustomTransaction));
+  }
+
+  batch(): CustomWriteBatch {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    return webWriteBatch(this.dbInstance) as CustomWriteBatch;
+  }
+
+  createDocumentWrapper<T extends CustomDocumentData>(
+    docRef: CustomDocumentReference<T>
+  ): FirebaseDocument<T> {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    
+    const firestoreDocRef = docRef as DocumentReference<T>;
     return {
-      id: docRef.id,
-      async data() {
-        const snapshot = await getDoc(docRef);
-        return snapshot.data();
+      id: firestoreDocRef.id,
+      ref: firestoreDocRef as CustomDocumentReference<T>,
+      data: undefined,
+      get: async () => {
+        const snapshot = await getDoc(firestoreDocRef);
+        return snapshot.exists() ? (snapshot.data() as T) : undefined;
       },
-      exists() {
-        return docRef.id !== '';
+      set: async (data: T) => {
+        await setDoc(firestoreDocRef, data);
       },
-      async get() {
-        const snapshot = await getDoc(docRef);
-        return snapshot.data();
+      update: async (data: Partial<T>) => {
+        await updateDoc(firestoreDocRef, data as any);
       },
-      async set(data: any) {
-        await setDoc(docRef, data);
+      delete: async () => {
+        await deleteDoc(firestoreDocRef);
       },
-      async update(data: any) {
-        await updateDoc(docRef, data);
-      },
-      async delete() {
-        await deleteDoc(docRef);
-      }
     };
   }
 
-  private createQueryWrapper(queryRef: Query): FirestoreCollection {
-    const self = this;
-    return {
-      doc: (id: string) => {
-        const docRef = doc(this.dbInstance, id);
-        return self.createDocumentWrapper(docRef);
-      },
-      async add(data: any) {
-        if (queryRef instanceof CollectionReference) {
-          const docRef = doc(queryRef);
-          await setDoc(docRef, data);
-          return self.createDocumentWrapper(docRef);
+  listenToDocument<T extends CustomDocumentData>(
+    path: string,
+    onNext: (doc: FirebaseDocument<T>) => void,
+    onError?: (error: Error) => void
+  ): () => void {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    const docRef = doc(this.dbInstance, path) as DocumentReference<T>;
+    
+    const unsubscribe = onSnapshot(docRef, 
+      (snapshot: DocumentSnapshot) => {
+        if (snapshot.exists()) {
+          const wrappedDoc = this.createDocumentWrapper(docRef as CustomDocumentReference<T>);
+          onNext(wrappedDoc as FirebaseDocument<T>);
+        } else {
+          console.log(`Document at path ${path} does not exist.`);
         }
-        throw new Error('Cannot add document to a filtered query');
       },
-      async get() {
-        const snapshot = await getDocs(queryRef);
-        return snapshot.docs.map(doc => ({
-          id: doc.id,
-          data: () => doc.data(),
-          exists: () => doc.exists(),
-          get: async () => doc.data(),
-          set: async (data: any) => setDoc(doc.ref, data),
-          update: async (data: any) => updateDoc(doc.ref, data),
-          delete: async () => deleteDoc(doc.ref)
-        }));
-      },
-      where: (field: string, operator: WhereFilterOp, value: any) => {
-        return this.createQueryWrapper(query(queryRef, where(field, operator, value)));
-      },
-      orderBy: (field: string, direction?: 'asc' | 'desc') => {
-        return this.createQueryWrapper(query(queryRef, orderBy(field, direction)));
-      },
-      limit: (limitCount: number) => {
-        return this.createQueryWrapper(query(queryRef, limit(limitCount)));
+      (error: Error) => {
+        console.error(`Error listening to document ${path}:`, error);
+        if (onError) {
+          onError(error);
+        }
       }
-    };
+    );
+    return unsubscribe;
+  }
+
+  listenToCollection<T extends CustomDocumentData>(
+    path: string,
+    onNext: (docs: FirebaseDocument<T>[]) => void,
+    onError?: (error: Error) => void
+  ): () => void {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    const collRef = collection(this.dbInstance, path) as CollectionReference<T>;
+
+    const unsubscribe = onSnapshot(collRef,
+      (snapshot: QuerySnapshot) => {
+        const docs = snapshot.docs.map(docSnapshot => 
+          this.createDocumentWrapper(docSnapshot.ref as CustomDocumentReference<T>)
+        );
+        onNext(docs as FirebaseDocument<T>[]);
+      },
+      (error: Error) => {
+        console.error(`Error listening to collection ${path}:`, error);
+        if (onError) {
+          onError(error);
+        }
+      }
+    );
+    return unsubscribe;
+  }
+
+  getStorageRef(path: string): CustomStorageReference {
+    if (!this.isInitialized || !this.storageInstance) throw new Error('Firebase not initialized');
+    return ref(this.storageInstance, path) as CustomStorageReference;
+  }
+
+  protected handleError(message: string, error: unknown): never {
+    console.error("WebFirebaseService Error:", message, error);
+    if (error instanceof Error && 'code' in error) {
+       throw error; 
+    }    
+    throw new Error(`${message}: ${error instanceof Error ? error.message : String(error)}`);
   }
 } 

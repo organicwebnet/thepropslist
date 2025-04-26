@@ -1,6 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { FirebaseFirestore, FirestoreDocument } from '../../../../shared/services/firebase/types';
+import firestore from '@react-native-firebase/firestore';
+import { FirebaseFirestore, FirebaseDocument } from '../../../../shared/services/firebase/types';
+// import { OfflineOperation } from './OfflineOperationStore'; // Commented out: Cannot find module
+
+// Define a placeholder type if OfflineOperation is used elsewhere in the file
+type OfflineOperation = any;
 
 interface SyncMetadata {
   lastSyncTimestamp: number;

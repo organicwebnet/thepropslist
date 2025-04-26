@@ -91,13 +91,13 @@ export class PropQRCodeService implements QRCodeService {
 
   validateQRCode(data: QRCodeData): boolean {
     // Required fields validation
-    if (!data.propId || !data.name || !data.category) {
+    if (!data.id || !data.name || !data.category) {
       return false;
     }
 
-    // Validate propId format (assuming UUID format)
+    // Validate id format (assuming UUID format)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(data.propId)) {
+    if (!uuidRegex.test(data.id)) {
       return false;
     }
 

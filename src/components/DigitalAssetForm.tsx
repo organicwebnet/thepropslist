@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, X, FileText, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import type { DigitalAsset } from '../types';
+import type { DigitalAsset } from '@/shared/types/props';
+import { storage } from '../lib/firebase';
 
 interface DigitalAssetFormProps {
   assets: DigitalAsset[];
@@ -11,6 +12,7 @@ interface DigitalAssetFormProps {
 export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProps) {
   const [validating, setValidating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'pending'>>({});
 
   const validateGoogleDriveUrl = async (url: string): Promise<boolean> => {
     try {
@@ -56,42 +58,51 @@ export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProp
   };
 
   const handleAddAsset = () => {
+    const newId = uuidv4();
     onChange([
       ...assets,
       {
-        id: uuidv4(),
-        title: '',
+        id: newId,
+        name: '',
         url: '',
-        createdAt: new Date().toISOString(),
-        status: 'active'
+        type: 'other'
       }
     ]);
+    setValidationStatus(prev => ({ ...prev, [newId]: 'pending' }));
   };
 
   const handleRemoveAsset = (id: string) => {
     onChange(assets.filter(asset => asset.id !== id));
+    setValidationStatus(prev => {
+        const newState = {...prev};
+        delete newState[id];
+        return newState;
+    });
   };
 
   const handleAssetChange = async (id: string, field: keyof DigitalAsset, value: string) => {
     const updatedAssets = assets.map(asset => {
       if (asset.id === id) {
-        const updatedAsset = { ...asset, [field]: value };
+        let type: DigitalAsset['type'] = asset.type;
+        if (field === 'url') {
+           if (value.includes('google.com/document')) type = 'document';
+           else if (value.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) type = 'image';
+           else if (value.match(/\.(mp4|mov|avi|webm)$/i)) type = 'video';
+           else type = 'other';
+        }
+        const updatedAsset = { ...asset, [field]: value, type };
         
-        // If URL is being updated, validate it
         if (field === 'url' && value) {
           setValidating(id);
           setError(null);
+          setValidationStatus(prev => ({ ...prev, [id]: 'pending' }));
           
           validateGoogleDriveUrl(value).then(isValid => {
-            if (isValid) {
-              updatedAsset.status = 'active';
-              updatedAsset.lastChecked = new Date().toISOString();
-            } else {
-              updatedAsset.status = 'inactive';
-            }
+            setValidationStatus(prev => ({ ...prev, [id]: isValid ? 'valid' : 'invalid' }));
             setValidating(null);
-            onChange(assets.map(a => a.id === id ? updatedAsset : a));
           });
+        } else if (field === 'url' && !value) {
+            setValidationStatus(prev => ({ ...prev, [id]: 'pending' }));
         }
         
         return updatedAsset;
@@ -129,15 +140,15 @@ export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProp
             className="p-4 bg-[#1A1A1A] border border-gray-800 rounded-lg space-y-4"
           >
             <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-2">
-                <FileText className="h-5 w-5 text-gray-400" />
+              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                <FileText className="h-5 w-5 text-gray-400 flex-shrink-0" />
                 <input
                   type="text"
-                  value={asset.title}
-                  onChange={(e) => handleAssetChange(asset.id, 'title', e.target.value)}
-                  placeholder="Enter file title"
-                  maxLength={50}
-                  className="bg-transparent border-none text-white placeholder-gray-500 focus:outline-none focus:ring-0"
+                  value={asset.name}
+                  onChange={(e) => handleAssetChange(asset.id, 'name', e.target.value)}
+                  placeholder="Enter file name/description"
+                  maxLength={100}
+                  className="bg-transparent border-none text-white placeholder-gray-500 focus:outline-none focus:ring-0 flex-1 min-w-0"
                 />
               </div>
               <button
@@ -171,10 +182,10 @@ export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProp
               )}
             </div>
 
-            {asset.status === 'inactive' && (
+            {validationStatus[asset.id] === 'invalid' && (
               <div className="flex items-center space-x-2 text-yellow-500 text-sm">
                 <AlertTriangle className="h-4 w-4" />
-                <span>Unable to verify file access. Please check sharing settings.</span>
+                <span>Unable to verify file access. Check URL/sharing settings.</span>
               </div>
             )}
           </div>

@@ -1,49 +1,29 @@
-module.exports = {
-  name: 'Props Bible',
-  slug: 'props-bible',
-  version: '1.0.0',
-  orientation: 'portrait',
-  icon: './assets/icon.png',
-  userInterfaceStyle: 'automatic',
-  splash: {
-    image: './assets/splash.png',
-    resizeMode: 'contain',
-    backgroundColor: '#ffffff'
-  },
-  assetBundlePatterns: [
-    "**/*",
-    "assets/fonts/**/*"
-  ],
-  ios: {
-    supportsTablet: true,
-    bundleIdentifier: 'com.propsbible.app'
-  },
-  android: {
-    adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#ffffff'
+const appJson = require('./app.json');
+
+module.exports = ({ config }) => {
+  return {
+    ...appJson.expo,
+    hooks: {
+      postPublish: [
+        {
+          file: 'sentry-expo/upload-sourcemaps',
+          config: {
+            organization: 'props-bible',
+            project: 'props-bible',
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+          },
+        },
+      ],
     },
-    package: 'com.propsbible.app'
-  },
-  web: {
-    favicon: './assets/favicon.png',
-    bundler: 'metro'
-  },
-  plugins: [
-    [
-      'expo-font',
-      {
-        fonts: [
-          './assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf',
-          './assets/fonts/OpenDyslexic/OpenDyslexic-Bold.otf',
-          './assets/fonts/OpenDyslexic/OpenDyslexic-Italic.otf'
-        ]
-      }
-    ]
-  ],
-  extra: {
-    eas: {
-      projectId: 'your-project-id'
+    // Make sure expo-router configuration is preserved
+    scheme: "propsbible",
+    plugins: [
+      ...((appJson.expo && appJson.expo.plugins) || []),
+      "expo-router"
+    ],
+    experiments: {
+      tsconfigPaths: true,
+      typedRoutes: true
     }
-  }
+  };
 }; 

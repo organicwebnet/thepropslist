@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot, doc, addDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, getDocs, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, signOut, getRedirectResult, GoogleAuthProvider, linkWithCredential } from 'firebase/auth';
 import { AuthForm } from './components/AuthForm';
@@ -10,16 +9,14 @@ import { Footer } from './components/Footer';
 
 import { UserProfileModal } from './components/UserProfile';
 import { ShareModal } from './components/ShareModal';
-import { PropDetailPage } from './pages/PropDetailPage';
-import { ShowDetailPage } from './pages/ShowDetailPage';
 import { db, auth } from './lib/firebase';
-import type { Prop, PropFormData, Filters, Show, ShowFormData } from './types';
+import type { Prop, PropFormData } from './shared/types/props';
+import type { Filters, Show, ShowFormData } from './types';
 import { LogOut, PlusCircle, Pencil, Trash2, Plus } from 'lucide-react';
 import ShowForm from './components/ShowForm';
 import { SearchBar } from './components/SearchBar';
 import { PropFilters } from './components/PropFilters';
 import { ExportToolbar } from './components/ExportToolbar';
-import { PackingPage } from './pages/PackingPage';
 import { OnboardingGuide } from './components/OnboardingGuide';
 
 const initialFilters: Filters = {
@@ -28,56 +25,6 @@ const initialFilters: Filters = {
   scene: undefined,
   category: undefined
 };
-
-function TabNavigation({ activeTab, setActiveTab, navigate }: { activeTab: string; setActiveTab: (tab: 'props' | 'shows' | 'packing') => void; navigate: (path: string) => void }) {
-  return (
-    <div className="mb-6">
-      <div className="border-b border-[var(--border-color)]">
-        <nav className="flex space-x-8">
-          <button
-            onClick={() => {
-              setActiveTab('props');
-              navigate('/props');
-            }}
-            className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
-              activeTab === 'props'
-                ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
-            }`}
-          >
-            Props
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('shows');
-              navigate('/shows');
-            }}
-            className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
-              activeTab === 'shows'
-                ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
-            }`}
-          >
-            Shows
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('packing');
-              navigate('/packing');
-            }}
-            className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
-              activeTab === 'packing'
-                ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
-                : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
-            }`}
-          >
-            Packing
-          </button>
-        </nav>
-      </div>
-    </div>
-  );
-}
 
 function App() {
   const [showAuth, setShowAuth] = useState(false);
@@ -88,12 +35,7 @@ function App() {
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(auth.currentUser);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [filters, setFilters] = useState<Filters>({
-    ...initialFilters,
-    category: searchParams.get('category') || undefined
-  });
-  const navigate = useNavigate();
+  const [filters, setFilters] = useState<Filters>(initialFilters);
   const [activeTab, setActiveTab] = useState<'props' | 'shows' | 'packing'>('props');
   const [selectedProp, setSelectedProp] = useState<Prop | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -299,16 +241,10 @@ function App() {
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
-    if (newFilters.category) {
-      setSearchParams({ category: newFilters.category });
-    } else {
-      setSearchParams({});
-    }
   };
 
   const handleFilterReset = () => {
     setFilters(initialFilters);
-    setSearchParams({});
   };
 
   const handlePropSubmit = async (data: PropFormData) => {
@@ -329,7 +265,6 @@ function App() {
       console.log('Prop data to be created:', propData);
       const docRef = await addDoc(collection(db, 'props'), propData);
       console.log('Created prop with ID:', docRef.id);
-      navigate(`/props/${docRef.id}`);
     } catch (error) {
       console.error('Error adding prop:', error);
       alert('Failed to add prop. Please try again.');
@@ -339,7 +274,6 @@ function App() {
   const handleDelete = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'props', id));
-      navigate('/props');
     } catch (error) {
       console.error('Error deleting prop:', error);
       alert('Failed to delete prop. Please try again.');
@@ -361,7 +295,6 @@ function App() {
         ...data,
         lastModifiedAt: new Date().toISOString()
       });
-      navigate(`/props/${id}`);
     } catch (error) {
       console.error('Error updating prop:', error);
       alert('Failed to update prop. Please try again.');
@@ -518,17 +451,9 @@ function App() {
     }
   };
 
-  const handleShowClick = (showId: string) => {
-    navigate(`/shows/${showId}`);
-  };
-
-  const handlePackingClick = (showId: string) => {
-    navigate(`/packing/${showId}`);
-  };
-
   const filteredProps = props.filter(prop => {
     const matchesSearch = prop.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      prop.description.toLowerCase().includes(filters.search.toLowerCase());
+      (prop.description || '').toLowerCase().includes(filters.search.toLowerCase());
     const matchesAct = !filters.act || prop.act === filters.act;
     const matchesScene = !filters.scene || prop.scene === filters.scene;
     const matchesCategory = !filters.category || prop.category.toLowerCase() === filters.category.toLowerCase();
@@ -547,438 +472,73 @@ function App() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col">
-      <div className="container mx-auto px-6 py-8 flex-1">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-8">
-          <h1 className="text-4xl font-bold gradient-text tracking-tight">The Props Bible</h1>
-          {user && (
-            <div className="flex items-center gap-6">
-              <button
-                onClick={async () => {
-                  try {
-                    await signOut(auth);
-                  } catch (error) {
-                    console.error('Error signing out:', error);
-                    alert('Failed to sign out. Please try again.');
-                  }
-                }}
-                className="btn-primary flex items-center gap-2 opacity-80 hover:opacity-100"
-                title="Sign Out"
-              >
-                <LogOut className="h-5 w-5" />
-                <span className="text-sm">Sign Out</span>
-              </button>
-              <button
-                onClick={() => setShowProfile(true)}
-                className="p-2 text-gray-400 hover:text-white transition-colors flex items-center gap-3"
-                title="Profile & Settings"
-              >
-                {user.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName || 'User'}
-                    className="w-10 h-10 rounded-full border-2 border-primary/20"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border-2 border-primary/30">
-                    {user.email?.[0].toUpperCase()}
-                  </div>
-                )}
-                <span className="text-sm">Profile & Settings</span>
-              </button>
-            </div>
-          )}
-        </div>
+  if (showAuth || !user) {
+    // Commenting out - Auth handling should likely be in root layout or navigation logic
+    // return <AuthForm onAuthSuccess={() => setShowAuth(false)} />;
+    // Placeholder while refactoring:
+    return <div className="flex justify-center items-center h-screen">Please Sign In</div>; 
+  }
 
-        <Routes>
-          <Route path="/props/:id" element={
-            user ? (
-              <PropDetailPage
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-red-400">Please sign in to view prop details</p>
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
-                >
-                  Sign In
-                </button>
-              </div>
-            )
-          } />
-          <Route path="/shows/:id" element={
-            user ? (
-              <ShowDetailPage
-                onEdit={(show) => {
-                  setEditingShow(show);
-                  setShowFormMode('edit');
-                  navigate('/shows');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              />
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-red-400">Please sign in to view show details</p>
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
-                >
-                  Sign In
-                </button>
-              </div>
-            )
-          } />
-          <Route path="/" element={
-            user ? (
-              <Navigate to="/props" replace />
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-red-400">Please sign in to view props</p>
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
-                >
-                  Sign In
-                </button>
-              </div>
-            )
-          } />
-          <Route path="/props" element={
-            user ? (
+  return (
+    <div className="flex flex-col min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
+      <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-color)] px-4 sm:px-6 py-3">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold">Props Bible</h1>
+          <div className="flex items-center gap-4">
+            {user && (
               <>
-                <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} navigate={navigate} />
-                <div className="lg:grid lg:grid-cols-2 lg:gap-12">
-                  <div className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-8">
-                    <div className="lg:h-full lg:overflow-y-auto lg:pr-6 scrollbar-hide">
-                      <PropForm 
-                        onSubmit={handlePropSubmit} 
-                        show={selectedShow || shows[0]}
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto scrollbar-hide">
-                    <div className="flex justify-between items-center mb-6">
-                      <div className="flex items-center gap-4">
-                        {(selectedShow || shows[0]) && (
-                          <ExportToolbar show={selectedShow || shows[0]} props={filteredProps} />
-                        )}
-                      </div>
-                    </div>
-                    {(selectedShow || shows[0]) && (
-                      <PropList
-                        props={filteredProps}
-                        onDelete={handleDelete}
-                        onUpdatePrice={handleUpdatePrice}
-                        onEdit={handleEdit}
-                        show={selectedShow || shows[0]}
-                        filters={filters}
-                        onFilterChange={setFilters}
-                        onFilterReset={() => setFilters(initialFilters)}
-                      />
-                    )}
-                  </div>
-                </div>
+                <button onClick={() => setShowProfile(true)} className="text-sm hover:text-[var(--highlight-color)] transition-colors">Profile</button>
+                <button onClick={() => signOut(auth)} className="text-sm hover:text-red-400 transition-colors flex items-center gap-1">
+                  <LogOut size={16} /> Logout
+                </button>
               </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-red-400">Please sign in to view props</p>
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
-                >
-                  Sign In
-                </button>
-              </div>
-            )
-          } />
-          <Route path="/shows" element={
-            user ? (
-              <>
-                <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} navigate={navigate} />
-                <div className="lg:grid lg:grid-cols-2 lg:gap-12">
-                  <div className="lg:h-[calc(100vh-8rem)] lg:sticky lg:top-8">
-                    <div className="lg:h-full lg:overflow-y-auto lg:pr-6 scrollbar-hide">
-                      <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold">Shows</h2>
-                      </div>
-                      <ShowForm
-                        mode={showFormMode}
-                        initialData={showFormMode === 'edit' && editingShow ? {
-                          id: editingShow.id,
-                          name: editingShow.name,
-                          description: editingShow.description,
-                          acts: editingShow.acts,
-                          userId: editingShow.userId,
-                          createdAt: editingShow.createdAt,
-                          collaborators: editingShow.collaborators || [],
-                          stageManager: editingShow.stageManager,
-                          stageManagerEmail: editingShow.stageManagerEmail,
-                          stageManagerPhone: editingShow.stageManagerPhone || '',
-                          propsSupervisor: editingShow.propsSupervisor,
-                          propsSupervisorEmail: editingShow.propsSupervisorEmail,
-                          propsSupervisorPhone: editingShow.propsSupervisorPhone || '',
-                          productionCompany: editingShow.productionCompany,
-                          productionContactName: editingShow.productionContactName,
-                          productionContactEmail: editingShow.productionContactEmail,
-                          productionContactPhone: editingShow.productionContactPhone || '',
-                          venues: editingShow.venues || [],
-                          isTouringShow: editingShow.isTouringShow || false,
-                          contacts: editingShow.contacts || [],
-                          imageUrl: editingShow.imageUrl || '',
-                          logoImage: editingShow.logoImage
-                        } : undefined}
-                        onSubmit={handleShowSubmit}
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-8 lg:mt-0 lg:h-[calc(100vh-8rem)] lg:overflow-y-auto scrollbar-hide">
-                    <div className="flex justify-between items-center mb-6">
-                      <button
-                        onClick={() => {
-                          setEditingShow(null);
-                          setShowFormMode('create');
-                        }}
-                        className="btn-primary flex items-center gap-2"
-                      >
-                        <PlusCircle className="h-5 w-5" />
-                        <span>New Show</span>
-                      </button>
-                    </div>
-                    <div className="gradient-border p-6">
-                      <div className="space-y-4">
-                        {shows.length > 0 ? (
-                          shows.map((show) => (
-                            <div
-                              key={show.id}
-                              className={`flex items-center justify-between p-4 border rounded-lg transition-colors relative ${
-                                selectedShow?.id === show.id 
-                                  ? 'bg-primary/5 border-primary border-2 shadow-lg' 
-                                  : 'bg-[var(--bg-secondary)] border-[var(--border-color)] hover:border-[var(--highlight-color)]'
-                              }`}
-                            >
-                              {selectedShow?.id === show.id && (
-                                <div className="absolute top-0 left-0 transform -translate-y-1/3 translate-x-1 z-10">
-                                  <div className="bg-primary px-2 py-1 rounded-full text-xs font-medium text-white shadow-md whitespace-nowrap">
-                                    Current Show
-                                  </div>
-                                </div>
-                              )}
-                              <div 
-                                className="flex items-center gap-4 flex-1 cursor-pointer"
-                                onClick={() => navigate(`/shows/${show.id}`)}
-                              >
-                                {show.imageUrl ? (
-                                  <img
-                                    src={show.imageUrl}
-                                    alt={`${show.name} logo`}
-                                    className={`w-12 h-12 rounded-lg object-cover border ${
-                                      selectedShow?.id === show.id ? 'border-primary' : 'border-[var(--border-color)]'
-                                    }`}
-                                  />
-                                ) : (
-                                  <div className="w-12 h-12 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
-                                    <span className="text-2xl font-semibold text-[var(--text-secondary)]">
-                                      {show.name[0]}
-                                    </span>
-                                  </div>
-                                )}
-                                <div>
-                                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">{show.name}</h3>
-                                  <p className="text-[var(--text-secondary)] text-sm mt-1">
-                                    {Array.isArray(show.acts) ? (
-                                      <>
-                                        {show.acts.length} Acts, {show.acts.reduce((total, act) => total + (Array.isArray(act.scenes) ? act.scenes.length : 0), 0)} Scenes
-                                      </>
-                                    ) : (
-                                      'No acts defined'
-                                    )}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedShow(show);
-                                    setActiveTab('props');
-                                    navigate('/props');
-                                  }}
-                                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                                    selectedShow?.id === show.id
-                                      ? 'bg-green-600 text-white font-bold' 
-                                      : 'bg-primary text-white hover:bg-primary/90'
-                                  }`}
-                                  title="Select for Props"
-                                  disabled={selectedShow?.id === show.id}
-                                >
-                                  {selectedShow?.id === show.id ? 'Current Show ✓' : 'Select for Props'}
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    console.log('Edit button clicked for show:', show);
-                                    e.stopPropagation();
-                                    if (editingShow?.id === show.id) {
-                                      setEditingShow(null);
-                                      setShowFormMode('create');
-                                    } else {
-                                      setEditingShow(show);
-                                      setShowFormMode('edit');
-                                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                                    }
-                                  }}
-                                  className="p-2 text-[var(--text-secondary)] hover:text-[var(--highlight-color)] transition-colors"
-                                  title="Edit show"
-                                >
-                                  <Pencil className="h-5 w-5" />
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteShow(show.id);
-                                  }}
-                                  className="p-2 text-[var(--text-secondary)] hover:text-red-400 transition-colors"
-                                  title="Delete show"
-                                >
-                                  <Trash2 className="h-5 w-5" />
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-12">
-                            <p className="text-[var(--text-secondary)]">No shows yet. Create your first show using the form.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-red-400">Please sign in to view shows</p>
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
-                >
-                  Sign In
-                </button>
-              </div>
-            )
-          } />
-          <Route path="/packing/:showId" element={
-            user ? (
-              <PackingPage />
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-red-400">Please sign in to access packing lists</p>
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
-                >
-                  Sign In
-                </button>
-              </div>
-            )
-          } />
-          <Route path="/packing" element={
-            user ? (
-              <>
-                <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} navigate={navigate} />
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-bold text-gray-200">Select a Show to Pack</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {shows.map(show => (
-                      <div
-                        key={show.id}
-                        className={`flex items-center p-4 border rounded-lg transition-colors cursor-pointer relative ${
-                          selectedShow?.id === show.id 
-                            ? 'bg-primary/5 border-primary border-2 shadow-lg' 
-                            : 'bg-[var(--bg-secondary)] border-[var(--border-color)] hover:border-[var(--highlight-color)]'
-                        }`}
-                        onClick={() => navigate(`/packing/${show.id}`)}
-                      >
-                        {selectedShow?.id === show.id && (
-                          <div className="absolute top-0 left-0 transform -translate-y-1/3 translate-x-1 z-10">
-                            <div className="bg-primary px-2 py-1 rounded-full text-xs font-medium text-white shadow-md whitespace-nowrap">
-                              Current Show
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-4">
-                          {show.imageUrl ? (
-                            <img
-                              src={show.imageUrl}
-                              alt={`${show.name} logo`}
-                              className={`w-12 h-12 rounded-lg object-cover border ${
-                                selectedShow?.id === show.id ? 'border-primary ring-2 ring-primary' : 'border-[var(--border-color)]'
-                              }`}
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
-                              <span className="text-2xl font-semibold text-[var(--text-secondary)]">
-                                {show.name[0]}
-                              </span>
-                            </div>
-                          )}
-                          <div>
-                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">{show.name}</h3>
-                            <p className="text-[var(--text-secondary)] text-sm mt-1">
-                              {show.venues && show.venues.length > 0 ? show.venues[0].name : 'No venue specified'}
-                            </p>
-                            {selectedShow?.id === show.id && (
-                              <div className="mt-2">
-                                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-white shadow-sm shadow-primary/30">
-                                  Current Show
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-red-400">Please sign in to access packing lists</p>
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="mt-4 inline-flex items-center text-primary hover:text-primary/80"
-                >
-                  Sign In
-                </button>
-              </div>
-            )
-          } />
-        </Routes>
-      </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-grow container mx-auto px-4 sm:px-6 py-8">
+        {/* Removed TabNavigation component - integrate into layout if needed */}
+        {/* Removed <Routes> and <Route> components */}
+        {/* Content is now determined by Expo Router file structure */}
+        
+        {/* 
+          Conditional Modals/Forms - these need to be moved to appropriate layouts/screens. 
+          Commenting them out here temporarily to resolve prop errors.
+        */}
+        {/* {showEditModal && selectedProp && (
+          <PropForm 
+            prop={selectedProp} 
+            onSubmit={handleEdit} 
+            onCancel={() => setShowEditModal(false)} 
+            showId={selectedShow?.id || ''} 
+          />
+        )} */}
+        {/* {editingShow && (
+          <ShowForm
+            initialData={editingShow}
+            onSubmit={handleShowSubmit}
+            onCancel={() => setEditingShow(null)}
+            mode={showFormMode}
+          />
+        )} */}
+        {/* {showProfile && user && <UserProfileModal user={user} onClose={() => setShowProfile(false)} />} */}
+        {/* {showShareModal && selectedShow && (
+          <ShareModal 
+            show={selectedShow} 
+            onClose={() => setShowShareModal(false)} 
+            onAddCollaborator={handleAddCollaborator}
+            onRemoveCollaborator={handleRemoveCollaborator}
+            // currentUserEmail={user?.email || ''} // Prop required
+          />
+        )} */}
+        {/* {showOnboarding && <OnboardingGuide onClose={() => setShowOnboarding(false)} /> /* onComplete prop required */}
+        
+        {/* Placeholder for where Expo Router will render the current screen */} 
+        <p>Main content area - driven by Expo Router (app directory files)</p>
+      </main>
 
       <Footer />
-
-      {showAuth && <AuthForm onClose={() => setShowAuth(false)} />}
-      {showProfile && <UserProfileModal onClose={() => setShowProfile(false)} />}
-      {showShareModal && selectedShow && (
-        <ShareModal
-          show={selectedShow}
-          onClose={() => setShowShareModal(false)}
-          onAddCollaborator={handleAddCollaborator}
-          onRemoveCollaborator={handleRemoveCollaborator}
-          currentUserEmail={user?.email || ''}
-        />
-      )}
-      
-      {showOnboarding && (
-        <OnboardingGuide 
-          onClose={() => setShowOnboarding(false)}
-          onComplete={() => setShowOnboarding(false)}
-        />
-      )}
     </div>
   );
 }

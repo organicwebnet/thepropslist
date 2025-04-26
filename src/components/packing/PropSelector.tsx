@@ -1,4 +1,4 @@
-import { Prop } from '../../types';
+import { Prop } from '@/shared/types/props';
 
 interface PropSelectorProps {
   props: Prop[];
@@ -46,9 +46,9 @@ export function PropSelector({
               `}
             >
               <div className="flex items-center gap-3 w-full">
-                {prop.imageUrl ? (
+                {prop.images?.[0]?.url ? (
                   <img
-                    src={prop.imageUrl}
+                    src={prop.images[0].url}
                     alt={prop.name}
                     className="w-12 h-12 rounded object-cover bg-black"
                   />

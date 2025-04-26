@@ -4,12 +4,25 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@components/*": ["src/components/*"],
-      "@screens/*": ["src/screens/*"],
-      "@utils/*": ["src/utils/*"],
-      "@assets/*": ["assets/*"],
-      "@shared/*": ["src/shared/*"],
-      "@platforms/*": ["src/platforms/*"]
+      "@/*": ["src/*"],
+      "@components/*": [
+        "src/components/*"
+      ],
+      "@screens/*": [
+        "src/screens/*"
+      ],
+      "@utils/*": [
+        "src/utils/*"
+      ],
+      "@assets/*": [
+        "assets/*"
+      ],
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@platforms/*": [
+        "src/platforms/*"
+      ]
     },
     "lib": [
       "dom",
@@ -26,12 +39,22 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "types": [
+      "react",
+      "react-native",
+      "jest"
+    ]
   },
   "include": [
     "src/**/*",
+    "app/**/*",
     "*.ts",
-    "*.tsx"
+    "*.tsx",
+    "index.js",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ],
   "exclude": [
     "node_modules",

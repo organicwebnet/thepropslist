@@ -1,10 +1,13 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import React, { StrictMode } from 'react';
+import ReactDOM from 'react-dom/client';
+import './styles/global.css';
+// import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { FontProvider } from './contexts/FontContext';
-import App from './App.tsx';
+// import { FontProvider } from './contexts/FontContext'; // Commented out
+import App from './App';
 import './index.css';
+import { AuthProvider } from './contexts/AuthContext';
+// Removed: import { GestureProvider } from './contexts/GestureContext';
 
 // Unregister any existing service workers first
 if ('serviceWorker' in navigator) {
@@ -21,16 +24,16 @@ if (!rootElement) {
 }
 
 try {
-  const root = createRoot(rootElement);
+  const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <BrowserRouter>
+      <AuthProvider>
         <ThemeProvider>
-          <FontProvider>
+          {/* <FontProvider> */}
             <App />
-          </FontProvider>
+          {/* </FontProvider> */}
         </ThemeProvider>
-      </BrowserRouter>
+      </AuthProvider>
     </StrictMode>
   );
 } catch (error) {

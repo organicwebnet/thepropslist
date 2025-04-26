@@ -1,22 +1,20 @@
 import React from 'react';
 import { View, FlatList, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { RootStackScreenProps } from '../navigation/types';
+import { useNavigation, useFocusEffect, NavigationProp } from '@react-navigation/native';
+import type { RootStackParamList } from '../navigation/types';
 import type { Show } from '../types';
 import { useShows } from '../contexts/ShowsContext';
+import { useAuth } from '../contexts/AuthContext';
+import firestore from '@react-native-firebase/firestore';
 
 export default function Shows() {
-  const navigation = useNavigation<RootStackScreenProps<'MainTabs'>['navigation']>();
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { shows, loading, setSelectedShow } = useShows();
 
   const handleShowPress = (show: Show) => {
     setSelectedShow(show);
-    navigation.navigate('ShowDetail', { 
+    navigation.navigate<'ShowDetail'>('ShowDetail', { 
       show,
-      onEdit: (updatedShow) => {
-        // TODO: Implement show update logic
-        console.log('Update show:', updatedShow);
-      }
     });
   };
 

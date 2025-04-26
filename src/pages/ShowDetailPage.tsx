@@ -1,14 +1,17 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { doc, onSnapshot, query, collection, where, getDoc, updateDoc } from 'firebase/firestore';
-import { useState, useEffect } from 'react';
-import { db, auth } from '../lib/firebase';
-import type { Show, Scene, Act } from '../types';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, StyleSheet } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { doc, onSnapshot, query, collection, where, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { Show, ShowFormData, Act, Scene, Venue, Contact } from '../types';
+import { Prop } from '@/shared/types/props';
+import { db } from '../lib/firebase';
+import { Edit, Trash2, Plus, Package } from 'lucide-react-native';
 import { Pencil, ArrowLeft, UserMinus } from 'lucide-react';
 
-export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
-  const { id } = useParams();
-  const navigate = useNavigate();
+export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => void }) {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [propStats, setPropStats] = useState({
@@ -16,6 +19,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
     totalValue: 0,
     totalWeight: 0
   });
+  const [props, setProps] = useState<Prop[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -61,13 +65,13 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
           productionContactPhone: data.productionContactPhone || ''
         } as Show);
       } else {
-        navigate('/shows');
+        router.push('/shows');
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [id, navigate]);
+  }, [id, router]);
 
   // Add effect to fetch prop statistics
   useEffect(() => {
@@ -92,15 +96,25 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
     return () => unsubscribe();
   }, [id]);
 
-  const handleDelete = async () => {
+  const handleEdit = () => {
+    if (!show) return;
+    router.push(`/shows/edit/${show.id}` as any);
+  };
+
+  const handleAddProp = () => {
+    router.push(`/shows/${id}/props/new` as any);
+  };
+
+  const handleViewProp = (propId: string) => {
+    router.push(`/shows/${id}/props/${propId}` as any);
+  };
+
+  const handleDeleteShow = async () => {
     if (!show || !window.confirm('Are you sure you want to delete this show?')) return;
     
     try {
-      await updateDoc(doc(db, 'shows', show.id), {
-        deleted: true,
-        deletedAt: new Date().toISOString()
-      });
-      navigate('/shows');
+      await deleteDoc(doc(db, 'shows', show.id));
+      router.back();
     } catch (error) {
       console.error('Error deleting show:', error);
       alert('Failed to delete show. Please try again.');
@@ -128,7 +142,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <button
-        onClick={() => navigate('/shows')}
+        onClick={() => router.back()}
         className="flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6"
       >
         <ArrowLeft className="h-5 w-5 mr-2" />
@@ -157,7 +171,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
             </div>
           </div>
           <button
-            onClick={() => onEdit(show)}
+            onClick={handleEdit}
             className="p-2 text-[var(--text-secondary)] hover:text-[var(--highlight-color)] transition-colors"
             title="Edit show"
           >
@@ -238,7 +252,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
                 <div>
                   <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-2">Touring Venues</h3>
                   <div className="space-y-3">
-                    {venues.map((venue, index) => (
+                    {venues.map((venue: Venue, index: number) => (
                       <div key={index} className="p-3 bg-[var(--bg-secondary)] rounded-lg">
                         <p className="font-medium text-[var(--text-primary)]">{venue.name}</p>
                         <p className="text-sm text-[var(--text-secondary)]">{venue.address}</p>
@@ -288,7 +302,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Acts and Scenes</h2>
           <div className="space-y-6">
             {acts.length > 0 ? (
-              acts.map((act) => (
+              acts.map((act: Act) => (
                 <div key={act.id} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
                   <h3 className="text-lg font-medium text-[var(--text-primary)] mb-3">
                     Act {act.id}
@@ -298,7 +312,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
                     <p className="text-[var(--text-secondary)] mb-3">{act.description}</p>
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Array.isArray(act.scenes) && act.scenes.map((scene) => (
+                    {Array.isArray(act.scenes) && act.scenes.map((scene: Scene) => (
                       <div key={scene.id} className="p-3 bg-[var(--input-bg)] rounded-lg">
                         <p className="font-medium text-[var(--text-primary)]">
                           Scene {scene.id}: {scene.name || 'Untitled Scene'}
@@ -321,7 +335,7 @@ export function ShowDetailPage({ onEdit }: { onEdit: (show: Show) => void }) {
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Key Contacts</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {contacts.map((contact, index) => (
+              {contacts.map((contact: Contact, index: number) => (
                 <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
                   <h3 className="font-medium text-[var(--text-primary)]">{contact.name}</h3>
                   <p className="text-sm text-[var(--text-secondary)] mb-2">{contact.role}</p>

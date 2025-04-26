@@ -120,7 +120,6 @@ export class LabelPrintService {
       try {
         const { uri } = await Print.printToFileAsync({
           html,
-          orientation: options.orientation || 'portrait',
         });
 
         if (Platform.OS === 'android') {

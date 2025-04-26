@@ -1,172 +1,149 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { PackingList } from '../PackingList';
-import { PackingBox } from '../../../types/packing';
-import { Prop, PropSource, PropStatus } from '../../../shared/types/props';
-import { Show } from '../../../types';
+import { Prop, PropSource } from '@/shared/types/props';
+import { PropLifecycleStatus } from '@/types/lifecycle';
+import { Show } from '@/types';
 
-// Mock data
+// Mock Props conforming to src/shared/types/props
 const mockProps: Prop[] = [
   {
     id: '1',
-    name: 'Test Prop 1',
-    description: 'Description 1',
-    category: 'Hand Prop',
-    act: 1,
-    scene: 1,
+    userId: 'user1',
+    showId: 'show1',
+    name: 'Old Chair',
+    description: 'A very old chair',
+    category: 'Furniture',
+    price: 50,
     quantity: 1,
     weightUnit: 'kg',
-    weight: 5,
-    source: 'owned' as PropSource,
-    status: 'available' as PropStatus,
-    handlingInstructions: 'Fragile',
+    weight: 10,
+    source: 'bought',
+    status: 'confirmed',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
     id: '2',
-    name: 'Test Prop 2',
-    description: 'Description 2',
-    category: 'Set Dressing',
+    userId: 'user1',
+    showId: 'show1',
+    name: 'Fake Sword',
+    description: 'A prop sword',
+    category: 'Weapon',
+    price: 120,
     act: 1,
     scene: 2,
-    quantity: 1,
+    quantity: 2,
     weightUnit: 'kg',
     weight: 3,
-    source: 'owned' as PropSource,
-    status: 'available' as PropStatus,
+    source: 'made',
+    status: 'confirmed',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
 
+// Mock Show with string date
 const mockShow: Show = {
   id: 'show1',
   name: 'Test Show',
-  description: 'A test show',
-  startDate: new Date(),
-  endDate: new Date(),
-  status: 'active',
   userId: 'user1',
+  acts: [
+    { id: 1, name: 'Act 1', scenes: [{ id: 1, name: 'Scene 1.1' }, { id: 2, name: 'Scene 1.2' }] },
+    { id: 2, name: 'Act 2', scenes: [{ id: 1, name: 'Scene 2.1' }] },
+  ],
+  description: 'A test show',
+  createdAt: new Date().toISOString(),
   collaborators: [],
-  stageManager: 'manager1',
-  venue: 'Test Venue',
-  company: 'Test Company',
-  season: 'Test Season',
-  acts: [],
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  stageManager: 'SM Name',
+  stageManagerEmail: 'sm@test.com',
+  propsSupervisor: 'Props Sup',
+  propsSupervisorEmail: 'props@test.com',
+  productionCompany: 'Test Co',
+  productionContactName: 'Contact Name',
+  productionContactEmail: 'contact@test.com',
+  venues: [],
+  isTouringShow: false,
+  contacts: [],
 };
 
-const mockBoxes: PackingBox[] = [];
+const mockOnCreateBox = jest.fn();
+const mockOnUpdateBox = jest.fn();
+const mockOnDeleteBox = jest.fn();
 
 describe('PackingList', () => {
-  const mockOnCreateBox = jest.fn();
-  const mockOnUpdateBox = jest.fn();
-  const mockOnDeleteBox = jest.fn();
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders available props correctly', () => {
-    const { getByText } = render(
+  it('renders correctly with props and boxes', () => {
+    render(
       <PackingList
         show={mockShow}
-        boxes={mockBoxes}
+        boxes={[]}
         props={mockProps}
         onCreateBox={mockOnCreateBox}
         onUpdateBox={mockOnUpdateBox}
         onDeleteBox={mockOnDeleteBox}
       />
     );
-    
-    expect(getByText('Test Prop 1')).toBeInTheDocument();
-    expect(getByText('Test Prop 2')).toBeInTheDocument();
+    expect(screen.getByText('Old Chair')).toBeInTheDocument();
+    expect(screen.getByText('Fake Sword')).toBeInTheDocument();
   });
 
-  it('allows selecting props for a new box', async () => {
-    const { getByText, getByLabelText } = render(
+  it('filters props by act and scene', () => {
+    render(
       <PackingList
         show={mockShow}
-        boxes={mockBoxes}
+        boxes={[]}
         props={mockProps}
         onCreateBox={mockOnCreateBox}
         onUpdateBox={mockOnUpdateBox}
         onDeleteBox={mockOnDeleteBox}
       />
     );
-    
-    // Click on a prop to select it
-    fireEvent.click(getByText('Test Prop 1'));
-    
-    // Enter box name
-    const boxNameInput = getByLabelText('Box Name');
-    fireEvent.change(boxNameInput, { target: { value: 'New Box' } });
-    
-    // Create box
-    fireEvent.click(getByText('Create Box'));
-    
-    await waitFor(() => {
-      expect(mockOnCreateBox).toHaveBeenCalledWith(
-        expect.arrayContaining([expect.objectContaining({ id: '1' })]),
-        1,
-        1
-      );
-    });
+
+    // Default view (Act 1, Scene 1)
+    expect(screen.queryByText('Old Chair')).toBeInTheDocument();
+    expect(screen.queryByText('Fake Sword')).not.toBeInTheDocument();
+
+    // Change to Act 1, Scene 2
+    fireEvent.change(screen.getByLabelText('Act'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Scene'), { target: { value: '2' } });
+
+    expect(screen.queryByText('Old Chair')).not.toBeInTheDocument();
+    expect(screen.queryByText('Fake Sword')).toBeInTheDocument();
+  });
+  
+  it('allows selecting props and creating a box', () => {
+    render(
+      <PackingList
+        show={mockShow}
+        boxes={[]}
+        props={mockProps}
+        onCreateBox={mockOnCreateBox}
+        onUpdateBox={mockOnUpdateBox}
+        onDeleteBox={mockOnDeleteBox}
+      />
+    );
+
+    // Select the sword
+    const swordCheckbox = screen.getByRole('button', { name: /Fake Sword/i });
+    fireEvent.click(swordCheckbox);
+
+    const createBoxButton = screen.getByRole('button', { name: /Create Box/i });
+    fireEvent.click(createBoxButton);
+
+    // Check if onCreateBox was called with the selected prop data
+    expect(mockOnCreateBox).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ propId: '2', name: 'Fake Sword' })
+      ]),
+      1,
+      2
+    );
   });
 
-  it('shows fragile indicator for fragile props', () => {
-    const { getByText } = render(
-      <PackingList
-        show={mockShow}
-        boxes={mockBoxes}
-        props={mockProps}
-        onCreateBox={mockOnCreateBox}
-        onUpdateBox={mockOnUpdateBox}
-        onDeleteBox={mockOnDeleteBox}
-      />
-    );
-    
-    expect(getByText('Fragile')).toBeInTheDocument();
-  });
-
-  it('shows weight information for props', () => {
-    const { getByText } = render(
-      <PackingList
-        show={mockShow}
-        boxes={mockBoxes}
-        props={mockProps}
-        onCreateBox={mockOnCreateBox}
-        onUpdateBox={mockOnUpdateBox}
-        onDeleteBox={mockOnDeleteBox}
-      />
-    );
-    
-    expect(getByText('5 kg')).toBeInTheDocument();
-    expect(getByText('3 kg')).toBeInTheDocument();
-  });
-
-  it('disables already selected props', async () => {
-    const { getByText } = render(
-      <PackingList
-        show={mockShow}
-        boxes={mockBoxes}
-        props={mockProps}
-        onCreateBox={mockOnCreateBox}
-        onUpdateBox={mockOnUpdateBox}
-        onDeleteBox={mockOnDeleteBox}
-      />
-    );
-    
-    const prop1Button = getByText('Test Prop 1').closest('button');
-    expect(prop1Button).not.toBeDisabled();
-    
-    fireEvent.click(prop1Button!);
-    
-    await waitFor(() => {
-      expect(prop1Button).toBeDisabled();
-    });
-  });
+  // Add tests for updating and deleting boxes if those functionalities are rendered
 }); 

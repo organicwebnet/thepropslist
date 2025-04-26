@@ -1,4 +1,6 @@
-import type { Prop } from '../types';
+import { google } from 'googleapis';
+// import { authorize } from './auth'; // Commented out: Cannot find module
+import type { Prop } from '@shared/types';
 
 function convertToCSV(props: Prop[]): string {
   // Define headers
@@ -77,17 +79,20 @@ function convertToCSV(props: Prop[]): string {
   });
 
   // Escape special characters and wrap fields in quotes if needed
-  const escapeField = (field: string) => {
-    if (field.includes(',') || field.includes('"') || field.includes('\n')) {
-      return `"${field.replace(/"/g, '""')}"`;
+  const escapeField = (field: string): string => {
+    if (field === null || field === undefined) return ''; // Handle null/undefined
+    const strField = String(field); // Ensure it's a string
+    if (strField.includes(',') || strField.includes('\"') || strField.includes('\n')) {
+      return `\"${strField.replace(/\"/g, '\"\"')}\"`;
     }
-    return field;
+    return strField;
   };
 
   // Convert to CSV string
   const csvContent = [
     headers.map(escapeField).join(','),
-    ...rows.map(row => row.map(escapeField).join(','))
+    // Use inline function to handle map arguments and potential undefined values
+    ...rows.map(row => row.map(value => escapeField(value ?? '')).join(',')) 
   ].join('\n');
 
   return csvContent;

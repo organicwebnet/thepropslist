@@ -1,4 +1,6 @@
-import { useParams } from 'react-router-dom';
+import { useLocalSearchParams } from 'expo-router';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Home, List, Settings, BarChart2, Search } from 'lucide-react-native';
 
 interface TabNavigationProps {
   activeTab: 'props' | 'shows' | 'packing';
@@ -7,7 +9,7 @@ interface TabNavigationProps {
 }
 
 export function TabNavigation({ activeTab, setActiveTab, navigate }: TabNavigationProps) {
-  const { showId } = useParams<{ showId?: string }>();
+  const { showId } = useLocalSearchParams<{ showId?: string }>();
 
   const handleTabClick = (tab: 'props' | 'shows' | 'packing') => {
     setActiveTab(tab);

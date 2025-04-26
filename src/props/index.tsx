@@ -1,68 +1,44 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { Stack } from 'expo-router';
-import { ActivityIndicator } from 'react-native-paper';
-import PropsList from '../components/PropsList';
-import { getProps, getShow } from '../services/propService';
-import type { Prop } from '../types/Prop';
-import { Filters } from '../types';
+import { View, StyleSheet, Text, ActivityIndicator, Button } from 'react-native';
+import { Stack, Link } from 'expo-router';
+import { PropList } from '../components/PropList';
+import type { Prop } from '@shared/types';
 import type { Show } from '../types';
+import type { Filters } from '../types';
 
-export default function PropsListPage() {
+export function PropsPage() {
   const [props, setProps] = useState<Prop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<Filters>(Filters.create());
+  const [filters, setFilters] = useState<Filters>({ search: '' });
   const [show, setShow] = useState<Show | null>(null);
 
+  const getProps = async () => Promise.resolve([]);
+  const getShow = async () => Promise.resolve(null as Show | null);
+
   useEffect(() => {
-    async function loadData() {
+    const loadData = async () => {
+      setLoading(true);
       try {
-        console.log('DEBUG: Starting to load data...');
-        setLoading(true);
-        setError(null);
-        // For now, we're using a hardcoded show ID. In a real app, this would come from user context/auth
-        const showId = 'test-show-1';
-        console.log('DEBUG: Fetching data for showId:', showId);
-        
-        const [fetchedProps, fetchedShow] = await Promise.all([
-          getProps(showId),
-          getShow(showId),
-        ]);
-        
-        console.log('DEBUG: Data fetched successfully');
-        console.log('DEBUG: Props:', JSON.stringify(fetchedProps, null, 2));
-        console.log('DEBUG: Show:', JSON.stringify(fetchedShow, null, 2));
-        
-        setProps(fetchedProps);
-        setShow(fetchedShow);
+        const showData = await getShow();
+        const propsData = await getProps();
+        setShow(showData);
+        setProps(propsData);
       } catch (err) {
-        console.error('DEBUG: Error loading data:', err);
-        if (err instanceof Error) {
-          console.error('DEBUG: Error details:', err.message);
-          console.error('DEBUG: Error stack:', err.stack);
-        }
-        setError('Failed to load data. Please try again.');
+        setError('Failed to load data');
+        console.error(err);
       } finally {
         setLoading(false);
       }
-    }
-
+    };
     loadData();
   }, []);
 
-  const handleFilterChange = (newFilters: Filters) => {
-    console.log('Filters changed:', newFilters);
-    setFilters(newFilters);
-  };
-
-  const handleFilterReset = () => {
-    console.log('Filters reset');
-    setFilters(Filters.create());
+  const handleResetFilters = () => {
+    setFilters({ search: '' });
   };
 
   if (loading) {
-    console.log('Rendering loading state');
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
@@ -71,7 +47,6 @@ export default function PropsListPage() {
   }
 
   if (error || !show) {
-    console.log('Rendering error state:', error);
     return (
       <View style={styles.centered}>
         <Text>{error || 'Failed to load show data.'}</Text>
@@ -79,7 +54,19 @@ export default function PropsListPage() {
     );
   }
 
-  console.log('Rendering PropsList with', props.length, 'props');
+  const filteredProps = props.filter(prop => {
+    let match = true;
+    if (filters.search && !prop.name.toLowerCase().includes(filters.search.toLowerCase())) {
+        match = false;
+    }
+    if (filters.act && prop.act !== filters.act) match = false;
+    if (filters.scene && prop.scene !== filters.scene) match = false;
+    if (filters.category && prop.category !== filters.category) match = false;
+    if (filters.status && prop.status !== filters.status) match = false;
+
+    return match;
+  });
+
   return (
     <View style={styles.container}>
       <Stack.Screen 
@@ -89,14 +76,17 @@ export default function PropsListPage() {
         }} 
       />
       <View style={styles.content}>
-        <PropsList 
-          props={props}
+        <PropList 
+          props={filteredProps}
           show={show}
           filters={filters}
-          onFilterChange={handleFilterChange}
-          onFilterReset={handleFilterReset}
+          onFilterChange={setFilters}
+          onFilterReset={handleResetFilters}
         />
       </View>
+      <Link href={{ pathname: '/props/new' }} style={styles.addButton}>
+        <Text style={styles.addButtonText}>Add New Prop</Text>
+      </Link>
     </View>
   );
 }
@@ -113,5 +103,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  addButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    padding: 15,
+    backgroundColor: '#007bff',
+    borderRadius: 50,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 }); 

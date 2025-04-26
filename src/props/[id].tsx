@@ -1,27 +1,54 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../_layout';
-import { Prop } from '../types/Prop';
+import { db } from '../lib/firebase';
+import type { Prop } from '@shared/types';
+import type { PropLifecycleStatus } from '../types/lifecycle';
+// import { getProp } from '../services/propService'; // Commented out: Cannot find module
+import { PropForm } from '../components/PropForm';
 
 export default function PropDetails() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [prop, setProp] = useState<Prop | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // Placeholder for missing service call
+  const getProp = async (id: string): Promise<Prop | null> => {
+    console.warn('getProp service function is missing, returning null.');
+    return null; 
+  };
 
   useEffect(() => {
     const fetchProp = async () => {
       try {
         const propDoc = await getDoc(doc(db, 'props', id as string));
         if (propDoc.exists()) {
-          setProp({
+          const fetchedData = propDoc.data();
+          const propData: Partial<Prop> = {
             id: propDoc.id,
-            ...propDoc.data(),
-            lastUpdated: propDoc.data().lastUpdated?.toDate(),
-          } as Prop);
+            userId: fetchedData.userId,
+            showId: fetchedData.showId,
+            name: fetchedData.name,
+            description: fetchedData.description,
+            category: fetchedData.category,
+            price: fetchedData.price,
+            quantity: fetchedData.quantity,
+            location: fetchedData.location,
+            status: fetchedData.status,
+            condition: fetchedData.condition,
+            tags: fetchedData.tags,
+            images: fetchedData.images,
+            lastUpdated: fetchedData.lastUpdated?.toDate ? fetchedData.lastUpdated.toDate() : undefined,
+          };
+          setProp(propData as Prop);
+        } else {
+          setError('Prop not found.');
         }
       } catch (error) {
         console.error('Error fetching prop:', error);
@@ -30,6 +57,7 @@ export default function PropDetails() {
       }
     };
 
+    // Placeholder call
     fetchProp();
   }, [id]);
 
@@ -96,12 +124,12 @@ export default function PropDetails() {
           />
           <DetailItem
             label="Condition"
-            value={prop.condition}
+            value={prop.condition ?? 'N/A'}
             isDark={isDark}
           />
           <DetailItem
             label="Last Updated"
-            value={prop.lastUpdated.toLocaleDateString()}
+            value={prop.lastUpdated ? prop.lastUpdated.toLocaleDateString() : 'N/A'}
             isDark={isDark}
           />
         </View>
@@ -118,13 +146,13 @@ export default function PropDetails() {
         </View>
       )}
 
-      {prop.tags.length > 0 && (
+      {(prop.tags?.length ?? 0) > 0 && (
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
             Tags
           </Text>
           <View style={styles.tags}>
-            {prop.tags.map((tag, index) => (
+            {prop.tags?.map((tag, index) => (
               <Text
                 key={index}
                 style={[
@@ -145,33 +173,43 @@ export default function PropDetails() {
   );
 }
 
-function DetailItem({ label, value, isDark }: { label: string; value: string; isDark: boolean }) {
+function DetailItem({ label, value, isDark }: { label: string; value: string | undefined | null; isDark: boolean }) {
   return (
     <View style={styles.detailItem}>
       <Text style={[styles.detailLabel, { color: isDark ? '#aaa' : '#666' }]}>
         {label}
       </Text>
       <Text style={[styles.detailValue, { color: isDark ? '#fff' : '#000' }]}>
-        {value}
+        {value ?? 'N/A'}
       </Text>
     </View>
   );
 }
 
-const getStatusColor = (status: Prop['status']) => {
-  switch (status) {
+function getStatusColor(status: PropLifecycleStatus | undefined): string {
+  if (!status) return '#718096'; // gray-500
+
+  // Use string values for comparison, casting status to string
+  switch (status as string) { // Explicit cast to string
     case 'available':
-      return '#4CAF50';
+      return '#48bb78'; // green-500
     case 'in-use':
-      return '#2196F3';
+      return '#4299e1'; // blue-500
     case 'maintenance':
-      return '#FFC107';
-    case 'lost':
-      return '#F44336';
+    case 'repair-needed':
+      return '#ecc94b'; // yellow-500
+    case 'lost/damaged': // Check actual value in type
+      return '#f56565'; // red-500
+    case 'storage':
+       return '#a0aec0'; // gray-400
+    case 'retired':
+       return '#718096'; // gray-500 
     default:
-      return '#9E9E9E';
+      // Handle any potential new statuses gracefully
+      console.warn(`Unknown status encountered in getStatusColor: ${status}`);
+      return '#a0aec0'; // Default gray-400
   }
-};
+}
 
 const styles = StyleSheet.create({
   container: {

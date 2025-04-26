@@ -1,5 +1,7 @@
-import { PackingBox, PackedProp, Prop } from '../types';
-import { generateId } from '../lib/utils';
+import { generateId } from "../lib/utils";
+import { PackedProp } from "../types";
+import { PackingBox } from '../types';
+import type { Prop } from '@shared/types';
 
 export class PackingService {
   private static instance: PackingService;

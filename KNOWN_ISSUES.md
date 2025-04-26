@@ -155,6 +155,62 @@
 - [ ] Add troubleshooting guides
 - [ ] Document platform specifics
 
+## Test Setup and Mocking Issues
+**Status**: Active
+**Priority**: Medium
+**Impact**: Quality Assurance / Developer Experience
+**Description**: Numerous TypeScript errors (`TS2345: Argument of type ... is not assignable to parameter of type 'never'`) occur in test files (`src/components/__tests__/OfflineSync.test.ts`, `src/platforms/mobile/services/__tests__/MobileFirebaseService.test.ts`). This often involves complex types (e.g., Firebase SDK types) being mocked with `jest.fn()` and assertions like `as any`.
+**Required Changes**:
+- Review mock implementations for type correctness.
+- Update Jest type definitions or configurations if necessary.
+- Potentially relax type checking specifically for mocks where intentional simplification is used, or use more robust mocking utilities.
+**Action Items**:
+- [ ] Investigate type errors in `OfflineSync.test.ts`.
+- [ ] Investigate type conversion errors (`TS2352`) in `MobileFirebaseService.test.ts`.
+- [ ] Refine mocking strategy for Firebase and other complex services.
+
+## Navigation Typing Issues
+**Status**: Active
+**Priority**: High
+**Impact**: Runtime / Developer Experience
+**Description**: Multiple errors related to `react-navigation` (`TS2344`, `TS2322`, `TS2345`, `TS2339`) indicate mismatches between `navigation.navigate` calls and the defined `RootStackParamList`. Screen names or parameters might be incorrect, or the type definition itself needs updating. Affects files like `src/navigation/AppNavigator.tsx`, `src/pages/Packing.tsx`, `src/pages/Shows.tsx`.
+**Required Changes**:
+- Verify all screen names used in `navigate` calls exist in `RootStackParamList`.
+- Ensure parameters passed match the expected types for each screen.
+- Update `RootStackParamList` in `src/navigation/types.ts` to accurately reflect the navigation structure.
+**Action Items**:
+- [ ] Audit all `navigation.navigate` calls against `RootStackParamList`.
+- [ ] Correct screen names and parameters in navigation calls.
+- [ ] Update `RootStackParamList` definition.
+
+## Firebase Service Type Issues
+**Status**: Active
+**Priority**: Medium
+**Impact**: Code Quality / Developer Experience
+**Description**: TypeScript errors (`TS2416`, `TS2353`) in Firebase service implementations (`src/platforms/mobile/services/firebase.ts`, `src/platforms/web/services/firebase.ts`, `src/shared/services/firebase/base.ts`). Issues include `BaseFirebaseService` not correctly implementing `FirebaseService`, properties missing (`createDocumentWrapper`), or custom `FirebaseDocument` type potentially missing expected fields like `data`.
+**Required Changes**:
+- Ensure `BaseFirebaseService` and platform-specific implementations correctly adhere to the `FirebaseService` interface.
+- Align the structure of the custom `FirebaseDocument` type with how Firestore documents are accessed (e.g., using `.data()`).
+- Correct method visibility and signatures across base and derived service classes.
+**Action Items**:
+- [ ] Fix `BaseFirebaseService` implementation against `FirebaseService` interface.
+- [ ] Correct `FirebaseDocument` type definition or usage in service methods.
+- [ ] Resolve method signature/visibility mismatches between base and derived Firebase services.
+
+## Expo Router Link[href] Type Issue
+**Status**: Active
+**Priority**: Medium
+**Impact**: Build / Developer Experience
+**Description**: Using a typed object like `{ pathname: '/props/new' }` for the `href` prop of the `expo-router` `Link` component (as recommended for type safety) results in a `Type '{ pathname: string; }' is not assignable to type 'never'` error in files like `src/props/index.tsx`. String literals also cause errors. This indicates a potential problem with Expo Router type inference or project setup.
+**Required Changes**:
+- Investigate `tsconfig.json` paths and Expo Router type generation.
+- Ensure the correct `Link` component is imported from `expo-router`.
+- Verify compatibility between Expo SDK, Expo Router, and TypeScript versions.
+**Action Items**:
+- [ ] Review Expo Router setup and type generation.
+- [ ] Check `Link` component import source.
+- [ ] Investigate potential type conflicts or configuration issues.
+
 ## Performance Issues
 
 ### 1. Bundle Size

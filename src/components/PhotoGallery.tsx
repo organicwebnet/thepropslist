@@ -1,9 +1,9 @@
 import React from 'react';
 import { X, Plus } from 'lucide-react';
-import type { GooglePhoto } from '../types';
+// import type { GooglePhoto } from '../types'; // Commented out
 
 interface PhotoGalleryProps {
-  photos: GooglePhoto[];
+  photos: any[]; // Changed type to any[] temporarily
   onRemovePhoto?: (photoId: string) => void;
   onSetMainPhoto?: (photoId: string) => void;
   mainPhotoId?: string;
@@ -13,7 +13,7 @@ interface PhotoGalleryProps {
 export function PhotoGallery({ photos, onRemovePhoto, onSetMainPhoto, mainPhotoId, readOnly = false }: PhotoGalleryProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-      {photos.map(photo => (
+      {photos.map((photo: any) => (
         <div
           key={photo.id}
           className={`relative aspect-square rounded-lg overflow-hidden group ${

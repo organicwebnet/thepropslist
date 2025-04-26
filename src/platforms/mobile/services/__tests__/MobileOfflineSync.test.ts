@@ -2,13 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { MobileOfflineSync } from '../MobileOfflineSync';
 import { PendingOperation } from '../../../../shared/services/firebase/types';
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import firestore from '@react-native-firebase/firestore';
 
 jest.mock('@react-native-async-storage/async-storage');
 jest.mock('@react-native-community/netinfo');
 
+jest.mock('@react-native-firebase/firestore', () => {
+  const mockEnableNetwork = jest.fn().mockResolvedValue(undefined);
+  const mockDisableNetwork = jest.fn().mockResolvedValue(undefined);
+
+  return jest.fn(() => ({
+    enableNetwork: mockEnableNetwork,
+    disableNetwork: mockDisableNetwork,
+  }));
+});
+
 describe('MobileOfflineSync', () => {
   let offlineSync: MobileOfflineSync;
   let netInfoCallback: (state: { isConnected: boolean }) => void;
+  let mockFirestoreInstance: FirebaseFirestoreTypes.Module;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -16,7 +29,10 @@ describe('MobileOfflineSync', () => {
       netInfoCallback = callback;
       return () => {};
     });
-    offlineSync = new MobileOfflineSync();
+
+    mockFirestoreInstance = firestore() as unknown as FirebaseFirestoreTypes.Module;
+
+    offlineSync = new MobileOfflineSync(mockFirestoreInstance);
   });
 
   describe('initialization', () => {
@@ -183,6 +199,20 @@ describe('MobileOfflineSync', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(mockOperation.execute).toHaveBeenCalled();
+    });
+  });
+
+  describe('enableSync', () => {
+    it('should call firestoreInstance.enableNetwork', async () => {
+      await offlineSync.enableSync();
+      expect(mockFirestoreInstance.enableNetwork).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('disableSync', () => {
+    it('should call firestoreInstance.disableNetwork', async () => {
+      await offlineSync.disableSync();
+      expect(mockFirestoreInstance.disableNetwork).toHaveBeenCalledTimes(1);
     });
   });
 }); 

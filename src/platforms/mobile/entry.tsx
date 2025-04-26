@@ -1,99 +1,37 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import 'expo-router/entry';
+import React from 'react';
+import { AppRegistry } from 'react-native';
+import App from '../../../App'; // Adjust path if needed
 import { AuthProvider } from '../../contexts/AuthContext';
-import { FontProvider } from '../../contexts/FontContext';
-import { StatusBar } from 'expo-status-bar';
-import { HomeScreen } from './screens/HomeScreen';
-import { PropsListScreen } from './screens/PropsListScreen';
-import { PropFormScreen } from './screens/PropFormScreen';
-import { NotificationHandler } from './features/notifications/NotificationHandler';
-import { useFonts } from '../../shared/hooks/useFonts';
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
-import { FirebaseProvider } from '../../contexts/FirebaseContext';
+// import { FontProvider } from '../../contexts/FontContext'; // Commented out
+import { ThemeProvider } from '../../contexts/ThemeContext';
+// import { useFonts } from '../../shared/hooks/useFonts'; // Assuming font loading hook is separate
 
-const Stack = createNativeStackNavigator();
+// Main application component wrapper
+const MainApp = () => {
+  // Font loading logic needs to be handled here if using custom fonts
+  // const { fontsLoaded, error } = useFonts(); // Commented out
 
-export default function MobileApp() {
-  const { fontsLoaded, fontError } = useFonts();
+  // if (!fontsLoaded) {
+  //   // Render loading state or default font component
+  //   return null; // Or a loading indicator
+  // }
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading fonts...</Text>
-      </View>
-    );
-  }
-
-  if (fontError) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>
-          {fontError}
-        </Text>
-        <Text style={styles.errorSubText}>
-          Please restart the app or contact support if the issue persists.
-        </Text>
-      </View>
-    );
-  }
+  // if (error) {
+  //   console.error('Error loading fonts:', error);
+  //   // Optionally render an error state
+  // }
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="auto" />
-      <FirebaseProvider>
-        <AuthProvider>
-          <FontProvider>
-            <NavigationContainer>
-              <Stack.Navigator>
-                <Stack.Screen 
-                  name="Home" 
-                  component={HomeScreen}
-                  options={{ title: 'Props Bible' }}
-                />
-                <Stack.Screen 
-                  name="PropsList" 
-                  component={PropsListScreen}
-                  options={{ title: 'Props List' }}
-                />
-                <Stack.Screen 
-                  name="PropForm" 
-                  component={PropFormScreen}
-                  options={{ title: 'Add/Edit Prop' }}
-                />
-              </Stack.Navigator>
-            </NavigationContainer>
-            <NotificationHandler />
-          </FontProvider>
-        </AuthProvider>
-      </FirebaseProvider>
-    </SafeAreaProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        {/* <FontProvider> */}
+          <App />
+        {/* </FontProvider> */}
+      </ThemeProvider>
+    </AuthProvider>
   );
-}
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#4b5563',
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  errorSubText: {
-    color: '#6b7280',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-}); 
+// Register the main application component
+AppRegistry.registerComponent('main', () => MainApp); 
