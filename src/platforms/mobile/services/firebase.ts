@@ -209,4 +209,40 @@ export class MobileFirebaseService implements FirebaseService {
     if (!this._storage) throw new Error("Storage not initialized");
     return this._storage;
   }
+
+  // Add placeholder implementations for missing FirebaseService methods
+  async deleteDocument(collectionPath: string, documentId: string): Promise<void> {
+    console.warn(`Mobile deleteDocument(${collectionPath}, ${documentId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null> {
+    console.warn(`Mobile getDocument(${collectionPath}, ${documentId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async updateDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void> {
+    console.warn(`Mobile updateDocument(${collectionPath}, ${documentId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
+    console.warn(`Mobile addDocument(${collectionPath}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async uploadFile(path: string, file: File): Promise<string> {
+    console.warn(`Mobile uploadFile(${path}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async deleteFile(path: string): Promise<void> {
+    console.warn(`Mobile deleteFile(${path}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async deleteShow(showId: string): Promise<void> {
+    console.warn(`Mobile deleteShow(${showId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
 } 

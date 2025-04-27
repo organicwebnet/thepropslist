@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { Camera, CameraType } from 'expo-camera';
+import { Camera, CameraView, CameraType } from 'expo-camera';
 import { MaterialIcons } from '@expo/vector-icons';
 import { CameraService, CameraPermissions } from './CameraService';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MediaLibrary } from 'expo-media-library';
 
 interface CameraScreenProps {
   onPhotoTaken: (uri: string) => void;
@@ -11,10 +12,10 @@ interface CameraScreenProps {
 }
 
 export function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProps) {
-  const [type, setType] = useState(CameraType.back);
+  const [type, setType] = useState<CameraType>(CameraType.back);
   const [permissions, setPermissions] = useState<CameraPermissions | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const cameraRef = useRef<Camera>(null);
+  const cameraRef = useRef<CameraView | null>(null);
   const cameraService = CameraService.getInstance();
 
   useEffect(() => {
@@ -26,7 +27,7 @@ export function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProps) {
   }, []);
 
   const toggleCameraType = () => {
-    setType(current => (current === CameraType.back ? CameraType.front : CameraType.back));
+    setType((current: CameraType) => (current === CameraType.back ? CameraType.front : CameraType.back));
   };
 
   const handleTakePicture = async () => {
@@ -71,7 +72,7 @@ export function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Camera style={styles.camera} type={type} ref={cameraRef}>
+      <CameraView style={styles.camera} facing={type === CameraType.back ? 'back' : 'front'} ref={cameraRef}>
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.button} onPress={onClose}>
             <MaterialIcons name="close" size={32} color="white" />
@@ -86,7 +87,7 @@ export function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProps) {
         <TouchableOpacity style={styles.galleryButton} onPress={handlePickImage}>
           <MaterialIcons name="photo-library" size={32} color="white" />
         </TouchableOpacity>
-      </Camera>
+      </CameraView>
     </SafeAreaView>
   );
 }

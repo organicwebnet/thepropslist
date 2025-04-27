@@ -1,13 +1,28 @@
-import { useState } from 'react';
-import { MessageSquare, HelpCircle } from 'lucide-react';
+import React from 'react';
+import { Link } from 'expo-router';
+import { MessageSquare, HelpCircle, Github, Twitter, Linkedin } from 'lucide-react';
 import { FeedbackForm } from './FeedbackForm';
 import { HelpCenter } from './HelpCenter';
-import { auth } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { useFirebase } from '@/contexts/FirebaseContext';
 
 export function Footer() {
-  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
-  const [showHelpCenter, setShowHelpCenter] = useState(false);
+  const { user } = useAuth();
+  const { service } = useFirebase();
+  const [showFeedbackForm, setShowFeedbackForm] = React.useState(false);
+  const [showHelpCenter, setShowHelpCenter] = React.useState(false);
   
+  const handleSignOut = async () => {
+    if (service?.auth) { 
+      try {
+        await service.auth().signOut();
+        console.log('User signed out');
+      } catch (error) {
+        console.error("Error signing out: ", error);
+      }
+    }
+  };
+
   return (
     <footer className="mt-auto py-3 px-6 text-center border-t border-[var(--border-color)] bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -31,13 +46,19 @@ export function Footer() {
             <MessageSquare className="h-3 w-3" />
             <span>Feedback</span>
           </button>
+          
+          {user ? (
+            <button onClick={handleSignOut} className="text-gray-400 hover:text-white transition-colors">Sign Out</button>
+          ) : (
+            <Link href={{ pathname: "/login" as any }} className="text-gray-400 hover:text-white transition-colors">Login</Link>
+          )}
         </div>
       </div>
       
       {showFeedbackForm && (
         <FeedbackForm 
           onClose={() => setShowFeedbackForm(false)} 
-          userEmail={auth.currentUser?.email || undefined}
+          userEmail={user?.email || undefined}
         />
       )}
       

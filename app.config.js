@@ -28,7 +28,7 @@ module.exports = ({ config }) => {
     },
     web: {
       bundler: "metro",
-      favicon: "./public/icon-192.png"
+      favicon: "./public/icon.png"
     },
     hooks: {
       postPublish: [

@@ -338,6 +338,7 @@ interface AIService {
    - PDF generation
    - Bulk operations
    - Administrative interface
+   - **Note:** Web-specific UI pages (e.g., props list, prop details, prop form) will be implemented within `src/platforms/web/pages/` using web-native components and styling (e.g., Tailwind CSS), distinct from shared or mobile components.
 
 ### Phase 4: Integration Layer (Week 5)
 1. Payment System

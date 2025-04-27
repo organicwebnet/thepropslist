@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { updateProfile, signOut } from 'firebase/auth';
-import { db, auth, signInWithGoogle } from '../lib/firebase';
-import { User, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
+import { updateProfile, GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
+import { useAuth } from '../contexts/AuthContext';
+import { useFirebase } from '../contexts/FirebaseContext';
+import { User as UserIcon, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -14,16 +15,18 @@ interface UserProfileModalProps {
 type TabType = 'basic' | 'appearance' | 'additional';
 
 export function UserProfileModal({ onClose }: UserProfileModalProps) {
+  const { user, signOut } = useAuth();
+  const { service: firebaseService, isInitialized } = useFirebase();
   const [profile, setProfile] = useState<UserProfile & { googleLinked?: boolean }>({
-    displayName: auth.currentUser?.displayName || '',
-    email: auth.currentUser?.email || '',
-    photoURL: auth.currentUser?.photoURL || '',
+    displayName: user?.displayName || '',
+    email: user?.email || '',
+    photoURL: user?.photoURL || '',
     phone: '',
     location: '',
     organization: '',
     role: '',
     bio: '',
-    googleLinked: false
+    googleLinked: user?.providerData.some(p => p.providerId === 'google.com') || false
   });
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [loading, setLoading] = useState(true);
@@ -34,59 +37,42 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      if (!user || !isInitialized || !firebaseService) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
       try {
-        const currentUser = auth.currentUser;
-        if (!currentUser) return;
-
-        // Get the user's provider data
-        const googleData = currentUser.providerData.find(
-          provider => provider.providerId === 'google.com'
-        );
-        const appleData = currentUser.providerData.find(
-          provider => provider.providerId === 'apple.com'
-        );
-
-        // Log provider data for debugging
-        console.log('Auth providers:', currentUser.providerData.map(p => p.providerId));
-        
-        // Check if Google account is linked
-        const hasGoogleProvider = !!googleData;
-        
-        // Get existing profile from Firestore
-        const profileDoc = await getDoc(doc(db, 'userProfiles', currentUser.uid));
+        const db = firebaseService.firestore();
+        const profileDocRef = doc(db, 'userProfiles', user.uid);
+        const profileDoc = await getDoc(profileDocRef);
         const existingData = profileDoc.exists() ? profileDoc.data() : {};
 
-        // Merge provider data with existing profile data
+        const googleData = user.providerData.find(p => p.providerId === 'google.com');
+        const appleData = user.providerData.find(p => p.providerId === 'apple.com');
+        const hasGoogleProvider = !!googleData;
+
         setProfile(prev => ({
           ...prev,
           ...existingData,
-          displayName: existingData.displayName || 
-                      appleData?.displayName || 
-                      googleData?.displayName || 
-                      currentUser.displayName || '',
-          email: currentUser.email || '',
-          photoURL: existingData.photoURL || 
-                   appleData?.photoURL || 
-                   googleData?.photoURL || 
-                   currentUser.photoURL || '',
+          displayName: existingData.displayName || googleData?.displayName || user.displayName || '',
+          email: user.email || '',
+          photoURL: existingData.photoURL || googleData?.photoURL || user.photoURL || '',
           googleLinked: hasGoogleProvider || existingData.googleLinked || false
         }));
-
-        // If this is the first time setting up the profile, save the provider data
-        if (!profileDoc.exists()) {
-          const providerData = appleData || googleData;
-          if (providerData) {
-            await setDoc(doc(db, 'userProfiles', currentUser.uid), {
-              displayName: providerData.displayName || '',
-              email: providerData.email || '',
-              photoURL: providerData.photoURL || '',
-              provider: providerData.providerId,
-              googleLinked: providerData.providerId === 'google.com',
-              createdAt: new Date().toISOString(),
-              lastUpdated: new Date().toISOString()
-            });
-          }
+        
+        if (!profileDoc.exists() && googleData) {
+          await setDoc(profileDocRef, {
+            displayName: googleData.displayName || '',
+            email: googleData.email || '',
+            photoURL: googleData.photoURL || '',
+            provider: googleData.providerId,
+            googleLinked: true,
+            createdAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
         }
+
       } catch (error) {
         console.error('Error fetching profile:', error);
         setError('Failed to load profile data');
@@ -96,24 +82,25 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     };
 
     fetchProfile();
-  }, []);
+  }, [user, isInitialized, firebaseService]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth.currentUser) return;
+    if (!user || !isInitialized || !firebaseService) return;
 
     setSaving(true);
     setError(null);
 
     try {
-      // Update Firebase Auth profile
-      await updateProfile(auth.currentUser, {
+      const auth = firebaseService.auth();
+      const db = firebaseService.firestore();
+
+      await updateProfile(auth.currentUser!, {
         displayName: profile.displayName,
         photoURL: profile.photoURL
       });
 
-      // Update Firestore profile
-      await setDoc(doc(db, 'userProfiles', auth.currentUser.uid), {
+      await setDoc(doc(db, 'userProfiles', user.uid), {
         ...profile,
         lastUpdated: new Date().toISOString()
       });
@@ -129,15 +116,13 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !auth.currentUser) return;
+    if (!file || !user || !isInitialized || !firebaseService) return;
     
-    // Check if file is an image
     if (!file.type.match('image.*')) {
       setError('Please select an image file');
       return;
     }
     
-    // Check file size (limit to 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('Image size should be less than 5MB');
       return;
@@ -145,25 +130,15 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     
     try {
       setLoading(true);
-      
-      // Create a temporary URL to show the image immediately
       const tempURL = URL.createObjectURL(file);
       setProfile(prev => ({ ...prev, photoURL: tempURL }));
       
-      // Upload to Firebase Storage
-      const storage = getStorage();
-      const storageRef = ref(storage, `profile_images/${auth.currentUser.uid}`);
+      const storage = firebaseService.storage();
+      const storageRef = ref(storage, `profile_images/${user.uid}`);
       
-      // Upload the file
       await uploadBytes(storageRef, file);
-      
-      // Get the download URL
       const downloadURL = await getDownloadURL(storageRef);
-      
-      // Update profile with the permanent URL
       setProfile(prev => ({ ...prev, photoURL: downloadURL }));
-      
-      // Clean up temporary URL
       URL.revokeObjectURL(tempURL);
       
     } catch (error) {
@@ -175,25 +150,62 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   };
 
   const handleGoogleLink = async () => {
+    if (!user || !isInitialized || !firebaseService) {
+      setError("User not logged in or Firebase not ready.");
+      return;
+    }
     try {
       setLoading(true);
       setError('');
       
-      const result = await signInWithGoogle();
-      if (result?.user) {
-        // Update profile with Google data
-        setProfile(prev => ({
-          ...prev,
-          displayName: result?.user.displayName || prev.displayName,
-          photoURL: result?.user.photoURL || prev.photoURL,
-          googleLinked: true
-        }));
+      const auth = firebaseService.auth();
+      if (!auth.currentUser) {
+        throw new Error("Current user not found in auth instance.");
       }
+
+      const provider = new GoogleAuthProvider();
+      const result = await linkWithPopup(auth.currentUser, provider);
+      
+      const linkedUser = result.user;
+      const googleProviderData = linkedUser.providerData.find(p => p.providerId === 'google.com');
+      
+      setProfile(prev => ({
+        ...prev,
+        displayName: googleProviderData?.displayName || prev.displayName,
+        photoURL: googleProviderData?.photoURL || prev.photoURL,
+        googleLinked: true
+      }));
+      const db = firebaseService.firestore();
+      await setDoc(doc(db, 'userProfiles', user.uid), {
+        googleLinked: true,
+        lastUpdated: new Date().toISOString(),
+        displayName: profile.displayName || googleProviderData?.displayName || '',
+        photoURL: profile.photoURL || googleProviderData?.photoURL || ''
+      }, { merge: true });
+
     } catch (error: any) {
       console.error('Error linking Google account:', error);
-      setError(error?.message || 'Failed to link Google account');
+      if (error.code === 'auth/credential-already-in-use') {
+        setError('This Google account is already linked to another user.');
+      } else {
+        setError(error?.message || 'Failed to link Google account');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await signOut();
+      onClose();
+    } catch (error) {
+      console.error("Sign out error:", error);
+      setError("Failed to sign out. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -233,7 +245,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
                 }`}
               >
-                <User className="h-4 w-4" />
+                <UserIcon className="h-4 w-4" />
                 <span>Profile Info</span>
               </button>
               <button
@@ -271,79 +283,21 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
         <form onSubmit={handleSubmit} className="p-6">
           {activeTab === 'basic' && (
             <div className="space-y-6">
-              {/* Sync with Google Button */}
-              <div className="mb-6">
-                {/* Show different buttons based on whether Google provider is available */}
-                {profile.googleLinked ? (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const currentUser = auth.currentUser;
-                        if (!currentUser) return;
-
-                        const googleData = currentUser.providerData.find(
-                          provider => provider.providerId === 'google.com'
-                        );
-
-                        if (!googleData) {
-                          // Check if user's email ends with gmail.com but they didn't sign in with Google
-                          if (currentUser.email?.endsWith('@gmail.com')) {
-                            setError('Your account uses a Gmail address but was not signed in with Google. Please sign out and use the "Sign in with Google" option.');
-                          } else {
-                            setError('No Google account connected. Please sign out and sign in with Google to use this feature.');
-                          }
-                          return;
-                        }
-
-                        // Successfully found Google provider data
-                        setProfile(prev => ({
-                          ...prev,
-                          displayName: googleData.displayName || prev.displayName,
-                          photoURL: googleData.photoURL || prev.photoURL,
-                        }));
-
-                        // Show success message
-                        const oldError = error;
-                        setError('Successfully synced with Google account!');
-                        
-                        // After 3 seconds, clear the success message or restore previous error
-                        setTimeout(() => {
-                          setError(message => message === 'Successfully synced with Google account!' ? null : oldError);
-                        }, 3000);
-                      } catch (err) {
-                        console.error('Error syncing with Google:', err);
-                        setError('Failed to sync with Google account. Please try again.');
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Sync with Google Account
-                  </button>
-                ) : (
-                  <button
+              {!profile.googleLinked && (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Link Account</label>
+                  <button 
                     type="button"
                     onClick={handleGoogleLink}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
                     disabled={loading}
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
                   >
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Preparing Sign-in...
-                      </>
-                    ) : (
-                      <>
-                        <LinkIcon className="h-4 w-4" />
-                        Link Google Account
-                      </>
-                    )}
+                    <LinkIcon className="h-4 w-4" /> Link Google Account
                   </button>
-                )}
-              </div>
+                  {error?.includes('Google') && <p className="text-red-500 text-xs mt-1">{error}</p>}
+                </div>
+              )}
 
-              {/* Profile Picture */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-300 mb-4">
                   Profile Picture
@@ -358,7 +312,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       />
                     ) : (
                       <div className="w-32 h-32 rounded-full bg-gray-800 flex items-center justify-center border-4 border-primary">
-                        <User className="h-16 w-16 text-sky-400" />
+                        <UserIcon className="h-16 w-16 text-sky-400" />
                       </div>
                     )}
                     <div 
@@ -378,14 +332,13 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                 </div>
               </div>
 
-              {/* Name and Email */}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Display Name
                   </label>
                   <div className="flex items-center space-x-2">
-                    <User className="h-5 w-5 text-gray-400" />
+                    <UserIcon className="h-5 w-5 text-gray-400" />
                     <input
                       type="text"
                       value={profile.displayName}
@@ -416,7 +369,6 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
 
           {activeTab === 'appearance' && (
             <div className="space-y-8">
-              {/* Theme Selection */}
               <div>
                 <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Theme</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -543,14 +495,14 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
             </div>
           )}
 
-          {/* Footer */}
           <div className="mt-8 pt-6 border-t border-gray-800 flex justify-end space-x-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleSignOut}
+              disabled={saving}
               className="px-6 py-2 text-gray-400 hover:text-gray-200 transition-colors"
             >
-              Cancel
+              Sign Out
             </button>
             <button
               type="submit"

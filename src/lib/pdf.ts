@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import QRCode from 'qrcode';
-import { fetchStorageImage } from './firebase';
+// import { fetchStorageImage } from './firebase'; // Commented out - Needs rework with context
 import type { Show } from '../types';
 import type { Prop } from '@shared/types';
 
@@ -84,7 +84,17 @@ async function loadImage(url: string): Promise<string | null> {
     
     let imageBlob: Blob;
     if (isFirebaseStorage) {
-      imageBlob = await fetchStorageImage(url);
+      // imageBlob = await fetchStorageImage(url); // Commented out usage
+      console.warn('Fetching Firebase storage images in PDF generation is currently disabled pending refactor.');
+      // Fallback: try fetching directly (might fail due to CORS/auth without service)
+      try {
+        const response = await fetch(url); 
+        if (!response.ok) throw new Error(`Failed to fetch image directly: ${response.status}`);
+        imageBlob = await response.blob();
+      } catch (directFetchError) {
+        console.error('Direct fetch attempt also failed:', directFetchError);
+        return null; // Cannot load image
+      }
     } else {
       const response = await fetch(url);
       if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);

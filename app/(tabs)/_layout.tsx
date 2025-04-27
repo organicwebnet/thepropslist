@@ -1,9 +1,35 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Platform, Pressable, Alert } from 'react-native';
+import { useAuth } from '../../src/contexts/AuthContext';
+import { LogOut } from 'lucide-react';
 
 export default function TabsLayout() {
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+      Alert.alert(
+          "Confirm Sign Out",
+          "Are you sure you want to sign out?",
+          [
+              { text: "Cancel", style: "cancel" },
+              {
+                  text: "Sign Out",
+                  style: "destructive",
+                  onPress: async () => {
+                      try {
+                          await signOut();
+                      } catch (error) {
+                          console.error("Sign out error:", error);
+                          Alert.alert("Error", "Failed to sign out. Please try again.");
+                      }
+                  },
+              },
+          ]
+      );
+  };
+
   return (
     <Tabs
       screenOptions={{
@@ -19,6 +45,7 @@ export default function TabsLayout() {
           elevation: 0,
           height: Platform.OS === 'ios' ? 88 : 60,
           paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+          display: Platform.OS === 'web' ? 'none' : 'flex',
         },
         tabBarInactiveTintColor: '#9CA3AF',
         tabBarLabelStyle: {
@@ -28,6 +55,12 @@ export default function TabsLayout() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        headerRight: Platform.OS === 'web' ? undefined : () => (
+          <Pressable onPress={handleSignOut} style={{ marginRight: 15 }}>
+            <LogOut size={24} color="#FFF" /> 
+          </Pressable>
+        ),
+        headerShown: Platform.OS !== 'web',
       }}
     >
       <Tabs.Screen

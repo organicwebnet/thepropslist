@@ -1,9 +1,18 @@
-import React, { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, AuthError, User, UserCredential } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  AuthError, 
+  User, 
+  UserCredential, 
+  getRedirectResult, 
+  signInWithPopup,
+  GoogleAuthProvider
+} from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db, signInWithGoogle } from '../lib/firebase';
+import { useFirebase } from '../contexts/FirebaseContext';
 import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { getRedirectResult } from 'firebase/auth';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -20,6 +29,7 @@ function RequiredLabel({ children }: { children: React.ReactNode }): JSX.Element
 }
 
 export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
+  const { service: firebaseService, isInitialized, error: firebaseError } = useFirebase();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,39 +38,50 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (firebaseError) {
+      setError(`Firebase initialization failed: ${firebaseError.message}`);
+    }
+  }, [firebaseError]);
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
 
+    if (!isInitialized || !firebaseService) {
+      setError("Firebase service not available. Please wait or refresh.");
+      setLoading(false);
+      return;
+    }
+    
+    const auth = firebaseService.auth();
+    const db = firebaseService.firestore();
+    const provider = new GoogleAuthProvider();
+
     try {
-      // Check if we have a redirect result
-      const redirectResult = await getRedirectResult(auth);
-      if (redirectResult?.user) {
-        // Update Firestore profile
-        await setDoc(doc(db, 'userProfiles', redirectResult.user.uid), {
-          displayName: redirectResult.user.displayName || '',
-          email: redirectResult.user.email || '',
-          photoURL: redirectResult.user.photoURL || '',
-          provider: 'google.com',
-          createdAt: new Date().toISOString(),
-          lastUpdated: new Date().toISOString()
-        }, { merge: true });
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-        onClose();
-        return;
-      }
+      await setDoc(doc(db, 'userProfiles', user.uid), {
+        displayName: user.displayName || '',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+        provider: 'google.com',
+        createdAt: new Date().toISOString(),
+        lastUpdated: new Date().toISOString()
+      }, { merge: true });
 
-      // If no redirect result, initiate sign in
-      await signInWithGoogle();
+      onClose();
     } catch (error: any) {
       console.error('Google sign in error:', error);
-      
       let errorMessage = 'Unable to sign in with Google. Please try again.';
-      
-      if (error.code === 'auth/unauthorized-domain') {
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Google Sign-In window closed. Please try again.';
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = 'Multiple sign-in windows opened. Please close others and try again.';
+      } else if (error.code === 'auth/unauthorized-domain') {
         errorMessage = `This domain (${window.location.hostname}) is not authorized for Google Sign-In. Please contact support.`;
       }
-      
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -99,6 +120,12 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
     setError(null);
     setSuccess(null);
 
+    if (!isInitialized || !firebaseService) {
+      setError("Firebase service not available.");
+      return;
+    }
+    const auth = firebaseService.auth();
+
     if (!validateForm()) {
       return;
     }
@@ -136,6 +163,12 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
     e.preventDefault();
     setError(null);
     setSuccess(null);
+    
+    if (!isInitialized || !firebaseService) {
+      setError("Firebase service not available.");
+      return;
+    }
+    const auth = firebaseService.auth();
 
     if (!validateForm()) {
       return;
@@ -395,7 +428,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isInitialized}
                 className="w-full inline-flex items-center justify-center rounded-lg bg-primary px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-medium text-white hover:shadow-neon border border-primary-neon/20 hover:border-primary-neon/50 focus:outline-none focus:ring-2 focus:ring-primary-neon/50 focus:ring-offset-2 focus:ring-offset-[#1A1A1A] disabled:opacity-50 transition-all duration-300"
               >
                 {loading ? (
@@ -424,7 +457,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                       setError(null);
                       setSuccess(null);
                     }}
-                    className="text-sm text-primary-neon hover:text-primary-light transition-colors"
+                    className="text-sm text-dark-primary-neon hover:text-primary-light transition-colors"
                   >
                     Back to Sign In
                   </button>
@@ -437,7 +470,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                         setError(null);
                         setSuccess(null);
                       }}
-                      className="text-sm text-primary-neon hover:text-primary-light transition-colors"
+                      className="text-sm text-dark-primary-neon hover:text-primary-light transition-colors"
                     >
                       {mode === 'signup' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
                     </button>
@@ -450,7 +483,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                           setSuccess(null);
                           setPassword('');
                         }}
-                        className="block w-full text-sm text-primary-neon hover:text-primary-light transition-colors"
+                        className="block w-full text-sm text-dark-primary-neon hover:text-primary-light transition-colors"
                       >
                         Forgot your password?
                       </button>

@@ -1,5 +1,6 @@
 import { addDoc, collection } from 'firebase/firestore';
-import { db } from './lib/firebase';
+// import { db } from './lib/firebase'; // Remove direct import
+import type { CustomFirestore } from '@/shared/services/firebase/types'; // Import correct type
 
 const testProducts = [
   {
@@ -106,7 +107,8 @@ const testShow = {
   contacts: [],
 };
 
-export async function addTestData() {
+export async function addTestData(dbInstance: CustomFirestore) {
+  if (!dbInstance) throw new Error('Firestore instance is required for addTestData.');
   // Get the current user's ID from Firebase Auth
   const auth = (await import('firebase/auth')).getAuth();
   const currentUser = auth.currentUser;
@@ -125,7 +127,7 @@ export async function addTestData() {
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'props'), productData);
+      await addDoc(collection(dbInstance as any, 'props'), productData);
       console.log(`Added product: ${product.name}`);
     } catch (error) {
       console.error(`Error adding ${product.name}:`, error);
@@ -133,7 +135,8 @@ export async function addTestData() {
   }
 }
 
-export async function addMacbethShow() {
+export async function addMacbethShow(dbInstance: CustomFirestore) {
+  if (!dbInstance) throw new Error('Firestore instance is required for addMacbethShow.');
   // Get the current user's ID from Firebase Auth
   const auth = (await import('firebase/auth')).getAuth();
   const currentUser = auth.currentUser;
@@ -151,7 +154,7 @@ export async function addMacbethShow() {
       createdAt: new Date().toISOString()
     };
 
-    const showRef = await addDoc(collection(db, 'shows'), showData);
+    const showRef = await addDoc(collection(dbInstance as any, 'shows'), showData);
     console.log('Added Macbeth show with ID:', showRef.id);
 
     // Add all the props with the show ID
@@ -163,7 +166,7 @@ export async function addMacbethShow() {
         createdAt: new Date().toISOString()
       };
 
-      await addDoc(collection(db, 'props'), propData);
+      await addDoc(collection(dbInstance as any, 'props'), propData);
       console.log(`Added prop: ${prop.name}`);
     }
 

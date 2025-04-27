@@ -9,7 +9,7 @@ import {
 import { WysiwygEditor } from '../WysiwygEditor';
 import { AlertTriangle, Clock, RefreshCcw, Camera, Upload, X, Image } from 'lucide-react';
 import { HelpTooltip } from '../HelpTooltip';
-import { auth } from '../../lib/firebase';
+import { useFirebase } from '@/contexts/FirebaseContext';
 
 interface PropStatusUpdateProps {
   currentStatus: PropLifecycleStatus;
@@ -26,7 +26,8 @@ export function PropStatusUpdate({
   showManagerEmail,
   propsSupervisorEmail
 }: PropStatusUpdateProps) {
-  const [newStatus, setNewStatus] = useState<PropLifecycleStatus>(currentStatus);
+  const { service } = useFirebase();
+  const [newStatus, setNewStatus] = useState<PropLifecycleStatus | ''>(currentStatus || '');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notifyTeam, setNotifyTeam] = useState(false);
@@ -44,12 +45,8 @@ export function PropStatusUpdate({
     console.log('4. Notify Team:', notifyTeam);
     console.log('5. Damage Images:', damageImages);
     
-    // Check if user is authenticated
-    if (!auth.currentUser) {
-      console.error('User must be authenticated to update prop status');
-      return;
-    }
-    
+    if (!newStatus || newStatus === currentStatus) return;
+
     setIsSubmitting(true);
     
     try {
@@ -113,24 +110,35 @@ export function PropStatusUpdate({
   // Determine if the new status requires notification
   // We'll suggest notifications for high/critical status changes
   const shouldSuggestNotification = 
-    lifecycleStatusPriority[newStatus] === 'critical' || 
-    lifecycleStatusPriority[newStatus] === 'high';
+    newStatus &&
+    (lifecycleStatusPriority[newStatus] === 'critical' || 
+     lifecycleStatusPriority[newStatus] === 'high');
 
-  // Get status priority color
-  const getStatusClass = (status: PropLifecycleStatus) => {
-    switch (lifecycleStatusPriority[status]) {
-      case 'critical':
-        return 'text-red-500 bg-red-500/10';
-      case 'high':
-        return 'text-orange-500 bg-orange-500/10';
-      case 'medium':
-        return 'text-yellow-500 bg-yellow-500/10';
-      case 'low':
-        return 'text-[var(--highlight-color)] bg-[var(--highlight-bg)]';
-      default:
-        return 'text-green-500 bg-green-500/10';
-    }
-  };
+  // Determine priority and color safely - Use simple check for existence
+  const statusPriority = newStatus ? lifecycleStatusPriority[newStatus] : 'info';
+  // const statusColor = newStatus ? {
+  //   critical: 'border-red-500 bg-red-900/50',
+  //   high: 'border-orange-500 bg-orange-900/50',
+  //   medium: 'border-yellow-500 bg-yellow-900/50',
+  //   low: 'border-blue-500 bg-blue-900/50',
+  //   info: 'border-gray-700 bg-gray-800/50',
+  // }[statusPriority] || 'border-gray-700 bg-gray-800/50'; // Fallback
+
+  // Refactored statusColor logic
+  let statusColor: string;
+  const defaultColor = 'border-gray-700 bg-gray-800/50';
+  if (newStatus) {
+    const colorMap: Record<StatusPriority | 'info', string> = {
+      critical: 'border-red-500 bg-red-900/50',
+      high: 'border-orange-500 bg-orange-900/50',
+      medium: 'border-yellow-500 bg-yellow-900/50',
+      low: 'border-blue-500 bg-blue-900/50',
+      info: defaultColor,
+    };
+    statusColor = colorMap[statusPriority] || defaultColor;
+  } else {
+    statusColor = defaultColor;
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,7 +153,7 @@ export function PropStatusUpdate({
               </div>
             } />
           </label>
-          <span className={`text-sm px-2 py-1 rounded-full ${getStatusClass(currentStatus)}`}>
+          <span className={`text-sm px-2 py-1 rounded-full ${statusColor}`}>
             {lifecycleStatusLabels[currentStatus]}
           </span>
         </div>
@@ -167,17 +175,23 @@ export function PropStatusUpdate({
           } />
         </label>
         <select
+          id="status-select"
           value={newStatus}
-          onChange={(e) => setNewStatus(e.target.value as PropLifecycleStatus)}
-          className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)]"
-          disabled={disabled || isSubmitting}
+          onChange={(e) => setNewStatus(e.target.value as PropLifecycleStatus | '')}
+          className="flex-grow bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent disabled:opacity-50"
+          disabled={isSubmitting || disabled}
         >
-          {Object.entries(lifecycleStatusLabels).map(([value, label]) => (
-            <option key={value} value={value}>
+          <option value="">Select New Status</option>
+          {Object.entries(lifecycleStatusLabels).map(([statusValue, label]) => (
+            <option key={statusValue} value={statusValue}>
               {label}
             </option>
           ))}
         </select>
+        {/* Only render tooltip if newStatus is a valid key */}
+        {newStatus && lifecycleStatusPriority[newStatus] && (
+          <HelpTooltip content={`Priority: ${lifecycleStatusPriority[newStatus].toUpperCase()}`} />
+        )}
       </div>
 
       <div>

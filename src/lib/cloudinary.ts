@@ -1,8 +1,11 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from './firebase';
 import { v4 as uuidv4 } from 'uuid';
+import type { FirebaseStorage } from '@/shared/services/firebase/types';
 
-export const uploadImage = async (file: File): Promise<string> => {
+export const uploadImage = async (file: File, storageService: FirebaseStorage): Promise<string> => {
+  if (!storageService) {
+    throw new Error('Firebase Storage service instance is required for uploadImage.');
+  }
   try {
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -19,8 +22,8 @@ export const uploadImage = async (file: File): Promise<string> => {
     const fileExtension = file.name.split('.').pop();
     const fileName = `images/${uuidv4()}.${fileExtension}`; // Changed from 'props' to 'images'
     
-    // Create a reference to the file location
-    const storageRef = ref(storage, fileName);
+    // Create a reference using the passed service instance
+    const storageRef = ref(storageService as any, fileName); // Use 'as any' for now due to type mismatch potential
     
     // Upload the file with metadata
     const metadata = {

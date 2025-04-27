@@ -3,6 +3,7 @@ import { ImagePlus, Link, X, Loader2, Image as ImageIcon, Star } from 'lucide-re
 import { uploadImage } from '../lib/cloudinary';
 import type { PropImage } from '@/shared/types/props';
 import { v4 as uuidv4 } from 'uuid';
+import { useFirebase } from '@/contexts/FirebaseContext';
 
 interface ImageUploadProps {
   onImagesChange: (images: PropImage[]) => void;
@@ -16,6 +17,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { service } = useFirebase();
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -27,7 +29,11 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const uploadedUrl = await uploadImage(file);
+        const storageService = service?.storage();
+        if (!storageService) {
+          throw new Error('Firebase Storage service is not available.');
+        }
+        const uploadedUrl = await uploadImage(file, storageService);
         
         newImages.push({
           id: uuidv4(),

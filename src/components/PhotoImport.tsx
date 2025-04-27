@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Image, Loader2, X, Plus } from 'lucide-react';
-import { auth } from '../lib/firebase';
+import { useFirebase } from '@/contexts/FirebaseContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface PhotoImportProps {
   onPhotosSelected: (photos: GooglePhoto[]) => void;
@@ -14,10 +15,13 @@ interface GooglePhoto {
 }
 
 export function PhotoImport({ onPhotosSelected }: PhotoImportProps) {
+  const { service } = useFirebase();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photos, setPhotos] = useState<GooglePhoto[]>([]);
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleAuthClick = async () => {
     setLoading(true);
@@ -73,6 +77,36 @@ export function PhotoImport({ onPhotosSelected }: PhotoImportProps) {
     const selectedPhotoObjects = photos.filter(photo => selectedPhotos.has(photo.id));
     onPhotosSelected(selectedPhotoObjects);
   };
+
+  const handleFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      // Check service/auth state if needed before proceeding
+      // if (!service || !user) { ... handle error ... }
+      
+      const files = event.target.files;
+      if (files) {
+        // ... existing code ...
+      }
+    },
+    [onPhotosSelected, photos.length]
+  );
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragging(false);
+      
+      // Check service/auth state if needed before proceeding
+      // if (!service || !user) { ... handle error ... }
+
+      const files = event.dataTransfer.files;
+      if (files) {
+        // ... existing code ...
+      }
+    },
+    [onPhotosSelected, photos.length]
+  );
 
   useEffect(() => {
     // Load Google API Client

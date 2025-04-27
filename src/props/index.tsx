@@ -76,12 +76,10 @@ export function PropsPage() {
         }} 
       />
       <View style={styles.content}>
-        <PropList 
+        <PropList
           props={filteredProps}
-          show={show}
-          filters={filters}
-          onFilterChange={setFilters}
-          onFilterReset={handleResetFilters}
+          onEdit={(prop) => console.log('Edit prop', prop)}
+          onDelete={(id) => console.log('Delete prop', id)}
         />
       </View>
       <Link href={{ pathname: '/props/new' }} style={styles.addButton}>

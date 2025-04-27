@@ -111,6 +111,15 @@ export class FirebaseError extends Error {
   }
 }
 
+// Define QueryOptions type here as well, mirroring the implementation
+// (Alternatively, define it once and import it here and in WebFirebaseService)
+import { WhereFilterOp } from 'firebase/firestore'; // Make sure this is imported
+type QueryOptions = {
+  where?: [string, WhereFilterOp, any][];
+  orderBy?: [string, 'asc' | 'desc'][];
+  limit?: number;
+};
+
 export interface FirebaseService {
   initialize(): Promise<void>;
   initializeService?(): Promise<void>;
@@ -125,16 +134,25 @@ export interface FirebaseService {
     onNext: (doc: FirebaseDocument<T>) => void,
     onError?: (error: Error) => void
   ): () => void;
-  listenToCollection<T extends CustomDocumentData>( // Updated constraint
+  listenToCollection<T extends CustomDocumentData>(
     path: string,
     onNext: (docs: FirebaseDocument<T>[]) => void,
-    onError?: (error: Error) => void
+    onError?: (error: Error) => void,
+    options?: QueryOptions
   ): () => void;
   createDocumentWrapper<T extends CustomDocumentData>( // Updated constraint
     docRef: CustomDocumentReference<T>
   ): FirebaseDocument<T>; // Use the updated FirebaseDocument type
   getStorageRef(path: string): CustomStorageReference; // Updated return type
+  deleteDocument(collectionPath: string, documentId: string): Promise<void>;
+  getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null>;
+  updateDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void>;
+  addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>>;
+  uploadFile(path: string, file: File): Promise<string>;
+  deleteFile(path: string): Promise<void>;
   getSyncStatus?(): boolean;
   enableSync?(): Promise<void>;
   disableSync?(): Promise<void>;
+  // Add Show specific methods
+  deleteShow(showId: string): Promise<void>;
 } 

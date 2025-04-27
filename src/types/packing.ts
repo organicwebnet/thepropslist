@@ -1,3 +1,4 @@
+import { WeightUnit } from '@/shared/types/props'; // Import WeightUnit
 // import { PackedProp } from './packing'; // Assuming PackedProp is here or adjust import
 
 export interface PackingBox {
@@ -28,7 +29,8 @@ export interface PackedProp {
   name: string;
   quantity: number;
   weight: number;
-  weightUnit: 'kg' | 'lb';
+  // Use WeightUnit from shared types for consistency
+  weightUnit: WeightUnit; 
   isFragile: boolean;
 }
 

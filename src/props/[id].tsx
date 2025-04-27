@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import type { Prop } from '@shared/types';
+import { useFirebase } from '@/contexts/FirebaseContext';
+import type { Prop } from '@/shared/types/props';
 import type { PropLifecycleStatus } from '../types/lifecycle';
 // import { getProp } from '../services/propService'; // Commented out: Cannot find module
-import { PropForm } from '../components/PropForm';
 
 export default function PropDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { service } = useFirebase();
   const router = useRouter();
   const [prop, setProp] = useState<Prop | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,8 +26,17 @@ export default function PropDetails() {
 
   useEffect(() => {
     const fetchProp = async () => {
+      // Use service
+      if (!service?.firestore || !id) {
+          setLoading(false);
+          setError('Service not available or ID missing.');
+          return;
+      }
+      const firestore = service.firestore();
+
       try {
-        const propDoc = await getDoc(doc(db, 'props', id as string));
+        // Use firestore instance from service
+        const propDoc = await getDoc(doc(firestore, 'props', id as string));
         if (propDoc.exists()) {
           const fetchedData = propDoc.data();
           const propData: Partial<Prop> = {
@@ -44,7 +53,12 @@ export default function PropDetails() {
             condition: fetchedData.condition,
             tags: fetchedData.tags,
             images: fetchedData.images,
-            lastUpdated: fetchedData.lastUpdated?.toDate ? fetchedData.lastUpdated.toDate() : undefined,
+            lastUpdated: fetchedData.lastUpdated, // Keep as is, assuming string
+            // Add other fields needed from Prop type
+            createdAt: fetchedData.createdAt, 
+            updatedAt: fetchedData.updatedAt,
+            source: fetchedData.source,
+            // ... etc
           };
           setProp(propData as Prop);
         } else {
@@ -57,9 +71,8 @@ export default function PropDetails() {
       }
     };
 
-    // Placeholder call
     fetchProp();
-  }, [id]);
+  }, [id, service]);
 
   if (loading) {
     return (
@@ -129,7 +142,7 @@ export default function PropDetails() {
           />
           <DetailItem
             label="Last Updated"
-            value={prop.lastUpdated ? prop.lastUpdated.toLocaleDateString() : 'N/A'}
+            value={prop.lastUpdated ? new Date(prop.lastUpdated).toLocaleDateString() : 'N/A'}
             isDark={isDark}
           />
         </View>

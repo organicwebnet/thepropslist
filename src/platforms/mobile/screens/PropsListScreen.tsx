@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -63,6 +63,34 @@ export function PropsListScreen() {
     navigation.navigate('PropDetails', { propId });
   };
 
+  const handleDeleteProp = useCallback(async (propId: string) => {
+    Alert.alert(
+      'Confirm Deletion',
+      'Are you sure you want to delete this prop?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              await service.deleteDocument('props', propId);
+              console.log(`Prop ${propId} deleted successfully`);
+            } catch (err) {
+              console.error('Error deleting prop:', err);
+              setError('Failed to delete prop. Please try again.');
+              Alert.alert('Error', 'Could not delete prop. Please try again.');
+            }
+          },
+          style: 'destructive',
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [service]);
+
   if (isLoading) {
     return (
       <View style={styles.centerContainer}>
@@ -91,12 +119,19 @@ export function PropsListScreen() {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={props}
-        renderItem={({ item }) => (
-          <PropCard
-            prop={item as unknown as Prop}
-            onPress={() => handlePropPress(item.id)}
-          />
-        )}
+        renderItem={({ item }: { item: FirebaseDocument<Prop> }) => {
+          const propData = item.data;
+          if (!propData) {
+            console.warn(`Prop data missing for document ID: ${item.id}`);
+            return null;
+          }
+          return (
+            <PropCard
+              prop={propData}
+              onPress={() => handlePropPress(item.id)}
+            />
+          );
+        }}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         refreshControl={

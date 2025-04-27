@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { PropList } from '../components/PropList';
-import type { RootStackScreenProps } from '../navigation/types';
+import type { RootStackParamList, RootStackScreenProps } from '../navigation/types';
 import type { Filters } from '../types';
 import type { Prop } from '@shared/types';
 import { Plus } from 'phosphor-react-native';
@@ -11,6 +11,7 @@ import { useProps } from '../hooks/useProps';
 import firestore from '@react-native-firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import type { Show } from '../types';
+import { useFirebase } from '@/contexts/FirebaseContext';
 
 export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const [filters, setFilters] = React.useState<Filters>({
@@ -20,6 +21,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const [isLoadingShows, setIsLoadingShows] = React.useState(true);
   const [connectionError, setConnectionError] = React.useState<string | null>(null);
   const [showData, setShowData] = useState<Show | null>(null);
+  const { service } = useFirebase();
 
   // Test Firebase connection
   React.useEffect(() => {
@@ -67,7 +69,13 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
           const docRef = firestore().collection('shows').doc(showId);
           const docSnap = await docRef.get();
           if (docSnap.exists) {
-            setShowData({ id: docSnap.id, ...docSnap.data() } as Show);
+            const data = docSnap.data();
+            setShowData({
+              id: docSnap.id,
+              ...data,
+              createdAt: data?.createdAt || new Date().toISOString(),
+              updatedAt: data?.updatedAt || new Date().toISOString(),
+            } as Show);
           } else {
             console.log("No such document!");
             setShowData(null); // Or handle error appropriately
@@ -83,6 +91,25 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
     }
   }, [showId]);
 
+  // Placeholder handlers for PropList (implement properly if needed)
+  const handleNavigateToEditProp = (prop: Prop) => {
+    console.log("Navigate to edit prop:", prop.id);
+    // Example navigation:
+    // navigation.navigate('EditProp', { prop });
+  };
+
+  const handleDeleteProp = (propId: string) => {
+    console.log("Delete prop:", propId);
+    // Example deletion logic (needs service method):
+    // Alert.alert('Delete Prop', 'Are you sure?', [
+    //   { text: 'Cancel', style: 'cancel' },
+    //   { text: 'Delete', style: 'destructive', onPress: async () => { 
+    //     // await service.deleteProp(propId); 
+    //     // // Refresh props list 
+    //   }}
+    // ]);
+  };
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
@@ -95,6 +122,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
               acts: [],
               userId: '',
               createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
               collaborators: [],
               stageManager: '',
               stageManagerEmail: '',
@@ -118,6 +146,55 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
 
   const handlePropPress = (prop: Prop) => {
     navigation.navigate('PropDetail', { prop });
+  };
+
+  const handleDeleteShow = async (showId: string, showName: string) => {
+    if (service) {
+      Alert.alert('Delete Show', `Are you sure you want to delete "${showName}"? This cannot be undone.`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: async () => {
+          try {
+            await service.deleteShow(showId);
+            setShowData(null);
+            // Optionally navigate away or show a success message
+          } catch (error) {
+            console.error("Error deleting show:", error);
+            Alert.alert('Error', 'Could not delete show.');
+          }
+        } },
+      ]);
+    } else {
+      console.warn("Attempted to delete show without service or showId/Name");
+    }
+  };
+
+  // --- Navigation Handlers ---
+  const handleNavigateToShowDetails = (show: Show) => {
+    // Ensure show has the necessary fields before navigating
+    const showWithDefaults: Show = {
+      ...show,
+      createdAt: show.createdAt || new Date().toISOString(),
+      updatedAt: show.updatedAt || new Date().toISOString(), // Add default updatedAt
+      collaborators: show.collaborators || [],
+      venues: show.venues || [],
+      contacts: show.contacts || [],
+      acts: show.acts || [],
+    };
+    navigation.navigate('ShowDetail', { show: showWithDefaults });
+  };
+
+  const handleNavigateToPackingList = (show: Show) => {
+    // Ensure show has the necessary fields before navigating
+    const showWithDefaults: Show = {
+      ...show,
+      createdAt: show.createdAt || new Date().toISOString(),
+      updatedAt: show.updatedAt || new Date().toISOString(), // Add default updatedAt
+      collaborators: show.collaborators || [],
+      venues: show.venues || [],
+      contacts: show.contacts || [],
+      acts: show.acts || [],
+    };
+    navigation.navigate('PackingDetail', { show: showWithDefaults });
   };
 
   if (connectionError) {
@@ -158,6 +235,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
               acts: [],
               userId: '',
               createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
               collaborators: [],
               stageManager: '',
               stageManagerEmail: '',
@@ -179,15 +257,17 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   }
 
   return (
-    <View style={styles.container}>
-      <PropList
-        props={props}
-        filters={filters}
-        onFilterChange={setFilters}
-        show={showData ?? {} as Show}
-        onFilterReset={() => setFilters({ search: '' })}
-      />
-    </View>
+    <ScrollView>
+      <View style={styles.container}>
+        {showData && (
+          <PropList
+            props={props}
+            onEdit={handleNavigateToEditProp}
+            onDelete={handleDeleteProp}
+          />
+        )}
+      </View>
+    </ScrollView>
   );
 }
 

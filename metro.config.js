@@ -1,5 +1,6 @@
 const { getDefaultConfig } = require('@expo/metro-config');
 const path = require('path');
+const { withNativeWind } = require('nativewind/metro');
 
 // Find the project root (directory containing package.json)
 const projectRoot = __dirname;
@@ -101,28 +102,19 @@ const { transformer, resolver } = config;
 
 // process.env.EXPO_ROUTER_ORIGIN = 'http://localhost:8081'; // Reverted this change
 
-module.exports = {
-  ...config,
-  // Reverted server configuration block
-  // server: {
-  //   port: 8081,
-  //   enhanceMiddleware: (middleware) => {
-  //     return (req, res, next) => {
-  //       if (req.url && !req.headers.host) {
-  //         req.headers.host = 'localhost:8081';
-  //       }
-  //       return middleware(req, res, next);
-  //     };
-  //   },
-  // },
-  transformer: {
-    ...transformer,
-    babelTransformerPath: require.resolve('react-native-svg-transformer'),
-  },
-  // Use the updated resolver config including extraNodeModules
+// Apply withNativeWind wrapper - Restore previous version
+module.exports = withNativeWind(config, {
+  // Keep your existing resolver customizations
   resolver: {
     ...resolver, 
     assetExts: resolver.assetExts.filter((ext) => ext !== 'svg'),
     sourceExts: [...resolver.sourceExts, 'svg'],
+    // Ensure extraNodeModules and nodeModulesPaths are included 
+    extraNodeModules: config.resolver.extraNodeModules, 
+    nodeModulesPaths: config.resolver.nodeModulesPaths
   },
-};
+  // Specify the input CSS file for NativeWind
+  input: './global.css',
+  // Specify projectRoot 
+  projectRoot: projectRoot 
+});

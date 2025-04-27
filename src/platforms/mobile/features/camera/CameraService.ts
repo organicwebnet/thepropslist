@@ -1,4 +1,5 @@
 import { Camera, CameraType } from 'expo-camera';
+import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { Platform } from 'react-native';
@@ -32,7 +33,11 @@ export class CameraService {
     };
   }
 
-  async takePicture(camera: Camera): Promise<string | null> {
+  async takePicture(camera: CameraView): Promise<string | null> {
+    if (!camera) {
+      console.error("Camera instance not provided to takePicture");
+      return null;
+    }
     try {
       const photo = await camera.takePictureAsync({
         quality: 0.8,
@@ -40,10 +45,12 @@ export class CameraService {
         exif: true,
       });
 
-      if (photo.uri) {
+      if (photo?.uri) {
         // Save to media library if on mobile
         if (Platform.OS !== 'web') {
-          await MediaLibrary.saveToLibraryAsync(photo.uri);
+          if (photo) {
+            await MediaLibrary.saveToLibraryAsync(photo.uri);
+          }
         }
         return photo.uri;
       }

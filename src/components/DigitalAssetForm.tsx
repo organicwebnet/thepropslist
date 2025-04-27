@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlusCircle, X, FileText, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { DigitalAsset } from '@/shared/types/props';
-import { storage } from '../lib/firebase';
+import { useFirebase } from '@/contexts/FirebaseContext';
 
 interface DigitalAssetFormProps {
   assets: DigitalAsset[];
@@ -10,6 +10,7 @@ interface DigitalAssetFormProps {
 }
 
 export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProps) {
+  const { service } = useFirebase();
   const [validating, setValidating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'pending'>>({});
@@ -38,6 +39,10 @@ export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProp
       // Construct the file preview URL
       const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
 
+      // This validation logic might need adjustment if it relied on direct storage access
+      // For now, assume fetch works or storage interaction is handled elsewhere
+      // Example: If upload was needed, you might use service.uploadFile()
+      
       // Try to fetch the file preview
       const response = await fetch(previewUrl, {
         method: 'HEAD',

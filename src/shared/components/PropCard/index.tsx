@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType } from 'react-native';
+import { Link } from 'expo-router';
 import type { Prop, PropImage } from '../../types/props';
 
 interface PropCardProps {
   prop: Prop;
-  onPress?: () => void;
   compact?: boolean;
+  onEditPress?: (propId: string) => void;
+  onDeletePress?: (propId: string) => void;
 }
 
 // Helper to check if the source is a valid structure for RN <Image>
@@ -13,7 +15,7 @@ function isValidImageSource(source: any): source is { uri: string } {
   return typeof source === 'object' && source !== null && typeof source.uri === 'string';
 }
 
-const PropCard: React.FC<PropCardProps> = ({ prop, onPress, compact = false }) => {
+const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress, onDeletePress }) => {
   const [imageError, setImageError] = useState(false);
 
   const renderImage = () => {
@@ -80,21 +82,48 @@ const PropCard: React.FC<PropCardProps> = ({ prop, onPress, compact = false }) =
   };
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[styles.container, compact && styles.compactContainer]}
-      activeOpacity={0.8}
-    >
-      {renderImage()}
-      <View style={styles.content}>
-        <Text style={styles.name}>{prop.name}</Text>
-        {!compact && prop.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {prop.description}
-          </Text>
-        )}
-      </View>
-    </TouchableOpacity>
+    <Link href={`/props/${prop.id}`} asChild>
+      <TouchableOpacity
+        style={[styles.container, compact && styles.compactContainer]}
+        activeOpacity={0.8}
+      >
+        {renderImage()}
+        <View style={styles.content}>
+          <Text style={styles.name}>{prop.name}</Text>
+          {!compact && prop.description && (
+            <Text style={styles.description} numberOfLines={2}>
+              {prop.description}
+            </Text>
+          )}
+          {(onEditPress || onDeletePress) && (
+            <View style={styles.buttonContainer}>
+              {onEditPress && (
+                <TouchableOpacity 
+                  style={[styles.button, styles.editButton]} 
+                  onPress={(e) => { 
+                    e.stopPropagation();
+                    onEditPress(prop.id); 
+                  }}
+                >
+                  <Text style={styles.buttonText}>Edit</Text>
+                </TouchableOpacity>
+              )}
+              {onDeletePress && (
+                <TouchableOpacity 
+                  style={[styles.button, styles.deleteButton]} 
+                  onPress={(e) => { 
+                    e.stopPropagation();
+                    onDeletePress(prop.id); 
+                  }}
+                >
+                  <Text style={styles.buttonText}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    </Link>
   );
 };
 
@@ -140,7 +169,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     color: '#FFFFFF',
@@ -150,6 +179,29 @@ const styles = StyleSheet.create({
   },
   description: {
     color: '#A0A0A0',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 'auto',
+  },
+  button: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  editButton: {
+    backgroundColor: '#3B82F6',
+  },
+  deleteButton: {
+    backgroundColor: '#EF4444',
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
     fontSize: 14,
   },
 });

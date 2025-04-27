@@ -443,7 +443,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                   disabled={disabled}
                 >
                   <option value="">Select Act</option>
-                  {show?.acts.map((act: any) => (
+                  {Array.isArray(show?.acts) && show.acts.map((act: any) => (
                     <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>
                   ))}
                 </select>
@@ -460,7 +460,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                   disabled={disabled || formData.isMultiScene}
                 >
                   <option value="">Select Scene</option>
-                  {show?.acts.find((act: any) => act.id === formData.act)?.scenes.map((scene: any) => (
+                  {Array.isArray(show?.acts) && show.acts.find((act: any) => act.id === formData.act)?.scenes.map((scene: any) => (
                     <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>
                   ))}
                 </select>

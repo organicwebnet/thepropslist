@@ -29,6 +29,44 @@ export abstract class BaseFirebaseService implements FirebaseService {
   abstract storage(): FirebaseStorage;
   abstract offline(): OfflineSync;
 
+  // Add placeholder implementation for deleteShow
+  async deleteShow(showId: string): Promise<void> {
+    // TODO: Implement actual delete logic for shows
+    console.warn(`deleteShow(${showId}) is not implemented in BaseFirebaseService.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  // Add placeholder implementations for other missing FirebaseService methods
+  async deleteDocument(collectionPath: string, documentId: string): Promise<void> {
+    console.warn(`deleteDocument(${collectionPath}, ${documentId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null> {
+    console.warn(`getDocument(${collectionPath}, ${documentId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async updateDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void> {
+    console.warn(`updateDocument(${collectionPath}, ${documentId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
+    console.warn(`addDocument(${collectionPath}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async uploadFile(path: string, file: File): Promise<string> {
+    console.warn(`uploadFile(${path}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async deleteFile(path: string): Promise<void> {
+    console.warn(`deleteFile(${path}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
   protected createError(error: unknown): FirebaseError {
     const err = error as { code?: string; message?: string };
     return new FirebaseError(

@@ -1,4 +1,5 @@
 import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle';
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 export type PropSource = 'bought' | 'made' | 'rented' | 'borrowed' | 'owned' | 'created';
 export type WeightUnit = 'kg' | 'lb' | 'g' | 'oz';
@@ -191,5 +192,6 @@ export interface Prop {
   updatedAt: string;
   lastUsedAt?: string;
   condition?: string;
-  lastUpdated?: Date;
+  lastUpdated?: string;
+  purchaseDate?: string;
 } 

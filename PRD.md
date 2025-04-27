@@ -20,6 +20,9 @@ Production teams face significant challenges in managing, tracking, and coordina
 ## 3. Product Features and Requirements
 
 ### 3.1 Core Features
+- user can sigin in with google or standard email sigin up 
+- profile details form google
+
 
 #### 3.1.1 Props Management
 - Digital inventory system for all props

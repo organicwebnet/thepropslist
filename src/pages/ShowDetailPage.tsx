@@ -5,12 +5,15 @@ import { doc, onSnapshot, query, collection, where, getDoc, updateDoc, deleteDoc
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Show, ShowFormData, Act, Scene, Venue, Contact } from '../types';
 import { Prop } from '@/shared/types/props';
-import { db } from '../lib/firebase';
+import { useFirebase } from '@/contexts/FirebaseContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Edit, Trash2, Plus, Package } from 'lucide-react-native';
 import { Pencil, ArrowLeft, UserMinus } from 'lucide-react';
 
 export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => void }) {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { service } = useFirebase();
+  const { user } = useAuth();
   const router = useRouter();
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
@@ -20,11 +23,21 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
     totalWeight: 0
   });
   const [props, setProps] = useState<Prop[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !service?.firestore) {
+      setLoading(false);
+      setError("Show ID missing or service not available.");
+      return;
+    }
+    const firestore = service.firestore();
 
-    const unsubscribe = onSnapshot(doc(db, 'shows', id), (doc) => {
+    setLoading(true);
+    setError(null);
+
+    const showRef = doc(firestore, 'shows', id);
+    const unsubscribe = onSnapshot(showRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data();
         // Ensure acts is always an array and has the correct structure
@@ -68,17 +81,21 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
         router.push('/shows');
       }
       setLoading(false);
+    }, (error) => {
+      console.error('Error fetching show details:', error);
+      setError('Failed to load show details.');
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [id, router]);
+  }, [id, service]);
 
   // Add effect to fetch prop statistics
   useEffect(() => {
     if (!id) return;
 
     const unsubscribe = onSnapshot(
-      query(collection(db, 'props'), where('showId', '==', id)),
+      query(collection(service.firestore(), 'props'), where('showId', '==', id)),
       (snapshot) => {
         const stats = snapshot.docs.reduce((acc, doc) => {
           const prop = doc.data();
@@ -94,7 +111,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
     );
 
     return () => unsubscribe();
-  }, [id]);
+  }, [id, service]);
 
   const handleEdit = () => {
     if (!show) return;
@@ -109,16 +126,37 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
     router.push(`/shows/${id}/props/${propId}` as any);
   };
 
-  const handleDeleteShow = async () => {
-    if (!show || !window.confirm('Are you sure you want to delete this show?')) return;
-    
-    try {
-      await deleteDoc(doc(db, 'shows', show.id));
-      router.back();
-    } catch (error) {
-      console.error('Error deleting show:', error);
-      alert('Failed to delete show. Please try again.');
+  const handleDelete = async () => {
+    if (!id || !service?.deleteDocument) {
+      Alert.alert("Error", "Cannot delete show. Service unavailable.");
+      return;
     }
+    Alert.alert(
+      "Delete Show",
+      "Are you sure you want to delete this show?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await service.deleteDocument('shows', id);
+              router.back();
+            } catch (error) {
+              console.error('Error deleting show:', error);
+              Alert.alert("Error", "Failed to delete show. Please try again.");
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (loading) {

@@ -65,7 +65,7 @@ interface MockDocumentData {
 
 // Define individual mock functions first
 const mockInitializeFn = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
-const mockGetItemFn = jest.fn< <T>(key: string) => Promise<T | null>>().mockResolvedValue(null);
+const mockGetItemFn = jest.fn< <T>(key: string) => Promise<T | null>>().mockResolvedValue(null as any);
 const mockSetItemFn = jest.fn< <T>(key: string, value: T) => Promise<void>>().mockResolvedValue(undefined);
 const mockRemoveItemFn = jest.fn<(key: string) => Promise<void>>().mockResolvedValue(undefined);
 const mockClearFn = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
@@ -78,7 +78,7 @@ const mockGetQueueStatusFn = jest.fn<() => Promise<QueueStatus>>().mockResolvedV
 // Assemble the mock object, typed as OfflineSync (without jest.Mocked)
 const mockOfflineSync: OfflineSync = {
   initialize: mockInitializeFn,
-  getItem: mockGetItemFn,
+  getItem: mockGetItemFn as any,
   setItem: mockSetItemFn,
   removeItem: mockRemoveItemFn,
   clear: mockClearFn,
@@ -164,14 +164,22 @@ const mockServiceFirestoreFn = jest.fn<() => CustomFirestore>(() => mockFirestor
 const mockServiceStorageFn = jest.fn<() => CustomStorage>(() => mockStorage);
 const mockServiceOfflineFn = jest.fn<() => OfflineSync>(() => mockOfflineSync);
 const mockServiceRunTransactionFn = jest.fn< <T>(updateFunction: (transaction: CustomTransaction) => Promise<T>) => Promise<T>>()
-    .mockImplementation(async (updateFunction) => {
-      return await updateFunction(mockTransaction);
+    .mockImplementation(async <T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T> => {
+      const result = await updateFunction(mockTransaction);
+      return result as T;
     });
 const mockServiceBatchFn = jest.fn<() => CustomWriteBatch>(() => mockBatch);
 const mockServiceListenDocFn = jest.fn< <T extends CustomDocumentData>(path: string, onNext: (doc: FirebaseDocument<T>) => void, onError?: (error: Error) => void) => () => void>().mockReturnValue(jest.fn());
 const mockServiceListenCollFn = jest.fn< <T extends CustomDocumentData>(path: string, onNext: (docs: FirebaseDocument<T>[]) => void, onError?: (error: Error) => void) => () => void>().mockReturnValue(jest.fn());
 const mockServiceCreateWrapperFn = jest.fn< <T extends CustomDocumentData>(docRef: CustomDocumentReference<T>) => FirebaseDocument<T>>(
-    (docRef: CustomDocumentReference): FirebaseDocument<any> => ({ id: docRef.id, ...mockDocMethods })
+    <T extends CustomDocumentData>(docRef: CustomDocumentReference<T>): FirebaseDocument<T> => ({ 
+        id: docRef.id, 
+        ref: docRef,
+        get: jest.fn<() => Promise<T | undefined>>().mockResolvedValue(undefined),
+        set: jest.fn<(data: T) => Promise<void>>().mockResolvedValue(undefined),
+        update: jest.fn<(data: Partial<T>) => Promise<void>>().mockResolvedValue(undefined),
+        delete: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
+     } as FirebaseDocument<T>)
 );
 const mockServiceGetStorageRefFn = jest.fn<(path: string) => CustomStorageReference>(() => mockStorageRef);
 
@@ -182,12 +190,19 @@ const mockFirebaseService: FirebaseService = {
   firestore: mockServiceFirestoreFn,
   storage: mockServiceStorageFn,
   offline: mockServiceOfflineFn,
-  runTransaction: mockServiceRunTransactionFn,
+  runTransaction: mockServiceRunTransactionFn as any,
   batch: mockServiceBatchFn,
   listenToDocument: mockServiceListenDocFn,
   listenToCollection: mockServiceListenCollFn,
-  createDocumentWrapper: mockServiceCreateWrapperFn,
+  createDocumentWrapper: mockServiceCreateWrapperFn as any,
   getStorageRef: mockServiceGetStorageRefFn,
+  deleteDocument: jest.fn< (collectionPath: string, documentId: string) => Promise<void>>().mockResolvedValue(undefined),
+  getDocument: jest.fn< <T extends CustomDocumentData>(collectionPath: string, documentId: string) => Promise<FirebaseDocument<T> | null>>().mockResolvedValue(null) as any,
+  updateDocument: jest.fn< <T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>) => Promise<void>>().mockResolvedValue(undefined),
+  addDocument: jest.fn< <T extends CustomDocumentData>(collectionPath: string, data: T) => Promise<FirebaseDocument<T>>>().mockResolvedValue({ id: 'mock-doc-id' } as FirebaseDocument<any>) as any,
+  uploadFile: jest.fn<(path: string, file: File) => Promise<string>>().mockResolvedValue('mock-url'),
+  deleteFile: jest.fn<(path: string) => Promise<void>>().mockResolvedValue(undefined),
+  deleteShow: jest.fn<(showId: string) => Promise<void>>().mockResolvedValue(undefined),
 };
 
 describe('OfflineSyncService', () => {
@@ -241,9 +256,12 @@ describe('OfflineSyncService', () => {
 
   describe('error handling', () => {
     it('should handle initialization errors', async () => {
+      const mockEnableSyncWithError = jest.fn<() => Promise<void>>();
+      mockEnableSyncWithError.mockRejectedValue(new Error('Failed to enable sync'));
+
       const errorOfflineSyncMock = {
         ...mockOfflineSync,
-        enableSync: jest.fn().mockRejectedValue(new Error('Failed to enable sync')) as any,
+        enableSync: mockEnableSyncWithError,
       };
       const errorFirebaseServiceMock = {
         ...mockFirebaseService,
@@ -254,9 +272,12 @@ describe('OfflineSyncService', () => {
     });
 
     it('should handle sync errors', async () => {
+      const mockGetWithError = jest.fn<() => Promise<FirebaseDocument<any>[]>>();
+      mockGetWithError.mockRejectedValue(new Error('Sync failed'));
+      
       const errorCollectionMock = {
-          ...mockCollection,
-          get: jest.fn().mockRejectedValue(new Error('Sync failed')) as any,
+        ...mockCollection,
+        get: mockGetWithError,
       };
       const errorFirestoreMock = {
           ...mockFirestore,

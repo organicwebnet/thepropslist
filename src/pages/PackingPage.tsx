@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PackingList } from '../components/packing/PackingList';
 import { usePacking } from '../hooks/usePacking';
 import type { Prop } from '@shared/types';
-import type { Show, PackedProp } from '../types';
+import type { Show } from '../types';
+import type { PackedProp, PackingBox } from '../types/packing';
 
 interface PackingPageProps {
   props: Prop[];
@@ -13,7 +14,8 @@ interface PackingPageProps {
 
 export function PackingPage({ props: allProps, show }: PackingPageProps) {
   const router = useRouter();
-  const { boxes, loading: boxesLoading, createBox, updateBox, deleteBox } = usePacking(show.id);
+  const { boxes, loading: boxesLoading, error, operations } = usePacking(show.id);
+  const { createBox, updateBox, deleteBox } = operations;
 
   const handleCreateBox = (packedProps: PackedProp[], act: number, scene: number): void => {
     console.log(`Creating box for Act ${act}, Scene ${scene} with ${packedProps.length} items`);
@@ -32,18 +34,22 @@ export function PackingPage({ props: allProps, show }: PackingPageProps) {
       return;
     }
 
-    createBox(selectedFullProps, act, scene)
-      .then(newBox => {
-        if (newBox) {
-          console.log('Box created successfully:', newBox.id);
+    createBox(packedProps, `Box for Act ${act}, Scene ${scene}`)
+      .then((newBoxId: string | undefined) => {
+        if (newBoxId) {
+          console.log('Box created successfully:', newBoxId);
         } else {
-          console.warn('createBox function returned undefined');
+          console.warn('createBox function returned undefined ID');
         }
       })
-      .catch(error => {
+      .catch((error: Error) => {
         console.error('Error creating box:', error);
       });
   };
+
+  if (error) {
+    return <View><Text>Error loading packing data: {error.message}</Text></View>;
+  }
 
   if (boxesLoading) {
     return (

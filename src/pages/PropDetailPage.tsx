@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Linking, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Linking, Platform, useWindowDimensions } from 'react-native';
+import { useLocalSearchParams, useRouter, Link } from 'expo-router';
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Check as CheckNative, Edit as EditNative, Trash2 as Trash2Native, Plus as PlusNative, Upload as UploadNative, Calendar as CalendarIconNative, X as XNative, ChevronDown as ChevronDownNative, ChevronUp as ChevronUpNative, AlertTriangle as AlertTriangleNative, MessageSquare as MessageSquareNative, LifeBuoy as LifeBuoyNative, Image as ImageIconNative, Paperclip as PaperclipNative } from 'lucide-react-native';
 import { Check, Edit, Trash2, Plus, Upload, Calendar, X, ChevronDown, ChevronUp, AlertTriangle, MessageSquare, LifeBuoy, Image as ImageIconWeb, Paperclip, ArrowLeft, Package, Info as InfoIcon, Activity, Wrench, Clock } from 'lucide-react';
@@ -18,11 +18,14 @@ import { DigitalAssetGrid } from '@components/DigitalAssetGrid';
 import { ImageCarousel } from '@components/ImageCarousel';
 import { StatusHistory } from '@components/lifecycle/StatusHistory';
 import { MaintenanceHistory } from '@components/lifecycle/MaintenanceHistory';
-import { db, auth } from '../lib/firebase';
+import { useFirebase } from '@/contexts/FirebaseContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function PropDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { service } = useFirebase();
+  const { user } = useAuth();
   const [prop, setProp] = useState<Prop | null>(null);
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,13 +34,7 @@ export default function PropDetailPage() {
   const [isAddingStatus, setIsAddingStatus] = useState(false);
   const [isAddingMaintenance, setIsAddingMaintenance] = useState(false);
 
-  const currentUser = auth.currentUser;
-  
-  if (!currentUser) {
-    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Authenticating...</Text></View>;
-  }
-
-  const lifecycle = usePropLifecycle({ propId: id || undefined, currentUser: currentUser });
+  const lifecycle = usePropLifecycle({ propId: id || undefined, currentUser: user });
 
   const [activeTab, setActiveTab] = useState<'details' | 'statusUpdates' | 'maintenanceRecords'>('details');
 
@@ -46,7 +43,7 @@ export default function PropDetailPage() {
     if (!id || !lifecycle?.updatePropStatus) return;
     try {
       await lifecycle.updatePropStatus(status, notes);
-      const propRef = doc(db, 'props', id);
+      const propRef = doc(service.firestore(), 'props', id);
       const propSnap = await getDoc(propRef);
       if (propSnap.exists()) {
         setProp({ ...(propSnap.data() as Prop), id: propSnap.id });
@@ -62,7 +59,7 @@ export default function PropDetailPage() {
     if (!id || !lifecycle?.addMaintenanceRecord) return;
     try {
       await lifecycle.addMaintenanceRecord(record);
-      const propRef = doc(db, 'props', id);
+      const propRef = doc(service.firestore(), 'props', id);
       const propSnap = await getDoc(propRef);
       if (propSnap.exists()) {
         setProp({ ...(propSnap.data() as Prop), id: propSnap.id });
@@ -75,70 +72,73 @@ export default function PropDetailPage() {
   };
 
   useEffect(() => {
-    if (!currentUser) {
-      setError('User not authenticated');
-      setLoading(false);
-      return;
-    }
-    
-    async function fetchPropAndShow() {
-      if (!id) {
-        setError('Prop ID is missing.');
+    let isMounted = true;
+    const fetchProp = async () => {
+      if (!id || !service?.firestore || !user) {
+        setError('Prop ID missing or service/user not available.');
         setLoading(false);
         return;
       }
+      const firestore = service.firestore();
+
       try {
         setLoading(true);
-        const propRef = doc(db, 'props', id);
-        const propSnap = await getDoc(propRef);
+        const propDoc = await service.getDocument<Prop>('props', id);
 
-        if (propSnap.exists()) {
-          console.log("=== Raw Firestore Data for Prop: ===", propSnap.id);
-          console.log(JSON.stringify(propSnap.data(), null, 2));
-          
-          const propData = propSnap.data() as Prop;
-          
-          if (!currentUser) {
-            setError('Authentication error occurred while fetching data.');
-            setLoading(false);
-            return;
-          }
+        if (isMounted) {
+          if (propDoc && propDoc.data) {
+            const firestoreData = propDoc.data;
+            const propData = { 
+              ...firestoreData,
+              id: propDoc.id, 
+              createdAt: firestoreData.createdAt,
+              updatedAt: firestoreData.updatedAt,
+              lastModifiedAt: firestoreData.lastModifiedAt,
+              lastUsedAt: firestoreData.lastUsedAt,
+              purchaseDate: firestoreData.purchaseDate,
+              rentalDueDate: firestoreData.rentalDueDate,
+              nextMaintenanceDue: firestoreData.nextMaintenanceDue,
+              lastUpdated: firestoreData.lastUpdated,
+            } as Prop;
 
-          if (propData.userId !== currentUser.uid) {
-            console.error('Prop does not belong to current user');
-            setError('Permission denied. You do not own this prop.');
-            setLoading(false);
-            return;
-          }
-          setProp({ ...propData, id: propSnap.id });
+            setProp(propData);
+            setError(null);
 
-          if (propData.showId) {
-            const showRef = doc(db, 'shows', propData.showId);
-            const showSnap = await getDoc(showRef);
-            if (showSnap.exists()) {
-              setShow({ ...(showSnap.data() as Show), id: showSnap.id });
-            } else {
-              console.warn('Show document not found for showId:', propData.showId);
+            if (propData.showId) {
+              const showRef = doc(firestore, 'shows', propData.showId);
+              const showSnap = await getDoc(showRef);
+              if (showSnap.exists()) {
+                setShow({ ...(showSnap.data() as Show), id: showSnap.id });
+              } else {
+                console.warn('Show document not found for showId:', propData.showId);
+              }
             }
+          } else {
+            setError('Prop not found.');
+            setProp(null);
           }
-        } else {
-          setError('Prop not found');
+          setLoading(false);
         }
-      } catch (err: any) {
-        setError(`Failed to fetch prop: ${err.message}`);
-        console.error("Fetch Prop Error:", err);
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        if (isMounted) {
+          console.error('Error fetching prop:', err);
+          setError('Failed to load prop details.');
+          setLoading(false);
+        }
       }
-    }
+    };
 
-    fetchPropAndShow();
-  }, [id, currentUser]);
+    fetchProp();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, user, service]);
 
   const handleEditSubmit = async (data: PropFormData) => {
     if (!prop) return;
     try {
-      await updateDoc(doc(db, 'props', prop.id), {
+      await updateDoc(doc(service.firestore(), 'props', prop.id), {
          ...data,
          lastModifiedAt: new Date().toISOString()
        });
@@ -162,14 +162,18 @@ export default function PropDetailPage() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            if (!id) return;
+            if (!id || !service?.deleteDocument || !user) {
+              Alert.alert("Error", "Cannot delete prop. Service unavailable or not logged in.");
+              return;
+            }
             try {
-              await deleteObject(ref(getStorage(), `props/${id}/images/0`));
-              await deleteDoc(doc(db, 'props', id));
+              setLoading(true);
+              await service.deleteDocument('props', id);
               router.back();
             } catch (error) {
-              console.error('Error deleting prop:', error);
-              Alert.alert('Error', 'Failed to delete prop.');
+              console.error("Error deleting prop:", error);
+              Alert.alert("Error", "Failed to delete prop.");
+              setLoading(false);
             }
           },
         },

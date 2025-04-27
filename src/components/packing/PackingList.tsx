@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-// Import main types from shared location, keep Show from local for now
-import { PackingBox, Show, PackedProp } from '../../types'; 
+// Import PackingBox/PackedProp from correct sub-directory
+import { PackingBox, PackedProp } from '../../types/packing'; 
+import { Show } from '../../types'; // Keep Show from main types
 import { Prop } from '@/shared/types/props'; // Import correct Prop type
 import { PackingBoxCard } from './PackingBoxCard';
 import { PropSelector } from './PropSelector';
@@ -19,21 +20,21 @@ interface PropInstance extends Prop { // Extend the imported Prop type
 
 interface PackingListProps {
   show: Show;
-  boxes: PackingBox[];
-  props: Prop[]; // Uses the imported Prop type now
+  boxes: PackingBox[]; // Uses type from packing
+  props: Prop[]; 
   isLoading?: boolean;
-  onCreateBox: (props: PackedProp[], act: number, scene: number) => void; 
-  onUpdateBox: (boxId: string, updates: Partial<PackingBox>) => Promise<void>;
+  onCreateBox: (props: PackedProp[], act: number, scene: number) => void; // Uses type from packing
+  onUpdateBox: (boxId: string, updates: Partial<PackingBox>) => Promise<void>; // Uses type from packing
   onDeleteBox: (boxId: string) => Promise<void>;
 }
 
 export function PackingList({
   show,
-  boxes,
-  props, // Now uses imported Prop[] type
+  boxes, // Now PackingBox[] from packing
+  props, 
   isLoading = false,
   onCreateBox,
-  onUpdateBox,
+  onUpdateBox, // Now expects Partial<PackingBox> from packing
   onDeleteBox,
 }: PackingListProps) {
   const [currentBoxName, setCurrentBoxName] = useState('');

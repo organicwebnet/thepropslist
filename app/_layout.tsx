@@ -1,3 +1,4 @@
+import '../global.css'; // Import Tailwind styles
 import React, { useEffect, type PropsWithChildren } from 'react';
 import { Stack, router } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -5,8 +6,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
 import { PropsProvider } from '../src/contexts/PropsContext';
 import { ShowsProvider } from '../src/contexts/ShowsContext';
-import { AuthProvider } from '../src/contexts/AuthContext';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
+import { AuthForm } from '../src/components/AuthForm';
+import { TopNavBar } from '../src/components/navigation/TopNavBar';
+import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 
@@ -23,6 +26,7 @@ export const unstable_settings = {
 };
 
 function RootLayoutNav() {
+  console.log("--- Rendering: RootLayoutNav ---");
   // ... (Keep the Stack navigator definition as is)
   return (
     <Stack
@@ -89,9 +93,48 @@ const styles = StyleSheet.create({
   errorMessage: {
     color: 'red',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
+function AppContent() {
+  console.log("--- Rendering: AppContent --- ");
+  const { user, loading: authLoading, error: authError } = useAuth();
+  console.log(`--- AppContent State: authLoading=${authLoading}, user=${user?.uid}, authError=${authError} ---`);
+
+  // Wait for authentication check to complete
+  if (authLoading) {
+    console.log("--- AppContent: Showing loading indicator --- ");
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  // If user is not logged in, show the AuthForm
+  if (!user) {
+    console.log("--- AppContent: Showing AuthForm --- ");
+    // onClose might need refinement depending on how AuthForm signals success
+    return <AuthForm onClose={() => console.log("AuthForm closed/completed")} />;
+  }
+
+  // If user is logged in, show the main app navigation with TopNavBar on web
+  console.log("--- AppContent: Showing main navigation (TopNavBar + RootLayoutNav) --- ");
+  return (
+    <View style={{ flex: 1 }}>
+      {Platform.OS === 'web' && <TopNavBar />}
+      <RootLayoutNav />
+      {/* Footer navigation would go here if needed */}
+    </View>
+  );
+}
+
 export default function RootLayout() {
+  console.log("--- Rendering: RootLayout --- ");
   // Uncomment font loading
   const [fontsLoaded, fontError] = useFonts({
     'OpenDyslexic-Regular': require('../assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf'),
@@ -118,21 +161,21 @@ export default function RootLayout() {
       // For now, we allow rendering to continue with system fonts
   }
 
-  // Keep ErrorBoundary commented, keep GestureHandler, Keep Auth/Theme Providers
-  // Keep Props/Shows Providers uncommented
+  // Wrap AppContent with providers
+  console.log("--- RootLayout: Rendering Providers + AppContent --- ");
   return (
-    // <ErrorBoundary error={undefined}> 
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <AuthProvider>
-          <ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ThemeProvider>
+          <ShowsProvider>
             <PropsProvider>
-              <ShowsProvider>
-                <RootLayoutNav />
-              </ShowsProvider>
+              <ErrorBoundary>
+                <AppContent />
+              </ErrorBoundary>
             </PropsProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </GestureHandlerRootView>
-    // </ErrorBoundary>
+          </ShowsProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 } 

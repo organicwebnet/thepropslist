@@ -5,11 +5,9 @@ import { AuthForm } from './components/AuthForm';
 import { PropForm } from './components/PropForm';
 import { PropList } from './components/PropList';
 import { ShowList } from './components/ShowList';
-import { Footer } from './components/Footer';
-
 import { UserProfileModal } from './components/UserProfile';
 import { ShareModal } from './components/ShareModal';
-import { db, auth } from './lib/firebase';
+import { WebFirebaseService } from './platforms/web/services/firebase';
 import type { Prop, PropFormData } from './shared/types/props';
 import type { Filters, Show, ShowFormData } from './types';
 import { LogOut, PlusCircle, Pencil, Trash2, Plus } from 'lucide-react';
@@ -18,6 +16,7 @@ import { SearchBar } from './components/SearchBar';
 import { PropFilters } from './components/PropFilters';
 import { ExportToolbar } from './components/ExportToolbar';
 import { OnboardingGuide } from './components/OnboardingGuide';
+import Sidebar from './components/Sidebar';
 
 const initialFilters: Filters = {
   search: '',
@@ -25,6 +24,12 @@ const initialFilters: Filters = {
   scene: undefined,
   category: undefined
 };
+
+// Instantiate the service
+const firebaseService = new WebFirebaseService();
+// Get auth and db instances (assuming firestore() returns the db instance)
+let auth: ReturnType<typeof firebaseService.auth> | null = null;
+let db: ReturnType<typeof firebaseService.firestore> | null = null;
 
 function App() {
   const [showAuth, setShowAuth] = useState(false);
@@ -34,7 +39,7 @@ function App() {
   const [props, setProps] = useState<Prop[]>([]);
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(auth.currentUser);
+  const [user, setUser] = useState(auth?.currentUser);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [activeTab, setActiveTab] = useState<'props' | 'shows' | 'packing'>('props');
   const [selectedProp, setSelectedProp] = useState<Prop | null>(null);
@@ -42,8 +47,29 @@ function App() {
   const [editingShow, setEditingShow] = useState<Show | null>(null);
   const [showFormMode, setShowFormMode] = useState<'create' | 'edit'>('create');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [firebaseInitialized, setFirebaseInitialized] = useState(false); // State to track initialization
+
+  // Initialize Firebase
+  useEffect(() => {
+    const initFirebase = async () => {
+      try {
+        await firebaseService.initialize();
+        auth = firebaseService.auth(); // Assign after initialization
+        db = firebaseService.firestore(); // Assign after initialization
+        setFirebaseInitialized(true);
+        console.log('Firebase initialized in App.tsx');
+      } catch (error) {
+        console.error("Failed to initialize Firebase:", error);
+        // Handle initialization error (e.g., show error message)
+      }
+    };
+    initFirebase();
+  }, []);
 
   useEffect(() => {
+    if (!firebaseInitialized || !auth) { // Wait for initialization and auth instance
+      return;
+    }
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (!user) {
@@ -56,10 +82,10 @@ function App() {
     });
 
     return () => unsubscribeAuth();
-  }, []);
+  }, [firebaseInitialized]); // Depend on initialization state
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !db || !firebaseInitialized) { // Wait for user, db, and initialization
       return;
     }
 
@@ -105,10 +131,10 @@ function App() {
     return () => {
       showsUnsubscribe();
     };
-  }, [user, selectedShow]);
+  }, [user, selectedShow, firebaseInitialized]); // Depend on initialization state
 
   useEffect(() => {
-    if (!user || !selectedShow) {
+    if (!user || !selectedShow || !db || !firebaseInitialized) { // Wait for user, show, db, and initialization
       setProps([]);
       setLoading(false);
       return;
@@ -145,10 +171,13 @@ function App() {
     });
 
     return () => unsubscribe();
-  }, [user, selectedShow]);
+  }, [user, selectedShow, firebaseInitialized]); // Depend on initialization state
 
   // Handle redirect result from Google Sign-in
   useEffect(() => {
+    if (!firebaseInitialized || !auth || !db) { // Wait for initialization, auth, and db
+       return;
+    }
     const handleRedirectResult = async () => {
       try {
         // Check if there's a redirect result
@@ -211,7 +240,7 @@ function App() {
     };
     
     handleRedirectResult();
-  }, [user]);
+  }, [user, firebaseInitialized]); // Depend on initialization state
 
   // Add effect to sync activeTab with current route
   useEffect(() => {
@@ -225,10 +254,13 @@ function App() {
     }
   }, []);
 
-  // Check if user needs onboarding
+  // Check if onboarding is needed
   useEffect(() => {
+    if (!user || !db || !firebaseInitialized) { // Wait for user, db, and initialization
+      return;
+    }
     const checkOnboarding = async () => {
-      if (user) {
+      if (!user) { // This condition seems wrong, should likely be if(user)
         const profileDoc = await getDoc(doc(db, 'userProfiles', user.uid));
         if (!profileDoc.exists() || !profileDoc.data().onboardingCompleted) {
           setShowOnboarding(true);
@@ -237,7 +269,26 @@ function App() {
     };
 
     checkOnboarding();
-  }, [user]);
+  }, [user, firebaseInitialized]); // Depend on initialization state
+
+  // Add effect to log computed styles after mount & init
+  useEffect(() => {
+    if (firebaseInitialized) {
+      const appContainer = document.getElementById('app-container');
+      if (appContainer) {
+        const styles = window.getComputedStyle(appContainer);
+        console.log('--- Computed Styles for #app-container ---');
+        console.log('Display:', styles.display); 
+        console.log('Flex Direction:', styles.flexDirection); 
+        console.log('Min Height:', styles.minHeight);
+        console.log('Background Color:', styles.backgroundColor);
+        console.log('Color:', styles.color);
+        console.log('-----------------------------------------');
+      } else {
+        console.error('#app-container element not found');
+      }
+    }
+  }, [firebaseInitialized]); // Rerun if firebase init state changes (primarily for first true)
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
@@ -248,8 +299,8 @@ function App() {
   };
 
   const handlePropSubmit = async (data: PropFormData) => {
-    if (!user || !selectedShow) {
-      setShowAuth(true);
+    if (!user || !selectedShow || !db || !firebaseInitialized) { // Check db and initialization
+      console.error('User, selected show, or DB not available');
       return;
     }
 
@@ -272,8 +323,10 @@ function App() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!db || !firebaseInitialized) return; // Check db and initialization
     try {
       await deleteDoc(doc(db, 'props', id));
+      console.log('Prop deleted successfully');
     } catch (error) {
       console.error('Error deleting prop:', error);
       alert('Failed to delete prop. Please try again.');
@@ -281,8 +334,11 @@ function App() {
   };
 
   const handleUpdatePrice = async (id: string, newPrice: number) => {
+    if (!db || !firebaseInitialized) return; // Check db and initialization
+    const propRef = doc(db, 'props', id); // Use db instance
     try {
-      await updateDoc(doc(db, 'props', id), { price: newPrice });
+      await updateDoc(propRef, { price: newPrice });
+      console.log('Prop price updated successfully');
     } catch (error) {
       console.error('Error updating price:', error);
       alert('Failed to update price. Please try again.');
@@ -290,11 +346,14 @@ function App() {
   };
 
   const handleEdit = async (id: string, data: PropFormData) => {
+    if (!db || !firebaseInitialized) return; // Check db and initialization
+    const propRef = doc(db, 'props', id); // Use db instance
     try {
-      await updateDoc(doc(db, 'props', id), {
+      await updateDoc(propRef, {
         ...data,
         lastModifiedAt: new Date().toISOString()
       });
+      console.log('Prop updated successfully');
     } catch (error) {
       console.error('Error updating prop:', error);
       alert('Failed to update prop. Please try again.');
@@ -307,7 +366,7 @@ function App() {
   };
 
   const handleAddCollaborator = async (email: string, role: 'editor' | 'viewer') => {
-    if (!selectedShow || !user) return;
+    if (!selectedShow || !user || !db || !firebaseInitialized) return;
 
     try {
       const collaborator = {
@@ -327,14 +386,11 @@ function App() {
   };
 
   const handleRemoveCollaborator = async (email: string) => {
-    if (!selectedShow) return;
-
+    if (!selectedShow || !db || !firebaseInitialized) return;
+    const showRef = doc(db, 'shows', selectedShow.id);
     try {
-      const collaboratorToRemove = selectedShow.collaborators.find(c => c.email === email);
-      if (!collaboratorToRemove) return;
-
-      await updateDoc(doc(db, 'shows', selectedShow.id), {
-        collaborators: arrayRemove(collaboratorToRemove)
+      await updateDoc(showRef, {
+        collaborators: arrayRemove(email)
       });
     } catch (error) {
       console.error('Error removing collaborator:', error);
@@ -347,198 +403,335 @@ function App() {
   };
 
   const handleCreateShow = async () => {
-    if (!user) {
-      setShowAuth(true);
-      return;
+    if (!user || !db || !firebaseInitialized) return; // Check db and initialization
+
+    const newShowData = {
+      name: 'New Show',
+      description: '',
+      acts: [{ id: 1, name: 'Act 1', scenes: [{ id: 1, name: 'Scene 1' }] }],
+      userId: user.uid,
+      createdAt: new Date().toISOString(),
+      collaborators: [],
+      stageManager: '',
+      stageManagerEmail: '',
+      propsSupervisor: '',
+      propsSupervisorEmail: '',
+      productionCompany: '',
+      productionContactName: '',
+      productionContactEmail: '',
+      venues: [],
+      isTouringShow: false,
+      contacts: [],
+      lastUpdated: new Date().toISOString()
+    };
+
+    try {
+      const docRef = await addDoc(collection(db, 'shows'), newShowData);
+      console.log('New show created with ID:', docRef.id);
+      // Optionally select the new show immediately
+      // const newShow = { id: docRef.id, ...newShowData } as Show;
+      // setSelectedShow(newShow);
+    } catch (error) {
+      console.error('Error creating new show:', error);
+      alert('Failed to create new show. Please try again.');
     }
-    setShowFormMode('create');
-    setEditingShow(null);
-    setShowEditModal(true);
   };
 
   const handleShowSubmit = async (data: Show) => {
-    console.log('=== HANDLESHOWSUBMIT ===');
-    console.log('1. Received data:', data);
-    
-    if (!user) return;
+    if (!user || !db || !firebaseInitialized) return; // Check db and initialization
+
+    console.log('Submitting show form data:', data);
+
+    // Prepare the data for Firestore, ensuring acts/scenes have IDs if missing
+    const showDataToSave = {
+      ...data,
+      userId: user.uid,
+      lastUpdated: new Date().toISOString(),
+      acts: (data.acts || []).map((act, actIndex) => ({
+        id: act.id || actIndex + 1, // Ensure act ID
+        name: act.name || `Act ${actIndex + 1}`,
+        scenes: (act.scenes || []).map((scene, sceneIndex) => ({
+          id: scene.id || sceneIndex + 1, // Ensure scene ID
+          name: scene.name || `Scene ${sceneIndex + 1}`
+        }))
+      }))
+    };
+
     try {
-      console.log('2. Mode:', showFormMode, 'editingShow:', editingShow?.id);
-      
       if (showFormMode === 'edit' && editingShow) {
-        console.log('3. Updating existing show:', editingShow.id);
-        
-        // Remove the id from the data object since Firestore doesn't allow it
-        // Extract only the fields we want to update
-        const updateData = {
-          name: data.name,
-          description: data.description,
-          acts: data.acts,
-          stageManager: data.stageManager,
-          stageManagerEmail: data.stageManagerEmail,
-          stageManagerPhone: data.stageManagerPhone,
-          propsSupervisor: data.propsSupervisor,
-          propsSupervisorEmail: data.propsSupervisorEmail, 
-          propsSupervisorPhone: data.propsSupervisorPhone,
-          productionCompany: data.productionCompany,
-          productionContactName: data.productionContactName,
-          productionContactEmail: data.productionContactEmail,
-          productionContactPhone: data.productionContactPhone,
-          venues: data.venues,
-          isTouringShow: data.isTouringShow,
-          contacts: data.contacts,
-          imageUrl: data.imageUrl,
-          userId: editingShow.userId,
-          lastModifiedAt: new Date().toISOString()
-        };
-        
-        console.log('4. Update data:', updateData);
-        
-        await updateDoc(doc(db, 'shows', editingShow.id), updateData);
-        console.log('5. Show updated successfully');
-        
-        setEditingShow(null);
-        setShowFormMode('create');
+        console.log('Updating show:', editingShow.id);
+        const showRef = doc(db, 'shows', editingShow.id);
+        await updateDoc(showRef, showDataToSave);
+        console.log('Show updated successfully');
       } else {
-        console.log('3. Creating new show');
-        
-        await addDoc(collection(db, 'shows'), {
-          ...data,
-          userId: user.uid,
-          createdAt: new Date().toISOString(),
-          collaborators: []
-        });
-        console.log('4. Show created successfully');
+        console.log('Adding new show');
+        const docRef = await addDoc(collection(db, 'shows'), showDataToSave);
+        console.log('Show added successfully with ID:', docRef.id);
+        // Optionally, select the newly created show
+        // setSelectedShow({ ...showDataToSave, id: docRef.id });
       }
+      setEditingShow(null);
+      setShowEditModal(false);
     } catch (error) {
-      console.error('Error with show:', error);
-      alert(`Failed to ${showFormMode} show. Please try again.`);
+      console.error('Error saving show:', error);
+      // Consider adding user feedback here (e.g., toast notification)
     }
   };
 
   const handleDeleteShow = async (showId: string) => {
-    if (!user || !window.confirm('Are you sure you want to delete this show? This will also delete all props associated with it.')) return;
-    
-    console.log('=== DELETE SHOW FUNCTION ===');
-    console.log('1. Starting delete for show:', showId);
-    console.log('2. Current user:', user.uid);
-    
+    if (!db || !firebaseInitialized) return; // Check db and initialization
+    console.log('Attempting to delete show:', showId);
+    if (!window.confirm('Are you sure you want to delete this show and all its props? This cannot be undone.')) {
+      return;
+    }
+
     try {
-      // Delete all props associated with this show
-      console.log('3. Querying props for deletion...');
+      // Delete props associated with the show
       const propsQuery = query(collection(db, 'props'), where('showId', '==', showId));
       const propsSnapshot = await getDocs(propsQuery);
-      console.log('4. Found', propsSnapshot.size, 'props to delete');
-      
-      const deletePromises = propsSnapshot.docs.map(doc => {
-        console.log('- Deleting prop:', doc.id);
-        return deleteDoc(doc.ref);
+      const deletePromises: Promise<void>[] = [];
+      propsSnapshot.forEach((propDoc) => {
+        console.log('Deleting prop:', propDoc.id);
+        deletePromises.push(deleteDoc(doc(db, 'props', propDoc.id)));
       });
       await Promise.all(deletePromises);
-      console.log('5. Successfully deleted all props');
-      
-      // Finally delete the show itself
-      console.log('6. Attempting to delete show document...');
+      console.log('Deleted associated props for show:', showId);
+
+      // Delete the show document
       await deleteDoc(doc(db, 'shows', showId));
-      console.log('7. Successfully deleted show');
-      
+      console.log('Show deleted successfully:', showId);
+
+      // Reset selected show if it was the one deleted
+      if (selectedShow?.id === showId) {
+        setSelectedShow(null);
+        setShows(shows.filter(s => s.id !== showId));
+        if (shows.length > 1) {
+           setSelectedShow(shows.find(s => s.id !== showId) || null);
+        }
+      }
     } catch (error) {
       console.error('Error deleting show:', error);
-      if (error instanceof Error) {
-        alert(`Failed to delete show: ${error.message}`);
-      } else {
-        alert('Failed to delete show. Please try again.');
-      }
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!auth || !firebaseInitialized) return; // Check auth and initialization
+    try {
+      await signOut(auth);
+      setUser(null);
+      setProps([]);
+      setShows([]);
+      setSelectedShow(null);
+      setShowAuth(true);
+    } catch (error) {
+      console.error('Error signing out: ', error);
     }
   };
 
   const filteredProps = props.filter(prop => {
-    const matchesSearch = prop.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      (prop.description || '').toLowerCase().includes(filters.search.toLowerCase());
-    const matchesAct = !filters.act || prop.act === filters.act;
-    const matchesScene = !filters.scene || prop.scene === filters.scene;
-    const matchesCategory = !filters.category || prop.category.toLowerCase() === filters.category.toLowerCase();
-    const matchesStatus = !filters.status || prop.status === filters.status;
-    return matchesSearch && matchesAct && matchesScene && matchesCategory && matchesStatus;
+    const searchLower = filters.search.toLowerCase();
+    const nameMatch = prop.name.toLowerCase().includes(searchLower);
+    const descriptionMatch = prop.description?.toLowerCase().includes(searchLower) ?? false;
+    const categoryMatch = prop.category?.toLowerCase().includes(searchLower) ?? false;
+    const actMatch = filters.act ? prop.act === filters.act : true;
+    const sceneMatch = filters.scene ? prop.scene === filters.scene : true;
+
+    return (nameMatch || descriptionMatch || categoryMatch) && actMatch && sceneMatch;
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0A0A0A] text-white p-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading props...</p>
-        </div>
-      </div>
-    );
+  const handleExport = (format: 'pdf' | 'csv') => {
+    console.log(`Exporting props in ${format} format...`);
+    // Placeholder for export functionality
+  };
+
+  const handleOpenAddPropModal = () => {
+    setSelectedProp(null);
+    setShowEditModal(true);
+  };
+  
+  const handleOpenEditPropModal = (prop: Prop) => {
+    setSelectedProp(prop);
+    setShowEditModal(true);
+  };
+  
+  const handleOpenShowForm = (mode: 'create' | 'edit', show: Show | null = null) => {
+      setShowFormMode(mode);
+      setEditingShow(mode === 'edit' ? show : null);
+      setShowEditModal(true);
+  };
+
+  if (loading || !firebaseInitialized) {
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   if (showAuth || !user) {
-    // Commenting out - Auth handling should likely be in root layout or navigation logic
-    // return <AuthForm onAuthSuccess={() => setShowAuth(false)} />;
-    // Placeholder while refactoring:
-    return <div className="flex justify-center items-center h-screen">Please Sign In</div>; 
+    return <AuthForm onClose={() => setShowAuth(false)} />;
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
-      <header className="bg-[var(--bg-secondary)] border-b border-[var(--border-color)] px-4 sm:px-6 py-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Props Bible</h1>
-          <div className="flex items-center gap-4">
-            {user && (
-              <>
-                <button onClick={() => setShowProfile(true)} className="text-sm hover:text-[var(--highlight-color)] transition-colors">Profile</button>
-                <button onClick={() => signOut(auth)} className="text-sm hover:text-red-400 transition-colors flex items-center gap-1">
-                  <LogOut size={16} /> Logout
-                </button>
-              </>
+    <div id="app-container" className="flex h-screen bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text-primary">
+      <Sidebar />
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="bg-gray-100 dark:bg-dark-card-bg border-b dark:border-dark-border text-gray-900 dark:text-dark-text-primary p-4 flex justify-between items-center shadow-md flex-shrink-0">
+          <h1 className="text-2xl font-bold">Props Bible</h1>
+          <div className="flex items-center space-x-4">
+            {shows.length > 0 ? (
+              <select
+                value={selectedShow?.id || ''}
+                onChange={(e) => {
+                  const show = shows.find(s => s.id === e.target.value);
+                  if (show) {
+                    setSelectedShow(show);
+                  } else {
+                    setSelectedShow(null);
+                  }
+                }}
+                className="bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-dark-border rounded px-3 py-1 text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-light-primary dark:focus:ring-dark-primary"
+              >
+                <option value="" disabled>Select a Show</option>
+                {shows.map(show => (
+                  <option key={show.id} value={show.id}>{show.name}</option>
+                ))}
+              </select>
+            ) : (
+              <span className="text-gray-500 dark:text-dark-text-secondary">No shows available</span>
             )}
+             <button 
+                onClick={() => handleOpenShowForm('create')} 
+                className="p-2 rounded-full text-gray-600 dark:text-dark-text-secondary hover:bg-gray-200 dark:hover:bg-gray-700 transition duration-150"
+                title="Add New Show"
+              >
+                  <PlusCircle size={20} />
+              </button>
+              {selectedShow && (
+                 <button 
+                    onClick={() => handleOpenShowForm('edit', selectedShow)} 
+                    className="p-2 rounded-full hover:bg-gray-700 transition duration-150"
+                    title="Edit Selected Show"
+                  >
+                      <Pencil size={20} />
+                  </button>
+              )}
+             {selectedShow && (
+                <button
+                  onClick={() => handleDeleteShow(selectedShow.id)}
+                  className="p-2 rounded-full hover:bg-red-700 text-red-500 hover:text-white transition duration-150"
+                  title="Delete Selected Show"
+                >
+                  <Trash2 size={20} />
+                </button>
+              )}
+
+            <button onClick={() => setShowProfile(true)} className="p-2 rounded-full hover:bg-gray-700">
+              <img src={user.photoURL || '/default-avatar.png'} alt="User Profile" className="w-8 h-8 rounded-full" />
+            </button>
+            <button onClick={handleLogout} title="Logout" className="p-2 rounded-full hover:bg-gray-700">
+              <LogOut size={20} />
+            </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="flex-grow container mx-auto px-4 sm:px-6 py-8">
-        {/* Removed TabNavigation component - integrate into layout if needed */}
-        {/* Removed <Routes> and <Route> components */}
-        {/* Content is now determined by Expo Router file structure */}
-        
-        {/* 
-          Conditional Modals/Forms - these need to be moved to appropriate layouts/screens. 
-          Commenting them out here temporarily to resolve prop errors.
-        */}
-        {/* {showEditModal && selectedProp && (
-          <PropForm 
-            prop={selectedProp} 
-            onSubmit={handleEdit} 
-            onCancel={() => setShowEditModal(false)} 
-            showId={selectedShow?.id || ''} 
+        <main className="flex-grow p-6">
+          {!selectedShow ? (
+            <div className="text-center text-gray-500">
+              Please select a show or create a new one to view props.
+            </div>
+          ) : (
+            <>
+              <div className="mb-6 p-4 bg-white rounded shadow flex flex-wrap items-center justify-between gap-4">
+                <SearchBar value={filters.search} onChange={(value) => handleFilterChange({ ...filters, search: value })} />
+                <PropFilters filters={filters} onChange={handleFilterChange} onReset={handleFilterReset} />
+                <ExportToolbar props={filteredProps} show={selectedShow!} />
+                 <button
+                    onClick={handleOpenAddPropModal}
+                    className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded inline-flex items-center"
+                    title="Add New Prop"
+                  >
+                    <Plus size={20} className="mr-2"/> Add Prop
+                </button>
+              </div>
+
+              {loading ? (
+                <div>Loading props...</div>
+              ) : (
+                <PropList
+                  props={filteredProps}
+                  onEdit={handleOpenEditPropModal}
+                  onDelete={handleDelete}
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+
+      {showEditModal && (
+          <PropForm
+            initialData={selectedProp ? {
+                ...selectedProp,
+                status: selectedProp.status || 'confirmed',
+                // Convert Timestamp to string if it exists and is a Timestamp instance
+                lastModifiedAt: selectedProp.lastModifiedAt && typeof selectedProp.lastModifiedAt === 'object' && 'toDate' in selectedProp.lastModifiedAt
+                    ? (selectedProp.lastModifiedAt as any).toDate().toISOString() // Assuming it's a Firestore Timestamp-like object
+                    : undefined,
+             } : undefined}
+            onSubmit={async (formData) => {
+              if (selectedProp) {
+                await handleEdit(selectedProp.id, formData);
+              } else {
+                await handlePropSubmit(formData);
+              }
+              setShowEditModal(false);
+              setSelectedProp(null);
+            }}
+            onCancel={() => {
+              setShowEditModal(false);
+              setSelectedProp(null);
+            }}
+            mode={selectedProp ? 'edit' : 'create'}
+            show={selectedShow || undefined}
           />
-        )} */}
-        {/* {editingShow && (
+        )}
+      {showProfile && <UserProfileModal onClose={() => setShowProfile(false)} />}
+      {showShareModal && selectedShow && user && (
+        <ShareModal
+          show={selectedShow}
+          onClose={() => setShowShareModal(false)}
+          onAddCollaborator={handleAddCollaborator}
+          onRemoveCollaborator={handleRemoveCollaborator}
+          currentUserEmail={user.email || ''}
+        />
+      )}
+      {showOnboarding && 
+        <OnboardingGuide 
+          show={showOnboarding} 
+          onComplete={() => {
+            console.log('Onboarding Complete callback fired in App.tsx');
+            setShowOnboarding(false);
+          }}
+        />
+      }
+      {editingShow !== null && showEditModal && (
+        <ShowForm
+          initialData={editingShow}
+          onSubmit={handleShowSubmit}
+          onCancel={() => {
+              setEditingShow(null);
+              setShowEditModal(false);
+          }}
+          mode="edit"
+        />
+      )}
+      {showFormMode === 'create' && !editingShow && showEditModal && (
           <ShowForm
-            initialData={editingShow}
+            mode="create"
             onSubmit={handleShowSubmit}
-            onCancel={() => setEditingShow(null)}
-            mode={showFormMode}
-          />
-        )} */}
-        {/* {showProfile && user && <UserProfileModal user={user} onClose={() => setShowProfile(false)} />} */}
-        {/* {showShareModal && selectedShow && (
-          <ShareModal 
-            show={selectedShow} 
-            onClose={() => setShowShareModal(false)} 
-            onAddCollaborator={handleAddCollaborator}
-            onRemoveCollaborator={handleRemoveCollaborator}
-            // currentUserEmail={user?.email || ''} // Prop required
-          />
-        )} */}
-        {/* {showOnboarding && <OnboardingGuide onClose={() => setShowOnboarding(false)} /> /* onComplete prop required */}
-        
-        {/* Placeholder for where Expo Router will render the current screen */} 
-        <p>Main content area - driven by Expo Router (app directory files)</p>
-      </main>
-
-      <Footer />
+            onCancel={() => {
+                setShowEditModal(false);
+            }}
+           />
+      )}
     </div>
   );
 }

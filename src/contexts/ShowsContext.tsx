@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { collection, query, where, onSnapshot, FirestoreError, Firestore } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { useFirebase } from './FirebaseContext';
@@ -18,9 +18,14 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
   const [shows, setShows] = useState<Show[]>([]);
-  const [selectedShow, setSelectedShow] = useState<Show | null>(null);
+  const [_selectedShow, _setSelectedShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  const setSelectedShow = useCallback((show: Show | null) => {
+    console.log(`ShowsContext: setSelectedShow called with:`, show ? `ID: ${show.id}, Name: ${show.name}` : 'null');
+    _setSelectedShow(show);
+  }, []);
 
   useEffect(() => {
     if (!firebaseInitialized || !firebaseService) {
@@ -81,9 +86,9 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
         setShows(showsData);
         setError(null);
         
-        if (!selectedShow && showsData.length > 0) {
+        if (!_selectedShow && showsData.length > 0) {
            setSelectedShow(showsData[0]);
-        } else if (selectedShow && !showsData.some(s => s.id === selectedShow.id)) {
+        } else if (_selectedShow && !showsData.some(s => s.id === _selectedShow.id)) {
           setSelectedShow(showsData.length > 0 ? showsData[0] : null);
         }
         
@@ -99,13 +104,13 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => unsubscribe();
-  }, [firebaseInitialized, firebaseService, firebaseError]);
+  }, [firebaseInitialized, firebaseService, firebaseError, _selectedShow, setSelectedShow]);
 
   const value = {
     shows,
     loading,
     error,
-    selectedShow,
+    selectedShow: _selectedShow,
     setSelectedShow,
   };
 

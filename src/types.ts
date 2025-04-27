@@ -1,5 +1,9 @@
 import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './types/lifecycle';
 import { WeightUnit } from '@/shared/types/props';
+import authImport, { FirebaseAuthTypes, firebase as authFirebase } from '@react-native-firebase/auth';
+import firestoreImport, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+
+import { PropList } from './components/PropList';
 
 export interface UserProfile {
   displayName: string;
@@ -33,6 +37,7 @@ export interface Show {
   acts: Act[];
   userId: string;
   createdAt: string;
+  updatedAt: string;
   collaborators: ShowCollaborator[];
   stageManager: string;
   stageManagerEmail: string;

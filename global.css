@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root { /* Target root elements */
+  height: 100%; /* Ensure they cover full height */
+  background-color: #111827; /* Tailwind gray-900 */
+  color: #f9fafb; /* Tailwind gray-50 - default text color */
+}
+
+/* Optional: Style scrollbars if desired */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #374151; /* gray-700 */
+}
+::-webkit-scrollbar-thumb {
+  background: #6b7280; /* gray-500 */
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af; /* gray-400 */
+}
+
+/* Your global CSS or Tailwind directives can go here */
+/* For example: @tailwind base; */ 

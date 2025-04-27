@@ -1,4 +1,5 @@
 import { User } from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc, collection } from 'firebase/firestore';
 import { FirebaseService } from './types';
 import { UserRole, UserProfile, UserPermissions, DEFAULT_ROLE_PERMISSIONS } from '../../types/auth';
 
@@ -11,20 +12,22 @@ export class AuthService {
 
   async getUserProfile(uid: string): Promise<UserProfile | null> {
     try {
-      const doc = await this.firebase.firestore()
-        .collection('users')
-        .doc(uid)
-        .get();
+      const db = this.firebase.firestore();
+      if (!db) throw new Error("Firestore service not available in AuthService");
 
-      if (!doc.exists()) {
+      const userDocRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(userDocRef);
+
+      if (!docSnap.exists()) {
         return null;
       }
 
-      const data = await doc.data();
+      const data = docSnap.data();
       return {
+        uid: uid,
         ...data,
-        createdAt: data.createdAt?.toDate(),
-        updatedAt: data.updatedAt?.toDate()
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+        updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
       } as UserProfile;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -33,47 +36,48 @@ export class AuthService {
   }
 
   async createUserProfile(user: User, role: UserRole = UserRole.USER): Promise<void> {
+    const db = this.firebase.firestore();
+    if (!db) throw new Error("Firestore service not available in AuthService");
     const now = new Date();
     const profile: UserProfile = {
       uid: user.uid,
       email: user.email!,
       displayName: user.displayName || undefined,
+      photoURL: user.photoURL || undefined,
       role,
       permissions: DEFAULT_ROLE_PERMISSIONS[role],
       createdAt: now,
       updatedAt: now
     };
 
-    await this.firebase.firestore()
-      .collection('users')
-      .doc(user.uid)
-      .set(profile);
+    const userDocRef = doc(db, 'users', user.uid);
+    await setDoc(userDocRef, profile);
   }
 
   async updateUserRole(uid: string, newRole: UserRole): Promise<void> {
-    await this.firebase.firestore()
-      .collection('users')
-      .doc(uid)
-      .update({
-        role: newRole,
-        permissions: DEFAULT_ROLE_PERMISSIONS[newRole],
-        updatedAt: new Date()
-      });
+    const db = this.firebase.firestore();
+    if (!db) throw new Error("Firestore service not available in AuthService");
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, {
+      role: newRole,
+      permissions: DEFAULT_ROLE_PERMISSIONS[newRole],
+      updatedAt: new Date()
+    });
   }
 
   async updateUserPermissions(uid: string, permissions: Partial<UserPermissions>): Promise<void> {
-    await this.firebase.firestore()
-      .collection('users')
-      .doc(uid)
-      .update({
-        'permissions': permissions,
-        updatedAt: new Date()
-      });
+    const db = this.firebase.firestore();
+    if (!db) throw new Error("Firestore service not available in AuthService");
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, {
+      permissions: permissions,
+      updatedAt: new Date()
+    });
   }
 
   async hasPermission(uid: string, permission: keyof UserPermissions): Promise<boolean> {
     const profile = await this.getUserProfile(uid);
-    return profile?.permissions[permission] || false;
+    return profile?.permissions?.[permission] || false;
   }
 
   async signIn(email: string, password: string): Promise<UserProfile> {
@@ -85,6 +89,10 @@ export class AuthService {
     
     const profile = await this.getUserProfile(user.uid);
     if (!profile) {
+      console.log(`Profile missing for ${user.uid}, creating default.`);
+      await this.createUserProfile(user);
+      const newProfile = await this.getUserProfile(user.uid);
+      if (!newProfile) throw new Error('Failed to create or retrieve profile after sign-in');
       throw new Error('User profile not found');
     }
     

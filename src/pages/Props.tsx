@@ -80,10 +80,8 @@ export default function Props() {
       <View style={styles.content}>
         <PropList
           props={filteredProps}
-          show={show}
-          filters={filters}
-          onFilterChange={setFilters}
-          onFilterReset={handleResetFilters}
+          onEdit={(prop) => { /* handle edit */ }}
+          onDelete={(id) => { /* handle delete */ }}
         />
       </View>
       <Link href="/props/new" style={styles.addButton}>
