@@ -10,8 +10,8 @@ import { View, Text, StyleSheet, Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 
-// Comment out SplashScreen and Linking for now
-// SplashScreen.preventAutoHideAsync();
+// Uncomment SplashScreen 
+SplashScreen.preventAutoHideAsync();
 // const prefix = Linking.createURL('/');
 
 // Keep unstable_settings with initialRouteName set
@@ -92,19 +92,44 @@ const styles = StyleSheet.create({
 });
 
 export default function RootLayout() {
-  // ... keep font loading commented for now ...
+  // Uncomment font loading
+  const [fontsLoaded, fontError] = useFonts({
+    'OpenDyslexic-Regular': require('../assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf'),
+    'OpenDyslexic-Bold': require('../assets/fonts/OpenDyslexic/OpenDyslexic-Bold.otf'),
+    'OpenDyslexic-Italic': require('../assets/fonts/OpenDyslexic/OpenDyslexic-Italic.otf'),
+  });
 
-  // Keep ErrorBoundary commented, keep GestureHandler, Keep Auth/Theme Providers, comment out Props/Shows Providers
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      // Hide the splash screen after fonts have loaded or an error occurred
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  // Prevent rendering until the fonts have loaded or an error occurred
+  if (!fontsLoaded && !fontError) {
+    return null; // Render nothing or a basic loading indicator if preferred
+  }
+
+  // Handle font loading errors (optional, but recommended)
+  if (fontError) {
+      console.error("Font loading error in RootLayout:", fontError);
+      // Optionally render an error message or fallback UI
+      // For now, we allow rendering to continue with system fonts
+  }
+
+  // Keep ErrorBoundary commented, keep GestureHandler, Keep Auth/Theme Providers
+  // Keep Props/Shows Providers uncommented
   return (
     // <ErrorBoundary error={undefined}> 
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AuthProvider>
           <ThemeProvider>
-            {/* <PropsProvider>
-              <ShowsProvider> */}
+            <PropsProvider>
+              <ShowsProvider>
                 <RootLayoutNav />
-              {/* </ShowsProvider>
-            </PropsProvider> */}
+              </ShowsProvider>
+            </PropsProvider>
           </ThemeProvider>
         </AuthProvider>
       </GestureHandlerRootView>

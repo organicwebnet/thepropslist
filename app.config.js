@@ -12,22 +12,23 @@ module.exports = ({ config }) => {
       backgroundColor: "#ffffff"
     },
     assetBundlePatterns: [
-      "**/*"
+      "**/*",
+      "assets/fonts/**/*"
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.propsbible.app"
+      bundleIdentifier: "com.propsbible"
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      package: "com.propsbible.app"
+      package: "com.propsbible"
     },
     web: {
       bundler: "metro",
-      favicon: "./assets/favicon.png"
+      favicon: "./public/icon-192.png"
     },
     hooks: {
       postPublish: [

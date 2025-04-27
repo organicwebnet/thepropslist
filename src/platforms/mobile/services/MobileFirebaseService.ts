@@ -1,6 +1,7 @@
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
 import auth from '@react-native-firebase/auth';
+import app from '@react-native-firebase/app';
 import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
@@ -88,49 +89,88 @@ class MobileOfflineSync implements OfflineSync {
 }
 
 export class MobileFirebaseService implements FirebaseService {
-  protected _firestore: FirebaseFirestoreTypes.Module;
-  protected _auth: FirebaseAuthTypes.Module;
-  protected _storage: FirebaseStorageTypes.Module;
-  private _offlineSync: MobileOfflineSync;
+  protected _firestore: FirebaseFirestoreTypes.Module | undefined;
+  protected _auth: FirebaseAuthTypes.Module | undefined;
+  protected _storage: FirebaseStorageTypes.Module | undefined;
+  private _offlineSync: MobileOfflineSync | undefined;
+  private _isInitialized = false;
 
   constructor() {
-    this._firestore = firestore();
-    this._auth = auth();
-    this._storage = storage();
-    this._offlineSync = new MobileOfflineSync(this._firestore);
+    // Remove immediate initialization from constructor
+    // this._firestore = firestore();
+    // this._auth = auth();
+    // this._storage = storage();
+    // this._offlineSync = new MobileOfflineSync(this._firestore);
   }
 
   async initialize(): Promise<void> {
-    console.log("MobileFirebaseService initialized (using @react-native-firebase)");
-    return Promise.resolve();
+    if (this._isInitialized) {
+        console.log("MobileFirebaseService already initialized.");
+        return;
+    }
+    try {
+        console.log("[Firebase Init] Attempting initialization...");
+
+        // Explicitly check/get the default app instance first
+        console.log("[Firebase Init] Getting default app instance...");
+        const defaultApp = app.app();
+        console.log(`[Firebase Init] Default app instance obtained: ${defaultApp.name}`);
+        
+        // Initialize services here, logging each step
+        console.log("[Firebase Init] Initializing Auth...");
+        this._auth = auth();
+        console.log("[Firebase Init] Auth initialized.");
+
+        console.log("[Firebase Init] Initializing Firestore...");
+        this._firestore = firestore();
+        console.log("[Firebase Init] Firestore initialized.");
+
+        console.log("[Firebase Init] Initializing Storage...");
+        this._storage = storage();
+        console.log("[Firebase Init] Storage initialized.");
+
+        console.log("[Firebase Init] Initializing Offline Sync...");
+        this._offlineSync = new MobileOfflineSync(this._firestore);
+        console.log("[Firebase Init] Offline Sync initialized.");
+
+        this._isInitialized = true;
+        console.log("MobileFirebaseService initialized successfully (using @react-native-firebase)");
+    } catch (error) {
+        console.error("Error during MobileFirebaseService initialization step:", error);
+        this._isInitialized = false;
+        throw error; // Re-throw the error to be caught by FirebaseProvider
+    }
   }
 
   auth(): CustomAuth {
-    if (!this._auth) throw new Error('Auth not initialized');
+    if (!this._isInitialized || !this._auth) throw new Error('MobileFirebaseService not initialized or Auth module failed to initialize.');
     return this._auth as CustomAuth;
   }
 
   firestore(): CustomFirestore {
-    if (!this._firestore) throw new Error('Firestore not initialized');
+    if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
     return this._firestore as CustomFirestore;
   }
 
   storage(): CustomStorage {
-    if (!this._storage) throw new Error('Storage not initialized');
+    if (!this._isInitialized || !this._storage) throw new Error('MobileFirebaseService not initialized or Storage module failed to initialize.');
     return this._storage as CustomStorage;
   }
 
   offline(): OfflineSync {
+     if (!this._isInitialized || !this._offlineSync) throw new Error('MobileFirebaseService not initialized or OfflineSync module failed to initialize.');
     return this._offlineSync;
   }
 
   async runTransaction<T>(
     updateFunction: (transaction: CustomTransaction) => Promise<T>
   ): Promise<T> {
+    if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
     return this._firestore.runTransaction(updateFunction as any);
   }
 
   batch(): CustomWriteBatch {
+    if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
     return this._firestore.batch() as CustomWriteBatch;
   }
 
@@ -181,6 +221,7 @@ export class MobileFirebaseService implements FirebaseService {
     onNext: (doc: FirebaseDocument<T>) => void,
     onError?: (error: Error) => void
   ): () => void {
+    if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
     const listener = this._firestore.doc(path).onSnapshot(
       (snapshot: FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData>) => {
         if (snapshot.exists) {
@@ -205,6 +246,7 @@ export class MobileFirebaseService implements FirebaseService {
     onNext: (docs: FirebaseDocument<T>[]) => void,
     onError?: (error: Error) => void
   ): () => void {
+    if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
     const listener = this._firestore.collection(path).onSnapshot(
       (snapshot: FirebaseFirestoreTypes.QuerySnapshot<FirebaseFirestoreTypes.DocumentData>) => {
         const docs = snapshot.docs.map(doc => this._snapshotToFirebaseDocument<T>(doc));
@@ -223,6 +265,7 @@ export class MobileFirebaseService implements FirebaseService {
   createDocumentWrapper<T extends CustomDocumentData>(
     path: string
   ): FirebaseDocument<T> {
+    if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
     const ref = this._firestore.doc(path) as CustomDocumentReference<T>;
     return {
         id: ref.id,
@@ -261,6 +304,7 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   getStorageRef(path: string): CustomStorageReference {
+    if (!this._isInitialized || !this._storage) throw new Error('MobileFirebaseService not initialized or Storage module failed to initialize.');
     return this._storage.ref(path) as CustomStorageReference;
   }
 

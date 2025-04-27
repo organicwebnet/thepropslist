@@ -41,8 +41,7 @@ export default function PropsScreen() {
   }
 
   return (
-    <View style={styles.fullFlexContainer}> // Use a different style for the main view
-      <Text style={{ color: 'red', padding: 10, fontWeight: 'bold' }}>Restored PropsScreen Active!</Text>
+    <View style={styles.fullFlexContainer}> 
       <PropList
         props={props}
         show={selectedShow} // Use the actual selectedShow

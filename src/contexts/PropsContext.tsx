@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, FirestoreError } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, onSnapshot, FirestoreError, Firestore } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { ShowsContext } from './ShowsContext';
+import { useFirebase } from './FirebaseContext';
 import type { Prop } from '@shared/types/props';
 
 interface PropsContextType {
@@ -14,19 +14,27 @@ interface PropsContextType {
 const PropsContext = createContext<PropsContextType | undefined>(undefined);
 
 export function PropsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  // const { user } = useAuth(); // Keep user check commented out for now
   const showsContext = useContext(ShowsContext);
   const selectedShow = showsContext ? showsContext.selectedShow : null;
+  // Get Firebase service and init status
+  const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
   
   const [props, setProps] = useState<Prop[]>([]);
-  const [loading, setLoading] = useState(!!user && !!selectedShow);
+  const [loading, setLoading] = useState(/*!!user &&*/ !!selectedShow && firebaseInitialized); // Adjust loading state
   const [error, setErrorState] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!user || !selectedShow) {
+    // Wait for Firebase to be initialized AND a show to be selected
+    if (!firebaseInitialized || !firebaseService || !selectedShow) {
+      if (firebaseError) {
+        console.error("Error from FirebaseProvider:", firebaseError);
+        setErrorState(firebaseError);
+      }
+      // Clear props if deps aren't ready
       setProps([]);
-      setLoading(false);
-      setErrorState(null);
+      setLoading(false); 
+      setErrorState(firebaseError); // Reflect potential firebase init error
       return;
     }
 
@@ -37,6 +45,10 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
     let unsubscribe = () => {};
     try {
       console.log(`PropsProvider: Fetching props for showId: ${selectedShow.id}`);
+      
+      // Get Firestore instance from service
+      const db = firebaseService.firestore() as Firestore; 
+      
       const propsQuery = query(
         collection(db, 'props'),
         where('showId', '==', selectedShow.id)
@@ -74,11 +86,13 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
       console.log("PropsProvider: Unsubscribing props listener.");
       unsubscribe();
     };
-  }, [user, selectedShow]);
+  // Depend on firebase init, service, and selected show
+  }, [firebaseInitialized, firebaseService, selectedShow, firebaseError]);
 
   const value = {
     props,
-    loading,
+    // Adjust loading based on firebase init and local loading
+    loading: loading || !firebaseInitialized,
     error,
   };
 

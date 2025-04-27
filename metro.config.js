@@ -82,6 +82,14 @@ config.resolver.extraNodeModules = new Proxy({}, {
   },
 });
 
+// --- Polyfills for Node.js core modules ---
+// Add buffer explicitly
+config.resolver.extraNodeModules.buffer = require.resolve('buffer/');
+// You might need others depending on your dependencies, e.g.:
+// config.resolver.extraNodeModules.stream = require.resolve('readable-stream');
+// config.resolver.extraNodeModules.crypto = require.resolve('crypto-browserify');
+// config.resolver.extraNodeModules.vm = require.resolve('vm-browserify'); 
+
 // Explicitly define aliases (Diagnostic step) - REMOVED
 // config.resolver.extraNodeModules = {
 //   '@/shared': path.resolve(projectRoot, 'src/shared'),

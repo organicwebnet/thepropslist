@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Theater, User, Building, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import type { Show, ShowFormData } from '../types';
 import ShowForm from './ShowForm';
-import { auth } from '../lib/firebase';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ShowListProps {
   shows: Show[];
@@ -14,6 +14,7 @@ interface ShowListProps {
 }
 
 export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, currentUserEmail }: ShowListProps) {
+  const { user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -43,7 +44,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
   };
 
   const isShowOwner = (show: Show) => {
-    return show.userId === auth.currentUser?.uid;
+    return show.userId === user?.uid;
   };
 
   return (

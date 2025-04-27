@@ -1,44 +1,16 @@
 <!DOCTYPE html>
-<html lang="<%= lang %>">
+<html>
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="theme-color" content="#000000" />
-    <meta name="description" content="<%= description %>" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-    <link rel="manifest" href="<%= publicPath %>manifest.json" />
-    <link rel="shortcut icon" href="<%= publicPath %>favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="shortcut icon" href="/favicon.ico" />
     
-    <!-- Preload fonts -->
-    <link rel="preload" href="/assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf" as="font" type="font/otf" crossorigin />
-    <link rel="preload" href="/assets/fonts/OpenDyslexic/OpenDyslexic-Bold.otf" as="font" type="font/otf" crossorigin />
-    <link rel="preload" href="/assets/fonts/OpenDyslexic/OpenDyslexic-Italic.otf" as="font" type="font/otf" crossorigin />
-    
-    <title><%= title %></title>
+    <title>Props Bible</title>
     <style>
-        /* Ensure proper font loading */
-        @font-face {
-            font-family: 'OpenDyslexic-Regular';
-            src: url('<%= publicPath %>fonts/OpenDyslexic/OpenDyslexic-Regular.otf') format('opentype');
-            font-weight: normal;
-            font-style: normal;
-            font-display: swap;
-        }
-        @font-face {
-            font-family: 'OpenDyslexic-Bold';
-            src: url('<%= publicPath %>fonts/OpenDyslexic/OpenDyslexic-Bold.otf') format('opentype');
-            font-weight: bold;
-            font-style: normal;
-            font-display: swap;
-        }
-        @font-face {
-            font-family: 'OpenDyslexic-Italic';
-            src: url('<%= publicPath %>fonts/OpenDyslexic/OpenDyslexic-Italic.otf') format('opentype');
-            font-weight: normal;
-            font-style: italic;
-            font-display: swap;
-        }
         /* Ensure proper root styles */
         html, body, #root {
             height: 100%;

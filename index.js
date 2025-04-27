@@ -1,21 +1,26 @@
 import { registerRootComponent } from 'expo';
 import React from 'react';
-import { LogBox } from 'react-native';
-import { ExpoRoot } from 'expo-router';
+// import { LogBox } from 'react-native'; // Comment out original imports if not needed for test
+import { ExpoRoot } from 'expo-router'; // Uncomment Expo Router
+import { FirebaseProvider } from './src/contexts/FirebaseContext'; // Uncomment FirebaseProvider
+// import FirebaseTest from './src/components/FirebaseTest'; // Remove test component import
 
-// Ignore specific warnings that are known and handled
-LogBox.ignoreLogs([
-  'Warning: Failed prop type',
-  'Non-serializable values were found in the navigation state',
-  'Sending `onAnimatedValueUpdate` with no listeners registered.',
-  // Add this to ignore hostname-related warnings
-  'Cannot read property \'hostname\' of undefined',
-]);
+// Ignore specific warnings that are known and handled (Keep LogBox if desired)
+// LogBox.ignoreLogs([
+//   'Warning: Failed prop type',
+//   ...
+// ]);
 
-// Create a simple app component that renders the router
+// Render the main app with Expo Router and Firebase Provider
 function App() {
-  const ctx = require.context('./app');
-  return <ExpoRoot context={ctx} />;
+  // Expo Router uses a require context to dynamically load routes
+  // Adjust the path './app' if your routes directory is different
+  const ctx = require.context('./app'); 
+  return (
+    <FirebaseProvider>
+      <ExpoRoot context={ctx} />
+    </FirebaseProvider>
+  );
 }
 
 // Register the root component

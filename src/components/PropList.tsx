@@ -213,7 +213,7 @@ export function PropList({
                   className="w-14 h-14 flex-shrink-0 rounded-lg object-cover border border-[var(--border-color)]"
                 />
               ) : (
-                <div className="w-14 h-14 flex-shrink-0 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center">
+                <div className="w-14 h-14 flex-shrink-0 rounded-lg bg-[var(--input-bg)] border border-[var(--border-color)] flex items-center justify-center show-initial-container">
                   <span className="text-2xl font-semibold text-[var(--text-secondary)]">
                     {show.name[0]}
                   </span>

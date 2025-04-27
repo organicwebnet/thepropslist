@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
-import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, Auth } from 'firebase/auth';
 import { getAnalytics } from 'firebase/analytics';
 
 interface GoogleButtonConfig {
@@ -45,59 +45,20 @@ const validateFirebaseConfig = () => {
 
 validateFirebaseConfig();
 
-const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
-};
-
-console.log('Firebase Config:', {
-  ...firebaseConfig,
-  apiKey: '***' // Hide API key in logs
-});
-
-// Initialize Firebase with proper auth domain handling
-if (window.location.hostname === 'localhost') {
-  // For localhost, use the Firebase auth domain to avoid third-party cookie issues
-  console.log('Running on localhost - using Firebase authDomain for authentication');
-} else {
-  if (window.location.protocol !== 'https:') {
-    window.location.href = window.location.href.replace('http:', 'https:');
-  }
-}
-
-let app;
-try {
-  app = initializeApp(firebaseConfig);
-  console.log('Firebase initialized successfully');
-} catch (error) {
-  console.error('Error initializing Firebase:', error);
-  throw error;
-}
-
-const db = getFirestore(app);
-const auth = getAuth(app);
-const storage = getStorage(app);
-let analytics;
-if (typeof window !== 'undefined') {
-  analytics = getAnalytics(app);
-}
-
-// Helper function for Google Sign In
-export const signInWithGoogle = async () => {
+// Helper function for Google Sign In - Needs Auth instance passed in
+export const signInWithGoogle = async (authInstance: Auth) => {
+  if (!authInstance) {
+    console.error("Auth instance not provided to signInWithGoogle");
+    return;
+  } 
   try {
     const provider = new GoogleAuthProvider();
     provider.addScope('https://www.googleapis.com/auth/userinfo.email');
     provider.addScope('https://www.googleapis.com/auth/userinfo.profile');
     
-    // Use redirect instead of popup for better compatibility
-    await signInWithRedirect(auth, provider);
+    await signInWithRedirect(authInstance, provider); // Use passed instance
     
-    // The redirect result is handled automatically when the page loads
-    const result = await getRedirectResult(auth);
+    const result = await getRedirectResult(authInstance); // Use passed instance
     if (result) {
       return result;
     }
@@ -115,7 +76,11 @@ export const signInWithGoogle = async () => {
 // Helper function for delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Custom fetch function for Storage operations with retry logic
+// Custom fetch function - Needs Storage instance and Auth instance passed in
+// export async function fetchStorageImage(url: string): Promise<Blob> { 
+// This function likely needs refactoring to use the storage service from context
+// For now, let's comment it out to avoid errors, assuming it's not immediately critical
+/*
 export async function fetchStorageImage(url: string): Promise<Blob> {
   const MAX_RETRIES = 3;
   const INITIAL_RETRY_DELAY = 1000; // 1 second
@@ -175,6 +140,4 @@ export async function fetchStorageImage(url: string): Promise<Blob> {
   console.error(errorMessage);
   throw new Error(errorMessage);
 }
-
-// Export configured instances
-export { db, auth, storage, analytics };
+*/

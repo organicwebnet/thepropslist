@@ -27,7 +27,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="propsbible"/>
-        <data android:scheme="com.propsbible.app"/>
+        <data android:scheme="com.propsbible"/>
         <data android:scheme="exp+props-bible"/>
       </intent-filter>
     </activity>

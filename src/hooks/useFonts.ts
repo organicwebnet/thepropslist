@@ -22,20 +22,8 @@ export function useFonts(): FontLoadingState {
     try {
       setError(null);
       
-      if (Platform.OS === 'web') {
-        // Web-specific font loading
-        const fontFaces = Object.entries(FONT_ASSETS).map(([family, source]) => {
-          return new FontFace(family, `url(${source})`);
-        });
-
-        await Promise.all(fontFaces.map(async (fontFace) => {
-          const loadedFace = await fontFace.load();
-          document.fonts.add(loadedFace);
-        }));
-      } else {
-        // Native platforms font loading
-        await Font.loadAsync(FONT_ASSETS);
-      }
+      // Use Font.loadAsync for all platforms, letting Expo handle web specifics
+      await Font.loadAsync(FONT_ASSETS);
 
       setFontsLoaded(true);
     } catch (e) {

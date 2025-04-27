@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, FirestoreError } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, where, onSnapshot, FirestoreError, Firestore } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
+import { useFirebase } from './FirebaseContext';
 import type { Show } from '../types';
 
 interface ShowsContextType {
   shows: Show[];
   loading: boolean;
-  error: FirestoreError | null;
+  error: Error | null;
   selectedShow: Show | null;
   setSelectedShow: (show: Show | null) => void;
 }
@@ -16,26 +16,41 @@ export const ShowsContext = createContext<ShowsContextType | undefined>(undefine
 
 export function ShowsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
   const [shows, setShows] = useState<Show[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<FirestoreError | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!firebaseInitialized || !firebaseService) {
+      if (firebaseError) {
+        console.error("Error from FirebaseProvider:", firebaseError);
+        setError(firebaseError);
+        setLoading(false);
+      }
+      setLoading(true);
       setShows([]);
       setSelectedShow(null);
-      setLoading(false);
-      setError(null);
       return;
     }
+
+    // TEMPORARY: Comment out the user check to fetch all shows
+    // if (!user) {
+    //   setShows([]);
+    //   setSelectedShow(null);
+    //   setLoading(false);
+    //   setError(null);
+    //   return;
+    // }
 
     setError(null);
     setLoading(true);
 
+    const db = firebaseService.firestore() as Firestore;
+
     const showsQuery = query(
-      collection(db, 'shows'),
-      where('userId', '==', user.uid)
+      collection(db, 'shows')
     );
 
     const unsubscribe = onSnapshot(showsQuery, 
@@ -84,7 +99,7 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [firebaseInitialized, firebaseService, firebaseError]);
 
   const value = {
     shows,
