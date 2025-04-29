@@ -1,22 +1,27 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-// Import modular functions from RNFirebase Firestore
-import firestore, { 
-  FirebaseFirestoreTypes, 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  addDoc, 
-  doc, 
-  updateDoc, 
-  deleteDoc 
-} from '@react-native-firebase/firestore';
-import { useAuth } from './AuthContext';
+// REMOVE direct imports from @react-native-firebase/firestore
+// import firestore, { 
+//   FirebaseFirestoreTypes, 
+//   collection, 
+//   query, 
+//   where, 
+//   onSnapshot, 
+//   addDoc, 
+//   doc, 
+//   updateDoc, 
+//   deleteDoc 
+// } from '@react-native-firebase/firestore';
+import { useAuth } from './AuthContext'; // Assuming AuthContext might be needed later
 import { ShowsContext } from './ShowsContext';
 import { useFirebase } from './FirebaseContext';
-import type { Prop, PropFormData } from '@shared/types/props';
-// Remove CustomFirestore if not needed
-// import type { CustomFirestore } from '../shared/services/firebase/types';
+// Corrected and consolidated type imports
+import type { Prop, PropFormData } from '@/shared/types/props'; 
+import type { Show } from '@/types'; // Changed import path to match useShow hook
+// Import FirebaseDocument type
+import { FirebaseDocument } from '@/shared/services/firebase/types';
+import { QueryOptions } from '../shared/services/firebase/types'; // Import QueryOptions
+import { WhereFilterOp } from 'firebase/firestore'; // Import WhereFilterOp
+// Removed unused import: import { useFirestoreCollectionData } from '../shared/services/firebase/useFirestoreCollectionData';
 
 interface PropsContextType {
   props: Prop[];
@@ -30,135 +35,146 @@ interface PropsContextType {
 const PropsContext = createContext<PropsContextType | undefined>(undefined);
 
 export function PropsProvider({ children }: { children: React.ReactNode }) {
-  // const { user } = useAuth(); // Keep user check commented out for now
   const showsContext = useContext(ShowsContext);
-  const selectedShow = showsContext ? showsContext.selectedShow : null;
-  // Get Firebase service and init status
+  const selectedShow = showsContext?.selectedShow;
   const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
   
   const [props, setProps] = useState<Prop[]>([]);
-  const [loading, setLoading] = useState(/*!!user &&*/ !!selectedShow && firebaseInitialized); // Adjust loading state
+  const [loading, setLoading] = useState(true);
   const [error, setErrorState] = useState<Error | null>(null);
 
-  // Firestore instance memoization
-  const db = React.useMemo(() => {
-    if (firebaseInitialized && firebaseService) {
-      return firebaseService.firestore() as FirebaseFirestoreTypes.Module;
-    }
-    return null;
-  }, [firebaseInitialized, firebaseService]);
+  // REMOVE Direct db instance memoization
+  // const db = React.useMemo(() => { ... }, [firebaseInitialized, firebaseService]);
 
   useEffect(() => {
-    let unsubscribe = () => {}; // Define unsubscribe outside the if block
+    let unsubscribe = () => {};
 
-    if (db && selectedShow) { // Ensure db is not null here
-      // All logic using db now happens inside this block
+    // Check if service is ready and a show is selected
+    if (firebaseInitialized && firebaseService && selectedShow) {
       setLoading(true);
       setProps([]);
       setErrorState(null);
 
       try {
-        console.log(`PropsProvider: Fetching props for showId: ${selectedShow.id}`);
+        console.log(`PropsProvider: Setting up listener for props in showId: ${selectedShow.id}`);
         
-        const propsCollectionRef = collection(db, 'props'); // db is guaranteed non-null here
-        const propsQuery = query(
-          propsCollectionRef, 
-          where('showId', '==', selectedShow.id)
-        );
+        const queryOptions: QueryOptions = {
+          where: [['showId', '==', selectedShow.id]],
+        };
+        // Removed unused call to useFirestoreCollectionData
+        // const { data: propsData, loading: propsLoading } = useFirestoreCollectionData<Prop>(
+        //   'props',
+        //   queryOptions // Pass the typed options object here
+        // );
 
-        unsubscribe = onSnapshot(propsQuery, 
-          (snapshot: FirebaseFirestoreTypes.QuerySnapshot) => {
-            const propsData: Prop[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Prop));
-            console.log(`PropsProvider: Fetched ${propsData.length} props.`);
+        // Use the service's listenToCollection method
+        unsubscribe = firebaseService.listenToCollection<Prop>(
+          'props', // Collection path
+          (docs: FirebaseDocument<Prop>[]) => {
+            // Map FirebaseDocument array to Prop array
+            const propsData: Prop[] = docs.map(doc => ({
+              id: doc.id,
+              ...(doc.data || {})
+            } as Prop)); // Assuming data structure matches Prop type
+            
+            console.log(`PropsProvider: Fetched ${propsData.length} props for show ${selectedShow.id}.`);
             setProps(propsData);
             setErrorState(null);
             setLoading(false);
           },
-          (err: Error) => { // Use generic Error or RNFirebase specific error type
-            console.error("PropsProvider: Error fetching props:", err);
+          (err: Error) => {
+            console.error(`PropsProvider: Error listening to props for show ${selectedShow.id}:`, err);
             setErrorState(err);
             setLoading(false);
             setProps([]);
-          }
+          },
+          queryOptions // Pass the query options - Type Fixed by Edit
         );
 
-      } catch (queryError) {
-        console.error("PropsProvider: Error setting up props query:", queryError);
-        const setupError = queryError instanceof Error ? queryError : new Error(String(queryError));
-        setErrorState(setupError);
+      } catch (setupError) {
+        console.error("PropsProvider: Error setting up props listener:", setupError);
+        const err = setupError instanceof Error ? setupError : new Error(String(setupError));
+        setErrorState(err);
         setLoading(false);
         setProps([]);
       }
     } else {
-      // Handle the case where db or selectedShow is null/undefined
-      // (e.g., Firebase not initialized yet, or no show selected)
-      setProps([]);
-      setLoading(false); 
-      // Set error state if firebase init failed
+      // Handle cases where service isn't ready or no show is selected
+      setProps([]); // Clear props
+      setLoading(false);
       if (firebaseError) {
-         console.error("Error from FirebaseProvider:", firebaseError);
-         setErrorState(firebaseError); 
+         console.error("PropsProvider: Error from FirebaseProvider:", firebaseError);
+         setErrorState(firebaseError);
+      } else if (!selectedShow && firebaseInitialized) {
+         // If firebase is ready but no show is selected, it's not an error state, just empty
+         setErrorState(null); 
       } else {
-         setErrorState(null); // Clear error if just waiting for init/selection
+         // Still initializing or other state
+         setErrorState(null); 
+         if (!firebaseInitialized) setLoading(true); // Keep loading if firebase isn't ready
       }
     }
 
-    // Cleanup function remains outside
     return () => {
       console.log("PropsProvider: Unsubscribing props listener.");
       unsubscribe();
     };
-  }, [db, selectedShow, firebaseError]); // Keep firebaseError dependency for the else block
+  // Depend on service readiness and selected show ID
+  }, [firebaseInitialized, firebaseService, selectedShow?.id, firebaseError]); 
 
-  // --- CRUD Operations --- 
+  // --- CRUD Operations using FirebaseService --- 
 
   const addProp = useCallback(async (propData: PropFormData): Promise<string> => {
-    if (!db || !selectedShow) throw new Error("Database service or selected show not available.");
-    // db is guaranteed non-null here due to the check above
+    if (!firebaseService || !selectedShow) throw new Error("Firebase service or selected show not available.");
     try {
-      const dataToSave = { ...propData, showId: selectedShow.id };
-      const docRef = await addDoc(collection(db, 'props'), dataToSave);
-      console.log("PropsProvider: Added prop with ID:", docRef.id);
-      return docRef.id;
+      // Prepare data, ensuring showId is included
+      const dataToSave = { 
+          ...propData, 
+          showId: selectedShow.id,
+          // Ensure required fields for Prop type are present or defaulted if needed
+          // Assuming service's addDocument handles createdAt/updatedAt
+      };
+      // Use service method - removing explicit generic <Prop>
+      const newDoc = await firebaseService.addDocument('props', dataToSave as Omit<Prop, 'id'>); 
+      console.log("PropsProvider: Added prop with ID:", newDoc.id);
+      return newDoc.id; // Return the new document ID
     } catch (err) {
       console.error("PropsProvider: Error adding prop:", err);
+      // Consider re-throwing a more specific error or handling it
       throw err;
     }
-  }, [db, selectedShow]);
+  }, [firebaseService, selectedShow]);
 
   const updateProp = useCallback(async (propId: string, propData: Partial<PropFormData>): Promise<void> => {
-    if (!db) throw new Error("Database service not available.");
-    // db is guaranteed non-null here
+    if (!firebaseService) throw new Error("Firebase service not available.");
     try {
-      const propRef = doc(db, 'props', propId);
-      await updateDoc(propRef, propData);
+      // Use service method - assuming it handles updatedAt timestamp
+      await firebaseService.updateDocument<Prop>('props', propId, propData as Partial<Prop>);
       console.log("PropsProvider: Updated prop with ID:", propId);
     } catch (err) {
       console.error("PropsProvider: Error updating prop:", err);
       throw err;
     }
-  }, [db]);
+  }, [firebaseService]);
 
   const deleteProp = useCallback(async (propId: string): Promise<void> => {
-    if (!db) throw new Error("Database service not available.");
-    // db is guaranteed non-null here
+    if (!firebaseService) throw new Error("Firebase service not available.");
     try {
-      const propRef = doc(db, 'props', propId);
-      await deleteDoc(propRef);
+      // Use service method
+      await firebaseService.deleteDocument('props', propId);
       console.log("PropsProvider: Deleted prop with ID:", propId);
     } catch (err) {
       console.error("PropsProvider: Error deleting prop:", err);
       throw err;
     }
-  }, [db]);
+  }, [firebaseService]);
 
   // --- Context Value --- 
 
   const value = {
     props,
-    // Adjust loading based on firebase init and local loading
     loading: loading || !firebaseInitialized,
-    error,
+    error: error, // Use the state variable directly
     addProp,
     updateProp,
     deleteProp,

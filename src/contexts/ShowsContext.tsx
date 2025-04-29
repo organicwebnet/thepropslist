@@ -1,18 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-// Import modular functions from RNFirebase Firestore
-import firestore, { 
-  FirebaseFirestoreTypes, 
-  collection, 
-  query, 
-  where, 
-  onSnapshot 
-} from '@react-native-firebase/firestore'; 
+// REMOVE Import modular functions from RNFirebase Firestore
+// import firestore, { 
+//   FirebaseFirestoreTypes, 
+//   collection, 
+//   query, 
+//   where, 
+//   onSnapshot 
+// } from '@react-native-firebase/firestore'; 
 import { useAuth } from './AuthContext';
 // import { ShowsContext } from './ShowsContext'; // REMOVE self-import
 import { useFirebase } from './FirebaseContext';
 import type { Show } from '../types';
-// Remove CustomFirestore import if no longer needed after refactor, assuming direct RNFirebase type is sufficient
-// import type { CustomFirestore } from '../shared/services/firebase/types';
+// Import FirebaseDocument type
+import { FirebaseDocument } from '../shared/services/firebase/types';
 
 interface ShowsContextType {
   shows: Show[];
@@ -26,6 +26,7 @@ export const ShowsContext = createContext<ShowsContextType | undefined>(undefine
 
 export function ShowsProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  // Destructure firebaseService without casting db here
   const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
   const [shows, setShows] = useState<Show[]>([]);
   const [_selectedShow, _setSelectedShow] = useState<Show | null>(null);
@@ -37,91 +38,83 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     _setSelectedShow(show);
   }, []);
 
-  // Use Firestore instance directly without memoizing here, rely on FirebaseProvider's memoization
-  const db = firebaseService?.firestore() as FirebaseFirestoreTypes.Module | undefined;
+  // REMOVE Direct db instance derivation here
+  // const db = firebaseService?.firestore() as FirebaseFirestoreTypes.Module | undefined;
 
   useEffect(() => {
-    // Use db instance directly in effect
-    if (!firebaseInitialized || !db) { // Check db directly
+    // Check if firebaseService is initialized
+    if (!firebaseInitialized || !firebaseService) { // Check service directly
       if (firebaseError) {
         console.error("Error from FirebaseProvider:", firebaseError);
         setError(firebaseError);
         setLoading(false);
+      } else {
+         // If not initialized and no error yet, just keep loading
+         setLoading(true); 
       }
-      setLoading(true);
+      // Reset state if firebase isn't ready
       setShows([]);
       setSelectedShow(null);
       return;
     }
 
     // TEMPORARY: Comment out the user check to fetch all shows
-    // if (!user) {
-    //   setShows([]);
-    //   setSelectedShow(null);
-    //   setLoading(false);
-    //   setError(null);
-    //   return;
-    // }
+    // if (!user) { ... }
 
     setError(null);
     setLoading(true);
 
-    // Use modular functions
-    const showsCollectionRef = collection(db, 'shows');
-    // Example if query/where were needed:
-    // const showsQuery = query(showsCollectionRef, where('ownerId', '==', user.uid)); 
-    // Using base collection ref for now as per previous logic:
-    const showsQuery = showsCollectionRef; 
-
-    // Use modular onSnapshot
-    const unsubscribe = onSnapshot(showsQuery, 
-      (snapshot: FirebaseFirestoreTypes.QuerySnapshot) => {
-        const showsData: Show[] = [];
-        snapshot.forEach((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) => {
-          const data = doc.data();
-          const acts = Array.isArray(data.acts) ? data.acts.map((act: any) => ({
-            ...act,
-            id: act.id || 1,
-            scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
-              ...scene,
-              id: scene.id || 1
-            })) : []
-          })) : [{
-            id: 1,
-            name: 'Act 1',
-            scenes: [{ id: 1, name: 'Scene 1' }]
-          }];
-
-          showsData.push({
+    // Use the service method to listen
+    const unsubscribe = firebaseService.listenToCollection<Show>(
+      'shows', // Collection path
+      (docs: FirebaseDocument<Show>[]) => { // Callback for successful updates
+        // Map FirebaseDocument array to Show array
+        // Ensure doc.data exists before trying to spread it
+        const showsData: Show[] = docs.map(doc => ({
             id: doc.id,
-            ...data,
-            acts,
-            collaborators: Array.isArray(data.collaborators) ? data.collaborators : []
-          } as Show);
-        });
+            ...(doc.data || {}), // Use data property, provide default empty object
+            // Ensure nested structures have defaults if potentially missing from doc.data
+            acts: Array.isArray(doc.data?.acts) ? doc.data.acts.map((act: any) => ({
+                ...act,
+                id: act.id || 1, // Default ID if missing
+                scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
+                    ...scene,
+                    id: scene.id || 1 // Default ID if missing
+                })) : []
+            })) : [{ id: 1, name: 'Act 1', scenes: [{ id: 1, name: 'Scene 1' }] }], // Default act/scene structure
+            collaborators: Array.isArray(doc.data?.collaborators) ? doc.data.collaborators : [] // Default collaborators
+        } as Show)); // Explicit cast to Show might be needed depending on strictness
+
         setShows(showsData);
         setError(null);
         
+        // Update selected show logic
         if (!_selectedShow && showsData.length > 0) {
            setSelectedShow(showsData[0]);
         } else if (_selectedShow && !showsData.some(s => s.id === _selectedShow.id)) {
+          // If current selection disappears, select the first available or null
           setSelectedShow(showsData.length > 0 ? showsData[0] : null);
         }
         
         setLoading(false);
       },
-      (err: Error) => {
-        console.error("Error fetching shows:", err);
+      (err: Error) => { // Callback for errors
+        console.error("Error fetching shows via service:", err);
         setError(err);
         setShows([]);
         setSelectedShow(null);
         setLoading(false);
       }
+      // Add query options here if needed, e.g., { where: [['ownerId', '==', user.uid]] }
     );
 
-    return () => unsubscribe();
-  // Adjust dependencies - db instance itself might not be stable, rely on firebaseInitialized/firebaseService
-  }, [firebaseInitialized, firebaseService, firebaseError, _selectedShow, setSelectedShow]);
+    // Cleanup function
+    return () => {
+        console.log("ShowsContext: Unsubscribing from collection listener.");
+        unsubscribe();
+    };
+  // Dependencies: service availability, user (if re-enabled), selection state
+  }, [firebaseInitialized, firebaseService, firebaseError, _selectedShow, setSelectedShow]); // user removed temporarily
 
   const value = {
     shows,

@@ -35,6 +35,7 @@ config.resolver.nodeModulesPaths = [
 const tsconfig = require('./tsconfig.json'); // Load tsconfig
 const aliases = tsconfig.compilerOptions.paths;
 
+// UNCOMMENTING DYNAMIC ALIAS PROXY
 config.resolver.extraNodeModules = new Proxy({}, {
   get: (target, name) => {
     if (typeof name !== 'string') {
@@ -86,10 +87,6 @@ config.resolver.extraNodeModules = new Proxy({}, {
 // --- Polyfills for Node.js core modules ---
 // Add buffer explicitly
 config.resolver.extraNodeModules.buffer = require.resolve('buffer/');
-// You might need others depending on your dependencies, e.g.:
-// config.resolver.extraNodeModules.stream = require.resolve('readable-stream');
-// config.resolver.extraNodeModules.crypto = require.resolve('crypto-browserify');
-// config.resolver.extraNodeModules.vm = require.resolve('vm-browserify'); 
 
 // Explicitly define aliases (Diagnostic step) - REMOVED
 // config.resolver.extraNodeModules = {
@@ -102,9 +99,9 @@ const { transformer, resolver } = config;
 
 // process.env.EXPO_ROUTER_ORIGIN = 'http://localhost:8081'; // Reverted this change
 
-// Apply withNativeWind wrapper - Restore previous version
+// Apply withNativeWind wrapper
 module.exports = withNativeWind(config, {
-  // Keep your existing resolver customizations
+  // Pass the potentially modified resolver from the base config
   resolver: {
     ...resolver, 
     assetExts: resolver.assetExts.filter((ext) => ext !== 'svg'),

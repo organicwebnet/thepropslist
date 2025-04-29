@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Package, Trash2, Theater, Edit, AlertTriangle, Calendar, FileText, Share2, ChevronsUp, Activity, HelpCircle } from 'lucide-react';
-import type { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, DimensionUnit } from '@/shared/types/props';
+import type { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, DimensionUnit } from '@shared/types/props';
 import type { Show } from '@/types';
-import { Prop } from '@/shared/types/props';
+import type { Prop } from '@shared/types/props';
 import { lifecycleStatusLabels, lifecycleStatusPriority, PropLifecycleStatus, StatusPriority } from '@/types/lifecycle';
 import { HelpTooltip } from './HelpTooltip';
-import { PropCard } from '@/components/PropCard';
+import PropCard from '@/shared/components/PropCard';
 
 interface PropListProps {
   props: Prop[];
@@ -17,7 +17,7 @@ interface PropListProps {
 export function PropList({ 
   props, 
   onDelete, 
-  onEdit, 
+  onEdit,
 }: PropListProps) {
   const router = useRouter();
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
@@ -43,8 +43,6 @@ export function PropList({
           <PropCard 
             key={prop.id} 
             prop={prop} 
-            onEdit={() => handleEditClick(prop)} 
-            onDelete={() => handleDeleteClick(prop.id)}
           />
         ))
       )}

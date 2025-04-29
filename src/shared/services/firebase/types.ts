@@ -13,6 +13,7 @@ export type CustomDocumentReference<T = CustomDocumentData> = any; // Placeholde
 export type CustomCollectionReference<T = CustomDocumentData> = any; // Placeholder
 export type CustomStorageReference = any; // Placeholder
 export type CustomUser = any; // Placeholder
+export type CustomUserCredential = any; // Placeholder for UserCredential
 
 // Add exports for core service types using placeholders
 export type FirebaseAuth = CustomAuth;
@@ -114,7 +115,11 @@ export class FirebaseError extends Error {
 // Define QueryOptions type here as well, mirroring the implementation
 // (Alternatively, define it once and import it here and in WebFirebaseService)
 import { WhereFilterOp } from 'firebase/firestore'; // Make sure this is imported
-type QueryOptions = {
+/**
+ * A type representing the options for querying Firestore collections.
+ * Allows specifying filtering, ordering, and limiting of query results.
+ */
+export type QueryOptions = {
   where?: [string, WhereFilterOp, any][];
   orderBy?: [string, 'asc' | 'desc'][];
   limit?: number;
@@ -127,6 +132,15 @@ export interface FirebaseService {
   firestore(): CustomFirestore; // Updated type
   storage(): FirebaseStorage | CustomStorage; // Updated type
   offline(): OfflineSync;
+
+  // Add Email/Password Auth Methods
+  signInWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential>;
+  createUserWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential>;
+  sendPasswordResetEmail(email: string): Promise<void>;
+  // Google Sign-in placeholder - needs specific implementation
+  // signInWithGoogle(): Promise<CustomUserCredential>; 
+  // signOut(): Promise<void>; // Add if needed
+
   runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T>; // Updated type
   batch(): CustomWriteBatch; // Updated type
   listenToDocument<T extends CustomDocumentData>( // Updated constraint

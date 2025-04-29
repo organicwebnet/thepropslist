@@ -1,6 +1,6 @@
 import React, { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
-import './styles/global.css';
+import '../global.css';
 // import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 // import { FontProvider } from './contexts/FontContext'; // Commented out

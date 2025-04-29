@@ -14,7 +14,8 @@ import {
   CustomDocumentReference,
   CustomStorageReference,
   SyncStatus,
-  QueueStatus
+  QueueStatus,
+  CustomUserCredential
 } from '../../../shared/services/firebase/types';
 
 class MobileOfflineSync implements OfflineSync {
@@ -334,37 +335,111 @@ export class MobileFirebaseService implements FirebaseService {
     return this._storage.ref(path) as CustomStorageReference;
   }
 
-  protected handleError(message: string, error: unknown): never {
-    console.error("MobileFirebaseService Error:", message, error);
-    // Optionally check error codes specific to @react-native-firebase
-    if (error instanceof Error) {
-       // You might want to check error.code for specific Firebase errors
-       throw new FirebaseError(`${message}: ${error.message}`, (error as any).code || 'unknown-mobile-error');
+  async signInWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential> {
+    if (!this._isInitialized || !this._auth) throw this.handleError('Auth service not initialized', new Error('Auth service not initialized'));
+    try {
+      const userCredential = await this._auth.signInWithEmailAndPassword(email, password);
+      return userCredential as CustomUserCredential;
+    } catch (error) {
+      throw this.handleError('Error signing in with email/password', error);
     }
-    throw new FirebaseError(message, 'unknown-mobile-error');
   }
 
-  // Add placeholder implementations for missing FirebaseService methods
+  async createUserWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential> {
+    if (!this._isInitialized || !this._auth) throw this.handleError('Auth service not initialized', new Error('Auth service not initialized'));
+    try {
+      const userCredential = await this._auth.createUserWithEmailAndPassword(email, password);
+      return userCredential as CustomUserCredential;
+    } catch (error) {
+      throw this.handleError('Error creating user with email/password', error);
+    }
+  }
+
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    if (!this._isInitialized || !this._auth) throw this.handleError('Auth service not initialized', new Error('Auth service not initialized'));
+    try {
+      await this._auth.sendPasswordResetEmail(email);
+    } catch (error) {
+      throw this.handleError('Error sending password reset email', error);
+    }
+  }
+
+  protected handleError(message: string, error: unknown): FirebaseError {
+    console.error("MobileFirebaseService Error:", message, error);
+    let code = 'unknown';
+    let errorMessage = message;
+    if (error instanceof Error) {
+        errorMessage = error.message;
+        if ('code' in error && typeof (error as any).code === 'string') {
+            code = (error as any).code;
+        } 
+    } else if (typeof error === 'string') {
+        errorMessage = error;
+    }
+    return new FirebaseError(errorMessage, code, error);
+  }
+
+  // --- Implement Core CRUD Methods ---
   async deleteDocument(collectionPath: string, documentId: string): Promise<void> {
-    console.warn(`Mobile deleteDocument(${collectionPath}, ${documentId}) is not implemented.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+    if (!this._isInitialized || !this._firestore) throw this.handleError('Firestore not initialized', new Error('Firestore not initialized'));
+    try {
+      await this._firestore.collection(collectionPath).doc(documentId).delete();
+    } catch (error) {
+      throw this.handleError(`Error deleting document ${collectionPath}/${documentId}`, error);
+    }
   }
 
   async getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null> {
-    console.warn(`Mobile getDocument(${collectionPath}, ${documentId}) is not implemented.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+    if (!this._isInitialized || !this._firestore) throw this.handleError('Firestore not initialized', new Error('Firestore not initialized'));
+    try {
+      const docRef = this._firestore.collection(collectionPath).doc(documentId);
+      const docSnapshot = await docRef.get();
+
+      if (docSnapshot.exists) {
+        // Use the existing helper to wrap the snapshot
+        return this._snapshotToFirebaseDocument<T>(docSnapshot as FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData>);
+      } else {
+        return null;
+      }
+    } catch (error) {
+      // Throw a FirebaseError using the handler
+      throw this.handleError(`Error getting document ${collectionPath}/${documentId}`, error);
+    }
   }
 
   async updateDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void> {
-    console.warn(`Mobile updateDocument(${collectionPath}, ${documentId}) is not implemented.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+     if (!this._isInitialized || !this._firestore) throw this.handleError('Firestore not initialized', new Error('Firestore not initialized'));
+    try {
+      // Add updatedAt timestamp automatically
+      const dataWithTimestamp = { 
+        ...data, 
+        updatedAt: firestore.FieldValue.serverTimestamp() // Use server timestamp for consistency
+      };
+      await this._firestore.collection(collectionPath).doc(documentId).update(dataWithTimestamp);
+    } catch (error) {
+      throw this.handleError(`Error updating document ${collectionPath}/${documentId}`, error);
+    }
   }
 
   async addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
-    console.warn(`Mobile addDocument(${collectionPath}) is not implemented.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+     if (!this._isInitialized || !this._firestore) throw this.handleError('Firestore not initialized', new Error('Firestore not initialized'));
+    try {
+      // Add timestamps automatically
+      const dataWithTimestamps = {
+        ...data,
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      };
+      const docRef = await this._firestore.collection(collectionPath).add(dataWithTimestamps);
+      // Fetch the added document to return it wrapped
+      const docSnapshot = await docRef.get();
+      return this._snapshotToFirebaseDocument<T>(docSnapshot as FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData>);
+    } catch (error) {
+      throw this.handleError(`Error adding document to ${collectionPath}`, error);
+    }
   }
 
+  // --- Placeholder for other methods ---
   async uploadFile(path: string, file: File): Promise<string> {
     console.warn(`Mobile uploadFile(${path}) is not implemented.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');

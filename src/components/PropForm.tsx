@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { PlusCircle, Save, Loader2, Upload } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { motion } from 'framer-motion';
+import { HelpCircle, Upload, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { PlusCircle, Save, Loader2 } from 'lucide-react';
 import { ImageUpload } from './ImageUpload';
 import { DigitalAssetForm } from './DigitalAssetForm';
-import { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, DimensionUnit } from '@shared/types/props';
-import { Show, Act, Scene } from 'src/types';
+import { propCategories, PropCategory, DimensionUnit } from '@shared/types/props';
+import type { Prop, PropFormData, DigitalAsset, PropImage } from '@shared/types/props';
+import type { Show, Act, Scene } from '@/types';
 import { WysiwygEditor } from './WysiwygEditor';
 import { HelpTooltip } from './HelpTooltip';
-import { PropLifecycleStatus, lifecycleStatusLabels } from 'src/types/lifecycle';
 
 export interface PropFormProps {
   onSubmit: (prop: PropFormData) => Promise<void>;
@@ -17,16 +20,18 @@ export interface PropFormProps {
   show?: Show;
 }
 
-export const dimensionUnits = [
+export const dimensionUnits: ReadonlyArray<{ value: DimensionUnit; label: string }> = [
   { value: 'cm', label: 'cm' },
   { value: 'in', label: 'in' },
-  { value: 'mm', label: 'mm' }
-] as const;
+  { value: 'm', label: 'm' },
+  { value: 'ft', label: 'ft' },
+];
 
-export const weightUnits = [
+export const weightUnits: ReadonlyArray<{ value: 'kg' | 'lb' | 'g'; label: string }> = [
   { value: 'kg', label: 'kg' },
-  { value: 'lb', label: 'lb' }
-] as const;
+  { value: 'lb', label: 'lb' },
+  { value: 'g', label: 'g' },
+];
 
 const initialFormState: PropFormData = {
   name: '',
@@ -155,6 +160,21 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
   const handleSafetyNotesChange = (content: string) => {
     setFormData({ ...formData, safetyNotes: content });
+  };
+
+  const convertWeight = (value: number | string | undefined, unit: 'kg' | 'lb' | 'g'): number => {
+    const numericValue = Number(value);
+    if (isNaN(numericValue) || numericValue === 0) return 0;
+
+    switch (unit) {
+      case 'lb':
+        return numericValue * 0.453592;
+      case 'g':
+        return numericValue / 1000;
+      case 'kg':
+      default:
+        return numericValue;
+    }
   };
 
   return (
@@ -568,7 +588,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               </label>
               <select
                 value={formData.weightUnit}
-                onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' })}
+                onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' | 'g' })}
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 disabled={disabled}
               >
@@ -823,15 +843,14 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
             </label>
             <select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as PropLifecycleStatus })}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value as 'confirmed' | 'loaned_out' | 'damaged_awaiting_repair' | 'out_for_repair' | 'confirmed' })}
               className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
               disabled={disabled}
             >
-              {Object.entries(lifecycleStatusLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {typeof label === 'string' ? label : String(label)}
-                </option>
-              ))}
+              <option value="confirmed">Confirmed</option>
+              <option value="loaned_out">Loaned Out</option>
+              <option value="damaged_awaiting_repair">Damaged Awaiting Repair</option>
+              <option value="out_for_repair">Out for Repair</option>
             </select>
           </div>
 

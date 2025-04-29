@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, X, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { useFirebase } from '../contexts/FirebaseContext';
 import { useAuth } from '../contexts/AuthContext';
 import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
 

@@ -4,9 +4,11 @@ import {
   signInWithEmailAndPassword,
   signOut,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   Auth,
-  User
+  User,
+  UserCredential
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -55,6 +57,7 @@ import type {
   CustomDocumentData,
   CustomDocumentReference,
   CustomStorageReference,
+  CustomUserCredential,
   SyncStatus,
   // FirebaseError // Keep as type import initially if only used for type annotations
 } from '../../../shared/services/firebase/types';
@@ -326,14 +329,21 @@ export class WebFirebaseService implements FirebaseService {
   }
 
   private createError(error: unknown): FirebaseError {
-    const err = error as { code?: string; message?: string };
-    const firebaseError: FirebaseError = {
-      code: err.code || 'unknown',
-      message: err.message || 'An unknown web error occurred',
-      originalError: error,
-      name: 'FirebaseError'
-    };
-    return firebaseError;
+    let message = 'An unknown Firebase web error occurred.';
+    let code = 'unknown';
+    const originalError = error;
+
+    if (error instanceof Error) {
+        message = error.message;
+        if ('code' in error && typeof (error as any).code === 'string') {
+            code = (error as any).code;
+        }
+    } else if (typeof error === 'string') {
+        message = error;
+    }
+
+    console.error('Firebase Web Error:', message, `(Code: ${code})`, originalError);
+    return new FirebaseError(message, code, originalError);
   }
 
   // --- CRUD Methods Implementation ---
@@ -427,5 +437,34 @@ export class WebFirebaseService implements FirebaseService {
     // TODO: Implement actual delete logic for shows using web SDK
     console.warn(`deleteShow(${showId}) is not implemented in WebFirebaseService.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async signInWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential> {
+    if (!this.isInitialized || !this.authInstance) throw this.createError(new Error('Firebase not initialized'));
+    try {
+      const userCredential = await signInWithEmailAndPassword(this.authInstance, email, password);
+      return userCredential as CustomUserCredential;
+    } catch (error) {
+      throw this.createError(error);
+    }
+  }
+
+  async createUserWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential> {
+    if (!this.isInitialized || !this.authInstance) throw this.createError(new Error('Firebase not initialized'));
+    try {
+      const userCredential = await createUserWithEmailAndPassword(this.authInstance, email, password);
+      return userCredential as CustomUserCredential;
+    } catch (error) {
+      throw this.createError(error);
+    }
+  }
+
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    if (!this.isInitialized || !this.authInstance) throw this.createError(new Error('Firebase not initialized'));
+    try {
+      await sendPasswordResetEmail(this.authInstance, email);
+    } catch (error) {
+      throw this.createError(error);
+    }
   }
 } 

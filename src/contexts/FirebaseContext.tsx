@@ -31,8 +31,8 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
   const service = React.useMemo(() => {
     if (Platform.OS === 'web') {
       console.log("[FirebaseProvider] Creating WebFirebaseService instance.");
-      // return new WebFirebaseService(); // Assuming Web is handled elsewhere for now
-      return null; // Or handle web properly if needed
+      return new WebFirebaseService(); // Assuming Web is handled elsewhere for now
+      // return null; // Or handle web properly if needed
     } else {
       console.log("[FirebaseProvider] Creating MobileFirebaseService instance.");
       return new MobileFirebaseService();

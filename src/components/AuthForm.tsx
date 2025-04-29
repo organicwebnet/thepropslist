@@ -9,17 +9,7 @@ import {
   StyleSheet
 } from 'react-native';
 import { Svg, Path } from 'react-native-svg';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  sendPasswordResetEmail, 
-  AuthError, 
-  User, 
-  UserCredential, 
-  getRedirectResult, 
-  signInWithPopup,
-  GoogleAuthProvider
-} from 'firebase/auth';
+import type { AuthError } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
@@ -57,46 +47,8 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    setError(null);
-
-    if (!isInitialized || !firebaseService) {
-      setError("Firebase service not available. Please wait or refresh.");
-      setLoading(false);
-      return;
-    }
-    
-    const auth = firebaseService.auth();
-    const db = firebaseService.firestore();
-    const provider = new GoogleAuthProvider();
-
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      await setDoc(doc(db, 'userProfiles', user.uid), {
-        displayName: user.displayName || '',
-        email: user.email || '',
-        photoURL: user.photoURL || '',
-        provider: 'google.com',
-        createdAt: new Date().toISOString(),
-        lastUpdated: new Date().toISOString()
-      }, { merge: true });
-
-      onClose();
-    } catch (error: any) {
-      console.error('Google sign in error:', error);
-      let errorMessage = 'Unable to sign in with Google. Please try again.';
-      if (error.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Google Sign-In window closed. Please try again.';
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        errorMessage = 'Multiple sign-in windows opened. Please close others and try again.';
-      } else if (error.code === 'auth/unauthorized-domain') {
-        errorMessage = `This domain (${window.location.hostname}) is not authorized for Google Sign-In. Please contact support.`;
-      }
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+    setError('Google Sign-In not yet implemented for this platform setup.');
+    setLoading(false);
   };
 
   const validateForm = () => {
@@ -134,7 +86,6 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
       setError("Firebase service not available.");
       return;
     }
-    const auth = firebaseService.auth();
 
     if (!validateForm()) {
       return;
@@ -143,7 +94,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
     setLoading(true);
 
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await firebaseService.sendPasswordResetEmail(email.trim());
       setSuccess('Password reset email sent! Please check your inbox.');
       setEmail('');
     } catch (error: any) {
@@ -161,6 +112,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
           break;
         default:
           console.error('Password reset error:', error);
+          if (error.message) message = error.message;
       }
       
       setError(message);
@@ -177,7 +129,6 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
       setError("Firebase service not available.");
       return;
     }
-    const auth = firebaseService.auth();
 
     if (!validateForm()) {
       return;
@@ -190,9 +141,9 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
       const trimmedPassword = password.trim();
 
       if (mode === 'signup') {
-        await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+        await firebaseService.createUserWithEmailAndPassword(trimmedEmail, trimmedPassword);
       } else {
-        await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+        await firebaseService.signInWithEmailAndPassword(trimmedEmail, trimmedPassword);
       }
       onClose();
     } catch (error: any) {
@@ -228,6 +179,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
           break;
         default:
           console.error('Auth error:', error);
+          if (error.message) message = error.message;
       }
       
       setError(message);
@@ -335,17 +287,17 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
             >
               <RequiredLabel>Email Address</RequiredLabel>
               <TextInput 
-                value={email}
+                  value={email}
                 onChangeText={setEmail}
                 placeholder="you@example.com"
-                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-md placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
                 aria-label="Email Address"
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
             </View>
 
-            {mode !== 'forgot' && (
+              {mode !== 'forgot' && (
               <View
                 className="mb-6 relative"
               >
@@ -360,10 +312,10 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                   )}
                 </View>
                 <TextInput 
-                  value={password}
+                      value={password}
                   onChangeText={setPassword}
                   placeholder="••••••••"
-                  className="w-full px-4 py-2.5 pr-10 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                  className="w-full px-4 py-2.5 pr-10 bg-gray-800 border border-gray-700 rounded-md placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
                   aria-label="Password"
                   secureTextEntry={!showPassword}
                 />
@@ -384,15 +336,15 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
               onPress={mode === 'forgot' ? handleForgotPassword : handleSubmit}
               disabled={loading}
               className={`w-full flex flex-row items-center justify-center px-4 py-3 ${loading ? 'bg-primary/70' : 'bg-primary hover:bg-primary/90'} text-white font-semibold rounded-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary`}
-            >
-              {loading ? (
+              >
+                {loading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-              ) : (
-                <> 
+                ) : (
+                  <>
                   {mode === 'signin' && <LogIn size={18} color="#FFFFFF" style={{ marginRight: 8 }} />} 
                   {mode === 'signup' && <UserPlus size={18} color="#FFFFFF" style={{ marginRight: 8 }} />} 
-                </> 
-              )}
+                  </>
+                )}
               <Text style={{ color: '#FFFFFF' }}>
                 {loading ? 'Processing...' : (mode === 'signin' ? 'Sign In' : (mode === 'signup' ? 'Sign Up' : 'Send Reset Email'))}
               </Text>
