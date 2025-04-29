@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { collection, query, where, onSnapshot, FirestoreError, Firestore, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import { useAuth } from './AuthContext';
 import { ShowsContext } from './ShowsContext';
 import { useFirebase } from './FirebaseContext';
 import type { Prop, PropFormData } from '@shared/types/props';
+import type { CustomFirestore } from '../shared/services/firebase/types';
 
 interface PropsContextType {
   props: Prop[];
   loading: boolean;
-  error: FirestoreError | Error | null;
+  error: Error | null;
   addProp: (propData: PropFormData) => Promise<string>;
   updateProp: (propId: string, propData: Partial<PropFormData>) => Promise<void>;
   deleteProp: (propId: string) => Promise<void>;
@@ -25,12 +26,13 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
   
   const [props, setProps] = useState<Prop[]>([]);
   const [loading, setLoading] = useState(/*!!user &&*/ !!selectedShow && firebaseInitialized); // Adjust loading state
-  const [error, setErrorState] = useState<FirestoreError | Error | null>(null);
+  const [error, setErrorState] = useState<Error | null>(null);
 
-  // Firestore instance memoization (ensure db is available)
+  // Firestore instance memoization
   const db = React.useMemo(() => {
     if (firebaseInitialized && firebaseService) {
-      return firebaseService.firestore() as Firestore;
+      // Use the specific RNFirebase type or keep CustomFirestore if it matches
+      return firebaseService.firestore() as FirebaseFirestoreTypes.Module;
     }
     return null;
   }, [firebaseInitialized, firebaseService]);
@@ -57,24 +59,27 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log(`PropsProvider: Fetching props for showId: ${selectedShow.id}`);
       
-      const propsQuery = query(
-        collection(db!, 'props'),
-        where('showId', '==', selectedShow.id)
-      );
+      // Use RNFirebase query methods
+      const propsQuery = db!
+        .collection('props')
+        .where('showId', '==', selectedShow.id);
 
-      unsubscribe = onSnapshot(propsQuery, (snapshot) => {
-        const propsData: Prop[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Prop));
-        console.log(`PropsProvider: Fetched ${propsData.length} props.`);
-        setProps(propsData);
-        setErrorState(null);
-        setLoading(false);
-      }, (err) => {
-        console.error("PropsProvider: Error fetching props:", err);
-        const fetchError = err instanceof Error ? err : new Error(String(err));
-        setErrorState(fetchError as FirestoreError | Error);
-        setLoading(false);
-        setProps([]);
-      });
+      // Use onSnapshot method from the query object
+      unsubscribe = propsQuery.onSnapshot(
+        (snapshot: FirebaseFirestoreTypes.QuerySnapshot) => {
+          const propsData: Prop[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Prop));
+          console.log(`PropsProvider: Fetched ${propsData.length} props.`);
+          setProps(propsData);
+          setErrorState(null);
+          setLoading(false);
+        },
+        (err: Error) => { // Use generic Error or RNFirebase specific error type
+          console.error("PropsProvider: Error fetching props:", err);
+          setErrorState(err);
+          setLoading(false);
+          setProps([]);
+        }
+      );
 
     } catch (queryError) {
       console.error("PropsProvider: Error setting up props query:", queryError);
@@ -89,7 +94,7 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
       unsubscribe();
     };
   // Depend on firebase init, service, and selected show
-  }, [db, selectedShow, firebaseError]);
+  }, [db, selectedShow]);
 
   // --- CRUD Operations --- 
 
@@ -97,20 +102,22 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
     if (!db || !selectedShow) throw new Error("Database service or selected show not available.");
     try {
       const dataToSave = { ...propData, showId: selectedShow.id };
-      const docRef = await addDoc(collection(db!, 'props'), dataToSave);
+      // Use RNFirebase add method
+      const docRef = await db.collection('props').add(dataToSave);
       console.log("PropsProvider: Added prop with ID:", docRef.id);
       return docRef.id;
     } catch (err) {
       console.error("PropsProvider: Error adding prop:", err);
-      throw err; // Re-throw error for handling in the component
+      throw err;
     }
   }, [db, selectedShow]);
 
   const updateProp = useCallback(async (propId: string, propData: Partial<PropFormData>): Promise<void> => {
     if (!db) throw new Error("Database service not available.");
     try {
-      const propRef = doc(db!, 'props', propId);
-      await updateDoc(propRef, propData);
+      // Get doc ref and use RNFirebase update method
+      const propRef = db.collection('props').doc(propId);
+      await propRef.update(propData);
       console.log("PropsProvider: Updated prop with ID:", propId);
     } catch (err) {
       console.error("PropsProvider: Error updating prop:", err);
@@ -121,10 +128,10 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
   const deleteProp = useCallback(async (propId: string): Promise<void> => {
     if (!db) throw new Error("Database service not available.");
     try {
-      const propRef = doc(db!, 'props', propId);
-      await deleteDoc(propRef);
+      // Get doc ref and use RNFirebase delete method
+      const propRef = db.collection('props').doc(propId);
+      await propRef.delete();
       console.log("PropsProvider: Deleted prop with ID:", propId);
-      // Note: The onSnapshot listener should automatically update the local state
     } catch (err) {
       console.error("PropsProvider: Error deleting prop:", err);
       throw err;

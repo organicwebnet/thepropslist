@@ -22,7 +22,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
-import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -281,7 +281,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
             className="absolute top-3 left-3 p-2 text-gray-400 hover:text-primary transition-colors"
             aria-label="Back to sign in"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={20} color="#9CA3AF" />
           </TouchableOpacity>
         )}
 
@@ -372,7 +372,10 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                   className="absolute inset-y-0 right-0 top-7 flex items-center pr-3 text-gray-500 hover:text-primary cursor-pointer"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword 
+                    ? <EyeOff size={20} color="#6B7280" />
+                    : <Eye size={20} color="#6B7280" />
+                  }
                 </TouchableOpacity>
               </View>
             )}
@@ -380,17 +383,17 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
             <TouchableOpacity 
               onPress={mode === 'forgot' ? handleForgotPassword : handleSubmit}
               disabled={loading}
-              className={`w-full flex items-center justify-center px-4 py-3 ${loading ? 'bg-primary/70' : 'bg-primary hover:bg-primary/90'} text-white font-semibold rounded-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary`}
+              className={`w-full flex flex-row items-center justify-center px-4 py-3 ${loading ? 'bg-primary/70' : 'bg-primary hover:bg-primary/90'} text-white font-semibold rounded-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary`}
             >
               {loading ? (
-                <Loader2 size={20} className="animate-spin mr-2" />
+                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
               ) : (
                 <> 
-                  {mode === 'signin' && <LogIn size={18} className="mr-2" />} 
-                  {mode === 'signup' && <UserPlus size={18} className="mr-2" />} 
+                  {mode === 'signin' && <LogIn size={18} color="#FFFFFF" style={{ marginRight: 8 }} />} 
+                  {mode === 'signup' && <UserPlus size={18} color="#FFFFFF" style={{ marginRight: 8 }} />} 
                 </> 
               )}
-              <Text>
+              <Text style={{ color: '#FFFFFF' }}>
                 {loading ? 'Processing...' : (mode === 'signin' ? 'Sign In' : (mode === 'signup' ? 'Sign Up' : 'Send Reset Email'))}
               </Text>
             </TouchableOpacity>

@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { collection, query, where, onSnapshot, FirestoreError, Firestore } from 'firebase/firestore';
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import { useAuth } from './AuthContext';
 import { useFirebase } from './FirebaseContext';
 import type { Show } from '../types';
+import type { CustomFirestore } from '../shared/services/firebase/types';
 
 interface ShowsContextType {
   shows: Show[];
@@ -52,16 +53,16 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setLoading(true);
 
-    const db = firebaseService.firestore() as Firestore;
+    const db = firebaseService.firestore() as CustomFirestore;
 
-    const showsQuery = query(
-      collection(db, 'shows')
-    );
+    const showsCollection = db.collection('shows');
 
-    const unsubscribe = onSnapshot(showsQuery, 
-      (snapshot) => {
+    const showsQuery = showsCollection;
+
+    const unsubscribe = showsQuery.onSnapshot( 
+      (snapshot: FirebaseFirestoreTypes.QuerySnapshot) => {
         const showsData: Show[] = [];
-        snapshot.forEach((doc) => {
+        snapshot.forEach((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) => {
           const data = doc.data();
           const acts = Array.isArray(data.acts) ? data.acts.map((act: any) => ({
             ...act,
@@ -94,7 +95,7 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
         
         setLoading(false);
       },
-      (err) => {
+      (err: Error) => {
         console.error("Error fetching shows:", err);
         setError(err);
         setShows([]);
