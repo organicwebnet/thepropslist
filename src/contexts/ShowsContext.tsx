@@ -1,9 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+// Import modular functions from RNFirebase Firestore
+import firestore, { 
+  FirebaseFirestoreTypes, 
+  collection, 
+  query, 
+  where, 
+  onSnapshot 
+} from '@react-native-firebase/firestore'; 
 import { useAuth } from './AuthContext';
+// import { ShowsContext } from './ShowsContext'; // REMOVE self-import
 import { useFirebase } from './FirebaseContext';
 import type { Show } from '../types';
-import type { CustomFirestore } from '../shared/services/firebase/types';
+// Remove CustomFirestore import if no longer needed after refactor, assuming direct RNFirebase type is sufficient
+// import type { CustomFirestore } from '../shared/services/firebase/types';
 
 interface ShowsContextType {
   shows: Show[];
@@ -28,8 +37,12 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     _setSelectedShow(show);
   }, []);
 
+  // Use Firestore instance directly without memoizing here, rely on FirebaseProvider's memoization
+  const db = firebaseService?.firestore() as FirebaseFirestoreTypes.Module | undefined;
+
   useEffect(() => {
-    if (!firebaseInitialized || !firebaseService) {
+    // Use db instance directly in effect
+    if (!firebaseInitialized || !db) { // Check db directly
       if (firebaseError) {
         console.error("Error from FirebaseProvider:", firebaseError);
         setError(firebaseError);
@@ -53,13 +66,15 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setLoading(true);
 
-    const db = firebaseService.firestore() as CustomFirestore;
+    // Use modular functions
+    const showsCollectionRef = collection(db, 'shows');
+    // Example if query/where were needed:
+    // const showsQuery = query(showsCollectionRef, where('ownerId', '==', user.uid)); 
+    // Using base collection ref for now as per previous logic:
+    const showsQuery = showsCollectionRef; 
 
-    const showsCollection = db.collection('shows');
-
-    const showsQuery = showsCollection;
-
-    const unsubscribe = showsQuery.onSnapshot( 
+    // Use modular onSnapshot
+    const unsubscribe = onSnapshot(showsQuery, 
       (snapshot: FirebaseFirestoreTypes.QuerySnapshot) => {
         const showsData: Show[] = [];
         snapshot.forEach((doc: FirebaseFirestoreTypes.QueryDocumentSnapshot) => {
@@ -105,6 +120,7 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => unsubscribe();
+  // Adjust dependencies - db instance itself might not be stable, rely on firebaseInitialized/firebaseService
   }, [firebaseInitialized, firebaseService, firebaseError, _selectedShow, setSelectedShow]);
 
   const value = {
