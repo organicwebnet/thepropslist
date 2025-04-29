@@ -1,10 +1,7 @@
-import firestore from '@react-native-firebase/firestore';
-import storage from '@react-native-firebase/storage';
-import auth from '@react-native-firebase/auth';
-import app from '@react-native-firebase/app';
-import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
-import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
+import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import storage, { FirebaseStorageTypes } from '@react-native-firebase/storage';
+import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import app, { getApps } from '@react-native-firebase/app';
 import { FirebaseError, FirebaseService, OfflineSync, FirebaseDocument } from '../../../shared/services/firebase/types';
 
 import {
@@ -96,70 +93,99 @@ export class MobileFirebaseService implements FirebaseService {
   private _isInitialized = false;
 
   constructor() {
-    // Remove immediate initialization from constructor
-    // this._firestore = firestore();
-    // this._auth = auth();
-    // this._storage = storage();
-    // this._offlineSync = new MobileOfflineSync(this._firestore);
+    console.log("[MobileFirebaseService] Constructor called.");
   }
 
   async initialize(): Promise<void> {
+    console.log("[MobileFirebaseService] initialize() called.");
     if (this._isInitialized) {
-        console.log("MobileFirebaseService already initialized.");
+        console.log("[MobileFirebaseService] Already initialized. Skipping.");
         return;
     }
     try {
-        console.log("[Firebase Init] Attempting initialization...");
+        console.log("[MobileFirebaseService] Attempting @react-native-firebase initialization...");
 
-        // Explicitly check/get the default app instance first
-        console.log("[Firebase Init] Getting default app instance...");
-        const defaultApp = app.app();
-        console.log(`[Firebase Init] Default app instance obtained: ${defaultApp.name}`);
-        
-        // Initialize services here, logging each step
-        console.log("[Firebase Init] Initializing Auth...");
+        // Check native app initialization status using getApps()
+        const apps = getApps(); // Use getApps()
+        console.log(`[MobileFirebaseService] Checking apps.length: ${apps.length}`);
+        if (apps.length === 0) { // Check the length of the result
+            console.error("[MobileFirebaseService] Error: No native Firebase app instance found! Check native setup (google-services.json) and ensure native modules are linked correctly.");
+            throw new Error("No Firebase app instance found. Check native setup.");
+        } else {
+             console.log(`[MobileFirebaseService] Native Default app instance found: ${apps[0].name}. Proceeding to get service instances.`);
+        }
+
+        console.log("[MobileFirebaseService] Getting Auth instance...");
         this._auth = auth();
-        console.log("[Firebase Init] Auth initialized.");
+        console.log("[MobileFirebaseService] Auth instance obtained:", this._auth ? 'Exists' : 'Failed');
 
-        console.log("[Firebase Init] Initializing Firestore...");
+        console.log("[MobileFirebaseService] Getting Firestore instance...");
         this._firestore = firestore();
-        console.log("[Firebase Init] Firestore initialized.");
+        console.log("[MobileFirebaseService] Firestore instance obtained:", this._firestore ? 'Exists' : 'Failed');
 
-        console.log("[Firebase Init] Initializing Storage...");
+        console.log("[MobileFirebaseService] Getting Storage instance...");
         this._storage = storage();
-        console.log("[Firebase Init] Storage initialized.");
+        console.log("[MobileFirebaseService] Storage instance obtained:", this._storage ? 'Exists' : 'Failed');
 
-        console.log("[Firebase Init] Initializing Offline Sync...");
+        console.log("[MobileFirebaseService] Initializing Offline Sync...");
+        if (!this._firestore) throw new Error("Firestore must be initialized before Offline Sync");
         this._offlineSync = new MobileOfflineSync(this._firestore);
-        console.log("[Firebase Init] Offline Sync initialized.");
+        // await this._offlineSync.initialize(); // If MobileOfflineSync needs async init
+        console.log("[MobileFirebaseService] Offline Sync initialized.");
+
+        // Final check
+        if (!this._auth || !this._firestore || !this._storage || !this._offlineSync) {
+           console.error("[MobileFirebaseService] One or more services failed to initialize.");
+           throw new Error("Firebase service initialization failed internally.");
+        }
 
         this._isInitialized = true;
-        console.log("MobileFirebaseService initialized successfully (using @react-native-firebase)");
+        console.log("[MobileFirebaseService] Initialization flag set to true. Initialization successful.");
     } catch (error) {
-        console.error("Error during MobileFirebaseService initialization step:", error);
-        this._isInitialized = false;
-        throw error; // Re-throw the error to be caught by FirebaseProvider
+        console.error("[MobileFirebaseService] Error during initialize():", error);
+        this._isInitialized = false; // Ensure flag is reset on error
+        if (error instanceof Error) {
+             throw new FirebaseError(error.message, 'initialization-failed');
+        } else {
+             throw new FirebaseError('An unknown error occurred during Firebase initialization.', 'unknown');
+        }
     }
   }
 
   auth(): CustomAuth {
-    if (!this._isInitialized || !this._auth) throw new Error('MobileFirebaseService not initialized or Auth module failed to initialize.');
+    if (!this._isInitialized || !this._auth) {
+        console.error('MobileFirebaseService not initialized or Auth module failed to initialize.');
+        throw new FirebaseError('MobileFirebaseService not initialized or Auth module failed to initialize.', 'not-initialized');
+    }
+    // Cast needed if CustomAuth differs structurally from FirebaseAuthTypes.Module
+    // If they are compatible, casting might not be strictly necessary but clarifies intent.
     return this._auth as CustomAuth;
   }
 
   firestore(): CustomFirestore {
-    if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
+    if (!this._isInitialized || !this._firestore) {
+        console.error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
+        throw new FirebaseError('MobileFirebaseService not initialized or Firestore module failed to initialize.', 'not-initialized');
+    }
+     // Cast needed if CustomFirestore differs structurally
     return this._firestore as CustomFirestore;
   }
 
   storage(): CustomStorage {
-    if (!this._isInitialized || !this._storage) throw new Error('MobileFirebaseService not initialized or Storage module failed to initialize.');
+    if (!this._isInitialized || !this._storage) {
+        console.error('MobileFirebaseService not initialized or Storage module failed to initialize.');
+        throw new FirebaseError('MobileFirebaseService not initialized or Storage module failed to initialize.', 'not-initialized');
+    }
+     // Cast needed if CustomStorage differs structurally
     return this._storage as CustomStorage;
   }
 
   offline(): OfflineSync {
-     if (!this._isInitialized || !this._offlineSync) throw new Error('MobileFirebaseService not initialized or OfflineSync module failed to initialize.');
-    return this._offlineSync;
+     if (!this._isInitialized || !this._offlineSync) {
+       console.error('MobileFirebaseService not initialized or OfflineSync module failed to initialize.');
+       throw new FirebaseError('MobileFirebaseService not initialized or OfflineSync module failed to initialize.', 'not-initialized');
+     }
+     return this._offlineSync;
   }
 
   async runTransaction<T>(
@@ -310,10 +336,12 @@ export class MobileFirebaseService implements FirebaseService {
 
   protected handleError(message: string, error: unknown): never {
     console.error("MobileFirebaseService Error:", message, error);
+    // Optionally check error codes specific to @react-native-firebase
     if (error instanceof Error) {
-       throw new FirebaseError(message, (error as any).code || 'UNKNOWN', error);
+       // You might want to check error.code for specific Firebase errors
+       throw new FirebaseError(`${message}: ${error.message}`, (error as any).code || 'unknown-mobile-error');
     }
-    throw new FirebaseError(message, 'UNKNOWN', error);
+    throw new FirebaseError(message, 'unknown-mobile-error');
   }
 
   // Add placeholder implementations for missing FirebaseService methods

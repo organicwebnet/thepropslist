@@ -1,6 +1,5 @@
 import React from 'react';
-import { Platform, TextInput } from 'react-native';
-import Editor, { Toolbar, BtnBold, BtnItalic, BtnUnderline, BtnLink, BtnBulletList, BtnNumberedList } from 'react-simple-wysiwyg';
+import { Platform, TextInput, View, Text, ActivityIndicator } from 'react-native';
 
 interface RichTextEditorProps {
   value: string;
@@ -17,89 +16,70 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   minHeight = 200,
   disabled = false,
 }) => {
-  // For web platform
+  // State to hold the dynamically imported web editor component
+  const [WebEditorComponent, setWebEditorComponent] = React.useState<React.ComponentType<any> | null>(null);
+  const [isLoadingWebEditor, setIsLoadingWebEditor] = React.useState(false);
+
+  React.useEffect(() => {
+    if (Platform.OS === 'web' && !WebEditorComponent && !isLoadingWebEditor) {
+      setIsLoadingWebEditor(true);
+      // Dynamically import the web editor only on the web platform
+      import('react-simple-wysiwyg').then(module => {
+        setWebEditorComponent(() => module.default);
+        setIsLoadingWebEditor(false);
+      }).catch(err => {
+        console.error("Failed to load web editor:", err);
+        setIsLoadingWebEditor(false);
+        // Handle error state if needed
+      });
+    }
+  }, [WebEditorComponent, isLoadingWebEditor]);
+
+  // For web platform - Render loading or the actual editor
   if (Platform.OS === 'web') {
+    if (isLoadingWebEditor || !WebEditorComponent) {
+      return (
+        <View style={{ minHeight, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+          {/* You can replace ActivityIndicator with a web-specific loader if preferred */}
+          <ActivityIndicator />
+          <Text>Loading Editor...</Text>
+        </View>
+      );
+    }
+    // Dynamically import Toolbar and Buttons here when WebEditorComponent is available
+    const Editor = WebEditorComponent;
+    // We need to dynamically import these too or ensure they are tree-shaken if not used on mobile
+    // For simplicity, let's assume they are part of the default export or handle dynamically as well
+    // This part might need refinement based on 'react-simple-wysiwyg' exports
+    const { Toolbar, BtnBold, BtnItalic, BtnUnderline, BtnLink, BtnBulletList, BtnNumberedList } = require('react-simple-wysiwyg');
+
+    // NOTE: The inline style tag won't work directly in React Native.
+    // Web-specific styles should be handled via CSS Modules, Tailwind, or other web styling methods.
+    // The <style> tag is removed here.
     return (
-      <div className="rich-text-editor">
-        <Editor
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          containerProps={{
-            style: {
-              resize: 'vertical',
-              minHeight: `${minHeight}px`,
-            },
-          }}
-        >
-          <Toolbar>
-            <BtnBold />
-            <BtnItalic />
-            <BtnUnderline />
-            <BtnBulletList />
-            <BtnNumberedList />
-            <BtnLink />
-          </Toolbar>
-        </Editor>
-        <style>{`
-          .rsw-editor {
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            background: var(--input-bg);
-            color: var(--text-primary);
-          }
-          
-          .rsw-toolbar {
-            border-bottom: 1px solid var(--border-color);
-            background: var(--input-bg);
-            padding: 0.5rem;
-          }
-          
-          .rsw-btn {
-            color: var(--text-primary);
-            background: transparent;
-            border: 1px solid var(--border-color);
-            border-radius: 0.25rem;
-            padding: 0.25rem 0.5rem;
-            margin: 0 0.25rem;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-          
-          .rsw-btn:hover {
-            background: var(--border-color);
-          }
-          
-          .rsw-btn.rsw-active {
-            background: var(--border-color);
-            color: var(--text-primary);
-          }
-          
-          .rsw-ce {
-            padding: 1rem;
-            min-height: ${minHeight}px;
-          }
-          
-          .rsw-ce:focus {
-            outline: none;
-          }
-          
-          .rsw-ce ul {
-            list-style: disc;
-            padding-left: 2em;
-          }
-          
-          .rsw-ce ol {
-            list-style: decimal;
-            padding-left: 2em;
-          }
-          
-          .rsw-ce a {
-            color: var(--primary);
-            text-decoration: underline;
-          }
-        `}</style>
-      </div>
+      // Use View instead of div for the outer wrapper if needed, or rely on Editor's container
+      <Editor
+        value={value}
+        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)} // Added type for event
+        disabled={disabled}
+        containerProps={{
+          style: {
+            resize: 'vertical',
+            minHeight: `${minHeight}px`,
+            border: '1px solid #ccc', // Example style, replace with CSS classes/web styles
+            borderRadius: '8px'
+          },
+        }}
+      >
+        <Toolbar>
+          <BtnBold />
+          <BtnItalic />
+          <BtnUnderline />
+          <BtnBulletList />
+          <BtnNumberedList />
+          <BtnLink />
+        </Toolbar>
+      </Editor>
     );
   }
 

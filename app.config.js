@@ -17,14 +17,16 @@ module.exports = ({ config }) => {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.propsbible"
+      bundleIdentifier: "com.propsbible",
+      googleServicesFile: process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist'
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
         backgroundColor: "#ffffff"
       },
-      package: "com.propsbible"
+      package: "com.propsbible",
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json'
     },
     web: {
       bundler: "metro",
@@ -44,7 +46,8 @@ module.exports = ({ config }) => {
     },
     scheme: "propsbible",
     plugins: [
-      "expo-router"
+      "@react-native-firebase/app",
+      "expo-router",
     ],
     experiments: {
       tsconfigPaths: true,

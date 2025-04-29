@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { 
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
+  StyleSheet
+} from 'react-native';
+import { Svg, Path } from 'react-native-svg';
+import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   sendPasswordResetEmail, 
@@ -22,9 +32,10 @@ export type AuthMode = 'signin' | 'signup' | 'forgot';
 
 function RequiredLabel({ children }: { children: React.ReactNode }): JSX.Element {
   return (
-    <span className="block text-sm font-medium text-gray-300 mb-1.5">
-      {children} <span className="text-primary">*</span>
-    </span>
+    <Text className="block text-sm font-medium text-gray-300 mb-1.5">
+      {children}
+      <Text className="text-primary">*</Text>
+    </Text>
   );
 }
 
@@ -115,8 +126,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
     return true;
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleForgotPassword = async () => {
     setError(null);
     setSuccess(null);
 
@@ -159,8 +169,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError(null);
     setSuccess(null);
     
@@ -228,273 +237,202 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[100]">
+    <View
+      className="fixed inset-0 bg-black bg-opacity-90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[100]"
+    >
       {/* Dramatic stage background */}
-      <div className="fixed inset-0 pointer-events-none">
+      <View
+        className="fixed inset-0 pointer-events-none"
+      >
         {/* Background image */}
-        <div 
+        <View
           className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: 'url("/stage-background.jpg")',
-            backgroundPosition: 'center',
-            backgroundSize: 'cover'
-          }}
         />
         {/* Gradient overlays for depth and readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20" />
+        <View
+          className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-20"
+        />
+        <View
+          className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20"
+        />
         {/* Blue atmospheric fog overlay */}
-        <div className="absolute inset-0 mix-blend-color bg-blue-900/20" />
+        <View
+          className="absolute inset-0 mix-blend-color bg-blue-900/20"
+        />
         {/* Additional lighting effect */}
-        <div className="absolute inset-0 bg-gradient-radial from-blue-500/10 via-transparent to-transparent opacity-20" />
-      </div>
+        <View
+          className="absolute inset-0 bg-gradient-radial from-blue-500/10 via-transparent to-transparent opacity-20"
+        />
+      </View>
 
-      <div className="bg-[#1A1A1A]/80 rounded-xl shadow-2xl shadow-neon-lg w-full max-w-4xl flex overflow-hidden border border-primary-neon/20 relative z-10 backdrop-blur-sm">
-        {/* Left Panel */}
-        <div className="w-full md:w-1/2 bg-gradient-to-br from-primary to-primary-dark p-6 sm:p-8 md:p-12 text-white hidden md:block relative overflow-hidden">
-          {/* Neon glow effect */}
-          <div className="absolute -top-32 -left-32 w-64 h-64 bg-primary-neon/20 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-primary-neon/20 rounded-full blur-3xl"></div>
-          
-          <div className="relative">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 text-white">The Props Bible</h1>
-            <p className="text-base sm:text-lg mb-6 sm:mb-8 text-white/90">Your complete solution for managing theater props and show inventories</p>
-            
-            <div className="space-y-4">
-              <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-200">Features</h3>
-              <div className="space-y-3 text-gray-200">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-primary-neon/20 flex items-center justify-center border border-primary-neon/30">
-                    <svg className="w-3 h-3 text-primary-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span>Comprehensive Props Management</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-primary-neon/20 flex items-center justify-center border border-primary-neon/30">
-                    <svg className="w-3 h-3 text-primary-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span>Show Organization</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-primary-neon/20 flex items-center justify-center border border-primary-neon/30">
-                    <svg className="w-3 h-3 text-primary-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <span>Collaborative Tools</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Main content container */}
+      <View
+        className="relative w-full max-w-sm bg-gray-900 bg-opacity-90 border border-primary/30 rounded-lg shadow-2xl overflow-hidden"
+      >
+        {/* Subtle spotlight effect */}
+        <View
+          className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"
+        />
 
-        {/* Right Panel */}
-        <div className="w-full md:w-1/2 p-4 sm:p-6 md:p-8 bg-[#1A1A1A] relative">
-          {/* Subtle neon glow for the right panel */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary-neon/5 to-transparent opacity-50"></div>
-          
-          <div className="w-full max-w-md mx-auto relative">
-            <div className="flex justify-between items-center mb-6 sm:mb-8">
-              {mode === 'forgot' ? (
-                <div className="flex items-center">
-                  <button
-                    onClick={() => {
-                      setMode('signin');
-                      setError(null);
-                      setSuccess(null);
-                    }}
-                    className="mr-3 text-gray-400 hover:text-primary-neon transition-colors"
-                  >
-                    <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </button>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white">Reset Password</h2>
-                </div>
-              ) : (
-                <h2 className="text-xl sm:text-2xl font-bold text-white">
-                  {mode === 'signup' ? 'Create Account' : 'Sign In'}
-                </h2>
-              )}
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-primary-neon transition-colors"
+        {/* Back button for forgot password mode */}
+        {mode === 'forgot' && (
+          <TouchableOpacity 
+            onPress={() => setMode('signin')} 
+            className="absolute top-3 left-3 p-2 text-gray-400 hover:text-primary transition-colors"
+            aria-label="Back to sign in"
+          >
+            <ArrowLeft size={20} />
+          </TouchableOpacity>
+        )}
+
+        {/* Close button */}
+        <TouchableOpacity 
+          onPress={onClose} 
+          className="absolute top-3 right-3 p-2 text-gray-400 hover:text-red-500 transition-colors"
+          aria-label="Close authentication"
+        >
+          <Svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width={20} height={20} strokeWidth={2}>
+            <Path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </Svg>
+        </TouchableOpacity>
+
+        <View
+          className="p-6 sm:p-8"
+        >
+          <View
+            className="mb-6 text-center"
+          >
+            <Text className="text-2xl font-bold text-primary mb-2">
+              {mode === 'signin' && 'Sign In'}
+              {mode === 'signup' && 'Create Account'}
+              {mode === 'forgot' && 'Reset Password'}
+            </Text>
+            <Text className="text-sm text-gray-400">
+              {mode === 'signin' && 'Welcome back to the Props Bible'}
+              {mode === 'signup' && 'Join the Props Bible community'}
+              {mode === 'forgot' && 'Enter your email to receive reset instructions'}
+            </Text>
+          </View>
+
+          <View>
+            {error && (
+              <View
+                className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-md"
               >
-                ✕
-              </button>
-            </div>
-
-            <div className="mb-4 sm:mb-6">
-              <h3 className="text-lg sm:text-xl text-gray-200 mb-2">Welcome to Props Bible</h3>
-              <p className="text-sm sm:text-base text-gray-300">Manage your theater props efficiently</p>
-            </div>
-
-            {/* Social Login Buttons */}
-            <div className="space-y-3 mb-4 sm:mb-6">
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-2.5 border border-gray-800 rounded-lg text-white hover:border-primary-neon hover:shadow-neon transition-all duration-300 disabled:opacity-50 text-sm sm:text-base"
+                <Text className="text-sm text-red-300">{error}</Text>
+              </View>
+            )}
+            {success && (
+              <View
+                className="mb-4 p-3 bg-green-900/50 border border-green-700 rounded-md"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                {loading ? 'Signing in...' : 'Continue with Google'}
-              </button>
-            </div>
+                <Text className="text-sm text-green-300">{success}</Text>
+              </View>
+            )}
 
-            <div className="relative mb-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-800"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 text-gray-400 bg-[#1A1A1A]">Or continue with email</span>
-              </div>
-            </div>
+            <View
+              className="mb-4"
+            >
+              <RequiredLabel>Email Address</RequiredLabel>
+              <TextInput 
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                aria-label="Email Address"
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
 
-            <form onSubmit={mode === 'forgot' ? handleForgotPassword : handleSubmit} className="space-y-4 sm:space-y-5">
-              {error && (
-                <div 
-                  className="p-2.5 sm:p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm"
-                  dangerouslySetInnerHTML={{ __html: error }}
-                />
-              )}
-
-              {success && (
-                <div className="p-2.5 sm:p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-300 text-sm">
-                  {success}
-                </div>
-              )}
-
-              <div>
-                <RequiredLabel>Email</RequiredLabel>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="hello@example.com"
-                  className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white bg-[#0A0A0A] border border-gray-800 rounded-lg focus:ring-2 focus:ring-primary-neon/20 focus:border-primary-neon transition-all duration-300"
-                  required
-                />
-              </div>
-
-              {mode !== 'forgot' && (
-                <div>
+            {mode !== 'forgot' && (
+              <View
+                className="mb-6 relative"
+              >
+                <View
+                  className="flex justify-between items-baseline mb-1.5"
+                >
                   <RequiredLabel>Password</RequiredLabel>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      id="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base text-white bg-[#0A0A0A] border border-gray-800 rounded-lg focus:ring-2 focus:ring-primary-neon/20 focus:border-primary-neon transition-all duration-300"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary-neon transition-colors"
-                      title={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      ) : (
-                        <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      )}
-                    </button>
-                  </div>
-                </div>
+                  {mode === 'signin' && (
+                    <TouchableOpacity onPress={() => setMode('forgot')} className="text-sm text-primary hover:underline">
+                      <Text>Forgot password?</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <TextInput 
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-2.5 pr-10 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                  aria-label="Password"
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 top-7 flex items-center pr-3 text-gray-500 hover:text-primary cursor-pointer"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity 
+              onPress={mode === 'forgot' ? handleForgotPassword : handleSubmit}
+              disabled={loading}
+              className={`w-full flex items-center justify-center px-4 py-3 ${loading ? 'bg-primary/70' : 'bg-primary hover:bg-primary/90'} text-white font-semibold rounded-md transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-primary`}
+            >
+              {loading ? (
+                <Loader2 size={20} className="animate-spin mr-2" />
+              ) : (
+                <> 
+                  {mode === 'signin' && <LogIn size={18} className="mr-2" />} 
+                  {mode === 'signup' && <UserPlus size={18} className="mr-2" />} 
+                </> 
               )}
+              <Text>
+                {loading ? 'Processing...' : (mode === 'signin' ? 'Sign In' : (mode === 'signup' ? 'Sign Up' : 'Send Reset Email'))}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-              <button
-                type="submit"
-                disabled={loading || !isInitialized}
-                className="w-full inline-flex items-center justify-center rounded-lg bg-primary px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-medium text-white hover:shadow-neon border border-primary-neon/20 hover:border-primary-neon/50 focus:outline-none focus:ring-2 focus:ring-primary-neon/50 focus:ring-offset-2 focus:ring-offset-[#1A1A1A] disabled:opacity-50 transition-all duration-300"
-              >
-                {loading ? (
-                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
-                ) : mode === 'signup' ? (
-                  <>
-                    <UserPlus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
-                    Sign Up
-                  </>
-                ) : mode === 'forgot' ? (
-                  'Send Reset Link'
-                ) : (
-                  <>
-                    <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" />
-                    Sign In
-                  </>
-                )}
-              </button>
+          {mode !== 'forgot' && (
+            <View
+              className="my-6 flex items-center"
+            >
+              <View
+                className="flex-grow border-t border-gray-700"
+              />
+              <Text className="mx-4 text-xs text-gray-500">OR</Text>
+              <View
+                className="flex-grow border-t border-gray-700"
+              />
+            </View>
+          )}
 
-              <div className="text-center space-y-1.5 sm:space-y-2">
-                {mode === 'forgot' ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode('signin');
-                      setError(null);
-                      setSuccess(null);
-                    }}
-                    className="text-sm text-dark-primary-neon hover:text-primary-light transition-colors"
-                  >
-                    Back to Sign In
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMode(mode === 'signup' ? 'signin' : 'signup');
-                        setError(null);
-                        setSuccess(null);
-                      }}
-                      className="text-sm text-dark-primary-neon hover:text-primary-light transition-colors"
-                    >
-                      {mode === 'signup' ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
-                    </button>
-                    {mode === 'signin' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMode('forgot');
-                          setError(null);
-                          setSuccess(null);
-                          setPassword('');
-                        }}
-                        className="block w-full text-sm text-dark-primary-neon hover:text-primary-light transition-colors"
-                      >
-                        Forgot your password?
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
+          {mode !== 'forgot' && (
+            <TouchableOpacity 
+              onPress={handleGoogleSignIn} 
+              disabled={loading}
+              className="w-full flex items-center justify-center px-4 py-3 bg-gray-800 border border-gray-700 rounded-md text-gray-300 hover:bg-gray-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-gray-500"
+            >
+              <Svg aria-hidden={true} focusable={false} viewBox="0 0 488 512" width={20} height={20} style={{ marginRight: 12 }} >
+                 <Path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" />
+              </Svg>
+              <Text>Sign {mode === 'signin' ? 'in' : 'up'} with Google</Text>
+            </TouchableOpacity>
+          )}
+
+          <View
+            className="mt-6 text-center"
+          >
+            <TouchableOpacity onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')} className="text-sm text-primary hover:underline">
+              {mode === 'signin' && <Text>Don't have an account? Sign Up</Text>}
+              {mode === 'signup' && <Text>Already have an account? Sign In</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </View>
   );
 }

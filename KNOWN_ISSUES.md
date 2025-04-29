@@ -37,10 +37,38 @@
 #### Action Items
 - [ ] Update Metro configuration for web
 - [ ] Fix MIME type handling
-- [ ] Setup proper Android environment
+- [X] Setup proper Android environment (via app.config.js fix)
 - [ ] Configure platform tools
+- [ ] Investigate Android app launch failure after successful prebuild
 
-### 2. Dependency Conflicts
+### 2. Android Firebase Initialization Failure
+**Status**: Active
+**Priority**: Critical
+**Impact**: Android App Functionality
+
+#### Description
+The Android application fails at runtime with errors like "No native Firebase app instance found" or "No Firebase App '[DEFAULT]' has been created". This occurs specifically when `@react-native-firebase/app` checks for initialized apps (`getApps().length`), which returns 0. This happens despite the native build seemingly succeeding and the `google-services.json` file being correctly placed and processed by the `com.google.gms.google-services` plugin.
+
+#### Current Status
+- Confirmed `google-services.json` is correctly placed in `android/app/`.
+- Confirmed `com.google.gms.google-services` plugin is applied in `android/build.gradle` and `android/app/build.gradle`.
+- Attempted various Firebase dependency management strategies in `package.json` (BOM, explicit versions, `resolutions`, `overrides`) with `npm install --force`.
+- Ensured no explicit Firebase dependencies are listed in `android/app/build.gradle` (relying on autolinking).
+- Manually added `FirebaseApp.initializeApp(this)` to `MainApplication.kt#onCreate()`. This did not resolve the issue; `getApps().length` remained 0 at runtime.
+- Reverted the manual change in `MainApplication.kt`.
+- Updated `@react-native-firebase/*` packages to the latest compatible versions.
+- Performed a full clean: removed `node_modules`, `android` directory, ran `npm install`, and `npx expo prebuild --platform android --clean`.
+- The issue persists after all the above steps. The native Firebase instance is not available/recognized by the JavaScript layer at runtime.
+
+#### Action Items / Next Steps
+- **Investigate Native Logs:** Use Android Studio's Logcat or `adb logcat` during app startup to look for specific errors related to Firebase initialization that might not be surfaced in the React Native logs.
+- **Check Gradle Plugin Execution:** Verify that the `com.google.gms.google-services` plugin is actually running and processing the `google-services.json` file during the build. Look for its output in the Gradle build logs (`./gradlew app:assembleDebug --info`).
+- **Simplify Test Case:** Create a minimal reproducible example with a fresh Expo project, adding only `@react-native-firebase/app` and the necessary setup to isolate the issue.
+- **Explore Expo Plugin Conflicts:** Investigate if other Expo config plugins or native modules could be interfering with the Firebase initialization process.
+- **Consider Expo Dev Client vs. Production Build:** Test if the issue occurs in a standalone production build (`eas build`) vs. the development client (`expo run:android`). There might be differences in the initialization timing or environment.
+- **Review `MainApplication.kt` and `MainActivity.kt`:** Double-check the generated native files after `prebuild` for any anomalies or missing Firebase-related setup that the Expo plugin *should* have added.
+
+### 3. Dependency Conflicts
 **Status**: Active  
 **Priority**: High  
 **Impact**: Build & Runtime  
@@ -73,7 +101,7 @@
 - [ ] Fix peer dependencies
 - [ ] Test compatibility
 
-### 3. Font Loading Issues
+### 4. Font Loading Issues
 **Status**: Active  
 **Priority**: Medium  
 **Impact**: User Experience  
