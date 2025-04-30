@@ -18,7 +18,7 @@ module.exports = ({ config }) => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.propsbible",
-      googleServicesFile: process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist'
+      // googleServicesFile: process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist' // Comment out if file doesn't exist
     },
     android: {
       adaptiveIcon: {

@@ -1,4 +1,9 @@
-import '../global.css'; // Import Tailwind styles
+// import '../global.css'; // REMOVE THIS LINE - Incorrect for native
+// Conditionally import global CSS for web
+if (Platform.OS === 'web') {
+  require('../global.css'); 
+}
+
 import React, { useEffect, type PropsWithChildren } from 'react';
 import { Stack, router } from 'expo-router';
 import { useFonts } from 'expo-font';
@@ -8,10 +13,15 @@ import { PropsProvider } from '../src/contexts/PropsContext';
 import { ShowsProvider } from '../src/contexts/ShowsContext';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { AuthForm } from '../src/components/AuthForm';
+import { NativeAuthScreen } from '../src/components/NativeAuthScreen';
 import { TopNavBar } from '../src/components/navigation/TopNavBar';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
+import nativeFirebaseApp from '@react-native-firebase/app'; // <-- Import RNFirebase App
+
+// Check if native Firebase app is initialized early
+console.log('--- RNFirebase App Check:', nativeFirebaseApp.apps.length > 0 ? 'Apps found' : 'NO APPS FOUND');
 
 // Uncomment SplashScreen 
 SplashScreen.preventAutoHideAsync();
@@ -94,6 +104,7 @@ function AppContent() {
   const { user, loading: authLoading, error: authError } = useAuth();
   console.log(`--- AppContent State: authLoading=${authLoading}, user=${user?.uid}, authError=${authError} ---`);
 
+  // Original Logic Restored
   if (authLoading) {
     console.log("--- AppContent: Showing loading indicator --- ");
     return (
@@ -103,32 +114,35 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    console.log("--- AppContent: Showing AuthForm --- ");
-    return <AuthForm onClose={() => console.log("AuthForm closed/completed")} />;
-  }
-
-  console.log(`--- AppContent: User logged in, rendering for Platform: ${Platform.OS} --- `);
   // If user is logged in, show platform-specific layout
-  return (
-    <View style={{ flex: 1 }}>
-      {Platform.OS === 'web' ? (
-        // --- Web Layout ---
-        <>
-          <TopNavBar />
-          {/* Render a base Stack for web. Expo Router should map web routes. */}
-          <Stack screenOptions={{ headerShown: false }}>
-            {/* Define web-specific screens or groups here if needed, */}
-            {/* or let Expo Router find top-level/ (web) group routes. */}
-            {/* Example if you have (web) layout: <Stack.Screen name="(web)" /> */}
-          </Stack>
-        </>
-      ) : (
-        // --- Mobile Layout ---
-        <RootLayoutNav /> // Keep using the existing Stack Nav that points to (tabs)
-      )}
-    </View>
-  );
+  if (user) {
+      console.log(`--- AppContent: User logged in, rendering for Platform: ${Platform.OS} --- `);
+      return (
+        <View style={{ flex: 1 }}>
+          {Platform.OS === 'web' ? (
+            // --- Web Layout ---
+            <>
+              <TopNavBar />
+              <Stack screenOptions={{ headerShown: false }}>
+                 {/* Let Expo Router handle web routes */}
+              </Stack>
+            </>
+          ) : (
+            // --- Mobile Layout ---
+            <RootLayoutNav /> 
+          )}
+        </View>
+      );
+  }
+  
+  // If NOT logged in, show platform-specific Auth screen
+  if (Platform.OS === 'web') {
+    console.log("--- AppContent: Showing AuthForm (Web) --- ");
+    return <AuthForm onClose={() => console.log("AuthForm closed/completed")} />;
+  } else {
+    console.log("--- AppContent: Showing NativeAuthScreen (Mobile) --- ");
+    return <NativeAuthScreen />; // Use Native Auth Screen for mobile
+  }
 }
 
 export default function RootLayout() {

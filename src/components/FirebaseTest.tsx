@@ -100,14 +100,14 @@ const FirebaseTest: React.FC = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Firebase Connection Test</Text>
       <Text style={styles.statusText}>Status: {status}</Text>
-      {error && <Text style={styles.errorText}>Error: {error}</Text>}
-      {data && (
+      {error ? <Text style={styles.errorText}>Error: {error}</Text> : null}
+      {data ? (
         <View style={styles.dataContainer}>
           <Text style={styles.dataTitle}>Data from Firestore:</Text> 
           <Text style={styles.dataText}>{JSON.stringify(data, null, 2)}</Text>
         </View>
-      )}
-      {status.includes('...') && <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />}
+      ) : null}
+      {status.includes('...') ? <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} /> : null}
     </View>
   );
 };

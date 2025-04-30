@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Linking, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Linking, Platform, useWindowDimensions, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter, Link } from 'expo-router';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -181,6 +181,16 @@ export default function PropDetailPage() {
     );
   };
 
+  // Helper to format dimensions safely
+  const formatDimensions = () => {
+    if (!prop) return null;
+    const { length, width, height, depth, unit } = prop; 
+    const parts = [length, width, height, depth].filter(d => d != null && d > 0);
+    if (parts.length === 0) return null;
+    return `${parts.join(' x ')} ${unit || ''}`.trim();
+  };
+  const dimensionsText = formatDimensions(); // Define dimensionsText here
+
   if (loading) {
     return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Loading...</Text></View>;
   }
@@ -306,10 +316,6 @@ export default function PropDetailPage() {
                     <div className="flex flex-col">
                       <dt className="text-sm text-gray-400 mb-1">Category</dt>
                       <dd className="text-base font-medium text-white">{prop.category}</dd>
-                    </div>
-                    <div className="flex flex-col">
-                      <dt className="text-sm text-gray-400 mb-1">Price</dt>
-                      <dd className="text-base font-medium text-white">£{prop.price.toFixed(2)}</dd>
                     </div>
                     <div className="flex flex-col">
                       <dt className="text-sm text-gray-400 mb-1">Quantity</dt>
@@ -658,7 +664,10 @@ export default function PropDetailPage() {
         <View style={styles.detailsSectionMobile}>
           <Text style={styles.detailLabelMobile}>Category:</Text>
           <Text style={styles.detailValueMobile}>{prop.category}</Text>
-          {prop.price && <Text style={styles.detailValueMobile}>Price: £{prop.price.toFixed(2)}</Text>}
+          {/* Dimensions */}
+          {dimensionsText ? <Text style={styles.detailValueMobile}>Dimensions: {dimensionsText}</Text> : null}
+          {/* Price */}
+          {prop.price != null ? <Text style={styles.detailValueMobile}>Price: £{prop.price.toFixed(2)}</Text> : null}
         </View>
       </ScrollView>
     );

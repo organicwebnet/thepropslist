@@ -41,7 +41,7 @@ export async function initGoogleApi() {
       } as any);
     });
 
-    const clientId = import.meta.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+    const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
     
     if (!clientId) {
       throw new Error('Google Client ID is not configured. Please check your environment variables.');
@@ -169,4 +169,10 @@ export async function fetchGoogleProfile(): Promise<Partial<UserProfile>> {
     console.error('Error fetching Google profile:', error);
     throw error;
   }
+}
+
+// Function to get Google Client ID
+export function getGoogleClientId(): string | undefined {
+  const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
+  return clientId;
 }

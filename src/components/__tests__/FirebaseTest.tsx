@@ -24,21 +24,21 @@ const FirebaseTest: React.FC = () => {
       
       try {
         // Check environment variables
-        const requiredEnvVars = [
-          'VITE_FIREBASE_API_KEY',
-          'VITE_FIREBASE_AUTH_DOMAIN',
-          'VITE_FIREBASE_PROJECT_ID',
-          'VITE_FIREBASE_STORAGE_BUCKET',
-          'VITE_FIREBASE_MESSAGING_SENDER_ID',
-          'VITE_FIREBASE_APP_ID'
+        const requiredVars = [
+          'EXPO_PUBLIC_FIREBASE_API_KEY',
+          'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
+          'EXPO_PUBLIC_FIREBASE_PROJECT_ID',
+          'EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET',
+          'EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
+          'EXPO_PUBLIC_FIREBASE_APP_ID'
         ];
 
-        const missingEnvVars = requiredEnvVars.filter(
-          varName => !import.meta.env[varName]
+        const missingVars = requiredVars.filter(
+          varName => !process.env[varName]
         );
 
-        if (missingEnvVars.length > 0) {
-          throw new Error(`Missing required environment variables: ${missingEnvVars.join(', ')}`);
+        if (missingVars.length > 0) {
+          throw new Error(`Missing Firebase environment variables: ${missingVars.join(', ')}`);
         }
 
         setConfigStatus('Configuration verified ✅');

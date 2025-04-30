@@ -1,139 +1,119 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { Camera, CameraView, CameraType } from 'expo-camera';
-import { MaterialIcons } from '@expo/vector-icons';
-import { CameraService, CameraPermissions } from './CameraService';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MediaLibrary } from 'expo-media-library';
+import React, { useState, useRef, useEffect } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
 
-interface CameraScreenProps {
-  onPhotoTaken: (uri: string) => void;
-  onClose: () => void;
-}
-
-export function CameraScreen({ onPhotoTaken, onClose }: CameraScreenProps) {
-  const [type, setType] = useState<CameraType>(CameraType.back);
-  const [permissions, setPermissions] = useState<CameraPermissions | null>(null);
-  const [isReady, setIsReady] = useState(false);
-  const cameraRef = useRef<CameraView | null>(null);
-  const cameraService = CameraService.getInstance();
+export default function CameraScreen() {
+  const [facing, setFacing] = useState<'back' | 'front'>('back');
+  const [permission, requestPermission] = useCameraPermissions();
+  const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   useEffect(() => {
-    (async () => {
-      const perms = await cameraService.requestPermissions();
-      setPermissions(perms);
-      setIsReady(true);
-    })();
-  }, []);
-
-  const toggleCameraType = () => {
-    setType((current: CameraType) => (current === CameraType.back ? CameraType.front : CameraType.back));
-  };
-
-  const handleTakePicture = async () => {
-    if (!cameraRef.current) return;
-
-    try {
-      const uri = await cameraService.takePicture(cameraRef.current);
-      if (uri) {
-        onPhotoTaken(uri);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to take picture');
+    if (!mediaPermission?.granted) {
+        requestMediaPermission();
     }
-  };
+  }, [mediaPermission, requestMediaPermission]);
 
-  const handlePickImage = async () => {
-    try {
-      const uri = await cameraService.pickImage();
-      if (uri) {
-        onPhotoTaken(uri);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick image from gallery');
-    }
-  };
+  if (!permission) {
+    return <View><Text>Loading permissions...</Text></View>;
+  }
 
-  if (!isReady || !permissions) {
+  if (!permission.granted) {
     return (
       <View style={styles.container}>
-        <Text>Loading...</Text>
+        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
+        <TouchableOpacity onPress={requestPermission} style={styles.button}><Text style={styles.text}>Grant Permission</Text></TouchableOpacity>
       </View>
     );
   }
 
-  if (!permissions.camera) {
+  function toggleCameraFacing() {
+    setFacing(current => (current === 'back' ? 'front' : 'back'));
+  }
+
+  async function takePicture() {
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync();
+        console.log('Photo taken:', photo);
+        
+        if (photo?.uri) { 
+          setPhotoUri(photo.uri);
+
+          if (mediaPermission?.granted) {
+        if (mediaPermission?.granted) {
+            const asset = await MediaLibrary.createAssetAsync(photo.uri);
+            console.log('Photo saved to library:', asset);
+            alert('Photo saved!'); 
+        } else {
+            console.warn('Media Library permission not granted, photo not saved.');
+            alert('Photo taken but not saved (permission denied).');
+        }
+
+      } catch (error) {
+        console.error('Failed to take picture:', error);
+      }
+    }
+  }
+
+  if (photoUri) {
     return (
       <View style={styles.container}>
-        <Text>No access to camera</Text>
+        <Image source={{ uri: photoUri }} style={styles.preview} />
+        <TouchableOpacity onPress={() => setPhotoUri(null)} style={styles.button}><Text style={styles.text}>Take Another</Text></TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <CameraView style={styles.camera} facing={type === CameraType.back ? 'back' : 'front'} ref={cameraRef}>
+    <View style={styles.container}>
+      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={onClose}>
-            <MaterialIcons name="close" size={32} color="white" />
+          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+            <Text style={styles.text}>Flip Camera</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={handleTakePicture}>
-            <View style={styles.captureButton} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraType}>
-            <MaterialIcons name="flip-camera-ios" size={32} color="white" />
+          <TouchableOpacity style={styles.button} onPress={takePicture}>
+            <Text style={styles.text}>Take Picture</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.galleryButton} onPress={handlePickImage}>
-          <MaterialIcons name="photo-library" size={32} color="white" />
-        </TouchableOpacity>
       </CameraView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'black',
+    justifyContent: 'center',
   },
   camera: {
     flex: 1,
   },
   buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
+    flex: 1,
     flexDirection: 'row',
-    width: '100%',
-    padding: 20,
+    backgroundColor: 'transparent',
+    margin: 64,
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
   },
   button: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
+    alignSelf: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 20,
   },
-  captureButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'white',
-    borderWidth: 4,
-    borderColor: 'rgba(0,0,0,0.3)',
+  text: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
   },
-  galleryButton: {
-    position: 'absolute',
-    right: 20,
-    top: 20,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  preview: {
+    flex: 1,
+    resizeMode: 'contain',
   },
 }); 

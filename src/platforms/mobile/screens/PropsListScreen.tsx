@@ -119,6 +119,7 @@ export function PropsListScreen() {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={props}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }: { item: FirebaseDocument<Prop> }) => {
           const propData = item.data;
           if (!propData) {
@@ -126,14 +127,14 @@ export function PropsListScreen() {
             return null;
           }
           return (
-            <PropCard
-              prop={propData}
-              onPress={() => handlePropPress(item.id)}
+            <PropCard 
+              prop={{ ...propData, id: item.id }}
+              onEditPress={() => handlePropPress(item.id)}
+              onDeletePress={() => handleDeleteProp(item.id)}
             />
           );
         }}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={styles.listContentContainer}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  listContent: {
+  listContentContainer: {
     padding: 16,
   },
   propCard: {

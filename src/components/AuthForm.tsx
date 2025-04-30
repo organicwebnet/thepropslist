@@ -368,13 +368,49 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
           )}
 
           <View className="mt-6 text-center">
-            <TouchableOpacity onPress={() => setMode(mode === 'signin' ? 'signup' : 'signin')} className="text-sm text-blue-400 hover:underline">
-              {mode === 'signin' && <Text className="text-blue-400">Don't have an account? Sign Up</Text>}
-              {mode === 'signup' && <Text className="text-blue-400">Already have an account? Sign In</Text>}
-            </TouchableOpacity>
+            {mode === 'signin' ? (
+              <View style={styles.switchAuthContainer}>
+                <Text style={styles.switchAuthText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={() => setMode('signup')} >
+                  <Text style={[styles.switchAuthLink, styles.switchAuthLinkHover]}>Sign up</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            {mode === 'signup' ? (
+              <View style={styles.switchAuthContainer}>
+                <Text style={styles.switchAuthText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => setMode('signin')} >
+                  <Text style={[styles.switchAuthLink, styles.switchAuthLinkHover]}>Sign in</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            {mode === 'forgot' && (
+              <Text style={styles.switchAuthText}>Enter your email to receive a reset link</Text>
+            )}
           </View>
         </View>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  switchAuthContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  switchAuthText: {
+    color: '#60A5FA',
+    fontSize: 14,
+  },
+  switchAuthLink: {
+    color: '#60A5FA',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  switchAuthLinkHover: {
+    textDecorationLine: 'underline',
+  }
+});

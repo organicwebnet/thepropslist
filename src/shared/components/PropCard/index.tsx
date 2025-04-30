@@ -55,7 +55,6 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
             source={imageSource} 
             style={styles.image}
             resizeMode="cover"
-            // resizeMethod="resize" // Typically not needed with cover/contain
             onError={(error) => {
               console.warn('PropCard: Image loading error:', error.nativeEvent?.error || error.nativeEvent);
               setImageError(true);
@@ -96,7 +95,7 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
 
   return (
     // Cast the dynamic path to any to bypass strict type checking
-    <Link href={`/(tabs)/props/${prop.id}` as any} asChild>
+    <Link href={`/props/${prop.id}` as any} asChild>
       <TouchableOpacity
         style={[styles.container, compact && styles.compactContainer]}
         activeOpacity={0.8}

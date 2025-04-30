@@ -245,4 +245,39 @@ export class MobileFirebaseService implements FirebaseService {
     console.warn(`Mobile deleteShow(${showId}) is not implemented.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
+
+  // --- Add Missing Auth Method Stubs ---
+  async signInWithEmailAndPassword(email: string, password: string): Promise<any> { // Use actual RNFirebase Auth if available
+    if (!this._auth) throw new Error("Auth not initialized");
+    console.log(`Mobile attempting signInWithEmailAndPassword for ${email}`);
+    try {
+      return await this._auth.signInWithEmailAndPassword(email, password);
+    } catch (error) {
+      console.error("Mobile signIn failed:", error);
+      throw this.createError(error); // Re-throw as FirebaseError
+    }
+  }
+
+  async createUserWithEmailAndPassword(email: string, password: string): Promise<any> { // Use actual RNFirebase Auth if available
+    if (!this._auth) throw new Error("Auth not initialized");
+    console.log(`Mobile attempting createUserWithEmailAndPassword for ${email}`);
+    try {
+      return await this._auth.createUserWithEmailAndPassword(email, password);
+    } catch (error) {
+      console.error("Mobile signUp failed:", error);
+      throw this.createError(error);
+    }
+  }
+
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    if (!this._auth) throw new Error("Auth not initialized");
+    console.log(`Mobile attempting sendPasswordResetEmail for ${email}`);
+    try {
+      await this._auth.sendPasswordResetEmail(email);
+    } catch (error) {
+      console.error("Mobile password reset failed:", error);
+      throw this.createError(error);
+    }
+  }
+  // --- End Missing Auth Method Stubs ---
 } 

@@ -9,7 +9,7 @@ export function LoadingScreen({ message = 'Loading...' }: LoadingScreenProps) {
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#ffd33d" />
-      {message && <Text style={styles.message}>{message}</Text>}
+      {message ? <Text style={styles.message}>{message}</Text> : null}
     </View>
   );
 }

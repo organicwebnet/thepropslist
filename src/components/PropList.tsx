@@ -33,15 +33,18 @@ export function PropList({
     }
   };
 
-  const renderPropCard = ({ item }: { item: Prop }) => (
-    <View style={styles.cardContainer}> 
-      <PropCard 
-        prop={item} 
-        onEditPress={handleEditPress}
-        onDeletePress={onDelete}
-      />
-    </View>
-  );
+  const renderPropCard = ({ item }: { item: Prop }) => {
+    // Original PropCard rendering restored
+    return (
+      <View style={styles.cardContainer}> 
+        <PropCard 
+          prop={item} 
+          onEditPress={handleEditPress}
+          onDeletePress={onDelete}
+        />
+      </View>
+    );
+  };
 
   const defaultEmptyList = () => (
      <View style={styles.emptyContainer}>

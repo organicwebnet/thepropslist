@@ -10,25 +10,13 @@ import { PropList } from '../../src/components/PropList';
 import { Show } from '../../src/types';
 import { Prop, PropFormData } from '../../src/shared/types/props';
 import { PropForm } from '../../src/components/PropForm';
+import { NativePropForm } from '../../src/components/NativePropForm';
 import { UserProfileModal } from '../../src/components/UserProfile';
 import { ShareModal } from '../../src/components/ShareModal';
 import { PropLifecycleStatus } from '../../src/types/lifecycle';
 import { useFirebase } from '../../src/contexts/FirebaseContext';
 import { useAuth } from '../../src/contexts/AuthContext';
-
-export type Filters = {
-  name: string;
-  location: string;
-  status?: PropLifecycleStatus;
-  search: string;
-};
-
-const initialFilters: Filters = {
-  name: '',
-  location: '',
-  status: undefined,
-  search: '',
-};
+import { LoadingScreen } from '../../src/components/LoadingScreen';
 
 const LAST_SHOW_ID_KEY = 'lastSelectedShowId';
 
@@ -44,17 +32,10 @@ export default function PropsScreen() {
   const [showProfile, setShowProfile] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showAddShowModal, setShowAddShowModal] = useState(false);
-  const [showAddPropModal, setShowAddPropModal] = useState(false);
-  const [showEditPropModal, setShowEditPropModal] = useState(false);
-  const [propToEdit, setPropToEdit] = useState<Prop | null>(null);
-  const [showIdForNewProp, setShowIdForNewProp] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [shows, setShows] = useState<Show[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [props, setProps] = useState<Prop[]>([]);
-  const [filters, setFilters] = useState<Filters>(initialFilters);
-  const [filteredProps, setFilteredProps] = useState<Prop[]>([]);
-  const [showFilters, setShowFilters] = useState(true);
   
   const initialShowIdAttempt = useRef<string | null>(null);
 
@@ -192,34 +173,6 @@ export default function PropsScreen() {
   }, [selectedShow, firebaseInitialized, firebaseService]);
 
   useEffect(() => {
-    if (!selectedShow) {
-      setFilteredProps([]);
-      return;
-    }
-    const searchLower = filters.search.toLowerCase(); // Pre-calculate lower case search term
-    const filtered = props.filter(prop => {
-      // Check basic showId match first
-      if (prop.showId !== selectedShow.id) return false;
-
-      // Check specific filters if they are set
-      if (filters.name && !prop.name.toLowerCase().includes(filters.name.toLowerCase())) return false;
-      if (filters.location && !(prop.location && prop.location.toLowerCase().includes(filters.location.toLowerCase()))) return false;
-      if (filters.status !== undefined && prop.status !== filters.status) return false;
-
-      // Check the general search term against name and description
-      if (searchLower !== '' && 
-          !prop.name.toLowerCase().includes(searchLower) &&
-          !(prop.description && prop.description.toLowerCase().includes(searchLower)) ) {
-            return false;
-      }
-
-      // If all checks pass, include the prop
-      return true;
-    });
-    setFilteredProps(filtered);
-  }, [props, filters, selectedShow]);
-
-  useEffect(() => {
     if (selectedShow && typeof window !== 'undefined' && window.localStorage) {
         try {
             localStorage.setItem(LAST_SHOW_ID_KEY, selectedShow.id);
@@ -230,83 +183,19 @@ export default function PropsScreen() {
     }
   }, [selectedShow]);
 
-  const handleFilterChange = (newFilters: Partial<Filters>) => {
-    setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
-  };
-
-  const handleFilterReset = () => {
-    setFilters(initialFilters);
-  };
-
-  const handleOpenAddPropModal = () => {
+  const handleOpenAddPropPage = () => {
     if (selectedShow) {
-      setShowIdForNewProp(selectedShow.id);
-      setShowAddPropModal(true);
+      router.push({
+          pathname: '/props/add' as any,
+          params: { showId: selectedShow.id }
+      });
     } else {
       Alert.alert("No Show Selected", "Please select a show before adding a prop.");
     }
   };
 
-  const handleCloseAddPropModal = () => {
-    setShowAddPropModal(false);
-    setShowIdForNewProp(null);
-  };
-
-  const handleOpenEditPropModal = (prop: Prop) => {
-    setPropToEdit(prop);
-    setShowEditPropModal(true);
-  };
-
-  const handleCloseEditPropModal = () => {
-    setShowEditPropModal(false);
-    setPropToEdit(null);
-  };
-
-  const handleAdd = async (formData: PropFormData) => {
-    if (!user || !firebaseInitialized || !firebaseService?.addDocument || !showIdForNewProp) {
-       console.error("Add Prop Error: User, Service, or Show ID missing.");
-       Alert.alert('Error', 'Could not add prop. Missing information.');
-       return;
-    }
-    
-    try {
-      const propDataToAdd: Omit<Prop, 'id'> = {
-        ...formData,
-        userId: user.uid,
-        showId: showIdForNewProp,
-        createdAt: new Date().toISOString(), 
-        updatedAt: new Date().toISOString(), 
-      };
-      const docRef = await firebaseService.addDocument('props', propDataToAdd);
-      console.log("Prop added with ID:", docRef.id);
-      handleCloseAddPropModal();
-    } catch (error) { 
-      console.error('Error adding prop via service:', error);
-      Alert.alert('Error', 'Failed to add prop.');
-    }
-  };
-
-  const handleUpdate = async (formData: PropFormData) => {
-    if (!user || !firebaseInitialized || !firebaseService?.updateDocument || !propToEdit) { 
-       console.error("Update Prop Error: User, Service, or Prop to Edit missing.");
-       Alert.alert('Error', 'Could not update prop. Missing information.');
-      return; 
-    }
-    
-    try {
-      const propDataToUpdate: Partial<Prop> = {
-        ...formData, 
-        userId: user.uid,
-        updatedAt: new Date().toISOString(), 
-        lastModifiedAt: formData.lastModifiedAt || undefined, 
-      };
-      await firebaseService.updateDocument('props', propToEdit.id, propDataToUpdate);
-      console.log("Prop updated with ID:", propToEdit.id);
-      handleCloseEditPropModal();
-    } catch (error) {
-      console.error('Error updating prop via service:', error);
-      Alert.alert('Error', 'Failed to update prop.');
-    }
+  const handleOpenEditPropPage = (prop: Prop) => {
+    router.push(`/props/${prop.id}/edit`);
   };
 
   const handleDelete = async (propId: string) => {
@@ -340,7 +229,6 @@ export default function PropsScreen() {
 
   const handleSelectShow = (show: Show) => {
     setSelectedShow(show);
-    setFilters(initialFilters);
   };
 
   const handleAddShow = async (showData: Omit<Show, 'id' | 'userId'>) => {
@@ -473,52 +361,8 @@ export default function PropsScreen() {
     }
   };
 
-  // Filter UI Rendering Logic - Renders the content of the filter section
-  const renderFilterControls = () => {
-    if (!showFilters) {
-      return null;
-    }
-    return (
-      <>
-        {/* Add Pickers or placeholder Views for other filters here */}
-        <Text style={styles.filterPlaceholder}>Category Filter Placeholder</Text>
-        <Text style={styles.filterPlaceholder}>Status Filter Placeholder</Text>
-        <Text style={styles.filterPlaceholder}>Act Filter Placeholder</Text>
-        <Text style={styles.filterPlaceholder}>Scene Filter Placeholder</Text>
-        <Button title="Reset Filters" onPress={handleFilterReset} />
-      </>
-    );
-  };
-
-  // Component to render the entire header for the FlatList
-  const renderListHeader = () => (
-    <View> {/* Wrap header content */}
-      {/* Filter Toggle Button */}
-      <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggleButton}>
-        <Ionicons name={showFilters ? "chevron-up" : "chevron-down"} size={24} color="#FFFFFF" />
-        <Text style={styles.filterToggleText}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
-      </TouchableOpacity>
-
-      {/* Filter Container (always includes search) */}
-      <View style={styles.filterContainer}>
-        {/* Search Input - Always Visible */}
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search name or description..."
-          placeholderTextColor="#9CA3AF"
-          value={filters.search}
-          onChangeText={(text) => handleFilterChange({ search: text })}
-        />
-        {/* Render the toggleable filter controls */}
-        {renderFilterControls()}
-      </View>
-    </View>
-  );
-
-  // Renders the main list content or loading indicator
   const renderContent = () => {
     if (propsLoading) {
-      // Show loading indicator centered within the available space
       return (
         <View style={styles.contentLoadingContainer}> 
           <ActivityIndicator size="large" color="#FFFFFF" />
@@ -526,14 +370,11 @@ export default function PropsScreen() {
         </View>
       );
     } else {
-      // Render the PropList, passing the header component
       return (
         <PropList 
-          props={filteredProps} 
-          onEdit={handleOpenEditPropModal} 
+          props={props}
+          onEdit={handleOpenEditPropPage}
           onDelete={handleDelete}
-          ListHeaderComponent={renderListHeader} // Pass the header here
-          // ListEmptyComponent could be customized here if needed
         />
       );
     }
@@ -542,70 +383,37 @@ export default function PropsScreen() {
   console.log(`[PropsScreen] Preparing to render. propsLoading=${propsLoading}, showsLoading=${showsLoading}, selectedShow=${selectedShow?.id}`);
 
   if (showsLoading) {
-    return (
-      <View style={styles.container} >
-        <ActivityIndicator size="large" />
-        <Text style={styles.messageText}>Loading Shows...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Loading shows..." />;
   }
 
-  if (!showsLoading && shows.length === 0) {
+  if (!selectedShow) {
     return (
-      <View style={styles.container} >
-        <Text style={styles.messageText}>No shows found. Add your first show!</Text>
-        <Button title="Add Show" onPress={() => setShowAddShowModal(true)} />
-      </View>
-    );
-  }
-
-  if (!showsLoading && shows.length > 0 && !selectedShow) {
-    return (
-      <View style={styles.container} >
-        <ActivityIndicator size="large" />
-        <Text style={styles.messageText}>Selecting Show...</Text>
-      </View>
-    );
-  }
-
-  if (!showsLoading && selectedShow) {
-    // Remove ScrollView, use View as the main container
-    return (
-      <View style={styles.fullFlexContainer}>
-        {/* Render the content (which is now either loading or the FlatList) */}
-        {renderContent()} 
-
-        {/* Modals remain outside the list */}
-        <Modal visible={showProfile} onRequestClose={() => setShowProfile(false)} animationType="slide">
-          {/* {user && <UserProfileModal onClose={() => setShowProfile(false)} />} */}
-          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>User Profile Placeholder</Text></View> 
-        </Modal>
-        
-        <Modal visible={showAddPropModal} onRequestClose={handleCloseAddPropModal} animationType="slide">
-          {/* <PropForm onSubmit={handleAdd} onCancel={handleCloseAddPropModal} show={selectedShow} /> */}
-          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>Add Prop Form Placeholder</Text></View> 
-        </Modal>
-
-        <Modal visible={showEditPropModal} onRequestClose={handleCloseEditPropModal} animationType="slide">
-          {/* 
-          <PropForm 
-            initialData={propToEdit ? { ...propToEdit } as PropFormData : undefined}
-            onSubmit={handleUpdate} 
-            onCancel={handleCloseEditPropModal} 
-            show={selectedShow}
-            mode="edit"
-          /> 
-          */}
-          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>Edit Prop Form Placeholder</Text></View> 
-        </Modal>
-
-      </View> // End main container View
+      <View style={styles.container}><Text style={styles.infoText}>Please select a show</Text></View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.messageText}>Something went wrong determining the state.</Text>
+    <View style={styles.fullFlexContainer}>
+      {renderContent()}
+
+      <Modal visible={showProfile} onRequestClose={() => setShowProfile(false)} animationType="slide">
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>User Profile Placeholder</Text></View> 
+      </Modal>
+
+      <Modal visible={showAddShowModal} onRequestClose={() => setShowAddShowModal(false)} animationType="slide">
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>Add Show Modal Placeholder</Text></View> 
+      </Modal>
+
+      {Platform.OS !== 'web' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={handleOpenAddPropPage}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={30} color="white" />
+        </TouchableOpacity>
+      )}
+
     </View>
   );
 }
@@ -613,13 +421,17 @@ export default function PropsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: '#111827',
+    padding: 10,
+  },
+  infoText: {
+    color: '#D1D5DB',
+    fontSize: 16,
+    textAlign: 'center',
   },
   fullFlexContainer: {
     flex: 1,
-    backgroundColor: '#1F1F1F',
+    backgroundColor: '#111827',
   },
   messageText: {
     fontSize: 18,
@@ -648,25 +460,21 @@ const styles = StyleSheet.create({
     borderColor: '#404040',
     borderRadius: 4,
   },
-  loadingContainer: { // Style for loading indicator when filters are present
+  loadingContainer: {
     padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   listWrapper: {
-    // If PropList (FlatList) needs specific sizing within ScrollView, add styles here
-    // e.g., minHeight: 300 
   },
   listContainer: {
-     // Removed flex: 1 as it's inside a ScrollView now.
-     // FlatList handles its own scrolling.
   },
   filterToggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    backgroundColor: '#333333', // Different background for toggle
+    backgroundColor: '#333333',
     borderBottomWidth: 1,
     borderBottomColor: '#404040',
   },
@@ -675,10 +483,26 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
   },
-  contentLoadingContainer: { // New style for centering loading indicator in content area
+  contentLoadingContainer: {
     flex: 1, 
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#0EA5E9',
+    borderRadius: 28,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 }); 

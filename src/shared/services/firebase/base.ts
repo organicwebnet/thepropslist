@@ -67,6 +67,23 @@ export abstract class BaseFirebaseService implements FirebaseService {
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
+  // --- Add Missing Auth Method Stubs ---
+  async signInWithEmailAndPassword(email: string, password: string): Promise<any> { // Return type 'any' for stub
+    console.warn(`signInWithEmailAndPassword(${email}) is not implemented in BaseFirebaseService.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async createUserWithEmailAndPassword(email: string, password: string): Promise<any> { // Return type 'any' for stub
+    console.warn(`createUserWithEmailAndPassword(${email}) is not implemented in BaseFirebaseService.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    console.warn(`sendPasswordResetEmail(${email}) is not implemented in BaseFirebaseService.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+  // --- End Missing Auth Method Stubs ---
+
   protected createError(error: unknown): FirebaseError {
     const err = error as { code?: string; message?: string };
     return new FirebaseError(

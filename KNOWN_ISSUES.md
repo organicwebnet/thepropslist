@@ -2,7 +2,23 @@
 
 ## Critical Issues
 
-### 1. Build System Issues
+### 1. Android App Hang/Crash After Loading
+**Status**: Active (Investigating)
+**Priority**: Critical
+**Impact**: Android App Functionality
+**Description**: The Android application loads the initial JS bundle (reaches 100% in Metro), shows the initial loading indicator from `_layout.tsx`, but then hangs or crashes (black screen) when attempting to render the initial route (`app/(tabs)/props.tsx`). This occurs even after fixing native Firebase initialization errors and major TypeScript errors.
+**Required Changes**:
+- Investigate the render cycle of `app/(tabs)/props.tsx` and its dependencies (`useFirebase`, `useAuth`, `PropList`, `useProps` hook, etc.).
+- Check context provider behavior during initial render/update.
+- Simplify the `app/(tabs)/props.tsx` render step-by-step to pinpoint the crashing component/hook.
+- Examine native logs (`adb logcat`) closely *during* the transition from loading to the attempted screen render for any new native errors.
+**Action Items**:
+- [X] Restore `app/(tabs)/props.tsx` main return block.
+- [ ] Systematically comment out sections within the restored `PropsScreen` render logic.
+- [ ] Analyze native logs during the crash timeframe.
+- [ ] Check context provider states and effects.
+
+### 2. Build System Issues
 **Status**: Active  
 **Priority**: High  
 **Impact**: Development & Production  
@@ -12,6 +28,7 @@
    - MIME type errors in web bundle loading
    - Incorrect configuration for web platform
    - Missing platform-specific entry points
+   - ~~iOS GoogleService-Info.plist path warning~~ (Resolved by commenting out in app.config.js as file is missing)
 
 2. Android SDK configuration:
    - Incorrect SDK path
@@ -40,35 +57,18 @@
 - [X] Setup proper Android environment (via app.config.js fix)
 - [ ] Configure platform tools
 - [ ] Investigate Android app launch failure after successful prebuild
+- [X] Comment out missing iOS plist reference in app.config.js
 
-### 2. Android Firebase Initialization Failure
-**Status**: Active
+### 3. Android Firebase Initialization Failure
+**Status**: Resolved (Native initialization fixed)
 **Priority**: Critical
 **Impact**: Android App Functionality
 
 #### Description
-The Android application fails at runtime with errors like "No native Firebase app instance found" or "No Firebase App '[DEFAULT]' has been created". This occurs specifically when `@react-native-firebase/app` checks for initialized apps (`getApps().length`), which returns 0. This happens despite the native build seemingly succeeding and the `google-services.json` file being correctly placed and processed by the `com.google.gms.google-services` plugin.
+~~The Android application fails at runtime with errors like "No native Firebase app instance found" or "No Firebase App '[DEFAULT]' has been created". This occurs specifically when `@react-native-firebase/app` checks for initialized apps (`getApps().length`), which returns 0...~~
+**Resolution**: The native Firebase initialization issue appears resolved, allowing the JS bundle to load further.
 
-#### Current Status
-- Confirmed `google-services.json` is correctly placed in `android/app/`.
-- Confirmed `com.google.gms.google-services` plugin is applied in `android/build.gradle` and `android/app/build.gradle`.
-- Attempted various Firebase dependency management strategies in `package.json` (BOM, explicit versions, `resolutions`, `overrides`) with `npm install --force`.
-- Ensured no explicit Firebase dependencies are listed in `android/app/build.gradle` (relying on autolinking).
-- Manually added `FirebaseApp.initializeApp(this)` to `MainApplication.kt#onCreate()`. This did not resolve the issue; `getApps().length` remained 0 at runtime.
-- Reverted the manual change in `MainApplication.kt`.
-- Updated `@react-native-firebase/*` packages to the latest compatible versions.
-- Performed a full clean: removed `node_modules`, `android` directory, ran `npm install`, and `npx expo prebuild --platform android --clean`.
-- The issue persists after all the above steps. The native Firebase instance is not available/recognized by the JavaScript layer at runtime.
-
-#### Action Items / Next Steps
-- **Investigate Native Logs:** Use Android Studio's Logcat or `adb logcat` during app startup to look for specific errors related to Firebase initialization that might not be surfaced in the React Native logs.
-- **Check Gradle Plugin Execution:** Verify that the `com.google.gms.google-services` plugin is actually running and processing the `google-services.json` file during the build. Look for its output in the Gradle build logs (`./gradlew app:assembleDebug --info`).
-- **Simplify Test Case:** Create a minimal reproducible example with a fresh Expo project, adding only `@react-native-firebase/app` and the necessary setup to isolate the issue.
-- **Explore Expo Plugin Conflicts:** Investigate if other Expo config plugins or native modules could be interfering with the Firebase initialization process.
-- **Consider Expo Dev Client vs. Production Build:** Test if the issue occurs in a standalone production build (`eas build`) vs. the development client (`expo run:android`). There might be differences in the initialization timing or environment.
-- **Review `MainApplication.kt` and `MainActivity.kt`:** Double-check the generated native files after `prebuild` for any anomalies or missing Firebase-related setup that the Expo plugin *should* have added.
-
-### 3. Dependency Conflicts
+### 4. Dependency Conflicts
 **Status**: Active  
 **Priority**: High  
 **Impact**: Build & Runtime  
@@ -101,7 +101,7 @@ The Android application fails at runtime with errors like "No native Firebase ap
 - [ ] Fix peer dependencies
 - [ ] Test compatibility
 
-### 4. Font Loading Issues
+### 5. Font Loading Issues
 **Status**: Active  
 **Priority**: Medium  
 **Impact**: User Experience  
@@ -198,32 +198,46 @@ The Android application fails at runtime with errors like "No native Firebase ap
 - [ ] Refine mocking strategy for Firebase and other complex services.
 
 ## Navigation Typing Issues
-**Status**: Active
+**Status**: Partially Resolved
 **Priority**: High
 **Impact**: Runtime / Developer Experience
-**Description**: Multiple errors related to `react-navigation` (`TS2344`, `TS2322`, `TS2345`, `TS2339`) indicate mismatches between `navigation.navigate` calls and the defined `RootStackParamList`. Screen names or parameters might be incorrect, or the type definition itself needs updating. Affects files like `src/navigation/AppNavigator.tsx`, `src/pages/Packing.tsx`, `src/pages/Shows.tsx`.
+**Description**: ~~Multiple errors related to `react-navigation`...~~ The specific error of passing `onPress` to `PropCard` in `PropsListScreen.tsx` has been resolved. Other potential issues remain.
 **Required Changes**:
-- Verify all screen names used in `navigate` calls exist in `RootStackParamList`.
-- Ensure parameters passed match the expected types for each screen.
-- Update `RootStackParamList` in `src/navigation/types.ts` to accurately reflect the navigation structure.
+...
 **Action Items**:
+- [X] Fix `onPress` prop usage on `PropCard` in `PropsListScreen.tsx`.
 - [ ] Audit all `navigation.navigate` calls against `RootStackParamList`.
 - [ ] Correct screen names and parameters in navigation calls.
 - [ ] Update `RootStackParamList` definition.
 
 ## Firebase Service Type Issues
-**Status**: Active
+**Status**: Partially Resolved
 **Priority**: Medium
 **Impact**: Code Quality / Developer Experience
-**Description**: TypeScript errors (`TS2416`, `TS2353`) in Firebase service implementations (`src/platforms/mobile/services/firebase.ts`, `src/platforms/web/services/firebase.ts`, `src/shared/services/firebase/base.ts`). Issues include `BaseFirebaseService` not correctly implementing `FirebaseService`, properties missing (`createDocumentWrapper`), or custom `FirebaseDocument` type potentially missing expected fields like `data`.
+**Description**: ~~TypeScript errors (`TS2416`, `TS2353`) in Firebase service implementations...~~ Missing auth methods (`signInWithEmailAndPassword`, etc.) have been added to `BaseFirebaseService` (stubs) and `MobileFirebaseService` (implementations). Other potential type issues might remain (e.g., `FirebaseDocument` usage).
 **Required Changes**:
 - Ensure `BaseFirebaseService` and platform-specific implementations correctly adhere to the `FirebaseService` interface.
 - Align the structure of the custom `FirebaseDocument` type with how Firestore documents are accessed (e.g., using `.data()`).
 - Correct method visibility and signatures across base and derived service classes.
 **Action Items**:
-- [ ] Fix `BaseFirebaseService` implementation against `FirebaseService` interface.
+- [X] Fix `BaseFirebaseService` implementation against `FirebaseService` interface (added missing auth methods).
+- [X] Fix `MobileFirebaseService` implementation against `FirebaseService` interface (added missing auth methods).
 - [ ] Correct `FirebaseDocument` type definition or usage in service methods.
 - [ ] Resolve method signature/visibility mismatches between base and derived Firebase services.
+
+## `import.meta.env` Usage Error
+**Status**: Resolved
+**Priority**: High
+**Impact**: Build / Runtime
+**Description**: Components were incorrectly using `import.meta.env` (Vite standard) instead of `process.env` (Expo/Node standard) to access environment variables.
+**Resolution**: Replaced all instances of `import.meta.env.EXPO_PUBLIC_...` with `process.env.EXPO_PUBLIC_...` in affected files (`ConfigForm.tsx`, `FirebaseTest.tsx`, `google.ts`).
+
+## Expo Camera Module Errors
+**Status**: Resolved
+**Priority**: Medium
+**Impact**: Native Feature
+**Description**: Errors in `CameraScreen.tsx` related to incorrect import of `MediaLibrary` and using `CameraType` as a value instead of a type.
+**Resolution**: Fixed `MediaLibrary` import and usage, changed `CameraType` usage to string literals (`'back'`, `'front'`), and added check for potentially undefined `photo` variable after capture.
 
 ## Expo Router Link[href] Type Issue
 **Status**: Active
@@ -445,25 +459,18 @@ module.exports = {
 
 ## Next Steps
 
-1. **HTML Template Issue**:
-   - [ ] Test with Expo's default template
-   - [ ] If needed, create minimal custom template
-   - [ ] Verify template variable interpolation
+1. **Android App Hang/Crash**:
+   - [ ] Investigate `app/(tabs)/props.tsx` render cycle.
+   - [ ] Analyze native logs (`adb logcat`).
 
-2. **VM Module Issue**:
-   - [ ] Implement complete Node.js polyfill solution
-   - [ ] Test with minimal configuration
-   - [ ] Verify all required modules are properly polyfilled
+2. **Remaining TypeScript Errors**:
+   - [ ] Fix Module Resolution Errors (`src/services/firebase.ts`).
+   - [ ] Fix Type Definition Issues (`auth.ts`).
+   - [ ] Fix Test Setup/Mocking issues.
 
-3. **Font Loading**:
-   - [ ] Implement unified font loading strategy
-   - [ ] Verify font file paths and bundling
-   - [ ] Add error handling and fallback fonts
-
-4. **Webpack Migration**:
-   - [ ] Evaluate migration to Expo Router
-   - [ ] Test Metro bundler compatibility
-   - [ ] Update build configurations
+3. **Build System/Web Issues**:
+   - [ ] Address remaining items in Build System Issues.
+   - [ ] Address Web Platform Issues.
 
 ## References
 
