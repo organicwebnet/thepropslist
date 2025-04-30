@@ -95,23 +95,20 @@ config.resolver.extraNodeModules.buffer = require.resolve('buffer/');
 
 // --- End path alias resolution --- 
 
-const { transformer, resolver } = config;
+// --- SVG Transformer Configuration --- 
+// Commenting out SVG transformer temporarily for diagnostics
+// config.transformer.babelTransformerPath = require.resolve('react-native-svg-transformer');
+// config.resolver.assetExts = config.resolver.assetExts.filter((ext) => ext !== 'svg');
+// config.resolver.sourceExts = [...config.resolver.sourceExts, 'svg'];
+// --- End SVG --- 
 
-// process.env.EXPO_ROUTER_ORIGIN = 'http://localhost:8081'; // Reverted this change
+// Remove the old resolver overrides within withNativeWind
+// const { transformer, resolver } = config; 
 
-// Apply withNativeWind wrapper
+// Apply withNativeWind wrapper, passing the already modified config
 module.exports = withNativeWind(config, {
-  // Pass the potentially modified resolver from the base config
-  resolver: {
-    ...resolver, 
-    assetExts: resolver.assetExts.filter((ext) => ext !== 'svg'),
-    sourceExts: [...resolver.sourceExts, 'svg'],
-    // Ensure extraNodeModules and nodeModulesPaths are included 
-    extraNodeModules: config.resolver.extraNodeModules, 
-    nodeModulesPaths: config.resolver.nodeModulesPaths
-  },
-  // Specify the input CSS file for NativeWind
+  // NativeWind options only
   input: './global.css',
-  // Specify projectRoot 
-  projectRoot: projectRoot 
+  projectRoot: projectRoot,
+  // Do NOT override resolver here, as it's already configured in the base 'config' object
 });

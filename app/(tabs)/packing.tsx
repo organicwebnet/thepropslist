@@ -37,7 +37,12 @@ export default function Packing() {
     );
   }
 
-  return <PackingPage show={show} props={props} />;
+  // return <PackingPage show={show} props={props} />;
+  return (
+     <View style={styles.placeholderContainer}>
+        <Text style={styles.placeholderText}>Packing Page Placeholder</Text>
+     </View>
+  )
 }
 
 const styles = StyleSheet.create({
@@ -59,4 +64,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
   },
+  placeholderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1F2937',
+    padding: 20,
+  },
+  placeholderText: {
+    color: '#9CA3AF',
+    fontSize: 18,
+  }
 }); 

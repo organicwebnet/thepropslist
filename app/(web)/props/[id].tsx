@@ -237,7 +237,9 @@ export default function WebPropDetailPage() {
   };
   
   // Determine status colors for the badge
-  const statusColors = propData?.status ? statusColorMap[propData.status] : { bg: 'bg-gray-600/20', text: 'text-gray-400', border: 'border-gray-500/50' };
+  const statusColors = (propData?.status && statusColorMap[propData.status]) 
+                      ? statusColorMap[propData.status] 
+                      : { bg: 'bg-gray-600/20', text: 'text-gray-400', border: 'border-gray-500/50' }; // Fallback if status is missing OR invalid
 
   const handleNextImage = () => setCurrentImageIndex((prev) => (prev + 1) % imagePreviews.length);
   const handlePrevImage = () => setCurrentImageIndex((prev) => (prev - 1 + imagePreviews.length) % imagePreviews.length);
@@ -255,20 +257,22 @@ export default function WebPropDetailPage() {
 
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
-      <button onClick={() => router.back()} className="mb-4 text-blue-400 hover:text-blue-300">
-        &larr; Back to List
-      </button>
+      {/* Use Pressable for better cross-platform compatibility, wrap text */}
+      <Pressable onPress={() => router.push('/props')} className="mb-4">
+        <Text className="text-blue-400 hover:text-blue-300">&larr; Back to List</Text>
+      </Pressable>
 
-      {/* Title Section */}      
+      {/* Title Section */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{isEditing ? 'Edit Prop' : 'Prop Details'}</h1>
         {!isEditing && propData && (
-          <button 
-            onClick={() => setIsEditing(true)} 
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          // Use Pressable, wrap text
+          <Pressable
+            onPress={() => setIsEditing(true)} 
+            className="bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
           >
-            Edit Prop
-          </button>
+            <Text className="text-white font-bold">Edit Prop</Text>
+          </Pressable>
         )}
       </div>
 

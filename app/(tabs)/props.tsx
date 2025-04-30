@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Button, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, Button, Alert, ActivityIndicator, Platform, TextInput, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { User } from 'firebase/auth';
-import { Firestore, collection, query, where, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, getDocs } from 'firebase/firestore';
+import type { FirebaseDocument } from '@/shared/services/firebase/types'; 
+import type { QueryOptions } from '@/shared/services/firebase/types'; 
+import { Ionicons } from '@expo/vector-icons';
 
 import { PropList } from '../../src/components/PropList';
 import { Show } from '../../src/types';
@@ -31,11 +33,12 @@ const initialFilters: Filters = {
 const LAST_SHOW_ID_KEY = 'lastSelectedShowId';
 
 export default function PropsScreen() {
-  console.log("--- Rendering: app/(tabs)/props.tsx ---");
+  console.log("[PropsScreen] Rendering...");
 
   const router = useRouter();
   const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
   const { user } = useAuth();
+  console.log(`[PropsScreen] State: user=${user?.uid}, firebaseInitialized=${firebaseInitialized}`);
   const [propsLoading, setPropsLoading] = useState(false);
   const [showsLoading, setShowsLoading] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
@@ -51,6 +54,7 @@ export default function PropsScreen() {
   const [props, setProps] = useState<Prop[]>([]);
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [filteredProps, setFilteredProps] = useState<Prop[]>([]);
+  const [showFilters, setShowFilters] = useState(true);
   
   const initialShowIdAttempt = useRef<string | null>(null);
 
@@ -64,33 +68,21 @@ export default function PropsScreen() {
   useEffect(() => {
     const checkOnboarding = async () => {
       if (user && firebaseInitialized && firebaseService) {
-        const db = firebaseService.firestore();
-        const userDocRef = doc(db, 'users', user.uid);
-        try {
-          const userDoc = await getDoc(userDocRef);
-          if (!userDoc.exists() || !userDoc.data()?.onboardingCompleted) {
-            console.log("User needs onboarding (checked in PropsScreen)");
-            if (!userDoc.exists()) {
-              await setDoc(userDocRef, { onboardingCompleted: false, createdAt: new Date().toISOString() });
-            }
-            setShowOnboarding(true);
-          } else {
-            setShowOnboarding(false);
-          }
-        } catch (error) {
-          console.error("Error checking onboarding status:", error);
-        }
+         console.log("Onboarding check temporarily disabled pending service refactor.");
+         // TODO: Refactor using firebaseService methods (getDocument, setDocument) 
+         // or ensure correct SDK functions (doc, getDoc, setDoc) are imported 
+         // for the mobile platform if direct access is needed.
       }
     };
     checkOnboarding();
   }, [user, firebaseInitialized, firebaseService]);
 
   useEffect(() => {
-    if (!user || !firebaseInitialized || !firebaseService) {
+    if (!user || !firebaseInitialized || !firebaseService?.listenToCollection) {
       setShows([]);
       setSelectedShow(null);
       setShowsLoading(false);
-      return;
+      return () => {};
     }
 
     if (initialShowIdAttempt.current === null && typeof window !== 'undefined' && window.localStorage) { 
@@ -108,73 +100,94 @@ export default function PropsScreen() {
     }
 
     setShowsLoading(true);
-    const db = firebaseService.firestore();
-    console.log(`Fetching shows for user ${user.uid}`);
-    const q = query(collection(db, 'shows'), where('userId', '==', user.uid));
-    
-    const unsubscribe = onSnapshot(q, querySnapshot => {
-      const showsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Show));
-      console.log("Fetched shows:", showsData.length);
-      setShows(showsData);
+    console.log(`Fetching shows for user ${user.uid} using service`);
 
-      let showToSelect: Show | null = null;
-      const attemptedId = initialShowIdAttempt.current;
+    const queryOptions: QueryOptions = {
+      where: [['userId', '==', user.uid]],
+    };
 
-      if (attemptedId && attemptedId !== 'error' && attemptedId !== 'no_storage') {
-          const foundShow = showsData.find(s => s.id === attemptedId);
-          if (foundShow) {
-              console.log("Restoring show from localStorage ID:", attemptedId);
-              showToSelect = foundShow;
-          } else {
-              console.log("Stored show ID not found in fetched list, selecting first.");
-          }
-          initialShowIdAttempt.current = 'used'; 
-      }
-      
-      if (!showToSelect && showsData.length > 0) {
-          console.log("Selecting first available show.");
-          showToSelect = showsData[0];
-      }
-      
-      if (selectedShow?.id !== showToSelect?.id) {
-           setSelectedShow(showToSelect);
-      }
+    const unsubscribeShows = firebaseService.listenToCollection<Show>(
+      'shows',
+      (showDocs: FirebaseDocument<Show>[]) => {
+        const showsData = showDocs.map(doc => ({ id: doc.id, ...doc.data } as Show));
+        console.log("Fetched shows via service:", showsData.length);
+        setShows(showsData);
 
-      setShowsLoading(false);
-    }, error => {
-      console.error("Error fetching shows: ", error);
-      setShowsLoading(false);
-    });
+        let showToSelect: Show | null = null;
+        const attemptedId = initialShowIdAttempt.current;
+
+        if (attemptedId && attemptedId !== 'error' && attemptedId !== 'no_storage') {
+            const foundShow = showsData.find((s: Show) => s.id === attemptedId);
+            if (foundShow) {
+                console.log("Restoring show from localStorage ID:", attemptedId);
+                showToSelect = foundShow;
+            } else {
+                console.log("Stored show ID not found in fetched list, selecting first.");
+            }
+            initialShowIdAttempt.current = 'used'; 
+        }
+        
+        if (!showToSelect && showsData.length > 0) {
+            showToSelect = showsData[0];
+        }
+        
+        if (selectedShow?.id !== showToSelect?.id) {
+             setSelectedShow(showToSelect);
+        }
+
+        setShowsLoading(false);
+      },
+      (error: Error) => {
+        console.error("Error fetching shows via service: ", error);
+        setShowsLoading(false);
+      },
+      queryOptions
+    );
 
     return () => {
-      console.log("Cleaning up shows listener");
-      unsubscribe();
+      console.log("Cleaning up shows listener (service)");
+      if (unsubscribeShows) {
+         unsubscribeShows();
+      }
     };
   }, [user, firebaseInitialized, firebaseService]);
 
   useEffect(() => {
-    if (!selectedShow || !firebaseInitialized || !firebaseService) {
+    console.log(`[PropsScreen] Props Fetch Effect Triggered. SelectedShow ID: ${selectedShow?.id}, Initialized: ${firebaseInitialized}`);
+    if (!selectedShow || !firebaseInitialized || !firebaseService?.listenToCollection) {
+      console.log(`[PropsScreen] Props Fetch Effect: Skipping fetch (Show: ${!!selectedShow}, Initialized: ${firebaseInitialized}, Service: ${!!firebaseService?.listenToCollection})`);
       setProps([]);
       setPropsLoading(false);
-      return;
+      return () => {};
     }
+    
     setPropsLoading(true);
-    const db = firebaseService.firestore();
-    console.log(`Fetching props for show ${selectedShow.id}`);
-    const q = query(collection(db, 'props'), where('showId', '==', selectedShow.id));
-    const unsubscribe = onSnapshot(q, querySnapshot => {
-      const propsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Prop));
-      console.log("Fetched props:", propsData.length);
-      setProps(propsData);
-      setPropsLoading(false);
-    }, error => {
-      console.error("Error fetching props: ", error);
-      setPropsLoading(false);
-    });
+    console.log(`[PropsScreen] Fetching props for show ${selectedShow.id} using service`);
+
+    const queryOptions: QueryOptions = {
+      where: [['showId', '==', selectedShow.id]],
+    };
+
+    const unsubscribeProps = firebaseService.listenToCollection<Prop>(
+      'props',
+      (propDocs: FirebaseDocument<Prop>[]) => {
+        const propsData = propDocs.map(doc => ({ id: doc.id, ...doc.data } as Prop));
+        console.log(`[PropsScreen] Fetched props via service: ${propsData.length}`);
+        setProps(propsData);
+        setPropsLoading(false);
+      },
+      (error: Error) => {
+        console.error("[PropsScreen] Error fetching props via service: ", error);
+        setPropsLoading(false);
+      },
+      queryOptions
+    );
 
     return () => {
-      console.log("Cleaning up props listener");
-      unsubscribe();
+      console.log("[PropsScreen] Cleaning up props listener (service)");
+      if (unsubscribeProps) {
+        unsubscribeProps();
+      }
     };
   }, [selectedShow, firebaseInitialized, firebaseService]);
 
@@ -183,13 +196,25 @@ export default function PropsScreen() {
       setFilteredProps([]);
       return;
     }
+    const searchLower = filters.search.toLowerCase(); // Pre-calculate lower case search term
     const filtered = props.filter(prop => {
-      return (
-        prop.showId === selectedShow.id &&
-        (filters.name === '' || prop.name.toLowerCase().includes(filters.name.toLowerCase())) &&
-        (filters.location === '' || (prop.location && prop.location.toLowerCase().includes(filters.location.toLowerCase()))) &&
-        (filters.status === undefined || prop.status === filters.status)
-      );
+      // Check basic showId match first
+      if (prop.showId !== selectedShow.id) return false;
+
+      // Check specific filters if they are set
+      if (filters.name && !prop.name.toLowerCase().includes(filters.name.toLowerCase())) return false;
+      if (filters.location && !(prop.location && prop.location.toLowerCase().includes(filters.location.toLowerCase()))) return false;
+      if (filters.status !== undefined && prop.status !== filters.status) return false;
+
+      // Check the general search term against name and description
+      if (searchLower !== '' && 
+          !prop.name.toLowerCase().includes(searchLower) &&
+          !(prop.description && prop.description.toLowerCase().includes(searchLower)) ) {
+            return false;
+      }
+
+      // If all checks pass, include the prop
+      return true;
     });
     setFilteredProps(filtered);
   }, [props, filters, selectedShow]);
@@ -238,46 +263,59 @@ export default function PropsScreen() {
   };
 
   const handleAdd = async (formData: PropFormData) => {
-    if (!user || !firebaseInitialized || !firebaseService || !showIdForNewProp) return;
-    const db = firebaseService.firestore();
+    if (!user || !firebaseInitialized || !firebaseService?.addDocument || !showIdForNewProp) {
+       console.error("Add Prop Error: User, Service, or Show ID missing.");
+       Alert.alert('Error', 'Could not add prop. Missing information.');
+       return;
+    }
+    
     try {
-      const propDataToAdd = {
+      const propDataToAdd: Omit<Prop, 'id'> = {
         ...formData,
         userId: user.uid,
         showId: showIdForNewProp,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(), 
+        updatedAt: new Date().toISOString(), 
       };
-      await addDoc(collection(db, 'props'), propDataToAdd);
+      const docRef = await firebaseService.addDocument('props', propDataToAdd);
+      console.log("Prop added with ID:", docRef.id);
       handleCloseAddPropModal();
-    } catch (error) {
-      console.error('Error adding prop:', error);
+    } catch (error) { 
+      console.error('Error adding prop via service:', error);
       Alert.alert('Error', 'Failed to add prop.');
     }
   };
 
   const handleUpdate = async (formData: PropFormData) => {
-    if (!user || !firebaseInitialized || !firebaseService || !propToEdit) return;
-    const db = firebaseService.firestore();
+    if (!user || !firebaseInitialized || !firebaseService?.updateDocument || !propToEdit) { 
+       console.error("Update Prop Error: User, Service, or Prop to Edit missing.");
+       Alert.alert('Error', 'Could not update prop. Missing information.');
+      return; 
+    }
+    
     try {
-      const propRef = doc(db, 'props', propToEdit.id);
       const propDataToUpdate: Partial<Prop> = {
-        ...formData,
+        ...formData, 
         userId: user.uid,
-        lastModifiedAt: formData.lastModifiedAt || undefined,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(), 
+        lastModifiedAt: formData.lastModifiedAt || undefined, 
       };
-      await updateDoc(propRef, propDataToUpdate as any);
+      await firebaseService.updateDocument('props', propToEdit.id, propDataToUpdate);
+      console.log("Prop updated with ID:", propToEdit.id);
       handleCloseEditPropModal();
     } catch (error) {
-      console.error('Error updating prop:', error);
+      console.error('Error updating prop via service:', error);
       Alert.alert('Error', 'Failed to update prop.');
     }
   };
 
   const handleDelete = async (propId: string) => {
-    if (!user || !firebaseInitialized || !firebaseService) return;
-    const db = firebaseService.firestore();
+    if (!user || !firebaseInitialized || !firebaseService?.deleteDocument) { 
+      console.error("Delete Prop Error: Service not available.");
+      Alert.alert('Error', 'Could not delete prop.');
+      return; 
+    }
+    
     Alert.alert(
       "Confirm Delete",
       "Are you sure you want to delete this prop?",
@@ -288,9 +326,10 @@ export default function PropsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, 'props', propId));
+              await firebaseService.deleteDocument('props', propId);
+              console.log("Prop deleted with ID:", propId);
             } catch (error) {
-              console.error('Error deleting prop:', error);
+              console.error('Error deleting prop via service:', error);
               Alert.alert('Error', 'Failed to delete prop.');
             }
           },
@@ -305,74 +344,202 @@ export default function PropsScreen() {
   };
 
   const handleAddShow = async (showData: Omit<Show, 'id' | 'userId'>) => {
-    if (!user || !firebaseInitialized || !firebaseService) return;
-    const db = firebaseService.firestore();
+    if (!user || !firebaseInitialized || !firebaseService?.addDocument) { 
+       console.error("Add Show Error: User or Service missing.");
+       Alert.alert('Error', 'Could not add show.');
+      return; 
+    }
+    
     try {
-      const newShowData = { 
+      const newShowData: Omit<Show, 'id'> = { 
         ...showData, 
         userId: user.uid,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(), 
         updatedAt: new Date().toISOString(),
       };
-      await addDoc(collection(db, 'shows'), newShowData);
+      await firebaseService.addDocument('shows', newShowData);
+      console.log("Show added successfully");
       setShowAddShowModal(false);
     } catch (error) {
-      console.error("Error adding show:", error);
+      console.error("Error adding show via service:", error);
       Alert.alert("Error", "Failed to add show.");
     }
   };
 
   const handleUpdateShow = async (showData: Show) => {
-    if (!user || !firebaseInitialized || !firebaseService) return;
-    const db = firebaseService.firestore();
+    if (!user || !firebaseInitialized || !firebaseService?.updateDocument) { 
+      console.error("Update Show Error: User or Service missing.");
+       Alert.alert('Error', 'Could not update show.');
+      return; 
+    }
+    
     try {
-      const showRef = doc(db, 'shows', showData.id);
       const showDataToUpdate: Partial<Show> = {
-        ...showData,
+        ...showData, 
         userId: user.uid,
         updatedAt: new Date().toISOString(),
       };
-      await updateDoc(showRef, showDataToUpdate);
+      await firebaseService.updateDocument('shows', showData.id, showDataToUpdate);
+      console.log("Show updated successfully:", showData.id);
     } catch (error) {
-      console.error("Error updating show:", error);
+      console.error("Error updating show via service:", error);
       Alert.alert("Error", "Failed to update show.");
-    }
+    } 
   };
 
   const handleDeleteShow = async (showId: string) => {
-    if (!user || !firebaseInitialized || !firebaseService) return;
-    const db = firebaseService.firestore();
-    Alert.alert(
-      "Confirm Delete",
-      "Are you sure you want to delete this show and all its props?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const batch = writeBatch(db);
-              const showRef = doc(db, 'shows', showId);
-              batch.delete(showRef);
-              const propsQuery = query(collection(db, 'props'), where('showId', '==', showId));
-              const propsSnapshot = await getDocs(propsQuery);
-              propsSnapshot.forEach((propDoc) => {
-                batch.delete(doc(db, 'props', propDoc.id));
-              });
-              await batch.commit();
-              if (selectedShow?.id === showId) {
-                setSelectedShow(null);
-              }
-            } catch (error) {
-              console.error("Error deleting show and props:", error);
-              Alert.alert("Error", "Failed to delete show and its props.");
-            }
+    if (!user || !firebaseInitialized || !firebaseService?.deleteDocument || !firebaseService?.runTransaction || !firebaseService?.listenToCollection) { 
+      console.error("Delete Show Error: Service or required methods (delete, transaction, listen) missing.");
+      Alert.alert('Error', 'Could not delete show. Service capabilities missing.');
+      return; 
+    }
+    
+    let propIdsToDelete: string[] = [];
+    let unsubscribePropsFetch: (() => void) | null = null;
+    const propsQueryOptions: QueryOptions = { where: [['showId', '==', showId]] };
+    
+    console.log(`Fetching props for show ${showId} before delete confirmation...`);
+    try {
+       unsubscribePropsFetch = firebaseService.listenToCollection<Prop>(
+          'props',
+          (propDocs: FirebaseDocument<Prop>[]) => {
+             propIdsToDelete = propDocs.map((doc: FirebaseDocument<Prop>) => doc.id);
+             console.log(`Found ${propIdsToDelete.length} props associated with show ${showId}.`);
+             if (unsubscribePropsFetch) {
+                 unsubscribePropsFetch();
+                 unsubscribePropsFetch = null;
+             }
+             showDeleteConfirmation(showId, propIdsToDelete);
           },
-        },
-      ]
+          (error: Error) => {
+             console.error("Error fetching props before delete:", error);
+             if (unsubscribePropsFetch) {
+                 unsubscribePropsFetch();
+                 unsubscribePropsFetch = null;
+             }
+             Alert.alert("Error", "Could not fetch props to delete. Aborting delete operation.");
+          },
+          propsQueryOptions
+       );
+       setTimeout(() => {
+           if (unsubscribePropsFetch) { 
+              console.warn("Timeout waiting for props fetch before delete confirmation. Proceeding without prop deletion confirmation.");
+              unsubscribePropsFetch();
+              unsubscribePropsFetch = null;
+              showDeleteConfirmation(showId, []);
+           }
+       }, 5000);
+
+    } catch (fetchError) {
+        console.error("Error setting up props listener for delete:", fetchError);
+        Alert.alert("Error", "Could not initiate prop check for deletion.");
+        return;
+    }
+    
+    const showDeleteConfirmation = (showIdToDelete: string, fetchedPropIds: string[]) => {
+        Alert.alert(
+          "Confirm Delete",
+          `Are you sure you want to delete this show and its ${fetchedPropIds.length} associated props?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: async () => {
+                try {
+                  if (!firebaseService?.runTransaction) { 
+                      throw new Error("Transaction capability became unavailable.");
+                  }
+                  await firebaseService.runTransaction(async (transaction) => {
+                      fetchedPropIds.forEach((propId: string) => {
+                          transaction.delete('props', propId); 
+                      });
+                      
+                      transaction.delete('shows', showIdToDelete);
+                  });
+                  
+                  console.log("Show and its props deleted successfully:", showIdToDelete);
+                  if (selectedShow?.id === showIdToDelete) {
+                    setSelectedShow(null);
+                  }
+                } catch (error) {
+                  console.error("Error deleting show and props via service transaction:", error);
+                  Alert.alert("Error", "Failed to delete show and its props.");
+                }
+              },
+            },
+          ]
+        );
+    }
+  };
+
+  // Filter UI Rendering Logic - Renders the content of the filter section
+  const renderFilterControls = () => {
+    if (!showFilters) {
+      return null;
+    }
+    return (
+      <>
+        {/* Add Pickers or placeholder Views for other filters here */}
+        <Text style={styles.filterPlaceholder}>Category Filter Placeholder</Text>
+        <Text style={styles.filterPlaceholder}>Status Filter Placeholder</Text>
+        <Text style={styles.filterPlaceholder}>Act Filter Placeholder</Text>
+        <Text style={styles.filterPlaceholder}>Scene Filter Placeholder</Text>
+        <Button title="Reset Filters" onPress={handleFilterReset} />
+      </>
     );
   };
+
+  // Component to render the entire header for the FlatList
+  const renderListHeader = () => (
+    <View> {/* Wrap header content */}
+      {/* Filter Toggle Button */}
+      <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggleButton}>
+        <Ionicons name={showFilters ? "chevron-up" : "chevron-down"} size={24} color="#FFFFFF" />
+        <Text style={styles.filterToggleText}>{showFilters ? 'Hide Filters' : 'Show Filters'}</Text>
+      </TouchableOpacity>
+
+      {/* Filter Container (always includes search) */}
+      <View style={styles.filterContainer}>
+        {/* Search Input - Always Visible */}
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search name or description..."
+          placeholderTextColor="#9CA3AF"
+          value={filters.search}
+          onChangeText={(text) => handleFilterChange({ search: text })}
+        />
+        {/* Render the toggleable filter controls */}
+        {renderFilterControls()}
+      </View>
+    </View>
+  );
+
+  // Renders the main list content or loading indicator
+  const renderContent = () => {
+    if (propsLoading) {
+      // Show loading indicator centered within the available space
+      return (
+        <View style={styles.contentLoadingContainer}> 
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.messageText}>Loading Props...</Text>
+        </View>
+      );
+    } else {
+      // Render the PropList, passing the header component
+      return (
+        <PropList 
+          props={filteredProps} 
+          onEdit={handleOpenEditPropModal} 
+          onDelete={handleDelete}
+          ListHeaderComponent={renderListHeader} // Pass the header here
+          // ListEmptyComponent could be customized here if needed
+        />
+      );
+    }
+  };
+
+  console.log(`[PropsScreen] Preparing to render. propsLoading=${propsLoading}, showsLoading=${showsLoading}, selectedShow=${selectedShow?.id}`);
 
   if (showsLoading) {
     return (
@@ -402,39 +569,37 @@ export default function PropsScreen() {
   }
 
   if (!showsLoading && selectedShow) {
+    // Remove ScrollView, use View as the main container
     return (
       <View style={styles.fullFlexContainer}>
-        {propsLoading ? (
-          <View style={styles.container}><ActivityIndicator size="large" /><Text style={styles.messageText}>Loading Props...</Text></View>
-        ) : (
-          <View style={styles.listContainer}>
-            <PropList 
-              props={filteredProps} 
-              onEdit={(prop) => handleOpenEditPropModal(prop)} 
-              onDelete={handleDelete}
-            />
-          </View>
-        )}
+        {/* Render the content (which is now either loading or the FlatList) */}
+        {renderContent()} 
 
+        {/* Modals remain outside the list */}
         <Modal visible={showProfile} onRequestClose={() => setShowProfile(false)} animationType="slide">
-          {user && <UserProfileModal onClose={() => setShowProfile(false)} />} 
+          {/* {user && <UserProfileModal onClose={() => setShowProfile(false)} />} */}
+          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>User Profile Placeholder</Text></View> 
         </Modal>
         
         <Modal visible={showAddPropModal} onRequestClose={handleCloseAddPropModal} animationType="slide">
-          <PropForm onSubmit={handleAdd} onCancel={handleCloseAddPropModal} show={selectedShow} />
+          {/* <PropForm onSubmit={handleAdd} onCancel={handleCloseAddPropModal} show={selectedShow} /> */}
+          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>Add Prop Form Placeholder</Text></View> 
         </Modal>
 
         <Modal visible={showEditPropModal} onRequestClose={handleCloseEditPropModal} animationType="slide">
+          {/* 
           <PropForm 
             initialData={propToEdit ? { ...propToEdit } as PropFormData : undefined}
             onSubmit={handleUpdate} 
             onCancel={handleCloseEditPropModal} 
             show={selectedShow}
             mode="edit"
-          />
+          /> 
+          */}
+          <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>Edit Prop Form Placeholder</Text></View> 
         </Modal>
 
-      </View>
+      </View> // End main container View
     );
   }
 
@@ -454,13 +619,66 @@ const styles = StyleSheet.create({
   },
   fullFlexContainer: {
     flex: 1,
+    backgroundColor: '#1F1F1F',
   },
   messageText: {
     fontSize: 18,
     textAlign: 'center',
     marginBottom: 20,
+    color: '#FFFFFF',
+  },
+  filterContainer: {
+    padding: 10,
+    backgroundColor: '#2D2D2D',
+  },
+  searchInput: {
+    backgroundColor: '#4A4A4A',
+    color: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  filterPlaceholder: {
+    color: '#9CA3AF',
+    paddingVertical: 8,
+    marginBottom: 5,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: '#404040',
+    borderRadius: 4,
+  },
+  loadingContainer: { // Style for loading indicator when filters are present
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listWrapper: {
+    // If PropList (FlatList) needs specific sizing within ScrollView, add styles here
+    // e.g., minHeight: 300 
   },
   listContainer: {
-    flex: 1,
+     // Removed flex: 1 as it's inside a ScrollView now.
+     // FlatList handles its own scrolling.
+  },
+  filterToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: '#333333', // Different background for toggle
+    borderBottomWidth: 1,
+    borderBottomColor: '#404040',
+  },
+  filterToggleText: {
+    color: '#FFFFFF',
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  contentLoadingContainer: { // New style for centering loading indicator in content area
+    flex: 1, 
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
 }); 

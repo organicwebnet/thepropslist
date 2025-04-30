@@ -65,7 +65,7 @@ export function WebPropCard({ prop, onEdit, onDelete }: WebPropCardProps) {
       </div>
 
       {/* Link wrapper for card content */}
-      <Link href={`/props/${prop.id}` as any} className="flex flex-col flex-grow cursor-pointer">
+      <Link href={`/props/${prop.id}` as any} className="cursor-pointer">
         {displayImage ? (
           <img
             src={displayImage}

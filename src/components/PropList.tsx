@@ -7,48 +7,81 @@ import type { Prop } from '@shared/types/props';
 import { lifecycleStatusLabels, lifecycleStatusPriority, PropLifecycleStatus, StatusPriority } from '@/types/lifecycle';
 import { HelpTooltip } from './HelpTooltip';
 import PropCard from '@/shared/components/PropCard';
+import { View, Text, FlatList, StyleSheet, FlatListProps } from 'react-native';
 
-interface PropListProps {
+interface ExplicitPropListProps {
   props: Prop[];
   onDelete: (id: string) => void;
   onEdit: (prop: Prop) => void;
 }
 
+type PropListProps = ExplicitPropListProps & Omit<FlatListProps<Prop>, 'data' | 'renderItem' | 'keyExtractor'>;
+
 export function PropList({ 
   props, 
   onDelete, 
   onEdit,
+  ...rest
 }: PropListProps) {
   const router = useRouter();
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
 
-  const handleEditClick = (prop: Prop) => {
-    onEdit(prop);
+  const handleEditPress = (propId: string) => {
+    const propToEdit = props.find(p => p.id === propId);
+    if (propToEdit && onEdit) {
+      onEdit(propToEdit);
+    }
   };
 
-  const handleDeleteClick = (propId: string) => {
-    onDelete(propId);
-  };
+  const renderPropCard = ({ item }: { item: Prop }) => (
+    <View style={styles.cardContainer}> 
+      <PropCard 
+        prop={item} 
+        onEditPress={handleEditPress}
+        onDeletePress={onDelete}
+      />
+    </View>
+  );
 
-  const displayProps = props;
+  const defaultEmptyList = () => (
+     <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No props found.</Text>
+      </View>
+  );
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-      {displayProps.length === 0 ? (
-        <div className="col-span-full text-center py-10">
-          <p className="text-dark-text-secondary">No props found matching the current filters.</p>
-        </div>
-      ) : (
-        displayProps.map((prop) => (
-          <PropCard 
-            key={prop.id} 
-            prop={prop} 
-          />
-        ))
-      )}
-    </div>
+    <FlatList
+      data={props}
+      renderItem={renderPropCard}
+      keyExtractor={item => item.id}
+      numColumns={1}
+      contentContainerStyle={styles.listContainer}
+      ListEmptyComponent={defaultEmptyList}
+      {...rest}
+    />
   );
 }
+
+const styles = StyleSheet.create({
+  listContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  cardContainer: {
+    flex: 1,
+    margin: 5,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50, 
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 16,
+  }
+});
 
 const getStatusColor = (status: string | undefined): string => {
   if (!status) return 'bg-gray-700';

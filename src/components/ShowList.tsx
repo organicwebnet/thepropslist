@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Theater, User, Building, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Theater, User, Building, Pencil, Trash2 } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
 import type { Show, ShowFormData } from '../types';
 import ShowForm from './ShowForm';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,47 +17,33 @@ interface ShowListProps {
 export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, currentUserEmail }: ShowListProps) {
   const { user } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleEdit = (show: Show) => {
-    console.log('=== SHOW EDIT HANDLER ===');
-    console.log('1. handleEdit called with show:', show);
     setEditingId(show.id);
-    console.log('2. Set editingId to:', show.id);
   };
 
   const handleEditSubmit = async (data: ShowFormData) => {
-    console.log('=== HANDLE EDIT SUBMIT ===');
-    console.log('1. Received form data:', data);
-    
     if (editingId && onEdit) {
-      console.log('2. Calling onEdit with editingId:', editingId);
       await onEdit(editingId, data);
-      console.log('3. onEdit function completed');
       setEditingId(null);
-      console.log('4. Reset editingId to null');
     }
   };
 
-  const toggleExpand = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedId(expandedId === id ? null : id);
-  };
-
   const isShowOwner = (show: Show) => {
-    return show.userId === user?.uid;
+    return !!user && show.userId === user.uid;
   };
 
   return (
-    <div className="space-y-4">
+    <View style={styles.listContainer}>
       {shows.map((show) => (
-        <div key={show.id}>
+        <View key={show.id} style={styles.showItemContainer}>
           {editingId === show.id ? (
-            <ShowForm
+            // Comment out the potentially web-specific ShowForm
+            /*
+            <ShowForm 
               onSubmit={handleEditSubmit}
               initialData={{
                 ...show,
-                // Ensure these fields have default values if they're missing
                 venues: show.venues || [],
                 isTouringShow: show.isTouringShow || false,
                 contacts: show.contacts || []
@@ -64,119 +51,230 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
               mode="edit"
               onCancel={() => setEditingId(null)}
             />
+            */
+            // Add a placeholder
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderText}>Show Form Placeholder</Text>
+              <TouchableOpacity onPress={() => setEditingId(null)} style={styles.placeholderButton}>
+                 <Text style={styles.placeholderButtonText}>Cancel Edit</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
-            <div 
-              className={`gradient-border p-6 transition-transform hover:scale-[1.02] cursor-pointer ${
-                selectedShowId === show.id ? 'ring-2 ring-primary border-2 border-primary shadow-lg shadow-primary/30' : ''
-              }`}
-              onClick={() => onSelect(show)}
+            <TouchableOpacity
+              style={[
+                styles.showCardBase,
+                selectedShowId === show.id && styles.selectedCard,
+                { padding: 16 }
+              ]}
+              onPress={() => onSelect(show)}
+              activeOpacity={0.8}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className={`${selectedShowId === show.id ? 'bg-primary' : 'bg-gradient-to-r from-primary to-primary-dark'} p-2 rounded-lg`}>
-                    <Theater className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-xl font-semibold text-white line-clamp-2">{show.name}</h3>
-                    <div className="flex items-center space-x-4 text-gray-400 mt-1">
-                      <span>{show.acts.length} Act{show.acts.length !== 1 ? 's' : ''}</span>
-                      <span>•</span>
-                      <span>
-                        {show.acts.reduce((total, act) => total + act.scenes.length, 0)} Scene
-                        {show.acts.reduce((total, act) => total + act.scenes.length, 0) !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    {selectedShowId === show.id && (
-                      <div className="mt-2">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary text-white">
-                          Currently Selected
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              <View style={styles.cardHeader}>
+                <View style={styles.iconAndTitle}>
+                  <View style={[styles.iconBackground, selectedShowId === show.id && styles.selectedIconBackground]}>
+                    <Theater color="white" size={24} />
+                  </View>
+                  <View style={styles.titleContainer}>
+                    <Text style={styles.titleText} numberOfLines={2}>
+                      {show.name}
+                    </Text>
+                    <View style={styles.detailsRow}>
+                      <Text style={styles.detailsText}>
+                        {show.acts?.length || 0} Act{(show.acts?.length || 0) !== 1 ? 's' : ''}
+                      </Text>
+                      <Text style={styles.detailsText}>•</Text>
+                      <Text style={styles.detailsText}>
+                        {(show.acts || []).reduce((total, act) => total + (act.scenes?.length || 0), 0)} Scene
+                        {(show.acts || []).reduce((total, act) => total + (act.scenes?.length || 0), 0) !== 1 ? 's' : ''}
+                      </Text>
+                    </View>
+                    {selectedShowId === show.id ? (
+                      <View style={styles.selectedBadgeContainer}>
+                        <View style={styles.selectedBadge}>
+                          <Text style={styles.selectedBadgeText}>
+                            Currently Selected
+                          </Text>
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
 
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={(e) => {
+                <View style={styles.actionButtonsContainer}>
+                  <TouchableOpacity
+                    onPress={(e: GestureResponderEvent) => {
                       e.stopPropagation();
                       onSelect(show);
                     }}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium ${
-                      selectedShowId === show.id 
-                        ? 'bg-green-600/20 text-green-400 cursor-default' 
-                        : 'bg-primary hover:bg-primary-dark text-white'
-                    }`}
+                    style={[styles.selectButton, selectedShowId === show.id && styles.selectButtonActive]}
                     disabled={selectedShowId === show.id}
+                    activeOpacity={selectedShowId === show.id ? 1 : 0.7}
                   >
-                    {selectedShowId === show.id ? 'Currently Active' : 'Select Show'}
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      console.log('=== SHOW EDIT BUTTON CLICKED ===');
-                      console.log('1. Edit button clicked for show:', show);
+                    <Text style={[styles.selectButtonText, selectedShowId === show.id && styles.selectButtonTextActive]}>
+                      {selectedShowId === show.id ? 'Currently Active' : 'Select Show'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={(e: GestureResponderEvent) => {
                       e.stopPropagation();
-                      console.log('2. Event propagation stopped');
                       handleEdit(show);
-                      console.log('3. handleEdit called with show data');
                     }}
-                    className="p-2 text-gray-400 hover:text-primary transition-colors"
-                    title="Edit show"
+                    style={styles.iconButton}
+                    accessibilityLabel="Edit show"
+                    activeOpacity={0.7}
                   >
-                    <Pencil className="h-5 w-5" />
-                  </button>
-                  {isShowOwner(show) && onEdit && onDelete && (
-                    <button
-                      onClick={(e) => {
+                    <Pencil color="#9CA3AF" size={20} />
+                  </TouchableOpacity>
+                  {isShowOwner(show) && onEdit && onDelete ? (
+                    <TouchableOpacity
+                      onPress={(e: GestureResponderEvent) => {
                         e.stopPropagation();
                         onDelete(show.id);
                       }}
-                      className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                      title="Delete show"
+                      style={styles.iconButton}
+                      accessibilityLabel="Delete show"
+                      activeOpacity={0.7}
                     >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {expandedId === show.id && (
-                <div className="pt-4 mt-4 border-t border-gray-800 space-y-4">
-                  {show.description && (
-                    <p className="text-gray-400">{show.description}</p>
-                  )}
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {show.stageManager && (
-                      <div className="flex items-center space-x-2 text-gray-400">
-                        <User className="h-4 w-4" />
-                        <span>Stage Manager: {show.stageManager}</span>
-                      </div>
-                    )}
-                    {show.propsSupervisor && (
-                      <div className="flex items-center space-x-2 text-gray-400">
-                        <User className="h-4 w-4" />
-                        <span>Props Supervisor: {show.propsSupervisor}</span>
-                      </div>
-                    )}
-                    {show.productionCompany && (
-                      <div className="flex items-center space-x-2 text-gray-400">
-                        <Building className="h-4 w-4" />
-                        <span>{show.productionCompany}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+                      <Trash2 color="#9CA3AF" size={20} />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            </TouchableOpacity>
           )}
-        </div>
+        </View>
       ))}
 
-      {shows.length === 0 && (
-        <div className="text-center py-12 gradient-border">
-          <p className="text-gray-400">No shows added yet. Create your first show to get started!</p>
-        </div>
-      )}
-    </div>
+      {shows.length === 0 ? (
+        <View style={styles.emptyListContainer}>
+          <Text style={styles.emptyListText}>No shows added yet. Create your first show to get started!</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  listContainer: {
+    padding: 10,
+  },
+  showItemContainer: {
+    marginBottom: 16,
+  },
+  showCardBase: {
+    backgroundColor: '#2D2D2D',
+    borderColor: '#404040',
+    borderWidth: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  selectedCard: {
+    borderColor: '#F59E0B',
+    borderWidth: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  iconAndTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  iconBackground: {
+    backgroundColor: '#F59E0B',
+    padding: 8,
+    borderRadius: 8,
+  },
+  selectedIconBackground: {
+    backgroundColor: '#F59E0B',
+  },
+  titleContainer: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  titleText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  detailsText: {
+    color: '#9CA3AF',
+    marginRight: 8,
+    fontSize: 12,
+  },
+  selectedBadgeContainer: {
+    marginTop: 8,
+  },
+  selectedBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    backgroundColor: '#F59E0B',
+  },
+  selectedBadgeText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F59E0B',
+    marginRight: 8,
+  },
+  selectButtonActive: {
+    backgroundColor: 'rgba(52, 211, 153, 0.2)',
+  },
+  selectButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+  selectButtonTextActive: {
+    color: '#34D399',
+  },
+  iconButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  emptyListContainer: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  emptyListText: {
+    color: '#9CA3AF',
+  },
+  placeholderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  placeholderText: {
+    color: '#9CA3AF',
+  },
+  placeholderButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#F59E0B',
+  },
+  placeholderButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFFFFF',
+  },
+});

@@ -100,6 +100,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* Removed the extra props/[id] screen definition */}
     </Tabs>
   );
 } 

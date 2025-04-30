@@ -3,7 +3,8 @@ import { TouchableOpacity, View, Text, Image, StyleSheet, Platform } from 'react
 import { Prop } from '@/shared/types/props';
 import { Clock, HandCoins, Edit, Trash } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
-import defaultImage from '@/assets/images/prop-placeholder.png';
+// Temporarily comment out unused import to suppress linter error
+// import defaultImage from '../assets/images/prop-placeholder.png'; 
 import { PropLifecycleStatus } from '../types/lifecycle';
 
 interface PropCardProps {
@@ -73,7 +74,7 @@ export const PropCard: React.FC<PropCardProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[styles.container, compact ? styles.compactContainer : null]}
+      style={compact ? styles.compactContainer : { marginBottom: 16 }}
     >
       <View style={styles.header}>
         <View style={styles.locationInfo}>
@@ -93,6 +94,7 @@ export const PropCard: React.FC<PropCardProps> = ({
           />
         ) : (
           <View style={styles.imagePlaceholder}>
+            {/* <Image source={defaultImage} style={styles.image} /> */}
             <Text style={styles.placeholderText}>
               {prop.name[0].toUpperCase()}
             </Text>

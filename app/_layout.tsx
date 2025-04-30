@@ -26,8 +26,7 @@ export const unstable_settings = {
 };
 
 function RootLayoutNav() {
-  console.log("--- Rendering: RootLayoutNav ---");
-  // ... (Keep the Stack navigator definition as is)
+  console.log("--- Rendering: RootLayoutNav (Mobile) ---");
   return (
     <Stack
       screenOptions={{
@@ -38,22 +37,12 @@ function RootLayoutNav() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
-        gestureEnabled: false,
+        gestureEnabled: false, // Keep gestureEnabled if needed
+        headerShown: false // Hide header for the group
       }}
     >
-      <Stack.Screen
-        name="(tabs)"
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="+not-found"
-        options={{
-          title: 'Oops!',
-          presentation: 'modal',
-        }}
-      />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="+not-found" options={{ title: 'Oops!', presentation: 'modal' }} />
     </Stack>
   );
 }
@@ -105,7 +94,6 @@ function AppContent() {
   const { user, loading: authLoading, error: authError } = useAuth();
   console.log(`--- AppContent State: authLoading=${authLoading}, user=${user?.uid}, authError=${authError} ---`);
 
-  // Wait for authentication check to complete
   if (authLoading) {
     console.log("--- AppContent: Showing loading indicator --- ");
     return (
@@ -115,20 +103,30 @@ function AppContent() {
     );
   }
 
-  // If user is not logged in, show the AuthForm
   if (!user) {
     console.log("--- AppContent: Showing AuthForm --- ");
-    // onClose might need refinement depending on how AuthForm signals success
     return <AuthForm onClose={() => console.log("AuthForm closed/completed")} />;
   }
 
-  // If user is logged in, show the main app navigation with TopNavBar on web
-  console.log("--- AppContent: Showing main navigation (TopNavBar + RootLayoutNav) --- ");
+  console.log(`--- AppContent: User logged in, rendering for Platform: ${Platform.OS} --- `);
+  // If user is logged in, show platform-specific layout
   return (
     <View style={{ flex: 1 }}>
-      {Platform.OS === 'web' && <TopNavBar />}
-      <RootLayoutNav />
-      {/* Footer navigation would go here if needed */}
+      {Platform.OS === 'web' ? (
+        // --- Web Layout ---
+        <>
+          <TopNavBar />
+          {/* Render a base Stack for web. Expo Router should map web routes. */}
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* Define web-specific screens or groups here if needed, */}
+            {/* or let Expo Router find top-level/ (web) group routes. */}
+            {/* Example if you have (web) layout: <Stack.Screen name="(web)" /> */}
+          </Stack>
+        </>
+      ) : (
+        // --- Mobile Layout ---
+        <RootLayoutNav /> // Keep using the existing Stack Nav that points to (tabs)
+      )}
     </View>
   );
 }

@@ -7,7 +7,7 @@ export default function ShowsScreen() {
   const { shows, selectedShow, setSelectedShow } = useShows();
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#1F1F1F' }}>
       <ShowList
         shows={shows}
         selectedShowId={selectedShow?.id}

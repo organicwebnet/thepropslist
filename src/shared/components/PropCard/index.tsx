@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType } from 'react-native';
 import { Link } from 'expo-router';
 import type { Prop, PropImage } from '../../types/props';
+import { lifecycleStatusLabels } from '@/types/lifecycle';
 
 interface PropCardProps {
   prop: Prop;
@@ -81,46 +82,99 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
     }
   };
 
+  // Helper to format dimensions safely
+  const formatDimensions = () => {
+    // Use direct properties from prop
+    const { length, width, height, depth, unit } = prop; 
+    const parts = [length, width, height, depth].filter(d => d != null && d > 0);
+    if (parts.length === 0) return null;
+    return `${parts.join(' x ')} ${unit || ''}`.trim();
+  };
+
+  const dimensionsText = formatDimensions();
+  const statusLabel = prop.status ? (lifecycleStatusLabels[prop.status] || prop.status) : 'Unknown';
+
   return (
-    <Link href={`/props/${prop.id}`} asChild>
+    // Cast the dynamic path to any to bypass strict type checking
+    <Link href={`/(tabs)/props/${prop.id}` as any} asChild>
       <TouchableOpacity
         style={[styles.container, compact && styles.compactContainer]}
         activeOpacity={0.8}
       >
-        {renderImage()}
-        <View style={styles.content}>
-          <Text style={styles.name}>{prop.name}</Text>
-          {!compact && prop.description && (
-            <Text style={styles.description} numberOfLines={2}>
-              {prop.description}
-            </Text>
-          )}
-          {(onEditPress || onDeletePress) && (
-            <View style={styles.buttonContainer}>
-              {onEditPress && (
-                <TouchableOpacity 
-                  style={[styles.button, styles.editButton]} 
-                  onPress={(e) => { 
-                    e.stopPropagation();
-                    onEditPress(prop.id); 
-                  }}
-                >
-                  <Text style={styles.buttonText}>Edit</Text>
-                </TouchableOpacity>
-              )}
-              {onDeletePress && (
-                <TouchableOpacity 
-                  style={[styles.button, styles.deleteButton]} 
-                  onPress={(e) => { 
-                    e.stopPropagation();
-                    onDeletePress(prop.id); 
-                  }}
-                >
-                  <Text style={styles.buttonText}>Delete</Text>
-                </TouchableOpacity>
-              )}
+        <View style={styles.cardLayoutRow}>
+          <View style={styles.imageContainer}>
+            {renderImage()}
+          </View>
+          <View style={styles.contentContainer}>
+            {/* Top section: Name and Description */}
+            <View style={styles.topContent}>
+              <Text style={styles.name}>{prop.name}</Text>
+              {!compact && prop.description ? (
+                <Text style={styles.description} numberOfLines={2}>
+                  {prop.description}
+                </Text>
+              ) : null}
             </View>
-          )}
+
+            {/* Middle section: Details like Act/Scene, Category, Dimensions, Status */}
+            {!compact ? (
+              <View style={styles.detailsSection}>
+                {/* Act/Scene and Category Row */}
+                <View style={styles.detailRow}>
+                  {(prop.act || prop.scene) ? (
+                    <View style={[styles.tag, styles.actSceneTag]}>
+                      <Text style={styles.tagText}>
+                        {`${prop.act ? `Act ${prop.act}` : ''}${prop.act && prop.scene ? ', ' : ''}${prop.scene ? `Scene ${prop.scene}` : ''}`}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {prop.category ? (
+                    <View style={[styles.tag, styles.categoryTag]}>
+                      <Text style={styles.tagText}>{prop.category}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                
+                {/* Dimensions and Status Row */}
+                <View style={styles.detailRow}>
+                  {dimensionsText ? (
+                     <Text style={styles.detailText}>{dimensionsText}</Text>
+                  ) : null}
+                  <View style={[styles.tag, styles.statusTag]}>
+                     <Text style={styles.tagText}>{statusLabel}</Text>
+                  </View>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Bottom section: Buttons */}
+            {(onEditPress || onDeletePress) ? (
+              <View style={styles.buttonContainer}>
+                {onEditPress ? (
+                  <TouchableOpacity 
+                    style={[styles.button, styles.editButton]} 
+                    onPress={(e) => { 
+                      e.stopPropagation();
+                      onEditPress(prop.id); 
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {onDeletePress ? (
+                  <TouchableOpacity 
+                    style={[styles.button, styles.deleteButton]} 
+                    onPress={(e) => { 
+                      e.stopPropagation();
+                      onDeletePress(prop.id); 
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Delete</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
         </View>
       </TouchableOpacity>
     </Link>
@@ -132,9 +186,9 @@ const baseContainerStyle: ViewStyle = {
   flexDirection: 'row',
   padding: 16,
   borderRadius: 8,
-  backgroundColor: '#1A1A1A',
+  backgroundColor: '#282828',
   borderWidth: 1,
-  borderColor: '#404040',
+  borderColor: '#606060',
   marginBottom: 16,
 };
 
@@ -146,18 +200,23 @@ const styles = StyleSheet.create({
   compactContainer: {
     padding: 8,
   },
+  cardLayoutRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  imageContainer: {
+    marginRight: 16,
+  },
   image: {
     width: 80,
     height: 80,
     borderRadius: 4,
-    marginRight: 16,
     backgroundColor: '#404040',
   },
   placeholderImage: {
     width: 80,
     height: 80,
     borderRadius: 4,
-    marginRight: 16,
     backgroundColor: '#404040',
     justifyContent: 'center',
     alignItems: 'center',
@@ -167,9 +226,47 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
   },
-  content: {
+  contentContainer: {
     flex: 1,
-    justifyContent: 'space-between',
+  },
+  topContent: {
+    marginBottom: 8,
+  },
+  detailsSection: {
+    marginBottom: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 4,
+  },
+  detailText: {
+    color: '#A0A0A0',
+    fontSize: 13,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  tag: {
+    borderRadius: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    marginRight: 8,
+    marginBottom: 4,
+  },
+  actSceneTag: {
+    backgroundColor: '#4B5563',
+  },
+  categoryTag: {
+    backgroundColor: '#8B5CF6',
+  },
+  statusTag: {
+    backgroundColor: '#6B7280',
+  },
+  tagText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '500',
   },
   name: {
     color: '#FFFFFF',
@@ -185,7 +282,6 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 'auto',
   },
   button: {
     paddingVertical: 6,

@@ -45,6 +45,11 @@
       "react",
       "react-native",
       "jest"
+    ],
+    "plugins": [
+      {
+        "name": "nativewind/typescript/css-module-types"
+      }
     ]
   },
   "include": [

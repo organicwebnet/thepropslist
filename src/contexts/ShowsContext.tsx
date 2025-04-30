@@ -13,6 +13,7 @@ import { useFirebase } from './FirebaseContext';
 import type { Show } from '../types';
 // Import FirebaseDocument type
 import { FirebaseDocument } from '../shared/services/firebase/types';
+import { Platform } from 'react-native';
 
 interface ShowsContextType {
   shows: Show[];
@@ -24,18 +25,36 @@ interface ShowsContextType {
 
 export const ShowsContext = createContext<ShowsContextType | undefined>(undefined);
 
-export function ShowsProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  // Destructure firebaseService without casting db here
+export const useShows = () => {
+  const context = useContext(ShowsContext);
+  if (!context) {
+    throw new Error('useShows must be used within a ShowsProvider');
+  }
+  return context;
+};
+
+export const ShowsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
+  const { user } = useAuth();
   const [shows, setShows] = useState<Show[]>([]);
-  const [_selectedShow, _setSelectedShow] = useState<Show | null>(null);
+  const [selectedShow, setSelectedShowInternal] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setErrorState] = useState<Error | null>(null);
 
   const setSelectedShow = useCallback((show: Show | null) => {
-    console.log(`ShowsContext: setSelectedShow called with:`, show ? `ID: ${show.id}, Name: ${show.name}` : 'null');
-    _setSelectedShow(show);
+    console.log(`[ShowsContext] setSelectedShow called with:`, show ? `ID: ${show.id}, Name: ${show.name}` : 'null');
+    setSelectedShowInternal(show);
+    if (show && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+       try {
+           localStorage.setItem('lastSelectedShowId', show.id);
+           console.log('[ShowsContext] Saved last selected show ID to localStorage:', show.id);
+       } catch (e) {
+           console.error("[ShowsContext] Failed to save show ID to localStorage:", e);
+       }
+    } else if (!show && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+       // Optional: Clear localStorage if show is deselected
+       // localStorage.removeItem('lastSelectedShowId');
+    }
   }, []);
 
   // REMOVE Direct db instance derivation here
@@ -46,7 +65,7 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     if (!firebaseInitialized || !firebaseService) { // Check service directly
       if (firebaseError) {
         console.error("Error from FirebaseProvider:", firebaseError);
-        setError(firebaseError);
+        setErrorState(firebaseError);
         setLoading(false);
       } else {
          // If not initialized and no error yet, just keep loading
@@ -61,7 +80,7 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
     // TEMPORARY: Comment out the user check to fetch all shows
     // if (!user) { ... }
 
-    setError(null);
+    setErrorState(null);
     setLoading(true);
 
     // Use the service method to listen
@@ -86,12 +105,12 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
         } as Show)); // Explicit cast to Show might be needed depending on strictness
 
         setShows(showsData);
-        setError(null);
+        setErrorState(null);
         
         // Update selected show logic
-        if (!_selectedShow && showsData.length > 0) {
+        if (!selectedShow && showsData.length > 0) {
            setSelectedShow(showsData[0]);
-        } else if (_selectedShow && !showsData.some(s => s.id === _selectedShow.id)) {
+        } else if (selectedShow && !showsData.some(s => s.id === selectedShow.id)) {
           // If current selection disappears, select the first available or null
           setSelectedShow(showsData.length > 0 ? showsData[0] : null);
         }
@@ -100,7 +119,7 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
       },
       (err: Error) => { // Callback for errors
         console.error("Error fetching shows via service:", err);
-        setError(err);
+        setErrorState(err);
         setShows([]);
         setSelectedShow(null);
         setLoading(false);
@@ -114,13 +133,13 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
         unsubscribe();
     };
   // Dependencies: service availability, user (if re-enabled), selection state
-  }, [firebaseInitialized, firebaseService, firebaseError, _selectedShow, setSelectedShow]); // user removed temporarily
+  }, [firebaseInitialized, firebaseService, firebaseError, selectedShow, setSelectedShow]); // user removed temporarily
 
   const value = {
     shows,
-    loading,
-    error,
-    selectedShow: _selectedShow,
+    loading: loading || !firebaseInitialized,
+    error: error || firebaseError,
+    selectedShow,
     setSelectedShow,
   };
 
@@ -129,12 +148,4 @@ export function ShowsProvider({ children }: { children: React.ReactNode }) {
       {children}
     </ShowsContext.Provider>
   );
-}
-
-export function useShows() {
-  const context = useContext(ShowsContext);
-  if (context === undefined) {
-    throw new Error('useShows must be used within a ShowsProvider');
-  }
-  return context;
-} 
+}; 
