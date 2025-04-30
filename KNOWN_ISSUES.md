@@ -225,6 +225,30 @@
 - [ ] Correct `FirebaseDocument` type definition or usage in service methods.
 - [ ] Resolve method signature/visibility mismatches between base and derived Firebase services.
 
+## TypeScript Compiler Errors (`tsc --noEmit`)
+**Status**: Active
+**Priority**: Medium
+**Impact**: Code Quality / Build Stability
+**Description**: Running `npx tsc --noEmit` revealed several type errors primarily in Firebase-related services and types. While potentially not the direct cause of current navigation/HMR issues, these should be fixed for overall stability.
+**Errors Found**:
+```
+src/services/firebase.ts:60:8 - error TS2307: Cannot find module '../../../shared/services/firebase/types' or its corresponding type declarations.
+src/services/firebase.ts:62:31 - error TS2307: Cannot find module '../../../shared/services/firebase/types' or its corresponding type declarations.
+src/services/firebase.ts:65:35 - error TS2307: Cannot find module '../../../config/firebase' or its corresponding type declarations.
+
+src/shared/services/firebase/auth.ts:35:24 - error TS2339: Property 'photoURL' does not exist on type 'UserProfile'.
+src/shared/services/firebase/auth.ts:54:7 - error TS2353: Object literal may only specify known properties, and 'photoURL' does not exist in type 'Partial<UserProfile>'.
+src/shared/services/firebase/auth.ts:91:9 - error TS2322: Type 'Partial<UserPermissions>' is not assignable to type 'UserPermissions'. (Types of property 'canCreateProps' are incompatible: Type 'boolean | undefined' is not assignable to type 'boolean').
+```
+**Required Changes**:
+- Fix import paths in `src/services/firebase.ts`. Verify that `shared/services/firebase/types` and `config/firebase` exist at the expected locations relative to `src/services/firebase.ts` or update the paths.
+- Update the `UserProfile` type definition (likely in `src/shared/types/auth.ts`) to include `photoURL?: string`.
+- Ensure the `permissionsInput` object passed when creating/updating user profiles in `src/shared/services/firebase/auth.ts` provides default values for all properties defined in `UserPermissions`, or adjust the `UserProfile` type to accept `Partial<UserPermissions>`.
+**Action Items**:
+- [ ] Fix path resolution errors in `src/services/firebase.ts`.
+- [ ] Add `photoURL` property to `UserProfile` type.
+- [ ] Fix `UserPermissions` assignability in `src/shared/services/firebase/auth.ts`.
+
 ## `import.meta.env` Usage Error
 **Status**: Resolved
 **Priority**: High
@@ -252,6 +276,24 @@
 - [ ] Review Expo Router setup and type generation.
 - [ ] Check `Link` component import source.
 - [ ] Investigate potential type conflicts or configuration issues.
+
+## Phantom Tab Route Issue (Expo Router)
+**Status**: Active
+**Priority**: Medium
+**Impact**: Development / UI
+**Description**: A tab corresponding to the route `props/[id]` persistently appears in the `app/(tabs)/_layout.tsx` tab bar, even though:
+    - The route `app/props/[id]/` exists *outside* the `(tabs)` group.
+    - The route is explicitly hidden in `app/(tabs)/_layout.tsx` using `<Tabs.Screen name="props/[id]" options={{ href: null }} />`.
+    - Extensive cache cleaning has been performed multiple times ( `npx expo start --clear`, `gradlew clean`, clearing device cache/data, reinstalling app, deleting `.expo`, `node_modules`, `android/app/build`, `android/.gradle`).
+    - The `app/props/[id]` directory was temporarily removed/renamed, and the issue persisted after cache cleaning.
+    - Only one `<Tabs>` layout definition exists (`app/(tabs)/_layout.tsx`).
+    - `app.config.js` appears standard.
+    - The development client / Expo Go has been reinstalled.
+**Root Cause**: Unknown. Likely a deep caching issue within Expo Router's build artifacts or a potential bug in the router version being used.
+**Required Changes**: Further investigation needed. Potential fixes might involve updating Expo Router, further isolating the issue, or finding alternative layout structures.
+**Action Items**:
+- [ ] Logged issue for tracking.
+- [ ] Revisit after dependency updates or if further clues emerge.
 
 ## Performance Issues
 

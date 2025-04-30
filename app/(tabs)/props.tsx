@@ -185,10 +185,7 @@ export default function PropsScreen() {
 
   const handleOpenAddPropPage = () => {
     if (selectedShow) {
-      router.push({
-          pathname: '/props/add' as any,
-          params: { showId: selectedShow.id }
-      });
+      router.push('/props/add' as any);
     } else {
       Alert.alert("No Show Selected", "Please select a show before adding a prop.");
     }

@@ -44,8 +44,12 @@ export default function TabsLayout() {
           fontWeight: 'bold',
         },
         headerRight: Platform.OS === 'web' ? undefined : () => (
-          <Pressable onPress={handleSignOut} style={{ marginRight: 15 }}>
-            <Text style={{ color: '#FFF', fontSize: 16 }}>Logout</Text> 
+          <Pressable onPress={handleSignOut} style={{ marginRight: 15, padding: 5 }}>
+            <Ionicons 
+              name={'log-out-outline'}
+              size={24}
+              color={'#FFFFFF'}
+            />
           </Pressable>
         ),
         headerShown: Platform.OS !== 'web',
@@ -59,20 +63,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="props"
-        options={{
-          title: 'Props',
-          headerTitle: 'Props Bible',
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons 
-              name={focused ? 'cube' : 'cube-outline'} 
-              size={size} 
-              color={color} 
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="shows"
         options={{
           title: 'Shows',
@@ -80,6 +70,20 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, focused, size }) => (
             <Ionicons 
               name={focused ? 'calendar' : 'calendar-outline'} 
+              size={size} 
+              color={color} 
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="props"
+        options={{
+          title: 'Props',
+          headerTitle: 'Props Bible',
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons 
+              name={focused ? 'cube' : 'cube-outline'} 
               size={size} 
               color={color} 
             />
@@ -100,7 +104,20 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* Removed the extra props/[id] screen definition */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          headerTitle: 'My Profile',
+          tabBarIcon: ({ color, focused, size }) => (
+            <Ionicons 
+              name={focused ? 'person-circle' : 'person-circle-outline'} 
+              size={size} 
+              color={color} 
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 } 

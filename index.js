@@ -1,5 +1,6 @@
 import { registerRootComponent } from 'expo';
 import React from 'react';
+import './global.css';
 // import { LogBox } from 'react-native'; // Comment out original imports if not needed for test
 import { ExpoRoot } from 'expo-router'; // Uncomment Expo Router
 import { FirebaseProvider } from './src/contexts/FirebaseContext'; // Uncomment FirebaseProvider

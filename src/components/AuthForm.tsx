@@ -6,14 +6,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
-  StyleSheet
+  StyleSheet,
+  ScrollView
 } from 'react-native';
 import { Svg, Path } from 'react-native-svg';
 import type { AuthError } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext';
 // Temporarily comment out Lucide icons
-// import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff, X } from 'lucide-react-native';
+import { LogIn, UserPlus, Loader2, ArrowLeft, Eye, EyeOff, X } from 'lucide-react-native';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -191,11 +192,11 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
 
   return (
     <View
-      className="fixed inset-0 bg-black bg-opacity-90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[100]"
+      className="flex-1 w-full h-full bg-black bg-opacity-90 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[100]"
     >
       {/* Dramatic stage background */}
       <View
-        className="fixed inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
       >
         {/* Background image */}
         <View
@@ -220,30 +221,31 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
 
       {/* Main content container */}
       <View
-        className="relative w-full max-w-sm bg-gray-900 bg-opacity-90 border border-primary/30 rounded-lg overflow-hidden"
+        className="relative w-full bg-gray-900 bg-opacity-90 border border-primary/30 rounded-lg overflow-hidden"
+        style={{ maxHeight: '90%' }}
       >
         {/* Subtle spotlight effect */}
         <View
           className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"
         />
 
-        {/* Back button for forgot password mode */}
-        {mode === 'forgot' && (
-          <TouchableOpacity 
-            onPress={() => setMode('signin')} 
-            className="absolute top-3 left-3 p-2 text-blue-400 hover:text-blue-300 transition-colors"
-            aria-label="Back to sign in"
-          >
-            <Text className="text-blue-400">Back</Text>
-          </TouchableOpacity>
-        )}
-
-        <View
-          className="p-6 sm:p-8"
+        {/* Wrap the actual form content in ScrollView */}
+        <ScrollView 
+          contentContainerStyle={{ padding: Platform.OS === 'web' ? 32 : 24 }}
+          keyboardShouldPersistTaps="handled"
         >
-          <View
-            className="mb-6 text-center"
-          >
+          {/* Back button for forgot password mode */}
+          {mode === 'forgot' && (
+            <TouchableOpacity 
+              onPress={() => setMode('signin')} 
+              className="absolute top-3 left-3 p-2 z-10"
+              aria-label="Back to sign in"
+            >
+              <Text className="text-blue-400">Back</Text>
+            </TouchableOpacity>
+          )}
+
+          <View className="mb-6 text-center">
             <Text className="text-2xl font-bold text-primary mb-2">
               {mode === 'signin' && 'Sign In'}
               {mode === 'signup' && 'Create Account'}
@@ -302,7 +304,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                     value={password}
                     onChangeText={setPassword}
                     placeholder="••••••••"
-                    className="w-full px-4 py-2.5 pr-10 bg-gray-800 border border-gray-700 rounded-md placeholder-gray-500 focus:outline-none focus:border-primary transition duration-200"
+                    className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-md placeholder-gray-500 focus:outline-none focus:border-primary transition duration-200 pr-10"
                     style={{ 
                       elevation: 0, 
                       shadowOpacity: 0, 
@@ -311,12 +313,16 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                     aria-label="Password"
                     secureTextEntry={!showPassword}
                   />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-primary cursor-pointer"
+                  <TouchableOpacity 
+                    onPress={() => setShowPassword(!showPassword)} 
+                    className="absolute right-3 top-[38px] transform -translate-y-1/2 p-1"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    <Text className="text-xs">{showPassword ? "Hide" : "Show"}</Text>
+                    {showPassword ? (
+                      <EyeOff size={18} color="#9CA3AF" />
+                    ) : (
+                      <Eye size={18} color="#9CA3AF" />
+                    )}
                   </TouchableOpacity>
                 </View>
                 {mode === 'signin' && (
@@ -335,7 +341,11 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
                 {loading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
                 ) : (
-                  <>{/* Empty fragment if no icons */}</>
+                  <>{/* Render appropriate icon based on mode */}
+                  {mode === 'signin' && <LogIn size={18} color="#FFFFFF" style={{ marginRight: 8 }} />}
+                  {mode === 'signup' && <UserPlus size={18} color="#FFFFFF" style={{ marginRight: 8 }} />}
+                  {mode === 'forgot' && <ArrowLeft size={18} color="#FFFFFF" style={{ marginRight: 8 }} />}
+                  </>
                 )}
                 <Text style={{ color: '#FFFFFF' }}>
                   {loading ? 'Processing...' : (mode === 'signin' ? 'Sign In' : (mode === 'signup' ? 'Sign Up' : 'Send Reset Email'))}
@@ -358,11 +368,11 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
               className="w-full flex flex-row items-center justify-center px-4 py-3 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-blue-500"
             >
               {/* Temporarily comment out Google SVG again */}
-              {/* 
+               
               <Svg aria-hidden={true} focusable={false} viewBox="0 0 488 512" width={18} height={18} style={{ marginRight: 10 }} >
                  <Path fill="#4285F4" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" />
               </Svg>
-              */}
+              
               <Text className="text-gray-700 font-medium text-sm">Sign {mode === 'signin' ? 'in' : 'up'} with Google</Text>
             </TouchableOpacity>
           )}
@@ -388,7 +398,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
               <Text style={styles.switchAuthText}>Enter your email to receive a reset link</Text>
             )}
           </View>
-        </View>
+        </ScrollView>
       </View>
     </View>
   );

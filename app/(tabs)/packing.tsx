@@ -39,9 +39,7 @@ export default function Packing() {
 
   // return <PackingPage show={show} props={props} />;
   return (
-     <View style={styles.placeholderContainer}>
-        <Text style={styles.placeholderText}>Packing Page Placeholder</Text>
-     </View>
+     <PackingPage show={show} props={props} />
   )
 }
 

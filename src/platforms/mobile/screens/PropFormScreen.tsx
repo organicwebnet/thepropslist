@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { CameraScreen } from '../features/camera/CameraScreen';
 import { QRScannerScreen } from '../features/qr/QRScannerScreen';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 
 interface PropFormData {
   name: string;
@@ -25,6 +24,9 @@ interface PropFormData {
 }
 
 export function PropFormScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ photoUri?: string }>();
+
   const [formData, setFormData] = useState<PropFormData>({
     name: '',
     description: '',
@@ -32,15 +34,23 @@ export function PropFormScreen() {
     location: '',
     images: [],
   });
-  const [showCamera, setShowCamera] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const navigation = useNavigation();
+
+  useEffect(() => {
+    if (params.photoUri) {
+      console.log('Received photoUri param:', params.photoUri);
+      handlePhotoTaken(params.photoUri);
+    }
+  }, [params.photoUri]);
 
   const handleSave = async () => {
     try {
-      // TODO: Implement save functionality with Firebase
       Alert.alert('Success', 'Prop saved successfully');
-      navigation.goBack();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/props');
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to save prop');
     }
@@ -51,7 +61,6 @@ export function PropFormScreen() {
       ...prev,
       images: [...prev.images, uri],
     }));
-    setShowCamera(false);
   };
 
   const handleQRScanned = (data: Record<string, any>) => {
@@ -72,15 +81,6 @@ export function PropFormScreen() {
       images: prev.images.filter((_, i) => i !== index),
     }));
   };
-
-  if (showCamera) {
-    return (
-      <CameraScreen
-        onPhotoTaken={handlePhotoTaken}
-        onClose={() => setShowCamera(false)}
-      />
-    );
-  }
 
   if (showQRScanner) {
     return (
@@ -133,7 +133,7 @@ export function PropFormScreen() {
             <Text style={styles.label}>Images</Text>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => setShowCamera(true)}
+              onPress={() => router.push('/camera')}
             >
               <MaterialIcons name="camera-alt" size={24} color="white" />
               <Text style={styles.buttonText}>Add Photo</Text>

@@ -1,30 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Image, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
+import { useRouter } from 'expo-router';
 
 export default function CameraScreen() {
+  const router = useRouter();
   const [facing, setFacing] = useState<'back' | 'front'>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions();
   const cameraRef = useRef<CameraView>(null);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!mediaPermission?.granted) {
-        requestMediaPermission();
-    }
+    (async () => {
+      if (!mediaPermission?.granted) {
+        console.log('Requesting media library permission...');
+        await requestMediaPermission();
+      }
+    })();
   }, [mediaPermission, requestMediaPermission]);
 
   if (!permission) {
-    return <View><Text>Loading permissions...</Text></View>;
+    return <View><Text>Loading camera permissions...</Text></View>;
   }
 
   if (!permission.granted) {
     return (
       <View style={styles.container}>
         <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.button}><Text style={styles.text}>Grant Permission</Text></TouchableOpacity>
+        <TouchableOpacity onPress={requestPermission} style={styles.button}>
+          <Text style={styles.text}>Grant Camera Permission</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()} style={[styles.button, styles.cancelButton]}>
+          <Text style={styles.text}>Cancel</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -34,43 +43,52 @@ export default function CameraScreen() {
   }
 
   async function takePicture() {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync();
-        console.log('Photo taken:', photo);
-        
-        if (photo?.uri) { 
-          setPhotoUri(photo.uri);
+    if (!cameraRef.current) return;
 
-          if (mediaPermission?.granted) {
-        if (mediaPermission?.granted) {
-            const asset = await MediaLibrary.createAssetAsync(photo.uri);
-            console.log('Photo saved to library:', asset);
-            alert('Photo saved!'); 
-        } else {
-            console.warn('Media Library permission not granted, photo not saved.');
-            alert('Photo taken but not saved (permission denied).');
+    try {
+      const photo = await cameraRef.current.takePictureAsync();
+      console.log('Photo taken:', photo);
+
+      if (photo?.uri) {
+        if (!mediaPermission?.granted) {
+          console.log('Requesting media library permission before saving...');
+          const { granted } = await requestMediaPermission();
+          if (!granted) {
+            Alert.alert('Permission Required', 'Cannot save photo without Media Library permission.');
+            return;
+          }
         }
+        
+        try {
+          const asset = await MediaLibrary.createAssetAsync(photo.uri);
+          console.log('Photo saved to library:', asset);
+          
+          router.replace({ 
+              pathname: '/props/add',
+              params: { photoUri: photo.uri } 
+          } as any);
 
-      } catch (error) {
-        console.error('Failed to take picture:', error);
+        } catch (saveError) {
+            console.error("Error saving photo to Media Library:", saveError);
+            Alert.alert('Save Error', 'Could not save photo to library.');
+        }
+      } else {
+        console.warn('Photo taken but URI is missing.');
+        Alert.alert('Capture Error', 'Could not get photo data after taking picture.');
       }
+    } catch (error) {
+      console.error('Failed to take picture:', error);
+      Alert.alert('Capture Error', 'An error occurred while taking the picture.');
     }
-  }
-
-  if (photoUri) {
-    return (
-      <View style={styles.container}>
-        <Image source={{ uri: photoUri }} style={styles.preview} />
-        <TouchableOpacity onPress={() => setPhotoUri(null)} style={styles.button}><Text style={styles.text}>Take Another</Text></TouchableOpacity>
-      </View>
-    );
   }
 
   return (
     <View style={styles.container}>
       <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
         <View style={styles.buttonContainer}>
+          <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => router.back()}>
+            <Text style={styles.text}>Cancel</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
             <Text style={styles.text}>Flip Camera</Text>
           </TouchableOpacity>
@@ -87,33 +105,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
+    backgroundColor: 'black',
   },
   camera: {
     flex: 1,
   },
   buttonContainer: {
-    flex: 1,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingBottom: 50,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     backgroundColor: 'transparent',
-    margin: 64,
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    alignItems: 'center',
   },
   button: {
-    alignSelf: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     padding: 15,
-    borderRadius: 10,
-    marginHorizontal: 20,
+    borderRadius: 50,
+    width: 70,
+    height: 70,
+    marginHorizontal: 10,
+  },
+  cancelButton: {
+     backgroundColor: 'rgba(200, 0, 0, 0.6)',
   },
   text: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: 'bold',
     color: 'white',
-  },
-  preview: {
-    flex: 1,
-    resizeMode: 'contain',
+    textAlign: 'center',
   },
 }); 

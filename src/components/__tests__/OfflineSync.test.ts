@@ -203,6 +203,9 @@ const mockFirebaseService: FirebaseService = {
   uploadFile: jest.fn<(path: string, file: File) => Promise<string>>().mockResolvedValue('mock-url'),
   deleteFile: jest.fn<(path: string) => Promise<void>>().mockResolvedValue(undefined),
   deleteShow: jest.fn<(showId: string) => Promise<void>>().mockResolvedValue(undefined),
+  signInWithEmailAndPassword: jest.fn<(email: string, pass: string) => Promise<any>>().mockResolvedValue({ user: { uid: 'mock-user' } } as any),
+  createUserWithEmailAndPassword: jest.fn<(email: string, pass: string) => Promise<any>>().mockResolvedValue({ user: { uid: 'mock-user' } } as any),
+  sendPasswordResetEmail: jest.fn<(email: string) => Promise<void>>().mockResolvedValue(undefined),
 };
 
 describe('OfflineSyncService', () => {

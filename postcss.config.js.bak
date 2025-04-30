@@ -1,0 +1,12 @@
+module.exports = {
+  plugins: {
+    "nativewind/postcss": {
+      output: "nativewind-output.js",
+    },
+    // You might need to re-add other plugins if they are essential
+    // 'tailwindcss/nesting': {},
+    // 'tailwindcss': {},
+    // 'autoprefixer': {},
+    // 'postcss-import': {},
+  },
+};

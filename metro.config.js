@@ -36,6 +36,7 @@ const tsconfig = require('./tsconfig.json'); // Load tsconfig
 const aliases = tsconfig.compilerOptions.paths;
 
 // UNCOMMENTING DYNAMIC ALIAS PROXY
+/* START: Commenting out Proxy for diagnostics
 config.resolver.extraNodeModules = new Proxy({}, {
   get: (target, name) => {
     if (typeof name !== 'string') {
@@ -83,15 +84,24 @@ config.resolver.extraNodeModules = new Proxy({}, {
     return undefined; // Let Metro handle modules not found in aliases or direct node_modules check
   },
 });
+END: Commenting out Proxy for diagnostics */
+
+// You might need to add basic aliases back here if the app fails to start, e.g.:
+config.resolver.extraNodeModules = {
+  '@shared': path.resolve(projectRoot, 'src/shared'),
+  // Add other critical aliases if needed
+};
+
 
 // --- Polyfills for Node.js core modules ---
 // Add buffer explicitly
-config.resolver.extraNodeModules.buffer = require.resolve('buffer/');
+// config.resolver.extraNodeModules.buffer = require.resolve('buffer/'); // This needs to be added to the object above now
+if (config.resolver.extraNodeModules) { // Ensure extraNodeModules exists
+  config.resolver.extraNodeModules.buffer = require.resolve('buffer/');
+} else {
+  config.resolver.extraNodeModules = { buffer: require.resolve('buffer/') };
+}
 
-// Explicitly define aliases (Diagnostic step) - REMOVED
-// config.resolver.extraNodeModules = {
-//   '@/shared': path.resolve(projectRoot, 'src/shared'),
-// };
 
 // --- End path alias resolution --- 
 

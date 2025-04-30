@@ -41,17 +41,22 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: '#f5f5f5',
+          backgroundColor: '#25292e', // Match tab bar color
         },
-        headerTintColor: '#000',
+        headerTintColor: '#FFFFFF', // White text for dark background
         headerTitleStyle: {
           fontWeight: 'bold',
         },
-        gestureEnabled: false, // Keep gestureEnabled if needed
-        headerShown: false // Hide header for the group
+        // gestureEnabled: false, // Keep gestureEnabled if needed
+        // headerShown: false // Remove default hiding
+        headerShown: true // Show headers by default for this stack
       }}
     >
-      <Stack.Screen name="(tabs)" />
+      {/* Hide header specifically for the tab screen */}
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }}/> 
+      <Stack.Screen name="props/add" options={{ title: 'Add New Prop' }}/>
+      <Stack.Screen name="props/[id]/edit" options={{ title: 'Edit Prop' }}/>
+      {/* Define other screens pushed onto the stack here if needed */}
       <Stack.Screen name="+not-found" options={{ title: 'Oops!', presentation: 'modal' }} />
     </Stack>
   );

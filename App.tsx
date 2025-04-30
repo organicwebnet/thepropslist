@@ -8,5 +8,6 @@ SplashScreen.preventAutoHideAsync();
 // This component is no longer used directly by the router initialization
 // The entry point is now handled in index.js
 export default function App() {
+ 
   return null;
 } 
