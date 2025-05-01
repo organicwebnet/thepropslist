@@ -7,7 +7,7 @@ import type { Prop } from '@shared/types/props';
 import { lifecycleStatusLabels, lifecycleStatusPriority, PropLifecycleStatus, StatusPriority } from '@/types/lifecycle';
 import { HelpTooltip } from './HelpTooltip';
 import PropCard from '@/shared/components/PropCard';
-import { View, Text, FlatList, StyleSheet, FlatListProps } from 'react-native';
+import { View, Text, FlatList, StyleSheet, FlatListProps, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 
 interface ExplicitPropListProps {
   props: Prop[];
@@ -25,6 +25,14 @@ export function PropList({
 }: PropListProps) {
   const router = useRouter();
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    console.log('Scroll Event:', {
+        contentOffset: event.nativeEvent.contentOffset,
+        contentSize: event.nativeEvent.contentSize,
+        layoutMeasurement: event.nativeEvent.layoutMeasurement,
+    });
+  };
 
   const handleEditPress = (propId: string) => {
     const propToEdit = props.find(p => p.id === propId);
@@ -60,6 +68,8 @@ export function PropList({
       numColumns={1}
       contentContainerStyle={styles.listContainer}
       ListEmptyComponent={defaultEmptyList}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
       {...rest}
     />
   );

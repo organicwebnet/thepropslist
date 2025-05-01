@@ -7,9 +7,10 @@ import { useFirebase } from '../contexts/FirebaseContext';
 interface DigitalAssetFormProps {
   assets: DigitalAsset[];
   onChange: (assets: DigitalAsset[]) => void;
+  disabled?: boolean;
 }
 
-export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProps) {
+export function DigitalAssetForm({ assets = [], onChange, disabled = false }: DigitalAssetFormProps) {
   const { service } = useFirebase();
   const [validating, setValidating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -126,6 +127,7 @@ export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProp
           type="button"
           onClick={handleAddAsset}
           className="inline-flex items-center text-sm text-primary hover:text-primary/80"
+          disabled={disabled}
         >
           <PlusCircle className="h-4 w-4 mr-1" />
           Add File
@@ -154,12 +156,14 @@ export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProp
                   placeholder="Enter file name/description"
                   maxLength={100}
                   className="bg-transparent border-none text-white placeholder-gray-500 focus:outline-none focus:ring-0 flex-1 min-w-0"
+                  disabled={disabled}
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleRemoveAsset(asset.id)}
                 className="text-gray-400 hover:text-red-400"
+                disabled={disabled}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -172,6 +176,7 @@ export function DigitalAssetForm({ assets = [], onChange }: DigitalAssetFormProp
                 onChange={(e) => handleAssetChange(asset.id, 'url', e.target.value)}
                 placeholder="Paste Google Drive sharing link"
                 className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent pr-10"
+                disabled={disabled}
               />
               {validating === asset.id ? (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />

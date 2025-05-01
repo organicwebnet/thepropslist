@@ -1,17 +1,23 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import { useShow } from '../../src/hooks/useShow';
-import { useProps } from '../../src/hooks/useProps';
+// Remove imports for local search params and old hooks
+// import { useLocalSearchParams } from 'expo-router';
+// import { useShow } from '../../src/hooks/useShow';
+// import { useProps } from '../../src/hooks/useProps';
+
+// Import context hooks
+import { useShows } from '../../src/contexts/ShowsContext';
+import { useProps } from '../../src/contexts/PropsContext'; 
 import { PackingPage } from '../../src/pages/PackingPage';
 
 export default function Packing() {
-  const { showId } = useLocalSearchParams();
-  const { show, loading: showLoading, error: showError } = useShow(showId as string);
-  const { props, loading: propsLoading, error: propsError } = useProps(showId as string);
+  // Get data from contexts
+  const { selectedShow, loading: showsLoading, error: showsError } = useShows();
+  const { props, loading: propsLoading, error: propsError } = useProps(); 
 
-  const loading = showLoading || propsLoading;
-  const error = showError || propsError;
+  // Combine loading and error states from contexts
+  const loading = showsLoading || propsLoading;
+  const error = showsError || propsError;
 
   if (loading) {
     return (
@@ -29,17 +35,17 @@ export default function Packing() {
     );
   }
 
-  if (!show) {
+  if (!selectedShow) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>No show selected</Text>
+        <Text style={styles.errorText}>Please select a show first.</Text>
       </View>
     );
   }
 
-  // return <PackingPage show={show} props={props} />;
+  // Pass context data to the page component
   return (
-     <PackingPage show={show} props={props} />
+     <PackingPage show={selectedShow} props={props} />
   )
 }
 

@@ -1,84 +1,89 @@
-import React, { useState } from 'react';
-import { useRouter } from 'expo-router';
-import { useFirebase } from '@/contexts/FirebaseContext'; // Adjust path as needed
-import type { PropFormData, PropImage } from '@/shared/types/props'; // Adjust path as needed
-import { WebPropForm } from '../../../src/platforms/web/components/WebPropForm'; // Adjust path as needed
+import React, { useState, useEffect } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFirebase } from '@/contexts/FirebaseContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useShows } from '@/contexts/ShowsContext';
+import type { PropFormData, Prop, Show as SharedShow } from '@/shared/types/props';
+import { PropForm } from '@/components/PropForm';
 
-// Placeholder for Web New Prop Page
 export default function WebNewPropPage() {
   const router = useRouter();
-  const { service } = useFirebase();
+  const searchParams = useLocalSearchParams();
+  const { service: firebaseService, isInitialized: firebaseInitialized } = useFirebase();
+  const { user } = useAuth();
+  const { getShowById } = useShows();
+
+  const [selectedShow, setSelectedShow] = useState<SharedShow | null>(null);
+  const [isLoadingShow, setIsLoadingShow] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Image State Management ---
-  const [imageFiles, setImageFiles] = useState<FileList | null>(null);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const showIdParam = searchParams.showId;
+  const showId = typeof showIdParam === 'string' ? showIdParam : undefined;
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    setImageFiles(files);
-
-    if (files) {
-      const currentPreviews = Array.from(files).map(file => URL.createObjectURL(file));
-      // Clean up old previews
-      imagePreviews.forEach(URL.revokeObjectURL);
-      setImagePreviews(currentPreviews);
-    } else {
-      imagePreviews.forEach(URL.revokeObjectURL);
-      setImagePreviews([]);
+  useEffect(() => {
+    if (showId && firebaseInitialized) {
+      const fetchShow = async () => {
+        setIsLoadingShow(true);
+        setError(null);
+        try {
+          const showData = await getShowById(showId);
+          console.log(`[WebNewPropPage] Show data received from getShowById for ${showId}:`, showData);
+          if (showData) {
+            setSelectedShow(showData);
+          } else {
+            console.error(`Web Add Prop Error: Show with ID ${showId} not found.`);
+            setError('Could not find the specified show.');
+          }
+        } catch (fetchError: any) {
+          console.error(`Error fetching show ${showId}:`, fetchError);
+          setError(fetchError.message || 'Error loading show data.');
+        }
+        setIsLoadingShow(false);
+      };
+      fetchShow();
+    } else if (firebaseInitialized) {
+      setError('Show ID is missing in URL query parameters. Cannot add prop without a show context.');
+      setIsLoadingShow(false);
     }
-  };
-  // --- End Image State Management ---
+  }, [showId, firebaseInitialized, getShowById]);
 
   const handleCreateSubmit = async (formData: PropFormData) => {
-    if (!service?.addDocument || !service?.uploadFile) {
-        setError('Cannot create prop. Service methods unavailable.');
-        return;
-      }
+    if (!user || !firebaseService?.addDocument || !showId || !selectedShow) {
+      setError('Cannot create prop. Missing User, Service, Show ID, or Show Data.');
+      console.error("Web Add Prop Error:", { userId: user?.uid, firebaseInitialized, showId, selectedShowExists: !!selectedShow });
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      let uploadedImageUrls: PropImage[] = [];
-
-      // --- Upload Images --- 
-      if (imageFiles && imageFiles.length > 0) {
-        console.log(`Uploading ${imageFiles.length} files...`);
-        const uploadPromises = Array.from(imageFiles).map(async (file, index) => {
-          // Create a unique path, e.g., props/{timestamp}_{filename}
-          // Using a temporary ID might be better if available before Firestore doc creation
-          const filePath = `props/${Date.now()}_${file.name}`;
-          const downloadURL = await service.uploadFile(filePath, file);
-          return {
-            id: `img-${Date.now()}-${index}`, // Generate a simple unique ID
-            url: downloadURL,
-            caption: file.name, // Use filename as default caption
-            isMain: index === 0 // Mark first uploaded image as main
-          };
-        });
-        uploadedImageUrls = await Promise.all(uploadPromises);
-        console.log('Upload complete:', uploadedImageUrls);
-      }
-
-      // --- Prepare Firestore Data --- 
       const now = new Date().toISOString();
-      const finalData = {
+      const finalData: Omit<Prop, 'id'> = {
          ...formData, 
-         images: uploadedImageUrls, // Use the actual URLs
+         act: formData.act ? Number(formData.act) : undefined,
+         scene: formData.scene ? Number(formData.scene) : undefined,
+         quantity: Number(formData.quantity) || 1,
+         price: Number(formData.price) || 0,
+         length: formData.length ? Number(formData.length) : undefined,
+         width: formData.width ? Number(formData.width) : undefined,
+         height: formData.height ? Number(formData.height) : undefined,
+         depth: formData.depth ? Number(formData.depth) : undefined,
+         weight: formData.weight ? Number(formData.weight) : undefined,
+         travelWeight: formData.travelWeight ? Number(formData.travelWeight) : undefined,
+         preShowSetupDuration: formData.preShowSetupDuration ? Number(formData.preShowSetupDuration) : undefined,
+         userId: user.uid,
+         showId: showId,
          createdAt: now, 
          updatedAt: now,
-         // userId, showId - add if necessary
       };
-      // Remove the files property if it exists on formData accidentally
-      delete (finalData as any).files;
 
-      // --- Add Document to Firestore --- 
-      const newDoc = await service.addDocument('props', finalData);
+      const newDoc = await firebaseService.addDocument('props', finalData);
       console.log('Prop created successfully with ID:', newDoc.id);
       
-      router.push('/props'); 
+      router.push(`/(web)/props?showId=${showId}`); 
+
     } catch (err: any) {
       console.error('Failed to create prop:', err);
       setError(err.message || 'Failed to create prop. Please try again.');
@@ -87,22 +92,39 @@ export default function WebNewPropPage() {
     }
   };
 
+  if (!firebaseInitialized || isLoadingShow) {
+     return (
+      <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100 flex justify-center items-center">
+         <p>Loading Show Info...</p>
+      </div>
+     );
+  }
+
+  if (error || !selectedShow) {
+     return (
+       <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
+          <button onClick={() => router.back()} className="mb-4 text-blue-400 hover:text-blue-300">
+              &larr; Back
+          </button>
+          <h1 className="text-2xl font-bold mb-6 text-red-500">Error</h1>
+          <p className="text-red-400">{error || 'Could not load the selected show.'}</p>
+       </div>
+     );
+  }
+
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
       <button onClick={() => router.back()} className="mb-4 text-blue-400 hover:text-blue-300">
           &larr; Cancel
       </button>
-      <h1 className="text-2xl font-bold mb-6">Add New Prop (Web)</h1>
+      <h1 className="text-2xl font-bold mb-6">Add Prop to {selectedShow.name}</h1>
       
-      {error && <p className="text-red-500 mb-4">Error: {error}</p>}
-
-      {/* Pass image state and handler to the form */}
-      <WebPropForm 
+      <PropForm 
         onSubmit={handleCreateSubmit} 
-        isSubmitting={isSubmitting}
-        imageFiles={imageFiles}
-        onImageChange={handleImageChange}
-        imagePreviews={imagePreviews}
+        show={selectedShow}
+        mode="create"
+        disabled={isSubmitting}
+        onCancel={() => router.back()}
       />
     </div>
   );

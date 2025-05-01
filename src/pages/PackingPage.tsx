@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { PackingList } from '../components/packing/PackingList';
 import { usePacking } from '../hooks/usePacking';
@@ -60,28 +60,36 @@ export function PackingPage({ props: allProps, show }: PackingPageProps) {
   }
 
   return (
-    <View style={styles.container}>
-      <PackingList
-        show={show}
-        props={allProps}
-        boxes={boxes}
-        isLoading={boxesLoading}
-        onCreateBox={handleCreateBox}
-        onUpdateBox={updateBox}
-        onDeleteBox={deleteBox}
-      />
-    </View>
+    <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.container}>
+        <PackingList
+          show={show}
+          props={allProps}
+          boxes={boxes}
+          onCreateBox={handleCreateBox}
+          onUpdateBox={updateBox}
+          onDeleteBox={deleteBox}
+        />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollView: {
     flex: 1,
-    backgroundColor: 'var(--bg-primary)'
+    backgroundColor: '#1F2937',
+  },
+  contentContainer: {
+    // Add padding or other layout styles if needed
+  },
+  container: {
+    // flex: 1,
+    // backgroundColor: 'var(--bg-primary)'
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: 'var(--bg-primary)',
+    backgroundColor: '#1F2937',
     justifyContent: 'center',
     alignItems: 'center'
   }

@@ -1,6 +1,9 @@
 import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle';
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
+// Re-export the type needed by PropForm using 'export type'
+export type { PropLifecycleStatus };
+
 export type PropSource = 'bought' | 'made' | 'rented' | 'borrowed' | 'owned' | 'created';
 export type WeightUnit = 'kg' | 'lb' | 'g' | 'oz';
 export type DimensionUnit = 'cm' | 'in' | 'm' | 'ft';
@@ -18,6 +21,28 @@ export interface DigitalAsset {
   title?: string;
   url: string;
   type: 'image' | 'video' | 'document' | 'other';
+}
+
+export interface ShowCollaborator {
+  email: string;
+  role: 'editor' | 'viewer';
+  addedAt: string;
+  addedBy: string;
+}
+
+export interface Venue {
+  name: string;
+  address: string;
+  startDate: string;
+  endDate: string;
+  notes: string;
+}
+
+export interface Contact {
+  name: string;
+  role: string;
+  email: string;
+  phone?: string;
 }
 
 export const propCategories = [
@@ -105,7 +130,7 @@ export interface PropFormData {
   notes?: string;
   tags?: string[];
   customFields?: Record<string, any>;
-  videos?: string[];
+  videos?: DigitalAsset[];
   purchaseDate?: string;
   condition?: string;
   manufacturer?: string;
@@ -178,10 +203,13 @@ export interface Prop {
   transportNotes?: string;
   status: PropLifecycleStatus;
   location?: string;
+  currentLocation?: string;
   notes?: string;
   tags?: string[];
   images?: PropImage[];
   digitalAssets?: DigitalAsset[];
+  videos?: DigitalAsset[];
+  materials?: string[];
   statusHistory?: PropStatusUpdate[];
   maintenanceHistory?: MaintenanceRecord[];
   nextMaintenanceDue?: string;
@@ -194,4 +222,51 @@ export interface Prop {
   condition?: string;
   lastUpdated?: string;
   purchaseDate?: string;
+  handedness?: string;
+  isBreakable?: boolean;
+  isHazardous?: boolean;
+  storageRequirements?: string;
+}
+
+export interface Show {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  venue?: string;
+  startDate?: string;
+  endDate?: string;
+  imageUrl?: string;
+  acts?: Act[];
+  createdAt: string;
+  updatedAt: string;
+  collaborators: ShowCollaborator[];
+  stageManager: string;
+  stageManagerEmail: string;
+  stageManagerPhone?: string;
+  propsSupervisor: string;
+  propsSupervisorEmail: string;
+  propsSupervisorPhone?: string;
+  productionCompany: string;
+  productionContactName: string;
+  productionContactEmail: string;
+  productionContactPhone?: string;
+  venues: Venue[];
+  isTouringShow: boolean;
+  contacts: Contact[];
+  logoImage?: { id: string; url: string; caption?: string };
+}
+
+export interface Act {
+  id: number;
+  name?: string;
+  description?: string;
+  scenes?: Scene[];
+}
+
+export interface Scene {
+  id: number;
+  name?: string;
+  setting?: string;
+  description?: string;
 } 

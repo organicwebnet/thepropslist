@@ -10,6 +10,20 @@ import { WebPropCard } from '../../../src/platforms/web/components/WebPropCard';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Import lifecycle types/labels
 import type { Show } from '@/types'; // Import Show type
 
+// --- Helper Function for Date Formatting ---
+const formatDateTime = (isoString: string | undefined): string => {
+  if (!isoString) return 'N/A';
+  try {
+    const date = new Date(isoString);
+    // Basic format, adjust as needed (e.g., use locale, add time)
+    return date.toLocaleDateString(); 
+  } catch (error) {
+    console.error("Error formatting date:", isoString, error);
+    return 'Invalid Date';
+  }
+};
+// --- End Helper Function ---
+
 export default function WebPropsListPage() {
   console.log("--- Rendering: app/(web)/props/index.tsx (Restored) ---");
 
@@ -78,8 +92,114 @@ export default function WebPropsListPage() {
   };
 
   const handleAddNew = () => {
-    router.push('/props/new');
+    if (!selectedShow || !selectedShow.id) {
+      // Prevent navigation if no show is selected
+      console.error("Cannot add new prop: No show selected.");
+      setError("Please select a show before adding a prop."); // Or use Alert
+      return;
+    }
+    // Correctly navigate with showId as a query parameter
+    // Using the (web) group path
+    router.push({ 
+      pathname: '/(web)/props/new', 
+      params: { showId: selectedShow.id } 
+    });
   };
+
+  // --- Placeholder Handlers for New Buttons ---
+  const handleDuplicates = () => {
+    alert('Duplicate prop detection/handling not implemented yet.');
+  };
+
+  const handleExportCSV = () => {
+    if (!selectedShow || filteredProps.length === 0) {
+      alert('No props to export.');
+      return;
+    }
+
+    // Define headers for the CSV file
+    const headers = [
+      'ID', 'Name', 'Category', 'Status', 'Description', 'Quantity',
+      'Act', 'Scene', 'Storage Location', 'Current Location', 'Condition',
+      'Source', 'Source Details', 'Price', 'Materials', 'Last Modified'
+      // Add more headers as needed based on PropFormData fields
+    ];
+    
+    // Function to safely format a cell value for CSV
+    const formatCsvCell = (value: any): string => {
+      const stringValue = value === null || typeof value === 'undefined' ? '' : String(value);
+      // Escape double quotes by doubling them and enclose in quotes if it contains comma, quote, or newline
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    // Create header row
+    const headerRow = headers.map(formatCsvCell).join(',');
+
+    // Create data rows from filteredProps
+    const dataRows = filteredProps.map(propDoc => {
+      const data = propDoc.data;
+      if (!data) return ''; // Skip if data is missing (shouldn't happen with filtered)
+      
+      const row = [
+        propDoc.id,
+        data.name,
+        data.category,
+        data.status,
+        data.description,
+        data.quantity,
+        data.act,
+        data.scene,
+        data.location, // Storage location
+        data.currentLocation, // Current location
+        data.condition,
+        data.source,
+        data.sourceDetails,
+        data.price,
+        (data.materials || []).join('; '), // Join materials array
+        data.lastModifiedAt ? formatDateTime(data.lastModifiedAt) : '' // Format date
+        // Add other data fields corresponding to headers
+      ];
+      return row.map(formatCsvCell).join(',');
+    }).filter(row => row).join('\n'); // Filter out potential empty rows and join with newline
+
+    const csvContent = `${headerRow}\n${dataRows}`;
+    
+    // Create Blob and trigger download
+    try {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      // Generate filename based on show name, replacing spaces
+      const filename = `props-export-${selectedShow.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') || 'show'}.csv`;
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url); // Clean up the object URL
+      console.log(`CSV export triggered for ${filteredProps.length} props.`);
+    } catch (error) {
+      console.error("Error during CSV export:", error);
+      alert("An error occurred while preparing the CSV file.");
+    }
+  };
+
+  const handleGoToPDFPreview = () => {
+    if (!selectedShow || !selectedShow.id) {
+      setError("Please select a show first.");
+      return;
+    }
+    // Navigate to a (currently non-existent) PDF preview route
+    router.push({
+      pathname: '/(web)/props/pdf-preview' as any,
+      params: { showId: selectedShow.id }
+    });
+  };
+  // --- End Placeholder Handlers ---
 
   // Calculate available acts and scenes for dropdowns
   const availableActs = selectedShow?.acts || [];
@@ -138,14 +258,37 @@ export default function WebPropsListPage() {
   // Restore the original return statement
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 gap-4 flex-wrap">
         <h1 className="text-2xl font-bold">Props List ({selectedShow?.name || 'No Show Selected'})</h1>
-        <button 
-          onClick={handleAddNew}
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
-        >
-          Add New Prop
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button 
+            onClick={handleDuplicates}
+            className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-50 flex items-center gap-1"
+            title="Find Duplicate Props (Not Implemented)"
+          >
+            <span className="text-lg">⚠️</span> Duplicates
+          </button>
+          <button 
+            onClick={handleExportCSV}
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center gap-1"
+            title="Export as CSV (Not Implemented)"
+          >
+            <span className="text-lg">📄</span> CSV
+          </button>
+          <button 
+            onClick={handleGoToPDFPreview}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center gap-1"
+            title="Go to PDF Preview Page"
+          >
+            <span className="text-lg">📄</span> PDF
+          </button>
+          <button 
+            onClick={handleAddNew}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 flex items-center gap-1"
+          >
+            <span className="text-lg">➕</span> Add New Prop
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">

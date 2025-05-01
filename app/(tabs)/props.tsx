@@ -36,6 +36,7 @@ export default function PropsScreen() {
   const [shows, setShows] = useState<Show[]>([]);
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [props, setProps] = useState<Prop[]>([]);
+  const [selectedPropForEdit, setSelectedPropForEdit] = useState<Prop | null>(null);
   
   const initialShowIdAttempt = useRef<string | null>(null);
 
@@ -358,23 +359,64 @@ export default function PropsScreen() {
     }
   };
 
+  const handleCreatePropWeb = async (formData: PropFormData) => {
+    console.log("Creating prop (Web):", formData);
+    // TODO: Implement actual creation via firebaseService.addDocument
+    // Requires selectedShow.id
+  };
+
+  const handleUpdatePropWeb = async (formData: PropFormData) => {
+    if (!selectedPropForEdit) return;
+    console.log(`Updating prop ${selectedPropForEdit.id} (Web):`, formData);
+    // TODO: Implement actual update via firebaseService.updateDocument
+  };
+
+  const mapPropToFormData = (prop: Prop): PropFormData => {
+    console.warn("mapPropToFormData not fully implemented. Using direct cast.");
+    // TODO: Implement proper mapping, ensuring all PropFormData fields exist
+    return { ...initialFormState, ...prop } as PropFormData; // Basic spread, might miss nested/optional fields
+  };
+
+  const handleExportPdf = () => Alert.alert("Export PDF", "Feature not yet implemented.");
+  const handleExportCsv = () => Alert.alert("Export CSV", "Feature not yet implemented.");
+  const handleRemoveDuplicates = () => Alert.alert("Remove Duplicates", "Feature not yet implemented.");
+
   const renderContent = () => {
-    if (propsLoading) {
+    console.log(`[PropsScreen] Render Content: ShowsLoading=${showsLoading}, PropsLoading=${propsLoading}, SelectedShow=${selectedShow?.id}, NumProps=${props.length}`);
+    if (showsLoading || (selectedShow && propsLoading)) {
+        console.log("[PropsScreen] Render Content: Showing Loading Indicator");
       return (
-        <View style={styles.contentLoadingContainer}> 
-          <ActivityIndicator size="large" color="#FFFFFF" />
-          <Text style={styles.messageText}>Loading Props...</Text>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#FBBF24" />
+          <Text style={styles.loadingText}>Loading data...</Text>
         </View>
       );
-    } else {
+    }
+
+    if (!selectedShow) {
+        console.log("[PropsScreen] Render Content: No Show Selected");
       return (
-        <PropList 
-          props={props}
-          onEdit={handleOpenEditPropPage}
-          onDelete={handleDelete}
-        />
+        <View style={styles.centered}>
+          <Text style={styles.infoText}>Please select a show first.</Text>
+          {/* Optionally add a button to navigate to shows screen */}
+        </View>
       );
     }
+    
+    // If a show is selected, show the list (or empty state)
+    console.log(`[PropsScreen] Render Content: Rendering PropList for show ${selectedShow.id}`);
+    return (
+      <View style={{ flex: 1 }}> 
+        {/* Add selected show title */} 
+        <Text style={styles.showTitle}>{selectedShow.name}</Text>
+        
+        <PropList
+          props={props}
+          onDelete={handleDelete}
+          onEdit={handleOpenEditPropPage}
+        />
+      </View>
+    );
   };
 
   console.log(`[PropsScreen] Preparing to render. propsLoading=${propsLoading}, showsLoading=${showsLoading}, selectedShow=${selectedShow?.id}`);
@@ -389,30 +431,84 @@ export default function PropsScreen() {
     );
   }
 
-  return (
-    <View style={styles.fullFlexContainer}>
-      {renderContent()}
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.webContainer}>
+        {/* Left Column */} 
+        <View style={styles.webListColumn}>
+          <ScrollView style={{ flex: 1 }}>
+            <View style={styles.webListHeader}>
+               {/* TODO: Add Show Selector Dropdown Here? */} 
+              <Text style={styles.webColumnTitle}>Props for: {selectedShow?.name || 'No Show Selected'}</Text>
+              <View style={styles.webButtonContainer}>
+                 <Button title="Export PDF" onPress={handleExportPdf} />
+                 <Button title="Export CSV" onPress={handleExportCsv} />
+                 <Button title="Remove Duplicates" onPress={handleRemoveDuplicates} />
+              </View>
+            </View>
+            <PropList 
+              props={props} 
+              onEdit={setSelectedPropForEdit}
+              onDelete={handleDelete}
+            />
+          </ScrollView>
+        </View>
+        
+        {/* Right Column */} 
+        <View style={styles.webFormColumn}>
+          <ScrollView style={{ flex: 1 }}>
+            <PropForm 
+              key={selectedPropForEdit?.id ?? 'create'} // Add key to force re-render on selection change
+              mode={selectedPropForEdit ? 'edit' : 'create'}
+              initialData={selectedPropForEdit ? mapPropToFormData(selectedPropForEdit) : undefined}
+              onSubmit={selectedPropForEdit ? handleUpdatePropWeb : handleCreatePropWeb}
+              onCancel={selectedPropForEdit ? () => setSelectedPropForEdit(null) : undefined}
+              show={selectedShow ?? undefined} // Pass selected show
+            />
+          </ScrollView>
+        </View>
+      </View>
+    );
+  } else {
+    const renderMobileContent = () => {
+      if (showsLoading || (selectedShow && propsLoading)) {
+          return (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color="#FBBF24" />
+            </View>
+          );
+      }
+      if (!selectedShow) {
+          return (
+            <View style={styles.centered}>
+              <Text style={styles.infoText}>Please select a show.</Text>
+              {/* TODO: Add show selector for mobile? */} 
+            </View>
+          );
+      }
+      return (
+        <PropList 
+            props={props} 
+            onEdit={handleOpenEditPropPage}
+            onDelete={handleDelete}
+        />
+      );
+    };
 
-      <Modal visible={showProfile} onRequestClose={() => setShowProfile(false)} animationType="slide">
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>User Profile Placeholder</Text></View> 
-      </Modal>
-
-      <Modal visible={showAddShowModal} onRequestClose={() => setShowAddShowModal(false)} animationType="slide">
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}><Text>Add Show Modal Placeholder</Text></View> 
-      </Modal>
-
-      {Platform.OS !== 'web' && (
+    return (
+      <View style={styles.container}>
+        {/* TODO: Add Mobile Header with Show Selector? */} 
+        {renderMobileContent()}
         <TouchableOpacity
           style={styles.fab}
-          onPress={handleOpenAddPropPage}
+          onPress={handleOpenAddPropPage} // Mobile uses FAB to navigate
           activeOpacity={0.7}
         >
-          <Ionicons name="add" size={30} color="white" />
+          <Ionicons name="add" size={30} color="#FFFFFF" />
         </TouchableOpacity>
-      )}
-
-    </View>
-  );
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
@@ -502,4 +598,63 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-}); 
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#111827', // Dark background for the whole screen
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#D1D5DB',
+    fontSize: 16,
+  },
+  showTitle: { // Style for the show title
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: '#FBBF24', // Accent color
+      textAlign: 'center',
+      paddingVertical: 15,
+      paddingHorizontal: 10,
+      backgroundColor: '#1F2937', // Slightly lighter background for emphasis
+      borderBottomWidth: 1,
+      borderBottomColor: '#374151',
+  },
+  webContainer: { // Web main container
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#1F2937',
+  },
+  webListColumn: { // Web left column
+    flex: 1, // Adjust ratio if needed (e.g., flex: 2)
+    borderRightWidth: 1,
+    borderColor: '#333',
+  },
+  webFormColumn: { // Web right column
+    flex: 1, // Adjust ratio if needed (e.g., flex: 1)
+    backgroundColor: '#111827' // Slightly different bg for form area
+  },
+  webListHeader: { // Header for web list column
+     padding: 15,
+     borderBottomWidth: 1,
+     borderColor: '#333',
+     backgroundColor: '#1A1A1A', // Header background
+  },
+  webColumnTitle: { // Title style for web column
+     fontSize: 18,
+     fontWeight: '600',
+     color: '#E5E7EB',
+     marginBottom: 10,
+  },
+  webButtonContainer: { // Container for buttons in web header
+     flexDirection: 'row',
+     justifyContent: 'flex-start', // Or space-around
+     gap: 10,
+  },
+});
+
+const initialFormState: PropFormData = { price: 0, name: '', category: 'Other', quantity: 1, status: 'confirmed', source: 'bought', images: [], digitalAssets: [], weightUnit: 'kg', unit: 'cm', act: 1, scene: 1 }; 

@@ -271,10 +271,37 @@ export class MobileFirebaseService implements FirebaseService {
   listenToCollection<T extends CustomDocumentData>(
     path: string,
     onNext: (docs: FirebaseDocument<T>[]) => void,
-    onError?: (error: Error) => void
+    onError?: (error: Error) => void,
+    options?: import('../../../shared/services/firebase/types').QueryOptions
   ): () => void {
     if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
-    const listener = this._firestore.collection(path).onSnapshot(
+    
+    // Start with the base collection reference
+    let query: FirebaseFirestoreTypes.Query = this._firestore.collection(path);
+
+    // Apply query options if provided
+    if (options) {
+      // Apply 'where' clauses
+      if (options.where) {
+        options.where.forEach(([fieldPath, opStr, value]) => {
+          // Cast opStr to FirebaseFirestoreTypes.WhereFilterOp if necessary, assuming it matches
+          query = query.where(fieldPath, opStr as FirebaseFirestoreTypes.WhereFilterOp, value);
+        });
+      }
+      // Apply 'orderBy' clauses
+      if (options.orderBy) {
+        options.orderBy.forEach(([fieldPath, directionStr]) => {
+          query = query.orderBy(fieldPath, directionStr);
+        });
+      }
+      // Apply 'limit'
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+    }
+
+    // Attach the listener to the potentially modified query
+    const listener = query.onSnapshot(
       (snapshot: FirebaseFirestoreTypes.QuerySnapshot<FirebaseFirestoreTypes.DocumentData>) => {
         const docs = snapshot.docs.map(doc => this._snapshotToFirebaseDocument<T>(doc));
         onNext(docs);

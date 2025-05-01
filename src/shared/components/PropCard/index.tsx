@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType } from 'react-native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import type { Prop, PropImage } from '../../types/props';
 import { lifecycleStatusLabels } from '@/types/lifecycle';
 
@@ -18,6 +18,7 @@ function isValidImageSource(source: any): source is { uri: string } {
 
 const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress, onDeletePress }) => {
   const [imageError, setImageError] = useState(false);
+  const router = useRouter();
 
   const renderImage = () => {
     // Determine the primary image URL from the images array
@@ -93,12 +94,16 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
   const dimensionsText = formatDimensions();
   const statusLabel = prop.status ? (lifecycleStatusLabels[prop.status] || prop.status) : 'Unknown';
 
+  const handleNavigate = () => {
+    // Programmatic navigation
+    router.push({ pathname: `/props/[id]` as any, params: { id: prop.id } });
+  };
+
   return (
-    // Cast the dynamic path to any to bypass strict type checking
-    <Link href={`/props/${prop.id}` as any} asChild>
       <TouchableOpacity
         style={[styles.container, compact && styles.compactContainer]}
         activeOpacity={0.8}
+        onPress={handleNavigate}
       >
         <View style={styles.cardLayoutRow}>
           <View style={styles.imageContainer}>
@@ -156,6 +161,7 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
                       e.stopPropagation();
                       onEditPress(prop.id); 
                     }}
+                    accessibilityRole="button" 
                   >
                     <Text style={styles.buttonText}>Edit</Text>
                   </TouchableOpacity>
@@ -167,6 +173,7 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
                       e.stopPropagation();
                       onDeletePress(prop.id); 
                     }}
+                    accessibilityRole="button" 
                   >
                     <Text style={styles.buttonText}>Delete</Text>
                   </TouchableOpacity>
@@ -176,7 +183,6 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
           </View>
         </View>
       </TouchableOpacity>
-    </Link>
   );
 };
 

@@ -30,7 +30,8 @@ export default {
         'dark-border': '#374151',       // Subtle border (Tailwind gray-700)
 
         // Update Default aliases to match light theme
-        primary: 'var(--light-primary)', // Use CSS variable referencing light theme
+        // primary: 'var(--light-primary)', // Use CSS variable referencing light theme
+        primary: '#3b82f6', // Set a concrete color (Tailwind blue-500) for native compatibility
         'primary-dark': 'var(--light-primary-dark)',
         'primary-light': 'var(--light-primary-light)',
         'primary-neon': 'var(--light-primary-neon)',

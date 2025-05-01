@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { HelpCircle, Upload, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { HelpCircle, Upload, Trash2, AlertTriangle, CheckCircle, Video } from 'lucide-react';
 import { PlusCircle, Save, Loader2 } from 'lucide-react';
 import { ImageUpload } from './ImageUpload';
 import { DigitalAssetForm } from './DigitalAssetForm';
+import { VideoAssetForm } from './VideoAssetForm';
 import { propCategories, PropCategory, DimensionUnit } from '@shared/types/props';
-import type { Prop, PropFormData, DigitalAsset, PropImage } from '@shared/types/props';
-import type { Show, Act, Scene } from '@/types';
+import type { Prop, PropFormData, DigitalAsset, PropImage, PropLifecycleStatus } from '@shared/types/props';
+import type { Show, Act, Scene } from '@shared/types/props';
 import { WysiwygEditor } from './WysiwygEditor';
 import { HelpTooltip } from './HelpTooltip';
 
@@ -33,16 +34,32 @@ export const weightUnits: ReadonlyArray<{ value: 'kg' | 'lb' | 'g'; label: strin
   { value: 'g', label: 'g' },
 ];
 
+// Define the lifecycle statuses array based on the imported type
+const propLifecycleStatuses: ReadonlyArray<PropLifecycleStatus> = [
+  'confirmed' as PropLifecycleStatus,
+  'potential' as PropLifecycleStatus,
+  'deleted' as PropLifecycleStatus,
+  'unknown' as PropLifecycleStatus,
+  'archived' as PropLifecycleStatus,
+  'in_use' as PropLifecycleStatus,
+  'maintenance' as PropLifecycleStatus
+];
+
 const initialFormState: PropFormData = {
   name: '',
   price: 0,
   description: '',
   category: 'Other' as PropCategory,
   quantity: 1,
-  status: 'confirmed',
+  status: 'confirmed', // Use PropLifecycleStatus default
+  location: '',
+  currentLocation: '', // Current location (e.g., on stage, rehearsal room)
+  condition: '',
   source: 'bought',
+  sourceDetails: '', // Add sourceDetails
   images: [],
   digitalAssets: [],
+  videos: [], // Ensure this is typed correctly, implicitly DigitalAsset[] via PropFormData
   weightUnit: 'kg',
   unit: 'cm',
   act: 1,
@@ -62,15 +79,31 @@ const initialFormState: PropFormData = {
   statusHistory: [],
   maintenanceHistory: [],
   tags: [],
-  customFields: {},
-  videos: [],
   materials: [],
+  customFields: {},
   handedness: 'either',
   isBreakable: false,
   isHazardous: false,
+  preShowSetupDuration: undefined,
+  preShowSetupNotes: '',
+  preShowSetupVideo: '',
+  travelWeight: undefined,
+  statusNotes: '',
 };
 
+// Helper for Required Label
+function RequiredLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+      {children} <span className="text-red-500">*</span>
+    </span>
+  );
+}
+
 export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, show, disabled = false }: PropFormProps): JSX.Element {
+  // Log received show prop at the start of the component execution
+  console.log('[PropForm Execution] Received show prop:', JSON.stringify(show, null, 2));
+
   console.log('=== PROP FORM MOUNT DEBUG ===');
   console.log('1. PropForm mounted with mode:', mode);
   console.log('2. Initial data received:', initialData);
@@ -132,6 +165,14 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
     });
   };
 
+  const handleVideoAssetAdd = (asset: Omit<DigitalAsset, 'id'>) => {
+    const newAsset: DigitalAsset = { ...asset, id: `new-vid-${Date.now()}`, type: 'video' };
+    setFormData((prevData) => ({
+      ...prevData,
+      videos: [...(prevData.videos || []), newAsset]
+    }));
+  };
+
   const handleRemoveImage = (imageId: string) => {
     setFormData({ 
       ...formData, 
@@ -144,6 +185,13 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
       ...formData, 
       digitalAssets: (formData.digitalAssets || []).filter(asset => asset.id !== assetId) 
     });
+  };
+
+  const handleRemoveVideoAsset = (assetId: string) => {
+    setFormData((prevData) => ({
+      ...prevData,
+      videos: (prevData.videos || []).filter(asset => asset.id !== assetId)
+    }));
   };
 
   const handleDescriptionChange = (content: string) => {
@@ -162,6 +210,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
     setFormData({ ...formData, safetyNotes: content });
   };
 
+  const handleMaterialsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const materialsArray = e.target.value.split(',').map(m => m.trim()).filter(Boolean);
+    setFormData({ ...formData, materials: materialsArray });
+  };
+
   const convertWeight = (value: number | string | undefined, unit: 'kg' | 'lb' | 'g'): number => {
     const numericValue = Number(value);
     if (isNaN(numericValue) || numericValue === 0) return 0;
@@ -177,35 +230,31 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="gradient-border section-spacing">
-      <div className="space-y-6">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-semibold text-[var(--text-primary)]">Add New Prop</h2>
-        </div>
+  // Fieldset styles (Tailwind example)
+  const fieldsetStyles = "bg-[#1F2937] p-4 rounded-lg border border-gray-700 mb-6"; // Use page bg or slightly different
+  const legendStyles = "text-lg font-semibold text-gray-200 mb-3";
+  const inputStyles = "w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent transition-colors disabled:opacity-50";
+  const selectStyles = `${inputStyles}`;
+  const checkboxLabelStyles = "ml-2 text-sm text-gray-300";
+  const checkboxContainerStyles = "flex items-center mt-2 mb-2";
+  const conditionalFieldStyles = "mt-4 space-y-1"; // Style for conditional inputs
 
-        {/* Basic Information */}
+  return (
+    // Match background of parent column: bg-[#111827]
+    <form onSubmit={handleSubmit} className="p-1 bg-[#111827]">
+      
+      {/* Fieldset: Basic Information */}
+      <div className={fieldsetStyles}>
+        <h3 className={legendStyles}>Basic Information</h3>
         <div className="space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
-              Name
-              <HelpTooltip content={
-                <div>
-                  <p className="font-medium mb-1">Prop Name Guidelines:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Be specific and descriptive</li>
-                    <li>Include key identifying features</li>
-                    <li>Use standard terminology</li>
-                  </ul>
-                </div>
-              } />
-            </label>
+            <RequiredLabel>Name</RequiredLabel>
             <input
               type="text"
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              className={inputStyles}
               placeholder="Enter prop name"
               required
               disabled={disabled}
@@ -213,710 +262,502 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </div>
 
           <div>
-            <label htmlFor="category" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
-              Category
-              <HelpTooltip content={
-                <div>
-                  <p className="font-medium mb-1">Categories help organize props by:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Type of prop</li>
-                    <li>Usage context</li>
-                    <li>Storage requirements</li>
-                  </ul>
-                </div>
-              } />
-            </label>
+            <RequiredLabel>Category</RequiredLabel>
             <select
               id="category"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as PropCategory })}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
+              className={selectStyles}
               required
               disabled={disabled}
             >
               <option value="">Select a category</option>
               {propCategories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
+                <option key={category} value={category}>{category}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label htmlFor="price" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
-              Price
-              <HelpTooltip content={
-                <div>
-                  <p className="font-medium mb-1">Price Information:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Enter the total cost per unit</li>
-                    <li>Include any additional fees</li>
-                    <li>For rentals, enter the rental cost</li>
-                  </ul>
-                </div>
-              } />
+            <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              Description
             </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]">£</span>
-              <input
-                type="number"
-                id="price"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg pl-8 pr-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                required
+            <WysiwygEditor
+                value={formData.description ?? ''}
+                onChange={handleDescriptionChange}
                 disabled={disabled}
-              />
-            </div>
+            />
           </div>
 
           <div>
-            <label htmlFor="quantity" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
+            <label htmlFor="quantity" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
               Quantity
-              <HelpTooltip content={
-                <div>
-                  <p className="font-medium mb-1">Quantity Guidelines:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Enter total number of identical items</li>
-                    <li>Minimum value is 1</li>
-                    <li>For sets, count individual pieces</li>
-                  </ul>
-                </div>
-              } />
             </label>
             <input
               type="number"
               id="quantity"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-              placeholder="Enter quantity"
               min="1"
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value, 10) || 1 })}
+              className={inputStyles}
               required
               disabled={disabled}
             />
           </div>
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)]">
-            Description
-          </label>
-          <WysiwygEditor
-            value={formData.description || ''}
-            onChange={handleDescriptionChange}
-            placeholder="Enter prop description"
-            minHeight={100}
-            disabled={disabled}
-          />
-        </div>
-
-        <div className="space-y-4">
-          <ImageUpload
-            onImagesChange={(newImages) => setFormData({ ...formData, images: newImages })}
-            currentImages={formData.images || []}
-          />
-        </div>
-
-        <div className="space-y-4">
-          <DigitalAssetForm
-            assets={formData.digitalAssets || []}
-            onChange={(newAssets) => setFormData({ ...formData, digitalAssets: newAssets })}
-          />
-        </div>
-
-        {/* Source Information */}
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
-            Source Information
-            <HelpTooltip content={
-              <div>
-                <p className="font-medium mb-1">Source Types:</p>
-                <ul className="space-y-2">
-                  <li><span className="font-medium">Bought:</span> Purchased from a store/seller</li>
-                  <li><span className="font-medium">Made:</span> Created in-house</li>
-                  <li><span className="font-medium">Rented:</span> Temporary use with return date</li>
-                  <li><span className="font-medium">Borrowed:</span> Borrowed from another production</li>
-                </ul>
-              </div>
-            } />
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Source Type <span className="text-primary">*</span>
-              </label>
-              <select
-                value={formData.source}
-                onChange={(e) => setFormData({ ...formData, source: e.target.value as 'bought' | 'made' | 'rented' | 'borrowed' })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={disabled}
-              >
-                <option value="bought">Bought</option>
-                <option value="made">Made</option>
-                <option value="rented">Rented</option>
-                <option value="borrowed">Borrowed</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Source Details <span className="text-primary">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.sourceDetails}
-                onChange={(e) => setFormData({ ...formData, sourceDetails: e.target.value })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder={formData.source === 'bought' ? 'Store/Seller name' : formData.source === 'made' ? 'Maker details' : 'Source details'}
-                disabled={disabled}
-              />
-            </div>
-          </div>
-
-          {formData.source === 'bought' && (
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Purchase URL
-              </label>
-              <input
-                type="url"
-                value={formData.purchaseUrl}
-                onChange={(e) => setFormData({ ...formData, purchaseUrl: e.target.value })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="https://example.com/product"
-                disabled={disabled}
-              />
-            </div>
-          )}
-
-          {(formData.source === 'rented' || formData.source === 'borrowed') && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                  Return Due Date {formData.source === 'rented' && <span className="text-primary">*</span>}
-                </label>
-                <input
-                  type="date"
-                  required={formData.source === 'rented'}
-                  value={formData.rentalDueDate || ''}
-                  onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  disabled={disabled}
-                />
-              </div>
-              {formData.source === 'rented' && (
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                    Reference Number
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.rentalReferenceNumber}
-                    onChange={(e) => setFormData({ ...formData, rentalReferenceNumber: e.target.value })}
-                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder="Enter reference number"
-                    disabled={disabled}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Scene Information */}
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Scene Information</div>
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={formData.isMultiScene}
-              onChange={(e) => setFormData({ ...formData, isMultiScene: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
-              disabled={disabled}
-            />
-            <span className="text-[var(--text-secondary)]">Used in multiple scenes</span>
-          </label>
-
-          {!formData.isMultiScene && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                  Act <span className="text-primary">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.act || ''}
-                  onChange={(e) => {
-                    const actId = parseInt(e.target.value);
-                    setFormData({ 
-                      ...formData, 
-                      act: isNaN(actId) ? undefined : actId, 
-                      scene: undefined
-                    });
-                  }}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)]"
-                  disabled={disabled}
-                >
-                  <option value="">Select Act</option>
-                  {Array.isArray(show?.acts) && show.acts.map((act: any) => (
-                    <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                  Scene <span className="text-primary">*</span>
-                </label>
-                <select
-                  required
-                  value={formData.scene || ''}
-                  onChange={(e) => setFormData({ ...formData, scene: parseInt(e.target.value) || undefined })}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)]"
-                  disabled={disabled || formData.isMultiScene}
-                >
-                  <option value="">Select Scene</option>
-                  {Array.isArray(show?.acts) && show.acts.find((act: any) => act.id === formData.act)?.scenes.map((scene: any) => (
-                    <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Physical Properties */}
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
-            Physical Properties
-            <HelpTooltip content={
-              <div>
-                <p className="font-medium mb-1">Measurements:</p>
-                <ul className="space-y-2">
-                  <li><span className="font-medium">Length/Width/Height:</span> Main dimensions</li>
-                  <li><span className="font-medium">Weight:</span> Important for transport</li>
-                  <li><span className="font-medium">Units:</span> Choose appropriate units</li>
-                </ul>
-              </div>
-            } />
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Length
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={formData.length || ''}
-                onChange={(e) => setFormData({ ...formData, length: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder={`Enter length in ${formData.unit}`}
-                disabled={disabled}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Width
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={formData.width || ''}
-                onChange={(e) => setFormData({ ...formData, width: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder={`Enter width in ${formData.unit}`}
-                disabled={disabled}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Height
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={formData.height || ''}
-                onChange={(e) => setFormData({ ...formData, height: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder={`Enter height in ${formData.unit}`}
-                disabled={disabled}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Unit
-              </label>
-              <select
-                value={formData.unit || 'cm'}
-                onChange={(e) => setFormData({ ...formData, unit: e.target.value as DimensionUnit })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={disabled}
-              >
-                {dimensionUnits.map(unit => (
-                  <option key={unit.value} value={unit.value}>
-                    {unit.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Weight
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={formData.weight || ''}
-                onChange={(e) => setFormData({ ...formData, weight: e.target.value ? Number(e.target.value) : undefined })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder={`Enter weight in ${formData.weightUnit}`}
-                disabled={disabled}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Weight Unit
-              </label>
-              <select
-                value={formData.weightUnit}
-                onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' | 'g' })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                disabled={disabled}
-              >
-                {weightUnits.map(unit => (
-                  <option key={unit.value} value={unit.value}>
-                    {unit.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Usage Instructions</div>
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={formData.hasUsageInstructions}
-              onChange={(e) => setFormData({ ...formData, hasUsageInstructions: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
-              disabled={disabled}
-            />
-            <span className="text-[var(--text-secondary)]">Add usage instructions</span>
-          </label>
-
-          {formData.hasUsageInstructions && (
-            <WysiwygEditor
-              value={formData.usageInstructions || ''}
-              onChange={handleUsageInstructionsChange}
-              placeholder="Enter detailed usage instructions"
-              minHeight={100}
-              disabled={disabled}
-            />
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Maintenance</div>
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={formData.hasMaintenanceNotes}
-              onChange={(e) => setFormData({ ...formData, hasMaintenanceNotes: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
-              disabled={disabled}
-            />
-            <span className="text-[var(--text-secondary)]">Add maintenance notes</span>
-          </label>
-
-          {formData.hasMaintenanceNotes && (
-            <WysiwygEditor
-              value={formData.maintenanceNotes || ''}
-              onChange={handleMaintenanceNotesChange}
-              placeholder="Enter maintenance requirements and schedule"
-              minHeight={100}
-              disabled={disabled}
-            />
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Safety</div>
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={formData.hasSafetyNotes}
-              onChange={(e) => setFormData({ ...formData, hasSafetyNotes: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
-              disabled={disabled}
-            />
-            <span className="text-[var(--text-secondary)]">Add safety notes</span>
-          </label>
-
-          {formData.hasSafetyNotes && (
-            <WysiwygEditor
-              value={formData.safetyNotes || ''}
-              onChange={handleSafetyNotesChange}
-              placeholder="Enter safety requirements and precautions"
-              minHeight={100}
-              disabled={disabled}
-            />
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Pre-show Setup</div>
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={formData.requiresPreShowSetup}
-              onChange={(e) => setFormData({ ...formData, requiresPreShowSetup: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
-              disabled={disabled}
-            />
-            <span className="text-[var(--text-secondary)]">Requires pre-show setup</span>
-          </label>
-
-          {formData.requiresPreShowSetup && (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                  Setup Duration (minutes)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.preShowSetupDuration || ''}
-                  onChange={(e) => setFormData({ ...formData, preShowSetupDuration: parseInt(e.target.value) || undefined })}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Enter setup time in minutes"
-                  disabled={disabled}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                  Setup Instructions
-                </label>
-                <WysiwygEditor
-                  value={formData.preShowSetupNotes || ''}
-                  onChange={(value) => setFormData({ ...formData, preShowSetupNotes: value })}
-                  placeholder="Enter detailed setup instructions"
-                  minHeight={100}
-                  disabled={disabled}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                  Setup Video URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={formData.preShowSetupVideo}
-                  onChange={(e) => setFormData({ ...formData, preShowSetupVideo: e.target.value })}
-                  placeholder="Enter video URL (YouTube, Vimeo, etc.)"
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  disabled={disabled}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Transport Information</div>
-          <div className="space-y-4">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={formData.hasOwnShippingCrate}
-                onChange={(e) => setFormData({ ...formData, hasOwnShippingCrate: e.target.checked })}
-                className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
-                disabled={disabled}
-              />
-              <span className="text-[var(--text-secondary)]">Has dedicated shipping crate</span>
-            </label>
-
-            {formData.hasOwnShippingCrate && (
-              <WysiwygEditor
-                value={formData.shippingCrateDetails || ''}
-                onChange={(value) => setFormData({ ...formData, shippingCrateDetails: value })}
-                placeholder="Enter shipping crate details and dimensions"
-                minHeight={80}
-                disabled={disabled}
-              />
-            )}
-
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={formData.requiresSpecialTransport}
-                onChange={(e) => setFormData({ ...formData, requiresSpecialTransport: e.target.checked })}
-                className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
-                disabled={disabled}
-              />
-              <span className="text-[var(--text-secondary)]">Requires special transport</span>
-            </label>
-
-            {formData.requiresSpecialTransport && (
-              <div className="space-y-4">
-                <WysiwygEditor
-                  value={formData.transportNotes || ''}
-                  onChange={(value) => setFormData({ ...formData, transportNotes: value })}
-                  placeholder="Enter special transport requirements"
-                  minHeight={80}
-                  disabled={disabled}
-                />
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                    Travel Weight ({formData.weightUnit})
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={formData.travelWeight || ''}
-                    onChange={(e) => setFormData({ ...formData, travelWeight: e.target.value ? Number(e.target.value) : undefined })}
-                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    placeholder={`Enter weight in ${formData.weightUnit}`}
-                    disabled={disabled}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Modifications</div>
-          <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={formData.hasBeenModified}
-              onChange={(e) => setFormData({ ...formData, hasBeenModified: e.target.checked })}
-              className="form-checkbox h-4 w-4 text-primary bg-[var(--input-bg)] border-[var(--border-color)] rounded focus:ring-primary"
-              disabled={disabled}
-            />
-            <span className="text-[var(--text-secondary)]">Prop has been modified</span>
-          </label>
-
-          {formData.hasBeenModified && (
-            <div className="space-y-4">
-              <WysiwygEditor
-                value={formData.modificationDetails || ''}
-                onChange={(value) => setFormData({ ...formData, modificationDetails: value })}
-                placeholder="Enter modification details"
-                minHeight={100}
-                disabled={disabled}
-              />
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                  Modification Date
-                </label>
-                <input
-                  type="date"
-                  value={formData.lastModifiedAt || ''}
-                  onChange={(e) => setFormData({ ...formData, lastModifiedAt: e.target.value })}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  disabled={disabled}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Lifecycle Status */}
-        <div className="space-y-4">
-          <div className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wider">Lifecycle Status</div>
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-              Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as 'confirmed' | 'loaned_out' | 'damaged_awaiting_repair' | 'out_for_repair' | 'confirmed' })}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-              disabled={disabled}
-            >
-              <option value="confirmed">Confirmed</option>
-              <option value="loaned_out">Loaned Out</option>
-              <option value="damaged_awaiting_repair">Damaged Awaiting Repair</option>
-              <option value="out_for_repair">Out for Repair</option>
-            </select>
-          </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-              Status Notes
-            </label>
-            <textarea
-              value={formData.statusNotes || ''}
-              onChange={(e) => setFormData({ ...formData, statusNotes: e.target.value })}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-              placeholder="Notes about the current status"
-              rows={3}
-              disabled={disabled}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-              Current Location
+            <label htmlFor="condition" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              Condition
             </label>
             <input
               type="text"
-              value={formData.currentLocation || ''}
-              onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-              placeholder="Where is this prop currently located?"
+              id="condition"
+              value={formData.condition ?? ''}
+              onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+              className={inputStyles}
+              placeholder="e.g., New, Used, Needs Repair"
               disabled={disabled}
             />
           </div>
 
-          {formData.status === 'loaned_out' && (
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Expected Return Date
-              </label>
-              <input
-                type="date"
-                value={formData.expectedReturnDate || ''}
-                onChange={(e) => setFormData({ ...formData, expectedReturnDate: e.target.value })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-                disabled={disabled}
-              />
-            </div>
-          )}
+          <div>
+            <label htmlFor="materials" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              Materials <span className="text-xs text-gray-400">(comma-separated)</span>
+            </label>
+            <input
+              type="text"
+              id="materials"
+              value={(formData.materials || []).join(', ')}
+              onChange={handleMaterialsChange}
+              className={inputStyles}
+              placeholder="e.g., Wood, Metal, Plastic"
+              disabled={disabled}
+            />
+          </div>
 
-          {(formData.status === 'damaged_awaiting_repair' || formData.status === 'out_for_repair') && (
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Repair Priority
-              </label>
-              <select
-                value={formData.repairPriority || 'medium'}
-                onChange={(e) => setFormData({ ...formData, repairPriority: e.target.value as 'low' | 'medium' | 'high' | 'urgent' })}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-                disabled={disabled}
-              >
-                <option value="low">Low Priority</option>
-                <option value="medium">Medium Priority</option>
-                <option value="high">High Priority</option>
-                <option value="urgent">Urgent</option>
-              </select>
-            </div>
-          )}
+          <div>
+            <label htmlFor="lastModifiedAt" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              Last Modified Date
+            </label>
+            <input
+              type="date"
+              id="lastModifiedAt"
+              value={formData.lastModifiedAt || ''}
+              onChange={(e) => setFormData({ ...formData, lastModifiedAt: e.target.value })}
+              className={inputStyles}
+              disabled={disabled}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Fieldset: Dimensions & Weight */}
+      <div className={fieldsetStyles}>
+        <h3 className={legendStyles}>Dimensions & Weight</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Dimensions */}
+          <div>
+             <label htmlFor="length" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Length</label>
+             <input type="number" id="length" value={formData.length ?? ''} onChange={(e) => setFormData({ ...formData, length: Number(e.target.value) })} className={inputStyles} placeholder="L" disabled={disabled} />
+          </div>
+           <div>
+             <label htmlFor="width" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Width</label>
+             <input type="number" id="width" value={formData.width ?? ''} onChange={(e) => setFormData({ ...formData, width: Number(e.target.value) })} className={inputStyles} placeholder="W" disabled={disabled} />
+           </div>
+           <div>
+             <label htmlFor="height" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Height</label>
+             <input type="number" id="height" value={formData.height ?? ''} onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })} className={inputStyles} placeholder="H" disabled={disabled} />
+           </div>
+           <div>
+             <label htmlFor="depth" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Depth</label>
+             <input type="number" id="depth" value={formData.depth ?? ''} onChange={(e) => setFormData({ ...formData, depth: Number(e.target.value) })} className={inputStyles} placeholder="D" disabled={disabled} />
+           </div>
+           <div className="md:col-span-2">
+             <label htmlFor="unit" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Dimension Unit</label>
+             <select id="unit" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value as DimensionUnit })} className={selectStyles} disabled={disabled}>
+               {dimensionUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+             </select>
+           </div>
+          {/* Weight */}
+          <div className="md:col-span-1">
+            <label htmlFor="weight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight</label>
+            <input type="number" id="weight" value={formData.weight ?? ''} onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })} className={inputStyles} placeholder="Weight" disabled={disabled} />
+          </div>
+          <div className="md:col-span-2">
+            <label htmlFor="weightUnit" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight Unit</label>
+            <select id="weightUnit" value={formData.weightUnit} onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' | 'g' })} className={selectStyles} disabled={disabled}>
+               {weightUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      {/* Fieldset: Source & Acquisition - ADD sourceDetails */}
+      <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Source & Acquisition</h3>
+         <div className="space-y-4">
+            {/* Source Select */}
+            <div>
+               <label htmlFor="source" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Source</label>
+               <select id="source" value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value as any })} className={selectStyles} disabled={disabled}>
+                  <option value="bought">Bought</option>
+                  <option value="rented">Rented</option>
+                  <option value="made">Made</option>
+                  <option value="borrowed">Borrowed</option>
+                  <option value="owned">Owned</option>
+                  {/* Add other sources as needed */} 
+               </select>
+            </div>
+            
+            {/* Source Details Input */}
+            <div>
+               <label htmlFor="sourceDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                 Source Details <span className="text-xs text-gray-400">(Vendor, Builder, etc.)</span>
+               </label>
+               <input
+                 type="text"
+                 id="sourceDetails"
+                 value={formData.sourceDetails || ''}
+                 onChange={(e) => setFormData({ ...formData, sourceDetails: e.target.value })}
+                 className={inputStyles}
+                 placeholder="Enter source details"
+                 disabled={disabled}
+               />
+             </div>
+
+            {/* Conditional Rental Fields */}
+            {formData.source === 'rented' && (
+              <>
+                <div>
+                  <RequiredLabel>Rental Source</RequiredLabel>
+                  <input type="text" value={formData.rentalSource ?? ''} onChange={(e) => setFormData({ ...formData, rentalSource: e.target.value })} className={inputStyles} required disabled={disabled} />
+                </div>
+                 <div>
+                   <RequiredLabel>Return Due Date</RequiredLabel>
+                   <input type="date" value={formData.rentalDueDate ?? ''} onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })} className={inputStyles} required disabled={disabled} />
+                 </div>
+              </>
+            )}
+
+            {/* Price */}
+             <div>
+               <label htmlFor="price" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Price/Value (€)</label>
+               <input type="number" id="price" value={formData.price ?? ''} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })} className={inputStyles} placeholder="Enter price or estimated value" disabled={disabled} />
+             </div>
+         </div>
+      </div>
+
+       {/* Fieldset: Show Context */}
+       {show && (
+          <div className={fieldsetStyles}>
+             <h3 className={legendStyles}>Show Context (for {show.name})</h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                   <label htmlFor="act" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Act</label>
+                   <select id="act" value={formData.act ?? ''} onChange={(e) => setFormData({ ...formData, act: Number(e.target.value) })} className={selectStyles} disabled={disabled}>
+                      <option value="">Select Act</option>
+                      {(() => { console.log(`[PropForm] Attempting to map show.acts for Act dropdown. show.acts:`, show.acts); return null; })()}
+                      {show.acts?.map(act => <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>)} 
+                   </select>
+                </div>
+                 <div>
+                   <label htmlFor="scene" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Scene</label>
+                    <select id="scene" value={formData.scene ?? ''} onChange={(e) => setFormData({ ...formData, scene: Number(e.target.value) })} className={selectStyles} disabled={!formData.act || disabled}>
+                       <option value="">Select Scene</option>
+                       {(() => { console.log(`[PropForm] Attempting to map scenes for selected Act (${formData.act}). Found Act:`, show.acts?.find(a => a.id === formData.act)); return null; })()}
+                       {show.acts?.find(a => a.id === formData.act)?.scenes?.map(scene => <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>)} 
+                    </select>
+                 </div>
+                  <div className={checkboxContainerStyles + " md:col-span-2"}>
+                     <input type="checkbox" id="isMultiScene" checked={!!formData.isMultiScene} onChange={(e) => setFormData({ ...formData, isMultiScene: e.target.checked })} className="rounded" disabled={disabled} />
+                     <label htmlFor="isMultiScene" className={checkboxLabelStyles}>Used in multiple scenes?</label>
+                  </div>
+             </div>
+          </div>
+       )}
+
+      {/* Fieldset: Handling & Usage - MOVE transport/shipping checkboxes out */}
+       <div className={fieldsetStyles}>
+          <h3 className={legendStyles}>Handling & Usage</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+             {/* Checkboxes - REMOVE transport/shipping related ones */}
+             <div className={checkboxContainerStyles}><input type="checkbox" id="isConsumable" checked={!!formData.isConsumable} onChange={(e) => setFormData({ ...formData, isConsumable: e.target.checked })} disabled={disabled} /><label htmlFor="isConsumable" className={checkboxLabelStyles}>Consumable</label></div>
+             <div className={checkboxContainerStyles}><input type="checkbox" id="isBreakable" checked={!!formData.isBreakable} onChange={(e) => setFormData({ ...formData, isBreakable: e.target.checked })} disabled={disabled} /><label htmlFor="isBreakable" className={checkboxLabelStyles}>Breakable/Fragile</label></div>
+             <div className={checkboxContainerStyles}><input type="checkbox" id="hasUsageInstructions" checked={!!formData.hasUsageInstructions} onChange={(e) => setFormData({ ...formData, hasUsageInstructions: e.target.checked })} disabled={disabled} /><label htmlFor="hasUsageInstructions" className={checkboxLabelStyles}>Has Usage Instructions</label></div>
+             <div className={checkboxContainerStyles}><input type="checkbox" id="hasMaintenanceNotes" checked={!!formData.hasMaintenanceNotes} onChange={(e) => setFormData({ ...formData, hasMaintenanceNotes: e.target.checked })} disabled={disabled} /><label htmlFor="hasMaintenanceNotes" className={checkboxLabelStyles}>Has Maintenance Notes</label></div>
+             <div className={checkboxContainerStyles}><input type="checkbox" id="hasSafetyNotes" checked={!!formData.hasSafetyNotes} onChange={(e) => setFormData({ ...formData, hasSafetyNotes: e.target.checked })} disabled={disabled} /><label htmlFor="hasSafetyNotes" className={checkboxLabelStyles}>Has Safety Notes</label></div>
+             <div className={checkboxContainerStyles}><input type="checkbox" id="isHazardous" checked={!!formData.isHazardous} onChange={(e) => setFormData({ ...formData, isHazardous: e.target.checked })} disabled={disabled} /><label htmlFor="isHazardous" className={checkboxLabelStyles}>Hazardous Material</label></div>
+             {/* -- REMOVED requiresPreShowSetup, hasOwnShippingCrate, requiresSpecialTransport, travelsUnboxed -- */} 
+             <div className={checkboxContainerStyles}><input type="checkbox" id="hasBeenModified" checked={!!formData.hasBeenModified} onChange={(e) => setFormData({ ...formData, hasBeenModified: e.target.checked })} disabled={disabled} /><label htmlFor="hasBeenModified" className={checkboxLabelStyles}>Has Been Modified</label></div>
+              
+             {/* Handedness Select */}
+             <div className="md:col-span-2 mt-4">
+                <label htmlFor="handedness" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Handedness</label>
+                <select id="handedness" value={formData.handedness ?? 'either'} onChange={(e) => setFormData({ ...formData, handedness: e.target.value as any })} className={selectStyles} disabled={disabled}>
+                   <option value="either">Either / Not Applicable</option>
+                   <option value="left">Left-Handed</option>
+                   <option value="right">Right-Handed</option>
+                </select>
+             </div>
+          </div>
+
+          {/* Conditional Rich Text Editors / Textareas */}
+          {formData.hasUsageInstructions && ( <div className={conditionalFieldStyles}> {/* ... Usage Instructions WYSIWYG ... */} </div> )}
+          {formData.hasMaintenanceNotes && ( <div className={conditionalFieldStyles}> {/* ... Maintenance Notes WYSIWYG ... */} </div> )}
+          {formData.hasSafetyNotes && ( <div className={conditionalFieldStyles}> {/* ... Safety Notes WYSIWYG ... */} </div> )}
+          {formData.hasBeenModified && ( <div className={conditionalFieldStyles}> {/* ... Modification Details textarea ... */} </div> )}
+       </div>
+
+       {/* --- NEW Fieldset: Pre-show Setup --- */}
+       <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Pre-show Setup</h3>
+         <div className={checkboxContainerStyles}>
+           <input type="checkbox" id="requiresPreShowSetup" checked={!!formData.requiresPreShowSetup} onChange={(e) => setFormData({ ...formData, requiresPreShowSetup: e.target.checked })} disabled={disabled} />
+           <label htmlFor="requiresPreShowSetup" className={checkboxLabelStyles}>Requires Pre-Show Setup</label>
+         </div>
+         {formData.requiresPreShowSetup && (
+           <div className="mt-4 space-y-4 pl-6 border-l-2 border-gray-600">
+             <div>
+               <label htmlFor="preShowSetupDuration" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                 Setup Duration (minutes)
+               </label>
+               <input
+                 type="number"
+                 id="preShowSetupDuration"
+                 value={formData.preShowSetupDuration ?? ''}
+                 onChange={(e) => setFormData({ ...formData, preShowSetupDuration: Number(e.target.value) || undefined })}
+                 className={inputStyles}
+                 placeholder="Enter setup time in minutes"
+                 min="0"
+                 disabled={disabled}
+               />
+             </div>
+             <div>
+               <label htmlFor="preShowSetupNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                 Setup Instructions
+               </label>
+               {/* Consider using WysiwygEditor here too if needed */}
+               <textarea
+                 id="preShowSetupNotes"
+                 value={formData.preShowSetupNotes || ''}
+                 onChange={(e) => setFormData({ ...formData, preShowSetupNotes: e.target.value })}
+                 className={inputStyles + " min-h-[100px]"}
+                 placeholder="Enter setup instructions"
+                 disabled={disabled}
+               />
+             </div>
+             <div>
+               <label htmlFor="preShowSetupVideo" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                 Setup Video URL (Optional)
+               </label>
+               <input
+                 type="url"
+                 id="preShowSetupVideo"
+                 value={formData.preShowSetupVideo || ''}
+                 onChange={(e) => setFormData({ ...formData, preShowSetupVideo: e.target.value })}
+                 className={inputStyles}
+                 placeholder="Enter video URL (YouTube, Vimeo, etc.)"
+                 disabled={disabled}
+               />
+             </div>
+           </div>
+         )}
+       </div>
+
+       {/* --- NEW Fieldset: Transport Information --- */}
+       <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Transport Information</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+           <div className={checkboxContainerStyles}><input type="checkbox" id="hasOwnShippingCrate" checked={!!formData.hasOwnShippingCrate} onChange={(e) => setFormData({ ...formData, hasOwnShippingCrate: e.target.checked })} disabled={disabled} /><label htmlFor="hasOwnShippingCrate" className={checkboxLabelStyles}>Has Own Shipping Crate</label></div>
+           <div className={checkboxContainerStyles}><input type="checkbox" id="requiresSpecialTransport" checked={!!formData.requiresSpecialTransport} onChange={(e) => setFormData({ ...formData, requiresSpecialTransport: e.target.checked })} disabled={disabled} /><label htmlFor="requiresSpecialTransport" className={checkboxLabelStyles}>Requires Special Transport</label></div>
+           <div className={checkboxContainerStyles}><input type="checkbox" id="travelsUnboxed" checked={!!formData.travelsUnboxed} onChange={(e) => setFormData({ ...formData, travelsUnboxed: e.target.checked })} disabled={disabled} /><label htmlFor="travelsUnboxed" className={checkboxLabelStyles}>Travels Unboxed</label></div>
+         </div>
+         <div className="mt-4">
+             <label htmlFor="travelWeight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+               Travel Weight ({formData.weightUnit || 'kg'}) {/* Use selected weight unit */}
+             </label>
+             <input
+               type="number"
+               id="travelWeight"
+               value={formData.travelWeight ?? ''}
+               onChange={(e) => setFormData({ ...formData, travelWeight: Number(e.target.value) || undefined })}
+               className={inputStyles}
+               placeholder={`Enter weight in ${formData.weightUnit || 'kg'}`}
+               min="0"
+               disabled={disabled}
+             />
+         </div>
+       </div>
+
+      {/* Fieldset: Images */}
+      <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Images</h3>
+         <ImageUpload 
+            onImagesChange={(newImages) => setFormData({ ...formData, images: newImages })}
+            currentImages={formData.images || []}
+            disabled={disabled}
+         />
+         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {(formData.images || []).map((img) => (
+              <div key={img.id} className="relative group">
+                <img src={img.url} alt={img.caption || 'Prop Image'} className="w-full h-32 object-cover rounded-md" />
+                <button type="button" onClick={() => handleRemoveImage(img.id)} className="absolute top-1 right-1 bg-red-600/80 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Remove Image">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+         </div>
+      </div>
+
+       {/* Fieldset: Digital Assets */}
+       <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Digital Assets (Manuals, Schematics, etc.)</h3>
+         <DigitalAssetForm 
+            onChange={(newAssets) => setFormData({ ...formData, digitalAssets: newAssets })}
+            assets={formData.digitalAssets || []}
+            disabled={disabled}
+         />
+          <div className="mt-4 space-y-2">
+            {(formData.digitalAssets || []).map((asset) => (
+              <div key={asset.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded">
+                <a href={asset.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate pr-2">{asset.name} ({asset.type})</a>
+                <button type="button" onClick={() => handleRemoveDigitalAsset(asset.id)} className="text-red-500 hover:text-red-400 flex-shrink-0" aria-label="Remove Asset">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+       </div>
+
+       {/* Fieldset: Videos */}
+       <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Videos (Links)</h3>
+         <VideoAssetForm
+            onChange={(newVideos: DigitalAsset[]) => setFormData({ ...formData, videos: newVideos })}
+            assets={(formData.videos as DigitalAsset[]) || []}
+            disabled={disabled}
+         />
+          {/* Display Added Videos */} 
+          <div className="mt-4 space-y-2">
+            {((formData.videos as DigitalAsset[]) || []).map((video) => (
+              <div key={video.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded">
+                 <div className="flex items-center space-x-2 flex-1 min-w-0">
+                    <Video size={16} className="text-gray-400 flex-shrink-0"/>
+                    <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate pr-2">
+                       {video.name || video.url}
+                    </a>
+                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveVideoAsset(video.id)}
+                  className="text-red-500 hover:text-red-400 flex-shrink-0"
+                  aria-label="Remove Video Link"
+                  disabled={disabled}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+       </div>
+
+       {/* --- NEW Fieldset: Lifecycle Status & Location --- */}
+       <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Lifecycle Status & Location</h3>
+         <div className="space-y-4">
+           {/* Status Select */}
+           <div>
+             <label htmlFor="status" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Status</label>
+             <select id="status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as PropLifecycleStatus })} className={selectStyles} required disabled={disabled}>
+               {propLifecycleStatuses.map((status) => ( <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option> ))} 
+             </select>
+           </div>
+           {/* Status Notes Textarea */}
+           <div>
+             <label htmlFor="statusNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+               Status Notes
+             </label>
+             <textarea
+               id="statusNotes"
+               value={formData.statusNotes || ''}
+               onChange={(e) => setFormData({ ...formData, statusNotes: e.target.value })}
+               className={inputStyles + " min-h-[80px]"}
+               placeholder="Add notes about the current status"
+               disabled={disabled}
+             />
+           </div>
+           {/* Storage Location Input - Moved and Relabeled */}
+           <div>
+             <label htmlFor="location" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+               Storage Location
+             </label>
+             <input
+               type="text"
+               id="location"
+               value={formData.location || ''}
+               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+               className={inputStyles}
+               placeholder="e.g., Shelf A-3, Warehouse B"
+               disabled={disabled}
+             />
+           </div>
+           {/* Current Location Input */}
+           <div>
+             <label htmlFor="currentLocation" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+               Current Location
+             </label>
+             <input
+               type="text"
+               id="currentLocation"
+               value={formData.currentLocation || ''}
+               onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
+               className={inputStyles}
+               placeholder="e.g., Onstage SL, Rehearsal Room 1"
+               disabled={disabled}
+             />
+           </div>
+         </div>
+       </div>
+
+      {/* Fieldset: Tags */}
+       <div className={fieldsetStyles}>
+          <h3 className={legendStyles}>Tags</h3>
+          {/* TODO: Implement Tag Input Component */}
+          <p className="text-gray-400 italic">Tag input component not implemented yet.</p>
+          <div className="flex flex-wrap gap-2 mt-2">
+             {(formData.tags || []).map((tag, index) => (
+                <span key={index} className="bg-gray-600 text-gray-200 px-2 py-1 rounded-full text-xs">
+                   {tag}
+                   {/* Add remove button here */} 
+                </span>
+             ))}
+          </div>
+       </div>
+       
+       {/* Add other fieldsets as needed: Materials, Status History, Maintenance History, Custom Fields */} 
+
+      {/* Submit/Cancel Buttons */}
+      <div className="flex justify-end gap-4 mt-8">
+        {onCancel && (
+          <button 
+            type="button"
+            onClick={onCancel} 
+            className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+            disabled={disabled}
+          >
+            Cancel
+          </button>
+        )}
+        <button 
+          type="submit" 
+          className="bg-primary hover:bg-primary-dark text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+          disabled={disabled}
+        >
+          {disabled ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+          {mode === 'create' ? 'Create Prop' : 'Update Prop'}
+        </button>
+      </div>
+
     </form>
   );
 }

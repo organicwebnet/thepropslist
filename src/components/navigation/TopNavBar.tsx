@@ -31,11 +31,7 @@ export const TopNavBar = () => {
       <View className="flex-row items-center space-x-4">
         <Text className="text-xl font-bold text-white mr-6">PropsBible</Text>
         {/* Navigation Links */}
-        <Link href="/" asChild>
-          <TouchableOpacity>
-            <Text className={`${linkStyle} ${textStyle}`}>Home</Text>
-          </TouchableOpacity>
-        </Link>
+        
         <Link href="/shows" asChild>
           <TouchableOpacity>
             <Text className={`${linkStyle} ${textStyle}`}>Shows</Text>

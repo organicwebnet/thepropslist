@@ -8,9 +8,10 @@ import { useFirebase } from '@/contexts/FirebaseContext';
 interface ImageUploadProps {
   onImagesChange: (images: PropImage[]) => void;
   currentImages?: PropImage[];
+  disabled?: boolean;
 }
 
-export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadProps) {
+export function ImageUpload({ onImagesChange, currentImages = [], disabled = false }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [imageLink, setImageLink] = useState('');
@@ -20,6 +21,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
   const { service } = useFirebase();
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
     const files = event.target.files;
     if (!files?.length) return;
 
@@ -60,6 +62,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
   };
 
   const handleRemoveImage = (imageId: string) => {
+    if (disabled) return;
     const newImages = currentImages.filter(img => img.id !== imageId);
     
     if (newImages.length > 0 && !newImages.some(img => img.isMain)) {
@@ -70,6 +73,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
   };
 
   const handleSetMain = (id: string) => {
+    if (disabled) return;
     const newImages = currentImages.map(img => ({
       ...img,
       isMain: img.id === id
@@ -101,6 +105,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
 
   const handleLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (disabled) return;
     setPreviewError(null);
     
     if (!imageLink.includes('google.com')) {
@@ -144,6 +149,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="text-primary-light hover:text-primary-light/80 text-sm flex items-center"
+                disabled={disabled || isUploading}
               >
                 <ImagePlus className="h-4 w-4 mr-1" />
                 Upload
@@ -153,6 +159,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
                 type="button"
                 onClick={() => setShowLinkInput(true)}
                 className="text-primary-light hover:text-primary-light/80 text-sm flex items-center"
+                disabled={disabled || isUploading}
               >
                 <Link className="h-4 w-4 mr-1" />
                 Add Link
@@ -171,10 +178,11 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
               onChange={(e) => setImageLink(e.target.value)}
               placeholder="Paste Google Drive or Photos link"
               className="flex-1 bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              disabled={disabled || isPreviewLoading}
             />
             <button
               type="submit"
-              disabled={isPreviewLoading}
+              disabled={isPreviewLoading || disabled}
               className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50 flex items-center"
             >
               {isPreviewLoading ? (
@@ -226,17 +234,20 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
               <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
                 {!image.isMain && (
                   <button
-                    onClick={() => handleSetMain(image.id)}
-                    className="p-2 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors"
+                    onClick={(e) => { e.stopPropagation(); handleSetMain(image.id); }}
+                    className={`p-2 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors ${disabled ? 'hidden' : ''}`}
                     title="Set as main image"
+                    disabled={disabled}
                   >
                     <ImageIcon className="h-4 w-4" />
                   </button>
                 )}
                 <button
-                  onClick={() => handleRemoveImage(image.id)}
-                  className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleRemoveImage(image.id); }}
+                  className={`p-2 bg-red-600/80 text-white rounded-full hover:bg-red-700 transition-colors ${disabled ? 'hidden' : ''}`}
                   title="Remove image"
+                  disabled={disabled}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -256,6 +267,7 @@ export function ImageUpload({ onImagesChange, currentImages = [] }: ImageUploadP
               placeholder="Add caption..."
               className="w-full bg-[#1A1A1A] border border-gray-800 rounded px-2 py-1 text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary"
               onClick={(e) => e.stopPropagation()}
+              disabled={disabled}
             />
           </div>
         ))}

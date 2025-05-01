@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { ActivityIndicator, Text, View, Button } from 'react-native'; // Correct import for ActivityIndicator and Button
 // Import PackingBox/PackedProp from correct sub-directory
 import { PackingBox, PackedProp } from '../../types/packing'; 
 import { Show } from '../../types'; // Keep Show from main types
 import { Prop } from '@/shared/types/props'; // Import correct Prop type
 import { PackingBoxCard } from './PackingBoxCard';
 import { PropSelector } from './PropSelector';
-import { X, Clock, HandCoins } from 'lucide-react';
+import { X, Clock, HandCoins, Package, PackageOpen } from 'lucide-react'; 
 import { Timestamp } from 'firebase/firestore';
 // Add import for PackingContainer used in casting
 import { PackingContainer } from '../../shared/services/inventory/packListService';
@@ -39,9 +40,8 @@ export function PackingList({
 }: PackingListProps) {
   const [currentBoxName, setCurrentBoxName] = useState('');
   const [selectedProps, setSelectedProps] = useState<PropInstance[]>([]); 
-  const [isCreating, setIsCreating] = useState(false);
-  
   const [propInstances, setPropInstances] = useState<PropInstance[]>([]); 
+  const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
 
   useEffect(() => {
     const instances: PropInstance[] = [];
@@ -89,23 +89,50 @@ export function PackingList({
     setSelectedProps(selectedProps.filter(p => p.instanceId !== instanceId));
   };
 
-  const handleCreateBox = async () => {
+  // --- Combined Handler for Create/Update ---
+  const handleSaveBox = async () => {
     if (selectedProps.length === 0 || !currentBoxName) return;
 
-    const firstProp = selectedProps[0];
+    // Map selected PropInstances back to PackedProp format
     const packedProps: PackedProp[] = selectedProps.map(prop => ({
       propId: prop.id,
       name: prop.name ?? 'Unnamed Prop',
-      quantity: 1, 
+      quantity: 1, // Assuming quantity 1 per instance for now
       weight: prop.weight ?? 0,
-      weightUnit: prop.weightUnit ?? 'lb', 
-      isFragile: isFragile(prop)
+      weightUnit: prop.weightUnit ?? 'lb',
+      isFragile: isFragile(prop) // Reuse existing isFragile logic
     }));
 
-    // Use act/scene from the prop instance if available
-    await onCreateBox(packedProps, firstProp?.act ?? 0, firstProp?.scene ?? 0); 
+    if (editingBoxId) {
+      // --- Update Existing Box ---
+      console.log(`Updating box: ${editingBoxId}`);
+      try {
+        await onUpdateBox(editingBoxId, { name: currentBoxName, props: packedProps });
+        console.log(`Box ${editingBoxId} updated successfully.`);
+      } catch (error) {
+        console.error(`Error updating box ${editingBoxId}:`, error);
+        // TODO: Add user feedback for error
+        return; // Don't clear form on error
+      }
+    } else {
+      // --- Create New Box ---
+      console.log(`Creating new box: ${currentBoxName}`);
+      // Use act/scene from the first prop instance if available (as before)
+      const firstProp = selectedProps[0];
+      try {
+        await onCreateBox(packedProps, firstProp?.act ?? 0, firstProp?.scene ?? 0);
+        console.log(`Box ${currentBoxName} created successfully.`);
+      } catch (error) {
+        console.error(`Error creating box ${currentBoxName}:`, error);
+         // TODO: Add user feedback for error
+        return; // Don't clear form on error
+      }
+    }
+
+    // Reset form and editing state on success
     setSelectedProps([]);
     setCurrentBoxName('');
+    setEditingBoxId(null);
   };
 
   // Calculate total weight of selected props
@@ -149,6 +176,40 @@ export function PackingList({
     }
     // Add cases for 'bought', 'made', 'owned', 'created' if needed
     return null;
+  };
+
+  // --- Update handler for Edit Box ---
+  const handleEditBox = (box: PackingBox) => {
+    console.log("Editing box:", box.id, box.name);
+    setEditingBoxId(box.id);
+    setCurrentBoxName(box.name ?? '');
+
+    // Find the corresponding PropInstance objects for the props in the box
+    const propsToSelect: PropInstance[] = [];
+    box.props?.forEach(packedProp => {
+      const matchingInstances = propInstances.filter(inst => inst.id === packedProp.propId);
+      for (let i = 0; i < (packedProp.quantity || 1); i++) {
+        const instanceId = `${packedProp.propId}-${i}`;
+        // Find the specific instance
+        const instanceToAdd = matchingInstances.find(inst => inst.instanceId === instanceId);
+        if (instanceToAdd) {
+          // Only add if not already selected (handles potential duplicates if logic is complex)
+          if (!propsToSelect.some(p => p.instanceId === instanceId)) {
+             propsToSelect.push(instanceToAdd);
+          }
+        } else {
+          console.warn(`Could not find matching instance for packed prop: ${packedProp.propId}, instance ${instanceId}`);
+        }
+      }
+    });
+    setSelectedProps(propsToSelect);
+  };
+
+  // --- Add handler for Cancel Edit ---
+  const handleCancelEdit = () => {
+    setEditingBoxId(null);
+    setCurrentBoxName('');
+    setSelectedProps([]);
   };
 
   return (
@@ -198,10 +259,17 @@ export function PackingList({
         </div>
       </div>
 
-      {/* Right column - Current box */}
-      <div className="lg:sticky lg:top-8 space-y-6">
+      {/* Right column - Boxes list and creation/edit form */}
+      <div className="space-y-6">
+        {/* Box Creation/Edit Form */}
         <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6 space-y-6">
-          <h2 className="text-xl font-semibold text-gray-200">Current Box</h2>
+          {/* Wrap title and icon in a flex container */}
+          <div className="flex items-center gap-2">
+             <PackageOpen className="h-5 w-5 text-gray-300" /> {/* Add Icon */}
+             <h2 className="text-xl font-semibold text-gray-200">
+               {editingBoxId ? 'Edit Box' : 'Create New Box'}
+             </h2>
+          </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">
@@ -250,41 +318,59 @@ export function PackingList({
             )}
           </div>
 
-          {selectedProps.length > 0 && (
-            <div className="border-t border-gray-700 pt-4 space-y-2 text-sm">
-              <div className="flex justify-between text-gray-400">
-                <span>Total Items:</span>
-                <span>{selectedProps.length}</span>
-              </div>
-              <div className={`flex justify-between ${isBoxHeavy ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-                <span>Estimated Weight:</span>
-                <span>{totalWeight.toFixed(2)} kg {isBoxHeavy && '(Heavy)'}</span>
-              </div>
+          <div className="border-t border-gray-700 pt-4 space-y-2 text-sm">
+            <div className="flex justify-between text-gray-400">
+              <span>Total Items:</span>
+              <span>{selectedProps.length}</span>
             </div>
-          )}
+            <div className={`flex justify-between ${isBoxHeavy ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+              <span>Estimated Weight:</span>
+              <span>{totalWeight.toFixed(2)} kg {isBoxHeavy && '(Heavy)'}</span>
+            </div>
+          </div>
 
-          <button
-            onClick={handleCreateBox}
-            disabled={selectedProps.length === 0 || !currentBoxName}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Create Box
-          </button>
+          <div className="flex gap-4">
+            {editingBoxId && (
+              <button
+                onClick={handleCancelEdit}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
+              >
+                 Cancel Edit
+               </button>
+            )}
+            <button
+              onClick={handleSaveBox}
+              disabled={selectedProps.length === 0 || !currentBoxName}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+               <Package className="h-5 w-5 text-gray-300" />{editingBoxId ? 'Update Box' : 'Create Box'}
+            </button>
+          </div>
         </div>
         
-        {/* Existing Boxes */}
-        <div className="space-y-4">
+        {/* Existing Boxes List */}
+        <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold text-gray-200">Packed Boxes</h2>
-          {boxes.map((box) => (
-            <PackingBoxCard
-              key={box.id}
-              container={box as any as PackingContainer}
-              packListId={show?.id ?? 'unknown-show'}
-              baseUrl={window.location.origin}
-              onUpdateNotes={(notes) => onUpdateBox(box.id, { notes: notes })}
-              onError={(error) => console.error('PackingBoxCard Error:', error)}
-            />
+        </div>
+        <div className="space-y-4">
+          {boxes
+            .filter(box => box.id !== editingBoxId)
+            .map((box) => (
+              <PackingBoxCard
+                key={box.id}
+                box={box}
+                onEdit={handleEditBox}
+                onDelete={onDeleteBox}
+              />
           ))}
+          {boxes.filter(box => box.id !== editingBoxId).length === 0 && !isLoading && (
+             <p className="text-gray-400 italic text-center py-4">No boxes packed yet{editingBoxId ? ' (excluding the one being edited)' : ''}.</p>
+          )}
+          {isLoading && (
+            <div className="flex justify-center py-4">
+              <ActivityIndicator size="small" color="#9CA3AF" />
+            </div>
+           )}
         </div>
       </div>
     </div>

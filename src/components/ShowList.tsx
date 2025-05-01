@@ -38,21 +38,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
       {shows.map((show) => (
         <View key={show.id} style={styles.showItemContainer}>
           {editingId === show.id ? (
-            // Comment out the potentially web-specific ShowForm
-            /*
-            <ShowForm 
-              onSubmit={handleEditSubmit}
-              initialData={{
-                ...show,
-                venues: show.venues || [],
-                isTouringShow: show.isTouringShow || false,
-                contacts: show.contacts || []
-              }}
-              mode="edit"
-              onCancel={() => setEditingId(null)}
-            />
-            */
-            // Add a placeholder
+            
             <View style={styles.placeholderContainer}>
               <Text style={styles.placeholderText}>Show Form Placeholder</Text>
               <TouchableOpacity onPress={() => setEditingId(null)} style={styles.placeholderButton}>
@@ -72,7 +58,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
               <View style={styles.cardHeader}>
                 <View style={styles.iconAndTitle}>
                   <View style={[styles.iconBackground, selectedShowId === show.id && styles.selectedIconBackground]}>
-                    <Theater color="white" size={24} />
+                     
                   </View>
                   <View style={styles.titleContainer}>
                     <Text style={styles.titleText} numberOfLines={2}>
@@ -123,7 +109,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                     accessibilityLabel="Edit show"
                     activeOpacity={0.7}
                   >
-                    <Pencil color="#9CA3AF" size={20} />
+                     
                   </TouchableOpacity>
                   {isShowOwner(show) && onEdit && onDelete ? (
                     <TouchableOpacity
@@ -135,7 +121,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                       accessibilityLabel="Delete show"
                       activeOpacity={0.7}
                     >
-                      <Trash2 color="#9CA3AF" size={20} />
+                       
                     </TouchableOpacity>
                   ) : null}
                 </View>
