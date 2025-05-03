@@ -1,3 +1,5 @@
+import 'buffer';
+import 'text-encoding-polyfill';
 import { registerRootComponent } from 'expo';
 import React from 'react';
 import './global.css';

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { PDFViewer, BlobProvider } from '@react-pdf/renderer';
+// import { PDFViewer, BlobProvider } from '@react-pdf/renderer'; // Comment out PDF renderer imports
 import { Download, Loader2 } from 'lucide-react';
 
 import { useFirebase } from '@/contexts/FirebaseContext';
 import { useShows } from '@/contexts/ShowsContext';
 import type { Prop, Show, Act, Scene } from '@/shared/types/props';
 import type { FirebaseDocument } from '@/shared/services/firebase/types';
-import { PropListDocument } from '@/platforms/web/pdf/PropListDocument';
+// import { PropListDocument } from '@/platforms/web/pdf/PropListDocument'; // Comment out custom document
 
 // Helper to get displayable keys from Prop type (excluding complex/internal fields)
 const getDisplayablePropKeys = (): (keyof Prop)[] => {
@@ -106,6 +106,7 @@ export default function PdfPreviewPage() {
   });
   const [layout, setLayout] = useState<'portrait' | 'landscape'>('portrait');
   const [columns, setColumns] = useState<number>(1); 
+  const [imageWidthOption, setImageWidthOption] = useState<'small' | 'medium' | 'full'>('medium'); // Default to medium
   // --- End Filter/Customization State --- 
 
   const displayablePropKeys = getDisplayablePropKeys();
@@ -127,6 +128,8 @@ export default function PdfPreviewPage() {
         });
         setCheckedActs(initialActsChecked);
         setCheckedScenes(initialScenesChecked);
+        console.log('[PDF Preview] Initialized checkedActs:', initialActsChecked);
+        console.log('[PDF Preview] Initialized checkedScenes:', initialScenesChecked);
         setShowPreview(false); // Reset preview on initial load
      }
   }, [show]); // Depend on show data
@@ -157,8 +160,8 @@ export default function PdfPreviewPage() {
         propsUnsubscribe = firebaseService.listenToCollection<Prop>(
           'props',
           (propDocs: FirebaseDocument<Prop>[]) => {
-            // Extract just the data part for the PDF
             const extractedData = propDocs.map(doc => ({ id: doc.id, ...doc.data } as Prop));
+            console.log('[PDF Preview] Fetched propData:', extractedData);
             setPropData(extractedData);
             setIsLoading(false);
           },
@@ -191,14 +194,43 @@ export default function PdfPreviewPage() {
 
   // --- Filter Props based on checked Acts/Scenes --- 
   const filteredPropData = useMemo(() => {
-     // Filter based on the checked state objects
-     return propData.filter(p => {
-        const actIdStr = p.act !== undefined ? String(p.act) : null;
-        const sceneIdStr = p.scene !== undefined ? String(p.scene) : null;
+    const hasActFilters = Object.keys(checkedActs).length > 0;
+    const hasSceneFilters = Object.keys(checkedScenes).length > 0;
+
+    console.log('[PDF Preview] Filtering props. Inputs:', { 
+       propDataLength: propData.length,
+       checkedActs,
+       checkedScenes,
+       hasActFilters,
+       hasSceneFilters
+    });
+
+    // If no filters are active (e.g., show has no acts), return all props
+    if (!hasActFilters && !hasSceneFilters) {
+        console.log('[PDF Preview] No act/scene filters active, returning all props.');
+        return propData;
+    }
+
+    const filtered = propData.filter((p, index) => {
+        const actIdStr = p.act !== undefined && p.act !== null ? String(p.act) : null;
+        const sceneIdStr = p.scene !== undefined && p.scene !== null ? String(p.scene) : null;
+
+        // Determine if the prop's act/scene (if they exist) are checked
+        // Default to 'true' if the specific filter type isn't active or the prop lacks the field
+        const actPasses = !hasActFilters || !actIdStr || checkedActs[actIdStr];
+        const scenePasses = !hasSceneFilters || !sceneIdStr || checkedScenes[sceneIdStr];
+
+        // Log check for first few props for detail
+        if (index < 5) { 
+           console.log(`[PDF Preview Filter Detail] Prop ${p.id} (Act: ${actIdStr}, Scene: ${sceneIdStr}): ActPasses=${actPasses}, ScenePasses=${scenePasses}`);
+        }
         
-        // Prop must belong to a checked act and a checked scene
-        return actIdStr && checkedActs[actIdStr] && sceneIdStr && checkedScenes[sceneIdStr];
-     });
+        // Prop passes if both its relevant act and scene checks pass
+        return actPasses && scenePasses;
+    });
+
+    console.log('[PDF Preview] Filtering props complete. Result count:', filtered.length);
+    return filtered;
   }, [propData, checkedActs, checkedScenes]);
   // --- End Filter Props ---
 
@@ -304,10 +336,26 @@ export default function PdfPreviewPage() {
      columns, 
      imageCount, 
      showFilesQR, 
-     showVideosQR 
+     showVideosQR, 
+     imageWidthOption // Pass the new option
   };
   // Simplified PDF filename
   const pdfFileName = `${show?.name?.replace(/[^a-z0-9]/gi, '_') ?? 'Show'}_PropList.pdf`;
+
+  // Memoized PDF Document Component
+  const MemoizedPropListDocument = useMemo(() => (
+   <div className="text-white p-4 bg-yellow-600 rounded">PDF Document generation commented out</div> // Placeholder
+  ), [
+    show?.name, 
+    filteredPropData, 
+    layout, 
+    selectedFields, 
+    imageCount, 
+    showFilesQR, 
+    showVideosQR, 
+    columns, 
+    imageWidthOption
+  ]);
 
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
@@ -375,6 +423,21 @@ export default function PdfPreviewPage() {
            </div>
            {/* --- End Act/Scene Checkbox Filters --- */}
 
+           {/* --- Image Size --- */}
+           <div className="mb-4">
+             <label htmlFor="imageSize" className="block text-sm font-medium text-gray-300 mb-1">Image Size:</label>
+             <select
+               id="imageSize"
+               value={imageWidthOption}
+               onChange={(e) => handleOptionChange(() => setImageWidthOption(e.target.value as 'small' | 'medium' | 'full'))}
+               className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5"
+             >
+               <option value="small">Small</option>
+               <option value="medium">Medium</option>
+               <option value="full">Full Width</option>
+             </select>
+           </div>
+
            {/* --- Image Count --- */}
            <div className="mb-4">
              <label htmlFor="imageCount" className="block text-sm font-medium text-gray-300 mb-1">Images per Prop (Max 10):</label>
@@ -416,15 +479,15 @@ export default function PdfPreviewPage() {
 
            {/* Columns Options (Placeholder) */}
            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-1">Columns (Styling TBD):</label>
-              <select 
-                 value={columns} 
-                 onChange={(e) => { setColumns(Number(e.target.value)); setShowPreview(false); }}
-                 className="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg p-2.5"
+              <label htmlFor="columns" className="block text-sm font-medium text-gray-300 mb-1">Columns:</label>
+              <select
+                 id="columns"
+                 value={columns}
+                 onChange={(e) => setColumns(Number(e.target.value))}
+                 className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
               >
                 <option value={1}>1 Column</option>
                 <option value={2}>2 Columns</option>
-                <option value={3}>3 Columns</option>
               </select>
            </div>
            
@@ -453,43 +516,29 @@ export default function PdfPreviewPage() {
               disabled={showPreview} // Disable if preview is already shown
               className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
            >
-              {showPreview ? 'Preview Generated Below' : 'Generate Preview'}
+              Generate Preview
            </button>
 
-           {/* Download Button (using BlobProvider) */}
-           {showPreview && filteredPropData.length > 0 && (
-              <BlobProvider document={<PropListDocument props={filteredPropData} options={pdfOptions} showName={show.name} />}>
-                {({ blob, url, loading, error }) => {
-                  if (error) {
-                    return <p className="text-red-400 text-xs mt-2">Error creating download link.</p>;
-                  }
-                  return (
-                    <a
-                      href={url ?? '#'}
-                      download={pdfFileName}
-                      className={`w-full mt-2 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ${loading || !url ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      aria-disabled={loading || !url}
-                      onClick={(e) => { if (loading || !url) e.preventDefault(); }} // Prevent click if loading
-                    >
-                      {loading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-                      {loading ? 'Generating...' : 'Download PDF'}
-                    </a>
-                  );
-                }}
-              </BlobProvider>
-            )}
+           {/* Download Button (Placeholder) */}
+           <button
+             disabled // Disable button as functionality is removed
+             className="w-full mt-4 flex items-center justify-center gap-2 bg-gray-500 text-white font-bold py-2 px-4 rounded opacity-50 cursor-not-allowed"
+           >
+             <Download size={18} />
+             Download PDF (Disabled)
+           </button>
          </div>
 
          {/* --- Column 2/3: PDF Preview --- */}
          <div className="md:col-span-2 bg-gray-800 p-1 rounded-lg border border-gray-700 flex items-center justify-center text-gray-500 min-h-[600px]">
-           {showPreview && filteredPropData.length > 0 ? (
-              <PDFViewer width="100%" height="100%" style={{ border: 'none' }}>
-                  <PropListDocument props={filteredPropData} options={pdfOptions} showName={show.name} />
-              </PDFViewer>
+           {showPreview ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-400 italic">PDF Preview generation commented out.</p>
+              </div>
             ) : showPreview && filteredPropData.length === 0 ? (
               <p>No props found matching the selected filters.</p>
             ) : (
-              <p>Click "Generate Preview" to view the PDF here.</p>
+              <p>Click "Generate Preview" above.</p>
             )}
          </div>
        </div>

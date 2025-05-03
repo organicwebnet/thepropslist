@@ -52,17 +52,21 @@ const styles = StyleSheet.create({
   },
   fieldRow: {
     flexDirection: 'row',
-    marginBottom: 3, // Increased spacing
+    marginBottom: 5, // Increased vertical spacing between rows
+    alignItems: 'flex-start', // Align items at the top for long values
   },
   fieldLabel: {
-    fontSize: 9, // Slightly smaller labels
+    fontSize: 9,
     fontWeight: 'bold',
-    width: '25%', // Adjusted width
+    maxWidth: '30%', // Explicitly limit label width
+    marginRight: 5, // Add some space between label and value
+    paddingVertical: 2, // Increase vertical padding for line height
     color: '#555555', // Grey labels
   },
   fieldValue: {
-    fontSize: 9, // Slightly smaller values
-    width: '75%', // Adjusted width
+    fontSize: 9,
+    flex: 1, // Allow value to take remaining space
+    paddingVertical: 2, // Increase vertical padding for line height
     color: '#333333',
   },
   imagesContainer: {
@@ -71,13 +75,18 @@ const styles = StyleSheet.create({
      marginTop: 5,
   },
   propImage: {
-     width: 60, // Smaller image size
-     height: 60,
-     objectFit: 'cover',
-     marginRight: 5,
      marginBottom: 5,
-     borderWidth: 0.5,
-     borderColor: '#CCCCCC',
+     maxWidth: '100%', // Ensure image doesn't overflow container
+     objectFit: 'contain',
+  },
+  imageSmall: {
+     width: '25%',
+  },
+  imageMedium: {
+     width: '50%',
+  },
+  imageFull: {
+     width: '100%',
   },
   qrCodeContainer: {
      marginTop: 8,
@@ -92,7 +101,12 @@ const styles = StyleSheet.create({
   qrCodeLabel: {
       fontSize: 8,
       color: '#666666',
-  }
+  },
+  propItemContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: '100%',
+  },
 });
 
 interface PropListDocumentProps {
@@ -100,17 +114,44 @@ interface PropListDocumentProps {
   options: {
     selectedFields: Record<keyof Prop, boolean>;
     layout: 'portrait' | 'landscape';
+    columns: number; // Placeholder for future multi-column layout
     imageCount: number;
     showFilesQR: boolean;
     showVideosQR: boolean;
-    // columns option is not directly used yet
+    imageWidthOption: 'small' | 'medium' | 'full'; // Added image size option
   };
-  showName?: string; // Optional: To display the show name
+  showName: string;
 }
 
 // Simple function to format field labels
 const formatLabel = (key: string): string => {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+};
+
+// --- Helper function to render a single field row ---
+const renderFieldRow = (prop: Prop, fieldKey: keyof Prop) => {
+  let value = prop[fieldKey];
+  if (value === undefined || value === null) return null;
+
+  // Basic formatting for specific types (can be expanded)
+  if (typeof value === 'boolean') {
+    value = value ? 'Yes' : 'No';
+  } else if (Array.isArray(value)) {
+    value = value.join(', '); 
+  } else if (fieldKey === 'act' || fieldKey === 'scene') {
+    value = String(value); 
+  } else {
+    value = String(value); 
+  }
+
+  if (!value) return null;
+
+  return (
+    <View key={fieldKey} style={styles.fieldRow}>
+      <Text style={styles.fieldLabel}>{formatLabel(fieldKey)}:</Text>
+      <Text style={styles.fieldValue}>{value}</Text>
+    </View>
+  );
 };
 
 // --- Component to Render a Single Prop with QR Codes --- 
@@ -126,83 +167,109 @@ const PropItemView: React.FC<{ prop: Prop; options: PropListDocumentProps['optio
 
    return (
       <View key={prop.id} style={styles.propItem} wrap={false}> {/* wrap=false prevents items breaking across pages */}
-        {/* Always show Name if available and selected */}
-        {options.selectedFields.name && prop.name && (
-           <Text style={styles.propName}>{prop.name}</Text>
-        )}
-        {/* Iterate over selected fields and display them */}
-        {Object.entries(options.selectedFields)
-          .filter(([key, isSelected]) => isSelected && key !== 'name' && prop[key as keyof Prop] !== undefined && prop[key as keyof Prop] !== null)
-          .map(([key]) => {
-             const fieldKey = key as keyof Prop;
-             let value = prop[fieldKey];
-             
-             // Basic formatting for specific types (can be expanded)
-             if (typeof value === 'boolean') {
-               value = value ? 'Yes' : 'No';
-             } else if (Array.isArray(value)) {
-               // Simple join for arrays (like materials, tags)
-               value = value.join(', '); 
-             } else if (fieldKey === 'act' || fieldKey === 'scene') {
-                 value = String(value); // Display act/scene numbers directly
-             } else {
-               value = String(value); // Ensure it's a string
-             }
-
-             // Skip empty values after formatting
-             if (!value) return null;
-
-             return (
-               <View key={fieldKey} style={styles.fieldRow}>
-                 <Text style={styles.fieldLabel}>{formatLabel(fieldKey)}:</Text>
-                 <Text style={styles.fieldValue}>{value}</Text>
-               </View>
-             );
-        })}
-
-        {/* --- Render Images --- */}
-        {options.imageCount > 0 && prop.images && prop.images.length > 0 && (
-           <View style={styles.imagesContainer}>
-              {prop.images.slice(0, options.imageCount).map((img) => (
-                  // Important: Ensure image URLs are absolute and accessible!
-                  // @react-pdf/renderer might have issues with relative URLs or complex auth
-                  <Image key={img.id} style={styles.propImage} src={img.url} />
-              ))}
-           </View>
-        )}
-
-        {/* --- Render QR Codes --- */}
-         {options.showFilesQR && filesQRCodeUrl && (
-             <View style={styles.qrCodeContainer}>
-                 <Image style={styles.qrCodeImage} src={filesQRCodeUrl} />
-                 <Text style={styles.qrCodeLabel}>Scan for Files</Text>
-             </View>
+         {/* Always show Name if available and selected */}
+         {options.selectedFields.name && prop.name && (
+            <Text style={styles.propName}>{prop.name}</Text>
          )}
-         {options.showVideosQR && videosQRCodeUrl && (
-             <View style={styles.qrCodeContainer}>
-                 <Image style={styles.qrCodeImage} src={videosQRCodeUrl} />
-                 <Text style={styles.qrCodeLabel}>Scan for Videos</Text>
-             </View>
+
+         {/* Render Act if selected and available */}
+         {options.selectedFields.act && renderFieldRow(prop, 'act')}
+
+         {/* Render Scene if selected and available */}
+         {options.selectedFields.scene && renderFieldRow(prop, 'scene')}
+
+         {/* --- Render Images --- */}
+         {options.imageCount > 0 && prop.images && prop.images.length > 0 && (
+            <View style={styles.imagesContainer}>
+               {prop.images?.slice(0, options.imageCount).map((img) => (
+                   <Image key={img.id} style={styles.propImage} src={img.url} />
+               ))}
+            </View>
          )}
+
+         {/* Render Description if selected and available */}
+         {options.selectedFields.description && renderFieldRow(prop, 'description')}
+
+         {/* Iterate over *remaining* selected fields and display them */}
+         {Object.entries(options.selectedFields)
+           // Exclude fields already handled explicitly
+           .filter(([key, isSelected]) => 
+               isSelected && 
+               !['name', 'act', 'scene', 'description'].includes(key) && 
+               prop[key as keyof Prop] !== undefined && 
+               prop[key as keyof Prop] !== null
+           )
+           .map(([key]) => renderFieldRow(prop, key as keyof Prop))}
+
+         {/* --- Render QR Codes --- */}
+          {options.showFilesQR && filesQRCodeUrl && (
+              <View style={styles.qrCodeContainer}>
+                  <Image style={styles.qrCodeImage} src={{ uri: filesQRCodeUrl }} />
+                  <Text style={styles.qrCodeLabel}>Scan for Files</Text>
+              </View>
+          )}
+          {options.showVideosQR && videosQRCodeUrl && (
+              <View style={styles.qrCodeContainer}>
+                  <Image style={styles.qrCodeImage} src={{ uri: videosQRCodeUrl }} />
+                  <Text style={styles.qrCodeLabel}>Scan for Videos</Text>
+              </View>
+          )}
 
       </View>
    );
 };
 
+// --- Document Component --- 
+export const PropListDocument: React.FC<PropListDocumentProps> = ({ props, options, showName }) => {
+  // Function to get the appropriate image style based on the option
+  const getImageStyle = () => {
+     switch (options.imageWidthOption) {
+       case 'small': return styles.imageSmall;
+       case 'full': return styles.imageFull;
+       case 'medium':
+       default: return styles.imageMedium;
+     }
+  };
 
-export const PropListDocument: React.FC<PropListDocumentProps> = ({ props, options, showName }) => (
+  const imageStyle = getImageStyle();
+
+  // Function to determine the style for each prop item based on columns
+  const getPropItemStyle = (numColumns: number) => {
+    const baseStyle = styles.propItem;
+    if (numColumns === 1) {
+      return { ...baseStyle, width: '100%' };
+    }
+    // Basic calculation for width, adjust padding/margin as needed
+    const widthPercentage = `${100 / numColumns}%`; 
+    return {
+      ...baseStyle,
+      width: widthPercentage,
+      paddingRight: numColumns > 1 ? 5 : 0, // Add some horizontal spacing between columns
+      paddingLeft: numColumns > 1 ? 5 : 0,
+    };
+  };
+
+  const propItemStyle = getPropItemStyle(options.columns);
+
+  return (
   <Document>
     <Page size="A4" orientation={options.layout} style={styles.page}>
       <View style={styles.section}>
         <Text style={{ fontSize: 18, textAlign: 'center', marginBottom: 10 }}>
-          Prop List {showName ? `for ${showName}` : ''}
+          Prop List for {showName}
         </Text>
       </View>
 
-      {/* Map through props and use the PropItemView component */}
-      {props.map((prop) => (
-         <PropItemView key={prop.id} prop={prop} options={options} />
-      ))}
+      {/* Wrap prop items in a flex container */}
+      <View style={styles.propItemContainer}>
+        {props.map((prop) => (
+          // Apply dynamic width style to a wrapper View around PropItemView
+          <View key={prop.id} style={propItemStyle}>
+             <PropItemView prop={prop} options={options} />
+          </View>
+        ))}
+      </View>
     </Page>
   </Document>
-); 
+);
+};

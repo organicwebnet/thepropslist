@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
-import { useRouter } from 'expo-router';
-import { View, Text } from 'react-native'; // Simplified imports
+import { useRouter, usePathname, useFocusEffect } from 'expo-router';
+import { View, Text, FlatList, ActivityIndicator, Alert, Button, TextInput, TouchableOpacity } from 'react-native'; // Simplified imports
 import { useFirebase } from '@/contexts/FirebaseContext';
 import { ShowsContext } from '@/contexts/ShowsContext'; // Import ShowsContext
 import type { Prop, PropCategory } from '@/shared/types/props';
 import { propCategories } from '@/shared/types/props';
+import { PlusCircle, FileDown, FileText, CopyX } from 'lucide-react'; // Import icons
 import type { FirebaseDocument } from '@/shared/services/firebase/types';
 import { WebPropCard } from '../../../src/platforms/web/components/WebPropCard';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Import lifecycle types/labels
@@ -24,13 +25,21 @@ const formatDateTime = (isoString: string | undefined): string => {
 };
 // --- End Helper Function ---
 
+// Map enum values to display names
+const statusDisplayMap: Record<PropLifecycleStatus | 'All', string> = {
+  All: 'All Statuses',
+  ...lifecycleStatusLabels
+};
+
 export default function WebPropsListPage() {
-  console.log("--- Rendering: app/(web)/props/index.tsx (Restored) ---");
+  const pathname = usePathname(); // Get current pathname
+  console.log(`--- Rendering: app/(web)/props/index.tsx (Pathname: ${pathname}) ---`);
 
   // Restore state, hooks, effects, handlers
   const { service } = useFirebase();
   const showsContext = useContext(ShowsContext); // Use ShowsContext
-  const selectedShow = showsContext?.selectedShow; // Get selected show
+  const selectedShow = showsContext?.selectedShow;
+  console.log(`[WebPropsListPage Render] selectedShow ID from context: ${selectedShow?.id ?? 'null/undefined'}`);
   const router = useRouter();
   const [props, setProps] = useState<FirebaseDocument<Prop>[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,26 +50,41 @@ export default function WebPropsListPage() {
   const [selectedAct, setSelectedAct] = useState<number | 'All'>('All');
   const [selectedScene, setSelectedScene] = useState<number | 'All'>('All');
 
+  useFocusEffect(
+    useCallback(() => {
+      // This runs when the screen comes into focus
+      console.log(`[WebPropsListPage FocusEffect] Screen focused. Pathname: ${pathname}. SelectedShow ID: ${selectedShow?.id ?? 'null/undefined'}`);
+      // Optional: Trigger data refresh if needed when screen focuses
+      // fetchData(); // Be careful with this to avoid infinite loops
+
+      return () => {
+        // This runs when the screen goes out of focus
+        console.log(`[WebPropsListPage FocusEffect] Screen blurred. Pathname: ${pathname}`);
+      };
+    }, [pathname, selectedShow]) // Re-run effect if pathname or selectedShow changes while focused
+  );
+
   useEffect(() => {
-    console.log("WebPropsListPage Effect: Attempting to fetch for showId:", selectedShow?.id);
+    console.log(`[WebPropsListPage Mount/Update Effect] Running effect. SelectedShow ID: ${selectedShow?.id ?? 'null/undefined'}. Pathname: ${pathname}`);
     if (!service || !selectedShow) { 
+      console.log("[WebPropsListPage Effect] No service or selectedShow, returning early.");
       setLoading(false);
       setProps([]);
       return;
     }
 
+    console.log(`[WebPropsListPage Effect] Setting up listener for showId: ${selectedShow.id}`);
     setLoading(true);
     const unsubscribe = service.listenToCollection<Prop>(
       'props', // Collection path
       (documents) => { // Callback for when data arrives
-        // Documents received should now be pre-filtered by Firestore
-        console.log("WebPropsListPage Effect: Filtered props received from listener:", documents);
+        console.log(`[WebPropsListPage Effect Callback] Listener received ${documents.length} props for showId: ${selectedShow.id}`);
         setProps(documents); // Directly set the received documents
         setError(null);
         setLoading(false);
       },
       (err) => { // Error callback
-        console.error('Failed to fetch props:', err);
+        console.error(`[WebPropsListPage Effect Error] Listener error for showId: ${selectedShow.id}`, err);
         setError('Failed to load props. Please try again later.');
         setLoading(false);
       },
@@ -68,8 +92,11 @@ export default function WebPropsListPage() {
       { where: [['showId', '==', selectedShow.id]] }
     );
 
-    return () => unsubscribe();
-  }, [service, selectedShow]);
+    return () => {
+        console.log(`[WebPropsListPage Effect Cleanup] Cleaning up listener for showId: ${selectedShow?.id ?? 'Cleanup occurred after show became null?'}`);
+        unsubscribe();
+    };
+  }, [service, selectedShow, pathname]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this prop?')) {
@@ -257,160 +284,147 @@ export default function WebPropsListPage() {
 
   // Restore the original return statement
   return (
-    <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
-      <div className="flex justify-between items-center mb-6 gap-4 flex-wrap">
-        <h1 className="text-2xl font-bold">Props List ({selectedShow?.name || 'No Show Selected'})</h1>
-        <div className="flex gap-2 flex-wrap">
-          <button 
-            onClick={handleDuplicates}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-50 flex items-center gap-1"
-            title="Find Duplicate Props (Not Implemented)"
-          >
-            <span className="text-lg">⚠️</span> Duplicates
-          </button>
-          <button 
-            onClick={handleExportCSV}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex items-center gap-1"
-            title="Export as CSV (Not Implemented)"
-          >
-            <span className="text-lg">📄</span> CSV
-          </button>
-          <button 
-            onClick={handleGoToPDFPreview}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center gap-1"
-            title="Go to PDF Preview Page"
-          >
-            <span className="text-lg">📄</span> PDF
-          </button>
-          <button 
-            onClick={handleAddNew}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 flex items-center gap-1"
-          >
-            <span className="text-lg">➕</span> Add New Prop
-          </button>
-        </div>
-      </div>
+    <View className="flex-1 bg-gray-900 text-white p-4">
+      {/* Header Section */}
+      <View className="mb-6 flex-row justify-between items-center flex-wrap gap-y-4">
+        <Text className="text-2xl font-bold text-gray-100">
+          Props for: {selectedShow ? selectedShow.name : 'Loading...'}
+        </Text>
+        {/* Action Buttons - Restored styled buttons with icons */}
+        <View className="flex-row flex-wrap gap-2">
+           <TouchableOpacity
+             onPress={handleGoToPDFPreview}
+             disabled={!selectedShow}
+             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+           >
+             <FileText size={18} />
+             <span>Export PDF</span>
+           </TouchableOpacity>
+           <TouchableOpacity
+             onPress={handleExportCSV}
+             disabled={!selectedShow || filteredProps.length === 0}
+             className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+           >
+              <FileDown size={18} />
+             <span>Export CSV</span>
+           </TouchableOpacity>
+            <TouchableOpacity
+             onPress={handleDuplicates}
+             disabled={!selectedShow}
+             className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+           >
+              <CopyX size={18} />
+             <span>Duplicates</span>
+           </TouchableOpacity>
+           <TouchableOpacity
+             onPress={handleAddNew}
+             disabled={!selectedShow}
+             className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <PlusCircle size={18} />
+             <span>Add New Prop</span>
+           </TouchableOpacity>
+        </View>
+      </View>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      {/* Filter Section */}
+      <View className="mb-4 p-4 bg-gray-800 rounded-lg grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
          {/* Search Input */}
-        <div>
-          <label htmlFor="search-filter" className="block text-sm font-medium text-gray-300 mb-1">Search:</label>
-          <input
-            type="text"
-            id="search-filter"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search name or description..."
-            className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-          />
-        </div>
+        <View>
+            <Text className="block text-sm font-medium text-gray-300 mb-1">Search</Text>
+            <TextInput
+                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+                placeholder="Search by name, description..."
+                value={searchTerm}
+                onChangeText={setSearchTerm}
+            />
+        </View>
 
-        {/* Category Filter */}
-        <div>
-          <label htmlFor="category-filter" className="block text-sm font-medium text-gray-300 mb-1">Category:</label>
-          <select
-            id="category-filter"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-          >
-             <option value="All">All Categories</option>
-             {propCategories.map(category => (<option key={category} value={category}>{category}</option>))
-             }
-          </select>
-        </div>
+        {/* Category Dropdown */}
+        <View>
+            <Text className="block text-sm font-medium text-gray-300 mb-1">Category</Text>
+            <select
+                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+                <option value="All">All Categories</option>
+                {propCategories.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                ))}
+            </select>
+        </View>
+         {/* Status Dropdown */}
+        <View>
+            <Text className="block text-sm font-medium text-gray-300 mb-1">Status</Text>
+            <select
+                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as PropLifecycleStatus | 'All')}
+            >
+                {Object.entries(statusDisplayMap).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+            </select>
+        </View>
+        {/* Act Dropdown */}
+        <View>
+            <Text className="block text-sm font-medium text-gray-300 mb-1">Act</Text>
+            <select
+                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+                value={String(selectedAct)}
+                onChange={(e) => setSelectedAct(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+                disabled={availableActs.length === 0}
+            >
+                <option value="All">All Acts</option>
+                {availableActs.map((act) => (
+                    <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>
+                ))}
+            </select>
+        </View>
+        {/* Scene Dropdown */}
+        <View>
+            <Text className="block text-sm font-medium text-gray-300 mb-1">Scene</Text>
+            <select
+                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
+                value={String(selectedScene)}
+                onChange={(e) => setSelectedScene(e.target.value === 'All' ? 'All' : Number(e.target.value))}
+                disabled={selectedAct === 'All' || availableScenes.length === 0}
+            >
+                <option value="All">All Scenes</option>
+                {availableScenes.map((scene) => (
+                    <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>
+                ))}
+            </select>
+        </View>
+      </View>
 
-         {/* Status Filter */}
-         <div>
-          <label htmlFor="status-filter" className="block text-sm font-medium text-gray-300 mb-1">Status:</label>
-          <select
-            id="status-filter"
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value as PropLifecycleStatus | 'All')}
-            className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-          >
-            <option value="All">All Statuses</option>
-            {Object.entries(lifecycleStatusLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Act Filter */}
-        <div>
-          <label htmlFor="act-filter" className="block text-sm font-medium text-gray-300 mb-1">Act:</label>
-          <select
-            id="act-filter"
-            value={selectedAct}
-            onChange={(e) => {
-              const actId = e.target.value === 'All' ? 'All' : parseInt(e.target.value);
-              setSelectedAct(actId);
-              setSelectedScene('All'); // Reset scene when act changes
-            }}
-            className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-            disabled={!selectedShow} // Disable if no show selected
-          >
-            <option value="All">All Acts</option>
-            {availableActs.map(act => (
-              <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Scene Filter */}
-        <div>
-          <label htmlFor="scene-filter" className="block text-sm font-medium text-gray-300 mb-1">Scene:</label>
-          <select
-            id="scene-filter"
-            value={selectedScene}
-            onChange={(e) => {
-              const sceneId = e.target.value === 'All' ? 'All' : parseInt(e.target.value);
-              setSelectedScene(sceneId);
-            }}
-            className="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-            disabled={selectedAct === 'All'} // Disable if no act selected
-          >
-            <option value="All">All Scenes</option>
-             {availableScenes.map(scene => (
-              <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {loading && (
-        <div className="text-center py-10">
-          <p>Loading props...</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-center py-10 text-red-500">
-          <p>Error: {error}</p>
-        </div>
-      )}
-
-      {!loading && !error && filteredProps.length === 0 && (
-         <div className="text-center py-10 text-gray-500">
-           <p>{selectedCategory === 'All' && searchTerm === '' && selectedStatus === 'All' && selectedAct === 'All' && selectedScene === 'All' 
-                ? 'No props found for this show. Add your first prop!' 
-                : `No props found matching the current filters.`}
-           </p>
-         </div>
-      )}
-
-      {!loading && !error && filteredProps.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* Loading / Error / Content Section */}
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#FBBF24" />
+          <Text className="text-gray-400 mt-2">Loading props...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 justify-center items-center">
+          <Text className="text-red-500">Error: {error}</Text>
+        </View>
+      ) : filteredProps.length === 0 ? (
+        <View className="flex-1 justify-center items-center">
+          <Text className="text-gray-400">No props found matching the current filters.</Text>
+        </View>
+      ) : (
+        <View className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredProps.map((propDoc) => (
-            <WebPropCard 
-              key={propDoc.id} 
-              prop={{ ...propDoc.data, id: propDoc.id } as Prop}
-              onEdit={handleEdit}
-              onDelete={handleDelete} 
+            <WebPropCard
+              key={propDoc.id}
+              prop={{ ...propDoc.data!, id: propDoc.id }}
+              onEdit={() => handleEdit(propDoc.id)}
+              onDelete={() => handleDelete(propDoc.id)}
             />
           ))}
-        </div>
+        </View>
       )}
-    </div>
+    </View>
   );
 } 

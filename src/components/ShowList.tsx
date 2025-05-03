@@ -35,101 +35,103 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
 
   return (
     <View style={styles.listContainer}>
-      {shows.map((show) => (
-        <View key={show.id} style={styles.showItemContainer}>
-          {editingId === show.id ? (
+      {shows.map((show) => {
+        return (
+          <View key={show.id} style={styles.showItemContainer}>
+            {editingId === show.id ? (
             
-            <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>Show Form Placeholder</Text>
-              <TouchableOpacity onPress={() => setEditingId(null)} style={styles.placeholderButton}>
-                 <Text style={styles.placeholderButtonText}>Cancel Edit</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[
-                styles.showCardBase,
-                selectedShowId === show.id && styles.selectedCard,
-                { padding: 16 }
-              ]}
-              onPress={() => onSelect(show)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.cardHeader}>
-                <View style={styles.iconAndTitle}>
-                  <View style={[styles.iconBackground, selectedShowId === show.id && styles.selectedIconBackground]}>
-                     
-                  </View>
-                  <View style={styles.titleContainer}>
-                    <Text style={styles.titleText} numberOfLines={2}>
-                      {show.name}
-                    </Text>
-                    <View style={styles.detailsRow}>
-                      <Text style={styles.detailsText}>
-                        {show.acts?.length || 0} Act{(show.acts?.length || 0) !== 1 ? 's' : ''}
-                      </Text>
-                      <Text style={styles.detailsText}>•</Text>
-                      <Text style={styles.detailsText}>
-                        {(show.acts || []).reduce((total, act) => total + (act.scenes?.length || 0), 0)} Scene
-                        {(show.acts || []).reduce((total, act) => total + (act.scenes?.length || 0), 0) !== 1 ? 's' : ''}
-                      </Text>
+              <View style={styles.placeholderContainer}>
+                <Text style={styles.placeholderText}>Show Form Placeholder</Text>
+                <TouchableOpacity onPress={() => setEditingId(null)} style={styles.placeholderButton}>
+                   <Text style={styles.placeholderButtonText}>Cancel Edit</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.showCardBase,
+                  selectedShowId === show.id && styles.selectedCard,
+                  { padding: 16 }
+                ]}
+                onPress={() => onSelect(show)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={styles.iconAndTitle}>
+                    <View style={[styles.iconBackground, selectedShowId === show.id && styles.selectedIconBackground]}>
+                       
                     </View>
-                    {selectedShowId === show.id ? (
-                      <View style={styles.selectedBadgeContainer}>
-                        <View style={styles.selectedBadge}>
-                          <Text style={styles.selectedBadgeText}>
-                            Currently Selected
-                          </Text>
-                        </View>
+                    <View style={styles.titleContainer}>
+                      <Text style={styles.titleText} numberOfLines={2}>
+                        {show.name}
+                      </Text>
+                      <View style={styles.detailsRow}>
+                        <Text style={styles.detailsText}>
+                          {show.acts?.length || 0} Act{(show.acts?.length || 0) !== 1 ? 's' : ''}
+                        </Text>
+                        <Text style={styles.detailsText}>•</Text>
+                        <Text style={styles.detailsText}>
+                          {(show.acts || []).reduce((total, act) => total + (act.scenes?.length || 0), 0)} Scene
+                          {(show.acts || []).reduce((total, act) => total + (act.scenes?.length || 0), 0) !== 1 ? 's' : ''}
+                        </Text>
                       </View>
-                    ) : null}
+                      {selectedShowId === show.id ? (
+                        <View style={styles.selectedBadgeContainer}>
+                          <View style={styles.selectedBadge}>
+                            <Text style={styles.selectedBadgeText}>
+                              Currently Selected
+                            </Text>
+                          </View>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
 
-                <View style={styles.actionButtonsContainer}>
-                  <TouchableOpacity
-                    onPress={(e: GestureResponderEvent) => {
-                      e.stopPropagation();
-                      onSelect(show);
-                    }}
-                    style={[styles.selectButton, selectedShowId === show.id && styles.selectButtonActive]}
-                    disabled={selectedShowId === show.id}
-                    activeOpacity={selectedShowId === show.id ? 1 : 0.7}
-                  >
-                    <Text style={[styles.selectButtonText, selectedShowId === show.id && styles.selectButtonTextActive]}>
-                      {selectedShowId === show.id ? 'Currently Active' : 'Select Show'}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={(e: GestureResponderEvent) => {
-                      e.stopPropagation();
-                      handleEdit(show);
-                    }}
-                    style={styles.iconButton}
-                    accessibilityLabel="Edit show"
-                    activeOpacity={0.7}
-                  >
-                     
-                  </TouchableOpacity>
-                  {isShowOwner(show) && onEdit && onDelete ? (
+                  <View style={styles.actionButtonsContainer}>
                     <TouchableOpacity
                       onPress={(e: GestureResponderEvent) => {
                         e.stopPropagation();
-                        onDelete(show.id);
+                        onSelect(show);
+                      }}
+                      style={[styles.selectButton, selectedShowId === show.id && styles.selectButtonActive]}
+                      disabled={selectedShowId === show.id}
+                      activeOpacity={selectedShowId === show.id ? 1 : 0.7}
+                    >
+                      <Text style={[styles.selectButtonText, selectedShowId === show.id && styles.selectButtonTextActive]}>
+                        {selectedShowId === show.id ? 'Currently Active' : 'Select Show'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={(e: GestureResponderEvent) => {
+                        e.stopPropagation();
+                        handleEdit(show);
                       }}
                       style={styles.iconButton}
-                      accessibilityLabel="Delete show"
+                      accessibilityLabel="Edit show"
                       activeOpacity={0.7}
                     >
                        
                     </TouchableOpacity>
-                  ) : null}
+                    {isShowOwner(show) && onEdit && onDelete ? (
+                      <TouchableOpacity
+                        onPress={(e: GestureResponderEvent) => {
+                          e.stopPropagation();
+                          onDelete(show.id);
+                        }}
+                        style={styles.iconButton}
+                        accessibilityLabel="Delete show"
+                        activeOpacity={0.7}
+                      >
+                         
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          )}
-        </View>
-      ))}
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      })}
 
       {shows.length === 0 ? (
         <View style={styles.emptyListContainer}>
@@ -179,7 +181,7 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     marginLeft: 16,
-    flex: 1,
+    // flex: 1, // Temporarily remove flex: 1 to test layout
   },
   titleText: {
     fontSize: 20,

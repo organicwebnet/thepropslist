@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { PackingBox, PackedProp } from '../../types/packing';
-import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, LucideProps, LucideIcon } from 'lucide-react';
+import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, LucideIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
-import { Platform, TouchableOpacity, Alert, Text } from 'react-native';
 import { useRouter } from 'expo-router';
+import { TouchableOpacity, Text } from 'react-native';
 
 interface PackingBoxCardProps {
   box: PackingBox;

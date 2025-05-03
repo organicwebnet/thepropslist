@@ -456,16 +456,29 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                    <label htmlFor="act" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Act</label>
                    <select id="act" value={formData.act ?? ''} onChange={(e) => setFormData({ ...formData, act: Number(e.target.value) })} className={selectStyles} disabled={disabled}>
                       <option value="">Select Act</option>
-                      {(() => { console.log(`[PropForm] Attempting to map show.acts for Act dropdown. show.acts:`, show.acts); return null; })()}
-                      {show.acts?.map(act => <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>)} 
+                      {(() => {
+                         console.log(`[PropForm] Attempting to map show.acts for Act dropdown. show object:`, show);
+                         if (!show || !Array.isArray(show.acts)) {
+                            console.warn('[PropForm] show.acts is not an array or show is missing!');
+                            return null; // Don't render options if acts isn't an array
+                         }
+                         return show.acts.map(act => <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>);
+                      })()}
                    </select>
                 </div>
                  <div>
                    <label htmlFor="scene" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Scene</label>
                     <select id="scene" value={formData.scene ?? ''} onChange={(e) => setFormData({ ...formData, scene: Number(e.target.value) })} className={selectStyles} disabled={!formData.act || disabled}>
                        <option value="">Select Scene</option>
-                       {(() => { console.log(`[PropForm] Attempting to map scenes for selected Act (${formData.act}). Found Act:`, show.acts?.find(a => a.id === formData.act)); return null; })()}
-                       {show.acts?.find(a => a.id === formData.act)?.scenes?.map(scene => <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>)} 
+                       {(() => {
+                         const currentAct = show?.acts && Array.isArray(show.acts) ? show.acts.find(a => a.id === formData.act) : undefined;
+                         console.log(`[PropForm] Attempting to map scenes for selected Act (${formData.act}). Found Act object:`, currentAct);
+                         if (!currentAct || !Array.isArray(currentAct.scenes)) {
+                            console.warn('[PropForm] currentAct.scenes is not an array or currentAct is missing!');
+                            return null; // Don't render options if scenes isn't an array
+                         }
+                         return currentAct.scenes.map(scene => <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>);
+                       })()}
                     </select>
                  </div>
                   <div className={checkboxContainerStyles + " md:col-span-2"}>

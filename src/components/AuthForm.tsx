@@ -253,7 +253,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
             <View className="mb-5">
               <RequiredLabel>Email Address</RequiredLabel>
               <TextInput
-                className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-colors"
                 placeholder="you@example.com"
                 value={email}
                 onChangeText={setEmail}
@@ -266,7 +266,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
             <View className="mb-6 relative">
               <RequiredLabel>Password</RequiredLabel>
               <TextInput
-                className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors pr-12"
+                className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-colors pr-12"
                 placeholder="••••••••"
                 value={password}
                 onChangeText={setPassword}
@@ -346,7 +346,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
             <View className="mb-5">
               <RequiredLabel>Email Address</RequiredLabel>
               <TextInput
-                className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-primary transition-colors"
                 placeholder="you@example.com"
                 value={email}
                 onChangeText={setEmail}

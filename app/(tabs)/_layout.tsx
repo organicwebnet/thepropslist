@@ -79,6 +79,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="props"
         options={{
+          href: Platform.OS === 'web' ? null : undefined,
           title: 'Props',
           headerTitle: 'Props Bible',
           tabBarIcon: ({ color, focused, size }) => (

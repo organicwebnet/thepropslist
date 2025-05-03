@@ -1,7 +1,7 @@
 import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import storage, { FirebaseStorageTypes } from '@react-native-firebase/storage';
 import auth, { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import app, { getApps } from '@react-native-firebase/app';
+import { getApps } from '@react-native-firebase/app';
 import { FirebaseError, FirebaseService, OfflineSync, FirebaseDocument } from '../../../shared/services/firebase/types';
 
 import {
@@ -17,6 +17,8 @@ import {
   QueueStatus,
   CustomUserCredential
 } from '../../../shared/services/firebase/types';
+
+import { Timestamp } from 'firebase/firestore';
 
 class MobileOfflineSync implements OfflineSync {
   constructor(private firestoreInstance: FirebaseFirestoreTypes.Module) {}
@@ -205,7 +207,7 @@ export class MobileFirebaseService implements FirebaseService {
     snapshot: FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData> | FirebaseFirestoreTypes.QueryDocumentSnapshot<FirebaseFirestoreTypes.DocumentData>
   ): FirebaseDocument<T> {
     const ref = snapshot.ref as CustomDocumentReference<T>;
-    const data = snapshot.exists ? snapshot.data() as T : undefined;
+    const data = snapshot.exists === true ? snapshot.data() as T : undefined;
 
     return {
       id: snapshot.id,
@@ -214,7 +216,7 @@ export class MobileFirebaseService implements FirebaseService {
       get: async (): Promise<T | undefined> => {
         try {
           const docSnapshot = await ref.get();
-          return docSnapshot.exists ? docSnapshot.data() as T : undefined;
+          return docSnapshot.exists === true ? docSnapshot.data() as T : undefined;
         } catch (error) {
           this.handleError(`Error getting document ${snapshot.id}`, error);
         }
@@ -417,20 +419,19 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   async getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null> {
-    if (!this._isInitialized || !this._firestore) throw this.handleError('Firestore not initialized', new Error('Firestore not initialized'));
+    if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
     try {
       const docRef = this._firestore.collection(collectionPath).doc(documentId);
       const docSnapshot = await docRef.get();
-
-      if (docSnapshot.exists) {
-        // Use the existing helper to wrap the snapshot
-        return this._snapshotToFirebaseDocument<T>(docSnapshot as FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData>);
-      } else {
+      
+      if (docSnapshot.exists !== true) {
         return null;
       }
+      // Cast the snapshot to the correct type before passing
+      return this._snapshotToFirebaseDocument<T>(docSnapshot as FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData>);
     } catch (error) {
-      // Throw a FirebaseError using the handler
-      throw this.handleError(`Error getting document ${collectionPath}/${documentId}`, error);
+      console.error(`Error getting document ${collectionPath}/${documentId}:`, error);
+      throw new FirebaseError(`Failed to get document ${documentId}`, 'get-failed');
     }
   }
 
@@ -473,12 +474,18 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   async deleteFile(path: string): Promise<void> {
-    console.warn(`Mobile deleteFile(${path}) is not implemented.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+    if (!this._isInitialized || !this._storage) throw new Error('MobileFirebaseService not initialized or Storage module failed to initialize.');
+    const storageRef = this._storage.ref(path);
+    await storageRef.delete();
   }
 
   async deleteShow(showId: string): Promise<void> {
-    console.warn(`Mobile deleteShow(${showId}) is not implemented.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+    // Placeholder implementation for deleting a show and potentially related props/data
+    // This might involve multiple Firestore deletes, potentially in a batch or transaction
+    console.warn(`deleteShow(${showId}) not fully implemented.`);
+    // Example: await this.deleteDocument('shows', showId);
+    // Example: Query and delete related props...
+    // For now, let's throw an error to indicate it's not functional
+    throw new FirebaseError('deleteShow is not yet implemented for mobile', 'unimplemented');
   }
 } 

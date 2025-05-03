@@ -21,9 +21,19 @@ import { LoadingScreen } from '../../src/components/LoadingScreen';
 const LAST_SHOW_ID_KEY = 'lastSelectedShowId';
 
 export default function PropsScreen() {
-  console.log("[PropsScreen] Rendering...");
-
   const router = useRouter();
+  const isWeb = typeof window !== 'undefined';
+
+  // --- Force render null on web --- 
+  if (isWeb) {
+      console.warn("[PropsScreen] Detected web environment - rendering null to prevent mobile UI display.");
+      return null; // Render nothing on web
+  }
+  // --- End force null --- 
+
+  // --- Mobile-only hooks and state below ---
+  console.log("[PropsScreen] Rendering mobile content..."); 
+
   const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
   const { user } = useAuth();
   console.log(`[PropsScreen] State: user=${user?.uid}, firebaseInitialized=${firebaseInitialized}`);
@@ -39,13 +49,6 @@ export default function PropsScreen() {
   const [selectedPropForEdit, setSelectedPropForEdit] = useState<Prop | null>(null);
   
   const initialShowIdAttempt = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      console.log("--- Programmatically redirecting from app/(tabs)/props.tsx to /props on web ---");
-      router.replace('/props');
-    }
-  }, [router]);
 
   useEffect(() => {
     const checkOnboarding = async () => {
@@ -186,7 +189,7 @@ export default function PropsScreen() {
 
   const handleOpenAddPropPage = () => {
     if (selectedShow) {
-      router.push('/props/add' as any);
+      router.push('/props/new' as any);
     } else {
       Alert.alert("No Show Selected", "Please select a show before adding a prop.");
     }
@@ -381,41 +384,28 @@ export default function PropsScreen() {
   const handleExportCsv = () => Alert.alert("Export CSV", "Feature not yet implemented.");
   const handleRemoveDuplicates = () => Alert.alert("Remove Duplicates", "Feature not yet implemented.");
 
-  const renderContent = () => {
-    console.log(`[PropsScreen] Render Content: ShowsLoading=${showsLoading}, PropsLoading=${propsLoading}, SelectedShow=${selectedShow?.id}, NumProps=${props.length}`);
+  const renderMobileContent = () => {
     if (showsLoading || (selectedShow && propsLoading)) {
-        console.log("[PropsScreen] Render Content: Showing Loading Indicator");
-      return (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#FBBF24" />
-          <Text style={styles.loadingText}>Loading data...</Text>
-        </View>
-      );
+        return (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color="#FBBF24" />
+          </View>
+        );
     }
-
     if (!selectedShow) {
-        console.log("[PropsScreen] Render Content: No Show Selected");
-      return (
-        <View style={styles.centered}>
-          <Text style={styles.infoText}>Please select a show first.</Text>
-          {/* Optionally add a button to navigate to shows screen */}
-        </View>
-      );
+        return (
+          <View style={styles.centered}>
+            <Text style={styles.infoText}>Please select a show.</Text>
+            {/* TODO: Add show selector for mobile? */} 
+          </View>
+        );
     }
-    
-    // If a show is selected, show the list (or empty state)
-    console.log(`[PropsScreen] Render Content: Rendering PropList for show ${selectedShow.id}`);
     return (
-      <View style={{ flex: 1 }}> 
-        {/* Add selected show title */} 
-        <Text style={styles.showTitle}>{selectedShow.name}</Text>
-        
-        <PropList
-          props={props}
-          onDelete={handleDelete}
+      <PropList 
+          props={props} 
           onEdit={handleOpenEditPropPage}
-        />
-      </View>
+          onDelete={handleDelete}
+      />
     );
   };
 
@@ -431,84 +421,22 @@ export default function PropsScreen() {
     );
   }
 
-  if (Platform.OS === 'web') {
-    return (
-      <View style={styles.webContainer}>
-        {/* Left Column */} 
-        <View style={styles.webListColumn}>
-          <ScrollView style={{ flex: 1 }}>
-            <View style={styles.webListHeader}>
-               {/* TODO: Add Show Selector Dropdown Here? */} 
-              <Text style={styles.webColumnTitle}>Props for: {selectedShow?.name || 'No Show Selected'}</Text>
-              <View style={styles.webButtonContainer}>
-                 <Button title="Export PDF" onPress={handleExportPdf} />
-                 <Button title="Export CSV" onPress={handleExportCsv} />
-                 <Button title="Remove Duplicates" onPress={handleRemoveDuplicates} />
-              </View>
-            </View>
-            <PropList 
-              props={props} 
-              onEdit={setSelectedPropForEdit}
-              onDelete={handleDelete}
-            />
-          </ScrollView>
-        </View>
-        
-        {/* Right Column */} 
-        <View style={styles.webFormColumn}>
-          <ScrollView style={{ flex: 1 }}>
-            <PropForm 
-              key={selectedPropForEdit?.id ?? 'create'} // Add key to force re-render on selection change
-              mode={selectedPropForEdit ? 'edit' : 'create'}
-              initialData={selectedPropForEdit ? mapPropToFormData(selectedPropForEdit) : undefined}
-              onSubmit={selectedPropForEdit ? handleUpdatePropWeb : handleCreatePropWeb}
-              onCancel={selectedPropForEdit ? () => setSelectedPropForEdit(null) : undefined}
-              show={selectedShow ?? undefined} // Pass selected show
-            />
-          </ScrollView>
-        </View>
-      </View>
-    );
-  } else {
-    const renderMobileContent = () => {
-      if (showsLoading || (selectedShow && propsLoading)) {
-          return (
-            <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#FBBF24" />
-            </View>
-          );
-      }
-      if (!selectedShow) {
-          return (
-            <View style={styles.centered}>
-              <Text style={styles.infoText}>Please select a show.</Text>
-              {/* TODO: Add show selector for mobile? */} 
-            </View>
-          );
-      }
-      return (
-        <PropList 
-            props={props} 
-            onEdit={handleOpenEditPropPage}
-            onDelete={handleDelete}
-        />
-      );
-    };
-
-    return (
-      <View style={styles.container}>
-        {/* TODO: Add Mobile Header with Show Selector? */} 
-        {renderMobileContent()}
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleOpenAddPropPage} // Mobile uses FAB to navigate
-          activeOpacity={0.7}
-        >
-          <Ionicons name="add" size={30} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  return (
+    <View style={styles.container}>
+      {/* TODO: Add Mobile Header with Show Selector? */} 
+      {selectedShow && <Text style={styles.showTitle}>{selectedShow.name}</Text>}
+      {renderMobileContent()}
+      {selectedShow && (
+         <TouchableOpacity
+            style={styles.fab}
+            onPress={handleOpenAddPropPage} // Mobile uses FAB to navigate
+            activeOpacity={0.7}
+         >
+            <Ionicons name="add" size={30} color="#FFFFFF" />
+         </TouchableOpacity>
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

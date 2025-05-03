@@ -201,6 +201,20 @@ const styles = StyleSheet.create({
   container: {
     ...baseContainerStyle,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as const } : {}),
+    // --- Start: Comment out platform-specific shadows ---
+    /*
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' as any } // Cast for web
+      : Platform.OS === 'android'
+      ? { elevation: 3 }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 }, // <-- iOS shadow
+          shadowOpacity: 0.2,
+          shadowRadius: 1.41,
+        }),
+    */
+    // --- End: Comment out platform-specific shadows ---
   } as ViewStyle,
   compactContainer: {
     padding: 8,

@@ -126,13 +126,40 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
         setShows(showsData);
         setErrorState(null);
         
-        // Update selected show logic
-        if (!selectedShow && showsData.length > 0) {
-           setSelectedShow(showsData[0]);
-        } else if (selectedShow && !showsData.some(s => s.id === selectedShow.id)) {
-          // If current selection disappears, select the first available or null
-          setSelectedShow(showsData.length > 0 ? showsData[0] : null);
+        // --- Logic to determine initial selected show ---
+        let showToSelect: Show | null = null;
+        let lastSelectedId: string | null = null;
+
+        // 1. Try restoring from localStorage (on web)
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+           try {
+             lastSelectedId = localStorage.getItem('lastSelectedShowId');
+             console.log(`[ShowsContext Restore] Read lastSelectedId from localStorage: ${lastSelectedId}`);
+             if (lastSelectedId) {
+               console.log('[ShowsContext Restore] Attempting to restore show ID from localStorage:', lastSelectedId);
+               console.log(`[ShowsContext Restore] Current showsData count before find: ${showsData.length}`);
+               console.log(`[ShowsContext Restore] showsData IDs before find: ${showsData.map(s => s.id).join(', ')}`);
+               showToSelect = showsData.find(s => s.id === lastSelectedId) || null;
+               console.log(`[ShowsContext Restore] Result of showsData.find(): ${showToSelect ? `Found: ${showToSelect.id}` : 'Not Found'}`);
+             }
+           } catch (e) {
+             console.error("[ShowsContext Restore] Failed to read show ID from localStorage:", e);
+           }
         }
+
+        // 2. If not restored and data available, select the first show
+        if (!showToSelect && showsData.length > 0) {
+            console.log('[ShowsContext Restore] No stored/valid show ID found or show not in current list, selecting first show.');
+            showToSelect = showsData[0];
+        }
+
+        // 3. If current selection is different or disappeared, update it
+        console.log(`[ShowsContext Restore] Before final update check. Current selectedShow ID: ${selectedShow?.id ?? 'null'}, Target showToSelect ID: ${showToSelect?.id ?? 'null'}`);
+        if (selectedShow?.id !== showToSelect?.id) {
+            console.log(`[ShowsContext] Updating selected show. Previous: ${selectedShow?.id ?? 'none'}, New: ${showToSelect?.id ?? 'none'}`);
+            setSelectedShowInternal(showToSelect); // Use internal setter to avoid loop
+        }
+        // --- End initial selection logic ---
         
         setLoading(false);
       },
@@ -151,8 +178,8 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
         console.log("ShowsContext: Unsubscribing from collection listener.");
         unsubscribe();
     };
-  // Dependencies: service availability, user (if re-enabled), selection state
-  }, [firebaseInitialized, firebaseService, firebaseError, selectedShow, setSelectedShow]); // user removed temporarily
+  // Dependencies: service availability, user (if re-enabled)
+  }, [firebaseInitialized, firebaseService, firebaseError]); // user removed temporarily
 
   const setSelectedShowById = useCallback((id: string | null) => {
     if (id === null) {
