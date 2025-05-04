@@ -43,10 +43,10 @@ export default function WebShowsScreen() {
         </ScrollView>
       </View>
 
-      {/* Column 2: Show Form - Temporarily Commented Out */}
+      {/* Column 2: Show Form */}
       <View style={styles.column}>
          <ScrollView style={{ flex: 1 }}>
-          {/* 
+           
           <ShowForm
             mode={selectedShow ? 'edit' : 'create'}
             initialData={selectedShow ?? undefined}
@@ -57,9 +57,9 @@ export default function WebShowsScreen() {
             onCancel={selectedShow ? () => setSelectedShow(null) : undefined}
             // onDelete={selectedShow ? () => handleDeleteShowWeb(selectedShow.id) : undefined} // Assuming ShowForm might have a delete button
           />
-          */}
+          
          </ScrollView>
-         <Text style={{color: 'white'}}>ShowForm Column (Commented Out)</Text> 
+         {/* <Text style={{color: 'white'}}>ShowForm Column (Commented Out)</Text> */}
       </View>
     </View>
   );

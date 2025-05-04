@@ -49,6 +49,12 @@ export const TopNavBar = () => {
              <Text className={`${linkStyle} ${textStyle}`}>Packing</Text>
            </TouchableOpacity>
         </Link>
+        {/* Add Profile Link */}
+        <Link href="/profile" asChild>
+           <TouchableOpacity>
+             <Text className={`${linkStyle} ${textStyle}`}>Profile</Text>
+           </TouchableOpacity>
+        </Link>
       </View>
 
       {/* Right side - Logout Button */}
