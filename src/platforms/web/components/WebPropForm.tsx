@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import type { Prop, PropFormData, PropSource, PropCategory, DimensionUnit, PropImage } from '@/shared/types/props'; // Adjust path if needed
 import { propCategories } from '@/shared/types/props';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Adjust path if needed
 
 interface WebPropFormProps {
-  initialData?: Prop | null;
+  initialData?: Prop;
   onSubmit: (formData: PropFormData) => Promise<void>;
   onCancel?: () => void;
   isSubmitting: boolean;
@@ -80,8 +80,8 @@ export function WebPropForm({
     setFormData(prev => ({ ...prev, tags: tagsArray }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!formData.name || !formData.category || !formData.source || !formData.status) {
         alert('Please fill in all required fields (Name, Category, Source, Status).');
         return;
@@ -104,7 +104,12 @@ export function WebPropForm({
         images: formData.images || [], 
         ...(formData as Omit<PropFormData, 'name' | 'category' | 'source' | 'status' | 'quantity' | 'price' | 'description' | 'location' | 'unit' | 'length' | 'width' | 'height' | 'notes' | 'tags' | 'images'>)
     };
-    onSubmit(submissionData);
+    try {
+      await onSubmit(submissionData);
+    } catch (err) {
+      console.error("Error submitting form:", err);
+      alert('An unexpected error occurred. Please try again later.');
+    }
   };
 
   const inputClasses = "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500";

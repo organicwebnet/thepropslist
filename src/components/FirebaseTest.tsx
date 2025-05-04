@@ -67,7 +67,8 @@ const FirebaseTest: React.FC = () => {
           } else {
             // Explicitly cast to FirebaseFirestoreTypes.DocumentSnapshot before accessing .exists / .data()
             const nativeSnap = docSnap as FirebaseFirestoreTypes.DocumentSnapshot;
-            exists = nativeSnap.exists;
+            // Call exists as a function for native snapshot as well
+            exists = nativeSnap.exists(); 
             if (exists) {
               dataPayload = nativeSnap.data();
             }

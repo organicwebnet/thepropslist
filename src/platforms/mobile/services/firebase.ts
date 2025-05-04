@@ -113,7 +113,7 @@ export class MobileFirebaseService implements FirebaseService {
     
     return docRef.onSnapshot(
       (snapshot: FirebaseFirestoreTypes.DocumentSnapshot<T>) => {
-        if (snapshot.exists) {
+        if (snapshot.exists()) {
           const wrappedDoc = this.createDocumentWrapper(docRef) as FirebaseDocument<T>;
           onNext(wrappedDoc);
         }
@@ -177,7 +177,7 @@ export class MobileFirebaseService implements FirebaseService {
       data: undefined,
       get: async () => {
         const snapshot = await firestoreDocRef.get();
-        return snapshot.exists ? snapshot.data() : undefined;
+        return snapshot.exists() ? snapshot.data() : undefined;
       },
       set: async (data: any) => {
         await firestoreDocRef.set(data);

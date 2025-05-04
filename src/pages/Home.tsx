@@ -68,7 +68,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
         try {
           const docRef = firestore().collection('shows').doc(showId);
           const docSnap = await docRef.get();
-          if (docSnap.exists) {
+          if (docSnap.exists()) {
             const data = docSnap.data();
             setShowData({
               id: docSnap.id,

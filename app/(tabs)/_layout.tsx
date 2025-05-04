@@ -106,15 +106,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="profile/index"
         options={{
           title: 'Profile',
           headerTitle: 'My Profile',
           tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons 
-              name={focused ? 'person-circle' : 'person-circle-outline'} 
-              size={size} 
-              color={color} 
+            <Ionicons
+              name={focused ? 'person-circle' : 'person-circle-outline'}
+              size={size}
+              color={color}
             />
           ),
         }}

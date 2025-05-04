@@ -207,7 +207,7 @@ export class MobileFirebaseService implements FirebaseService {
     snapshot: FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData> | FirebaseFirestoreTypes.QueryDocumentSnapshot<FirebaseFirestoreTypes.DocumentData>
   ): FirebaseDocument<T> {
     const ref = snapshot.ref as CustomDocumentReference<T>;
-    const data = snapshot.exists === true ? snapshot.data() as T : undefined;
+    const data = snapshot.exists() === true ? snapshot.data() as T : undefined;
 
     return {
       id: snapshot.id,
@@ -216,7 +216,7 @@ export class MobileFirebaseService implements FirebaseService {
       get: async (): Promise<T | undefined> => {
         try {
           const docSnapshot = await ref.get();
-          return docSnapshot.exists === true ? docSnapshot.data() as T : undefined;
+          return docSnapshot.exists() === true ? docSnapshot.data() as T : undefined;
         } catch (error) {
           this.handleError(`Error getting document ${snapshot.id}`, error);
         }
@@ -253,7 +253,7 @@ export class MobileFirebaseService implements FirebaseService {
     if (!this._isInitialized || !this._firestore) throw new Error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
     const listener = this._firestore.doc(path).onSnapshot(
       (snapshot: FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData>) => {
-        if (snapshot.exists) {
+        if (snapshot.exists()) {
           const docData = this._snapshotToFirebaseDocument<T>(snapshot);
           onNext(docData);
         } else {
@@ -330,7 +330,7 @@ export class MobileFirebaseService implements FirebaseService {
         get: async (): Promise<T | undefined> => {
             try {
                 const docSnapshot = await ref.get();
-                return docSnapshot.exists ? docSnapshot.data() as T : undefined;
+                return docSnapshot.exists() ? docSnapshot.data() as T : undefined;
             } catch (error) {
                 this.handleError(`Error getting document ${path}`, error);
             }
@@ -424,7 +424,7 @@ export class MobileFirebaseService implements FirebaseService {
       const docRef = this._firestore.collection(collectionPath).doc(documentId);
       const docSnapshot = await docRef.get();
       
-      if (docSnapshot.exists !== true) {
+      if (docSnapshot.exists() !== true) {
         return null;
       }
       // Cast the snapshot to the correct type before passing

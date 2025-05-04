@@ -1,7 +1,7 @@
 import React from 'react';
 import { Redirect } from 'expo-router';
 
-export default function Index() {
-  // Redirect to the props tab, which is our main screen
-  return <Redirect href="/(tabs)/props" />;
+export default function TabIndex() {
+  // Redirect to a default tab, e.g., shows
+  return <Redirect href="/shows" />;
 } 

@@ -70,8 +70,9 @@ export default function AddPropScreen() {
       const docRef = await firebaseService.addDocument('props', propDataToAdd);
       console.log("Prop added with ID:", docRef.id);
       Alert.alert('Success', 'Prop added successfully!');
-    } catch (error) { 
-      console.error('Error adding prop via service:', error);
+      if (router.canGoBack()) router.back();
+    } catch (error) {
+      console.error('Error adding prop:', error);
       Alert.alert('Error', 'Failed to add prop.');
     } finally {
       setIsSubmitting(false);

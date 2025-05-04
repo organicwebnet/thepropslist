@@ -26,7 +26,9 @@ export const TopNavBar = () => {
   };
 
   return (
-    <View className="w-full bg-gray-900 p-4 flex-row justify-between items-center space-x-4 shadow-md">
+    <View 
+      className="w-full bg-gray-900 p-4 flex-row justify-between items-center space-x-4 shadow-md"
+    >
       {/* Left side links */}
       <View className="flex-row items-center space-x-4">
         <Text className="text-xl font-bold text-white mr-6">PropsBible</Text>

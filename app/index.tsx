@@ -3,8 +3,8 @@ import { Redirect } from 'expo-router';
 // import { View, Text } from 'react-native';
 
 export default function Index() {
-  // Restore the original redirect
-  return <Redirect href="/(tabs)/props" />;
+  // Redirect to the web props list by default
+  return <Redirect href="/props" />;
   // Test redirect:
   // return <Redirect href="/props/new" />; 
 } 

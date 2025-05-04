@@ -15,7 +15,7 @@ export default function NotFound() {
       </Text>
       <Pressable 
         style={styles.button} 
-        onPress={() => router.replace('/(tabs)/props')}
+        onPress={() => router.replace('/props')}
       >
         <Ionicons name="home-outline" size={20} color="#25292e" style={styles.buttonIcon} />
         <Text style={styles.buttonText}>Go to Home</Text>

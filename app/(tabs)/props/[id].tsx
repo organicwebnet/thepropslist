@@ -39,6 +39,8 @@ export default function PropDetailScreen() {
       .catch(err => {
         console.error("Error fetching prop details:", err);
         setError('Failed to load prop details.');
+        // Navigate back if possible
+        if (router.canGoBack()) router.back();
       })
       .finally(() => {
         setLoading(false);
@@ -68,8 +70,6 @@ export default function PropDetailScreen() {
               // Navigate back to the list after deletion
               if (router.canGoBack()) {
                 router.back();
-              } else {
-                router.replace('/(tabs)/props'); // Fallback navigation
               }
             } catch (err) {
               console.error('Error deleting prop:', err);

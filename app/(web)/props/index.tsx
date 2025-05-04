@@ -1,15 +1,14 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { useRouter, usePathname, useFocusEffect } from 'expo-router';
 import { View, Text, FlatList, ActivityIndicator, Alert, Button, TextInput, TouchableOpacity } from 'react-native'; // Simplified imports
-import { useFirebase } from '@/contexts/FirebaseContext';
 import { ShowsContext } from '@/contexts/ShowsContext'; // Import ShowsContext
+import { useProps } from '@/contexts/PropsContext'; // Import useProps hook
 import type { Prop, PropCategory } from '@/shared/types/props';
 import { propCategories } from '@/shared/types/props';
 import { PlusCircle, FileDown, FileText, CopyX } from 'lucide-react'; // Import icons
-import type { FirebaseDocument } from '@/shared/services/firebase/types';
+import type { Show, Act, Scene } from '@/types'; // Import Show, Act, Scene types
 import { WebPropCard } from '../../../src/platforms/web/components/WebPropCard';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Import lifecycle types/labels
-import type { Show } from '@/types'; // Import Show type
 
 // --- Helper Function for Date Formatting ---
 const formatDateTime = (isoString: string | undefined): string => {
@@ -35,102 +34,53 @@ export default function WebPropsListPage() {
   const pathname = usePathname(); // Get current pathname
   console.log(`--- Rendering: app/(web)/props/index.tsx (Pathname: ${pathname}) ---`);
 
-  // Restore state, hooks, effects, handlers
-  const { service } = useFirebase();
-  const showsContext = useContext(ShowsContext); // Use ShowsContext
-  const selectedShow = showsContext?.selectedShow;
-  console.log(`[WebPropsListPage Render] selectedShow ID from context: ${selectedShow?.id ?? 'null/undefined'}`);
+  // Get state and functions from context
+  const { props: contextProps, loading, error: contextError, deleteProp: contextDeleteProp } = useProps();
+  const { selectedShow } = useContext(ShowsContext) ?? {}; // Add default empty object and nullish coalescing for safety
+  
+  console.log(`[WebPropsListPage Render] selectedShow ID: ${selectedShow?.id}, Context loading: ${loading}, Context error: ${contextError?.message}, Context props count: ${contextProps.length}`);
+  
   const router = useRouter();
-  const [props, setProps] = useState<FirebaseDocument<Prop>[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Local state for filters ONLY
+  const [componentError, setComponentError] = useState<string | null>(null); // Local error state for component-specific errors (e.g., delete)
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<PropLifecycleStatus | 'All'>('All');
   const [selectedAct, setSelectedAct] = useState<number | 'All'>('All');
   const [selectedScene, setSelectedScene] = useState<number | 'All'>('All');
 
-  useFocusEffect(
-    useCallback(() => {
-      // This runs when the screen comes into focus
-      console.log(`[WebPropsListPage FocusEffect] Screen focused. Pathname: ${pathname}. SelectedShow ID: ${selectedShow?.id ?? 'null/undefined'}`);
-      // Optional: Trigger data refresh if needed when screen focuses
-      // fetchData(); // Be careful with this to avoid infinite loops
-
-      return () => {
-        // This runs when the screen goes out of focus
-        console.log(`[WebPropsListPage FocusEffect] Screen blurred. Pathname: ${pathname}`);
-      };
-    }, [pathname, selectedShow]) // Re-run effect if pathname or selectedShow changes while focused
-  );
-
-  useEffect(() => {
-    console.log(`[WebPropsListPage Mount/Update Effect] Running effect. SelectedShow ID: ${selectedShow?.id ?? 'null/undefined'}. Pathname: ${pathname}`);
-    if (!service || !selectedShow) { 
-      console.log("[WebPropsListPage Effect] No service or selectedShow, returning early.");
-      setLoading(false);
-      setProps([]);
-      return;
-    }
-
-    console.log(`[WebPropsListPage Effect] Setting up listener for showId: ${selectedShow.id}`);
-    setLoading(true);
-    const unsubscribe = service.listenToCollection<Prop>(
-      'props', // Collection path
-      (documents) => { // Callback for when data arrives
-        console.log(`[WebPropsListPage Effect Callback] Listener received ${documents.length} props for showId: ${selectedShow.id}`);
-        setProps(documents); // Directly set the received documents
-        setError(null);
-        setLoading(false);
-      },
-      (err) => { // Error callback
-        console.error(`[WebPropsListPage Effect Error] Listener error for showId: ${selectedShow.id}`, err);
-        setError('Failed to load props. Please try again later.');
-        setLoading(false);
-      },
-      // Pass the query options object
-      { where: [['showId', '==', selectedShow.id]] }
-    );
-
-    return () => {
-        console.log(`[WebPropsListPage Effect Cleanup] Cleaning up listener for showId: ${selectedShow?.id ?? 'Cleanup occurred after show became null?'}`);
-        unsubscribe();
-    };
-  }, [service, selectedShow, pathname]);
+  // Map context props (Prop[]) to FirebaseDocument<Prop>[] if needed by WebPropCard,
+  // OR update WebPropCard to accept Prop[] directly.
+  // For now, let's assume WebPropCard needs FirebaseDocument structure.
+  // If contextProps structure is different, this mapping needs adjustment.
+  const propsForFiltering: Prop[] = contextProps;
 
   const handleDelete = useCallback(async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this prop?')) {
-      return;
-    }
+    if (!window.confirm('Are you sure you want to delete this prop?')) return;
+    setComponentError(null); // Clear local error
     try {
-      if (!service?.deleteDocument) {
-        throw new Error("Delete function not available on service.");
-      }
-      await service.deleteDocument('props', id);
-      console.log(`Prop ${id} deleted`);
+      await contextDeleteProp(id); // Use delete function from context
+      console.log(`Prop ${id} deleted via context`);
     } catch (err) {
-      console.error('Failed to delete prop:', err);
-      setError('Failed to delete prop. Please try again.');
+      console.error('Failed to delete prop via context:', err);
+      setComponentError('Failed to delete prop. Please try again.'); // Set local error
     }
-  }, [service]);
+  }, [contextDeleteProp]);
 
   const handleEdit = (id: string) => {
-    router.push(`/props/${id}` as any);
+    // Navigation remains the same
+    router.push({ pathname: '/props/[id]/edit', params: { id } });
   };
 
   const handleAddNew = () => {
     if (!selectedShow || !selectedShow.id) {
-      // Prevent navigation if no show is selected
       console.error("Cannot add new prop: No show selected.");
-      setError("Please select a show before adding a prop."); // Or use Alert
+      setComponentError("Please select a show before adding a prop.");
       return;
     }
-    // Correctly navigate with showId as a query parameter
-    // Using the (web) group path
-    router.push({ 
-      pathname: '/(web)/props/new', 
-      params: { showId: selectedShow.id } 
-    });
+    // Navigation remains the same
+    router.push({ pathname: '/props/new', params: { showId: selectedShow.id } });
   };
 
   // --- Placeholder Handlers for New Buttons ---
@@ -139,90 +89,72 @@ export default function WebPropsListPage() {
   };
 
   const handleExportCSV = () => {
-    if (!selectedShow || filteredProps.length === 0) {
+    if (!selectedShow || propsForFiltering.length === 0) { // Use direct props
       alert('No props to export.');
       return;
     }
-
-    // Define headers for the CSV file
     const headers = [
       'ID', 'Name', 'Category', 'Status', 'Description', 'Quantity',
       'Act', 'Scene', 'Storage Location', 'Current Location', 'Condition',
       'Source', 'Source Details', 'Price', 'Materials', 'Last Modified'
-      // Add more headers as needed based on PropFormData fields
     ];
-    
-    // Function to safely format a cell value for CSV
     const formatCsvCell = (value: any): string => {
       const stringValue = value === null || typeof value === 'undefined' ? '' : String(value);
-      // Escape double quotes by doubling them and enclose in quotes if it contains comma, quote, or newline
       if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
         return `"${stringValue.replace(/"/g, '""')}"`;
       }
       return stringValue;
     };
-
-    // Create header row
     const headerRow = headers.map(formatCsvCell).join(',');
-
-    // Create data rows from filteredProps
-    const dataRows = filteredProps.map(propDoc => {
-      const data = propDoc.data;
-      if (!data) return ''; // Skip if data is missing (shouldn't happen with filtered)
-      
-      const row = [
-        propDoc.id,
-        data.name,
-        data.category,
-        data.status,
-        data.description,
-        data.quantity,
-        data.act,
-        data.scene,
-        data.location, // Storage location
-        data.currentLocation, // Current location
-        data.condition,
-        data.source,
-        data.sourceDetails,
-        data.price,
-        (data.materials || []).join('; '), // Join materials array
-        data.lastModifiedAt ? formatDateTime(data.lastModifiedAt) : '' // Format date
-        // Add other data fields corresponding to headers
-      ];
-      return row.map(formatCsvCell).join(',');
-    }).filter(row => row).join('\n'); // Filter out potential empty rows and join with newline
-
+    const dataRows = propsForFiltering.map(data => { // Map directly from Prop
+        if (!data) return ''; // Should not happen if contextProps is filtered properly upstream, but safe check
+        const row = [
+            data.id,
+            data.name,
+            data.category,
+            data.status,
+            data.description,
+            data.quantity,
+            data.act,
+            data.scene,
+            data.location,
+            data.currentLocation,
+            data.condition,
+            data.source,
+            data.sourceDetails,
+            data.price,
+            (data.materials || []).join('; '),
+            data.lastModifiedAt ? formatDateTime(data.lastModifiedAt as any) : ''
+        ];
+        return row.map(formatCsvCell).join(',');
+    }).filter(row => row).join('\n');
     const csvContent = `${headerRow}\n${dataRows}`;
-    
-    // Create Blob and trigger download
     try {
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      // Generate filename based on show name, replacing spaces
-      const filename = `props-export-${selectedShow.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') || 'show'}.csv`;
+      const filename = `props-export-${selectedShow?.name?.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '') || 'show'}.csv`;
       link.setAttribute('download', filename);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url); // Clean up the object URL
-      console.log(`CSV export triggered for ${filteredProps.length} props.`);
-    } catch (error) {
-      console.error("Error during CSV export:", error);
-      alert("An error occurred while preparing the CSV file.");
+      URL.revokeObjectURL(url); 
+      console.log(`CSV export triggered for ${propsForFiltering.length} props.`);
+    } catch (csvError) {
+      console.error("Error during CSV export:", csvError);
+      setComponentError("An error occurred while preparing the CSV file.");
     }
   };
 
   const handleGoToPDFPreview = () => {
     if (!selectedShow || !selectedShow.id) {
-      setError("Please select a show first.");
+      setComponentError("Please select a show first.");
       return;
     }
-    // Navigate to a (currently non-existent) PDF preview route
     router.push({
-      pathname: '/(web)/props/pdf-preview' as any,
+      pathname: '/props/pdf-preview',
       params: { showId: selectedShow.id }
     });
   };
@@ -233,16 +165,14 @@ export default function WebPropsListPage() {
   const availableScenes =
     selectedAct === "All"
       ? []
-      : availableActs.find((act) => act.id === selectedAct)?.scenes || [];
+      : availableActs.find((act: Act) => act.id === selectedAct)?.scenes || [];
 
   // Combined filtering logic
-  const filteredProps = props.filter((propDoc, index) => {
-    const data = propDoc.data;
+  const filteredProps = propsForFiltering.filter((data, index) => { // Filter directly on Prop data
     
     // Log the first prop document being filtered
     if (index === 0) {
-      console.log("Filtering propDoc:", JSON.stringify(propDoc, null, 2));
-      console.log("Extracted data:", JSON.stringify(data, null, 2));
+      console.log("Filtering data:", JSON.stringify(data, null, 2));
       console.log("Current Filters:", {
         selectedCategory,
         selectedStatus,
@@ -280,7 +210,10 @@ export default function WebPropsListPage() {
     return true; // Include prop if all filters pass
   });
   // Log the result of filtering
-  console.log(`WebPropsListPage Render: Filtered props count: ${filteredProps.length} (Raw count: ${props.length})`);
+  console.log(`WebPropsListPage Render: Filtered props count: ${filteredProps.length} (Raw count: ${propsForFiltering.length})`);
+
+  // Final Render Check Log using context state
+  console.log(`[WebPropsListPage Final Render Check] loading: ${loading}, contextError: ${contextError?.message}, componentError: ${componentError}, contextProps.length: ${contextProps.length}, filteredProps.length: ${filteredProps.length}`);
 
   // Restore the original return statement
   return (
@@ -288,7 +221,7 @@ export default function WebPropsListPage() {
       {/* Header Section */}
       <View className="mb-6 flex-row justify-between items-center flex-wrap gap-y-4">
         <Text className="text-2xl font-bold text-gray-100">
-          Props for: {selectedShow ? selectedShow.name : 'Loading...'}
+          Props for: {selectedShow?.name || 'Loading...'}
         </Text>
         {/* Action Buttons - Restored styled buttons with icons */}
         <View className="flex-row flex-wrap gap-2">
@@ -377,7 +310,7 @@ export default function WebPropsListPage() {
                 disabled={availableActs.length === 0}
             >
                 <option value="All">All Acts</option>
-                {availableActs.map((act) => (
+                {availableActs.map((act: Act) => (
                     <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>
                 ))}
             </select>
@@ -392,22 +325,29 @@ export default function WebPropsListPage() {
                 disabled={selectedAct === 'All' || availableScenes.length === 0}
             >
                 <option value="All">All Scenes</option>
-                {availableScenes.map((scene) => (
+                {availableScenes.map((scene: Scene) => (
                     <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>
                 ))}
             </select>
         </View>
       </View>
 
-      {/* Loading / Error / Content Section */}
+      {/* Display component-specific errors (e.g., from delete) */}
+      {componentError && (
+          <View className="mb-4 p-3 bg-red-900 border border-red-700 rounded">
+              <Text className="text-red-400">{componentError}</Text>
+          </View>
+      )}
+      
+      {/* Loading / Error / Content Section - Uses context state */}
       {loading ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#FBBF24" />
           <Text className="text-gray-400 mt-2">Loading props...</Text>
         </View>
-      ) : error ? (
+      ) : contextError ? ( // Use contextError
         <View className="flex-1 justify-center items-center">
-          <Text className="text-red-500">Error: {error}</Text>
+          <Text className="text-red-500">Error loading props: {contextError.message}</Text>
         </View>
       ) : filteredProps.length === 0 ? (
         <View className="flex-1 justify-center items-center">
@@ -415,12 +355,12 @@ export default function WebPropsListPage() {
         </View>
       ) : (
         <View className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProps.map((propDoc) => (
+          {filteredProps.map((prop) => (
             <WebPropCard
-              key={propDoc.id}
-              prop={{ ...propDoc.data!, id: propDoc.id }}
-              onEdit={() => handleEdit(propDoc.id)}
-              onDelete={() => handleDelete(propDoc.id)}
+              key={prop.id}
+              prop={prop}
+              onEdit={() => handleEdit(prop.id)}
+              onDelete={() => handleDelete(prop.id)}
             />
           ))}
         </View>

@@ -34,7 +34,8 @@ import {
   writeBatch as webWriteBatch,
   onSnapshot,
   DocumentSnapshot,
-  QuerySnapshot
+  QuerySnapshot,
+  type DocumentData
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -104,25 +105,30 @@ export class WebFirebaseService implements FirebaseService {
       this.app = initializeApp(firebaseConfig);
       this.authInstance = getAuth(this.app);
       this.dbInstance = getFirestore(this.app);
-      this.storageInstance = getStorage(this.app);
       
-      await enableIndexedDbPersistence(this.dbInstance)
-        .catch((err) => { 
-          if (err.code == 'failed-precondition') {
-            console.warn('Firestore Persistence failed precondition. Multiple tabs open?');
-          } else if (err.code == 'unimplemented') {
-            console.warn('Firestore Persistence not available in this browser.');
+      // Attempt standard IndexedDB Persistence
+      try {
+          await enableIndexedDbPersistence(this.dbInstance);
+          console.log('[Firebase Init] Firestore persistence enabled.');
+      } catch (err: any) {
+          if (err.code === 'failed-precondition') {
+              console.warn('[Firebase Init] Firestore Persistence failed precondition. Multiple tabs open? Falling back to memory cache for this session.');
+          } else if (err.code === 'unimplemented') {
+              console.warn('[Firebase Init] Firestore Persistence is not available in this browser environment. Using memory cache.');
           } else {
-            console.error('Firestore Persistence error:', err);
+              console.error('[Firebase Init] Error enabling Firestore persistence:', err);
           }
-        });
-      
+          // Firestore automatically uses memory cache on failure
+      }
+
+      this.storageInstance = getStorage(this.app);
       this.isInitialized = true;
-      console.log('Firebase Web initialized successfully');
+      console.log('Firebase Web initialized successfully (persistence attempt completed).');
     } catch (error) {
-      console.error('Firebase Web initialization error:', error);
+      // Catch errors from initializeApp, getAuth, getFirestore, getStorage
+      console.error('Firebase Web core initialization error:', error);
       this.isInitialized = false;
-      throw error;
+      throw error; // Re-throw critical initialization errors
     }
   }
 

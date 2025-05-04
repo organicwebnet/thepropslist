@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   Auth,
-  User
+  User,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import {
   getFirestore,
@@ -57,12 +58,12 @@ import type {
   CustomStorageReference,
   SyncStatus,
   // FirebaseError // Keep as type import initially if only used for type annotations
-} from '../../../shared/services/firebase/types';
+} from '../shared/services/firebase/types';
 // Import FirebaseError as a value if needed for instantiation
-import { FirebaseError } from '../../../shared/services/firebase/types';
+import { FirebaseError } from '../shared/services/firebase/types';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle';
 import type { Show } from '@/types';
-import { getFirebaseConfig } from '../../../config/firebase'; // Import the central config getter
+import { getFirebaseConfig } from '../config/firebase'; // Import the central config getter
 
 // Add QueryOptions type
 type QueryOptions = {
@@ -422,4 +423,35 @@ export class WebFirebaseService implements FirebaseService {
     console.warn(`deleteShow(${showId}) is not implemented in WebFirebaseService.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
+
+  // --- Add missing Auth methods required by FirebaseService interface ---
+
+  async signInWithEmailAndPassword(email: string, password: string): Promise<any> {
+    if (!this.isInitialized || !this.authInstance) throw new Error('Firebase Auth not initialized');
+    try {
+      return await signInWithEmailAndPassword(this.authInstance, email, password);
+    } catch (error) {
+      throw this.createError(error);
+    }
+  }
+
+  async createUserWithEmailAndPassword(email: string, password: string): Promise<any> {
+    if (!this.isInitialized || !this.authInstance) throw new Error('Firebase Auth not initialized');
+    try {
+      return await createUserWithEmailAndPassword(this.authInstance, email, password);
+    } catch (error) {
+      throw this.createError(error);
+    }
+  }
+
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    if (!this.isInitialized || !this.authInstance) throw new Error('Firebase Auth not initialized');
+    try {
+      await sendPasswordResetEmail(this.authInstance, email);
+    } catch (error) {
+      throw this.createError(error);
+    }
+  }
+  // --- End missing Auth methods ---
+
 } 

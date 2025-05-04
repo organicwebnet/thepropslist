@@ -5,7 +5,7 @@ if (Platform.OS === 'web') {
 }
 
 import React, { useEffect, type PropsWithChildren } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, Slot } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
@@ -18,10 +18,11 @@ import { TopNavBar } from '../src/components/navigation/TopNavBar';
 import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
-import nativeFirebaseApp from '@react-native-firebase/app'; // <-- Import RNFirebase App
+// Import getApps alongside the default import
+import nativeFirebaseApp, { getApps } from '@react-native-firebase/app';
 
-// Check if native Firebase app is initialized early
-console.log('--- RNFirebase App Check:', nativeFirebaseApp.apps.length > 0 ? 'Apps found' : 'NO APPS FOUND');
+// Use getApps() for the check
+console.log('--- RNFirebase App Check:', getApps().length > 0 ? 'Apps found' : 'NO APPS FOUND');
 
 // Uncomment SplashScreen 
 SplashScreen.preventAutoHideAsync();
@@ -29,7 +30,7 @@ SplashScreen.preventAutoHideAsync();
 
 // Keep unstable_settings with initialRouteName set
 export const unstable_settings = {
-  initialRouteName: '(tabs)/props', 
+//  initialRouteName: '(tabs)/props', // Temporarily remove to see if it affects web routing
   router: {
     unstable_enableDirectoryLinks: true,
   },
@@ -122,22 +123,14 @@ function AppContent() {
   // If user is logged in, show platform-specific layout
   if (user) {
       console.log(`--- AppContent: User logged in, rendering for Platform: ${Platform.OS} --- `);
-      return (
-        <View style={{ flex: 1 }}>
-          {Platform.OS === 'web' ? (
-            // --- Web Layout ---
-            <>
-              <TopNavBar />
-              <Stack screenOptions={{ headerShown: false }}>
-                 {/* Let Expo Router handle web routes */}
-              </Stack>
-            </>
-          ) : (
-            // --- Mobile Layout ---
-            <RootLayoutNav /> 
-          )}
-        </View>
-      );
+      if (Platform.OS === 'web') {
+        // On Web, render Slot. Expo Router uses file structure to find the layout.
+        // For routes matching (web)/*, it will use app/(web)/_layout.tsx.
+        return <Slot />;
+      } else {
+        // On Native, render the specific Native Stack Navigator.
+        return <RootLayoutNav />;
+      }
   }
   
   // If NOT logged in, show platform-specific Auth screen
