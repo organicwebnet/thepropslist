@@ -77,7 +77,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="props"
+        name="propsTab/index"
         options={{
           href: Platform.OS === 'web' ? null : undefined,
           title: 'Props',
