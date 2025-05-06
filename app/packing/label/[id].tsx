@@ -43,6 +43,9 @@ export default function LabelPreviewPage() {
   const { show, loading: showLoading, error: showError } = useShow(showId);
 
   const hasFragileItems = box?.props?.some(p => p.isFragile) ?? false;
+  // Calculate total weight
+  const totalWeightKg = box?.props?.reduce((sum, p) => sum + (p.weight || 0), 0) ?? 0;
+  const weightUnit = box?.weightUnit || 'kg'; // Use unit from box or default
 
   const origin = Platform.OS === 'web' ? window.location.origin : 'https://yourapp.com';
   const qrValue = boxId && showId ?
@@ -172,9 +175,12 @@ export default function LabelPreviewPage() {
               }
               .content-cell { padding: 15px; border-top: 3px solid black; }
               .box-name { font-size: 24px; font-weight: bold; margin-bottom: 8px; text-align: left; }
+              .info-row { display: flex; justify-content: space-between; margin-top: 10px; font-size: 14px; }
               .notes-label { font-weight: bold; display: block; margin-bottom: 3px; font-size: 12px; }
               .notes-content { font-size: 14px; word-wrap: break-word; }
-              .notes-section { margin-top: 10px; }
+              .notes-section { /* Removed margin-top, handled by info-row now */ }
+              .weight-label { font-weight: bold; font-size: 12px; }
+              .weight-value { font-size: 14px; }
               /* Added style for the show name cell */
               .show-name-cell { 
                 padding: 10px; 
@@ -194,7 +200,13 @@ export default function LabelPreviewPage() {
                   </td>
                 </tr>
                 <tr>
-                  <td class="header-left">Box<br/>${boxNumber} of ${totalBoxes}</td>
+                  <td class="header-left">
+                  <br/>Box<br/>${boxNumber} of ${totalBoxes}<br/><br/><br/>
+                  <div class="weight-section">
+                      <span class="weight-label">Approx Weight:</span><br/>
+                      <strong class="weight-value">${totalWeightKg.toFixed(1)} ${weightUnit}</strong>
+                  </div>
+                  </td>
                   <td class="header-right">
                     <div class="header-right-content">
                       <img src="${qrDataURL}" alt="QR Code" class="qr-code" />
@@ -206,9 +218,12 @@ export default function LabelPreviewPage() {
                 <tr>
                   <td colspan="2" class="content-cell">
                     <div class="box-name">${box.name || 'Packing Box'}</div>
-                    <div class="notes-section">
-                      <span class="notes-label">Handling Notes:</span>
-                      <span class="notes-content">${handlingNote || 'N/A'}</span>
+                    <div class="info-row">
+                       <div class="notes-section">
+                         <span class="notes-label">Handling Notes:</span>
+                         <span class="notes-content">${handlingNote || 'N/A'}</span>
+                       </div>
+                      
                     </div>
                   </td>
                 </tr>
