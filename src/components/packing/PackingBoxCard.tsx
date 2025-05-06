@@ -81,7 +81,7 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
     console.log('[PackingBoxCard] Full box object:', box);
 
     router.push({
-      pathname: '/packing/label/[id]' as any,
+      pathname: '/(web)/packing/label/[id]' as any,
       params: { id: box.id, showId: box.showId }
     });
   };
