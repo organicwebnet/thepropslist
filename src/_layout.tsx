@@ -1,3 +1,4 @@
+import React from 'react';
 import { Stack } from 'expo-router';
 import { StrictMode } from 'react';
 import { View } from 'react-native';
@@ -6,20 +7,22 @@ import { useColorScheme } from 'react-native';
 import { darkTheme, lightTheme } from '@/theme';
 // import { GestureProvider } from './contexts/GestureContext'; // Commented out: Cannot find module
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+// This is the layout for the root /src folder routes
+// Often used for modals, settings, or routes outside the main tab/stack flow
 
-  return (
-    <StrictMode>
-      <ThemeProvider value={colorScheme === 'dark' ? darkTheme : lightTheme}>
+const SrcLayout = () => {
+    return (
+        // @ts-ignore - Suppress TS2786 for Stack component
         <Stack
-          screenOptions={{
-            headerShown: false,
-            gestureEnabled: true,
-            animation: 'slide_from_right',
-          }}
-        />
-      </ThemeProvider>
-    </StrictMode>
-  );
-} 
+            screenOptions={{
+                headerShown: true, // Example: Show header for src routes
+                // Add other screen options as needed
+            }}
+        >
+            {/* Define screens within the src folder here if needed */}
+            {/* Example: <Stack.Screen name="settings" options={{ title: 'Settings' }} /> */}
+        </Stack>
+    );
+};
+
+export default SrcLayout; 

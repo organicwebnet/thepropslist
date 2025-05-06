@@ -3,11 +3,11 @@ import { PackingBox, PackedProp } from '../../types/packing';
 import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, LucideIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 import { TouchableOpacity, Text } from 'react-native';
 
 interface PackingBoxCardProps {
-  box: PackingBox;
+  box: PackingBox & { showId?: string };
   onEdit: (box: PackingBox) => void;
   onDelete: (boxId: string) => Promise<void>;
 }
@@ -76,19 +76,31 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
   const statusBg = currentStatusStyle.bg;
   const statusText = currentStatusStyle.text;
 
+  const handleNavigateToLabel = () => {
+    console.log(`[PackingBoxCard] Navigating to label for Document ID: ${box.id}, Show ID: ${box.showId}`);
+    console.log('[PackingBoxCard] Full box object:', box);
+
+    router.push({
+      pathname: '/packing/label/[id]' as any,
+      params: { id: box.id, showId: box.showId }
+    });
+  };
+
   return (
-    <div className={`bg-[#1F2937] rounded-lg shadow-md border border-gray-700 overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-gray-600`}>
+    <div className={`bg-[#1F2937] w-fit rounded-lg shadow-md border border-gray-700 overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-gray-600`}>
       <div className="p-5">
         <div className="flex justify-between items-start mb-3">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-100 mb-1 truncate" title={box.name ?? 'Unnamed Box'}>
+          <Link 
+            href={{
+              pathname: '/(web)/packing/box/[id]' as any, 
+              params: { id: box.id, showId: box.showId }
+            }} 
+            className="block hover:text-blue-400 transition-colors mr-4"
+          >
+            <h3 className="text-lg font-semibold text-gray-100 truncate" title={box.name ?? 'Unnamed Box'}>
               {box.name ?? 'Unnamed Box'}
             </h3>
-            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBg} ${statusText}`}>
-              <StatusIcon className="h-3 w-3 mr-1.5" />
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </div>
-          </div>
+          </Link>
           <div className="flex space-x-2 flex-shrink-0">
             <button
               onClick={() => onEdit(box)}
@@ -110,6 +122,34 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
               )}
             </button>
           </div>
+        </div>
+
+        {/* --- Status, Print Button & Updated Section --- */}
+        <div className="flex justify-between items-center mb-3 text-xs">
+          {/* Left side: Status and Print Button */} 
+          <div className="flex items-center gap-2">
+            {/* Status Badge */}
+            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-medium ${statusBg} ${statusText}`}>
+              <StatusIcon className="h-3 w-3 mr-1.5" />
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </div>
+            {/* Print Label Button */}
+            <TouchableOpacity
+              onPress={handleNavigateToLabel}
+              style={{
+                backgroundColor: '#3B82F6', // Blue-500
+                paddingVertical: 2,
+                paddingHorizontal: 6,
+                borderRadius: 4,
+              }}
+            >
+              <Text style={{ color: 'white', fontSize: 10, fontWeight: '500' }}>
+                Label
+              </Text>
+            </TouchableOpacity>
+          </div>
+          {/* Right side: Last Updated */}
+          <span className="text-gray-500">Last updated: {timeAgo}</span>
         </div>
 
         {box.description && (
@@ -147,24 +187,6 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
                 </span>
               )}
             </span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span>Last updated: {timeAgo}</span>
-
-            <TouchableOpacity
-              onPress={() => router.push({ pathname: '/packing/label/[id]' as any, params: { id: box.id } })}
-              style={{
-                backgroundColor: '#3B82F6',
-                paddingVertical: 4,
-                paddingHorizontal: 8,
-                borderRadius: 4,
-              }}
-            >
-              <Text style={{ color: 'white', fontSize: 10, fontWeight: '500' }}>
-                Print Label
-              </Text>
-            </TouchableOpacity>
           </div>
         </div>
       </div>

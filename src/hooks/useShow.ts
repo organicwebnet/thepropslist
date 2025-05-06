@@ -36,13 +36,15 @@ export function useShow(showId: string | undefined) {
           `shows/${showId}`, // Combined path
           (docWrapper) => {
             // Assuming onNext provides FirebaseDocument<T>
+            console.log(`[useShow Listener] Received data for ${showId}:`, docWrapper?.data);
             setShow(docWrapper?.data ?? null);
             setLoading(false);
           },
           (err) => {
+            console.error(`[useShow Listener] Error listening to show ${showId}:`, err);
             setError(err);
             setLoading(false);
-            console.error(`Error listening to show ${showId}:`, err);
+            // console.error(`Error listening to show ${showId}:`, err);
           }
         );
 

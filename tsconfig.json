@@ -24,6 +24,21 @@
       ],
       "@platforms/*": [
         "src/platforms/*"
+      ],
+      "@hooks/*": [
+        "src/hooks/*"
+      ],
+      "@contexts/*": [
+        "src/contexts/*"
+      ],
+      "@services/*": [
+        "src/services/*"
+      ],
+      "@config/*": [
+        "src/config/*"
+      ],
+      "@types/*": [
+        "src/types/*"
       ]
     },
     "lib": [

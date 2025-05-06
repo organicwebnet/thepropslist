@@ -61,7 +61,7 @@ export function PackingPage({ props: allProps, show }: PackingPageProps) {
 
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.container}>
+      <View className="pt-6 px-4 md:px-6">
         <PackingList
           show={show}
           props={allProps}
@@ -82,10 +82,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     // Add padding or other layout styles if needed
-  },
-  container: {
-    // flex: 1,
-    // backgroundColor: 'var(--bg-primary)'
   },
   loadingContainer: {
     flex: 1,

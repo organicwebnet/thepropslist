@@ -10,6 +10,7 @@ import { Package, Theater, Box } from 'lucide-react-native';
 import type { RootStackParamList } from './types';
 import { Show } from '../types';
 import { Prop } from '@/shared/types/props';
+import { RouteProp } from '@react-navigation/native';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
@@ -31,7 +32,7 @@ function MainTabs() {
         name="Props"
         component={Props}
         options={{
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Package size={size} color={color} />
           ),
         }}
@@ -40,7 +41,7 @@ function MainTabs() {
         name="Shows"
         component={Shows}
         options={{
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Theater size={size} color={color} />
           ),
         }}
@@ -49,7 +50,7 @@ function MainTabs() {
         name="Packing"
         component={Packing}
         options={{
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Box size={size} color={color} />
           ),
         }}
@@ -83,14 +84,14 @@ export function AppNavigator() {
         <Stack.Screen
           name="PropDetail"
           component={PropDetailPage}
-          options={({ route }) => ({
+          options={({ route }: { route: RouteProp<RootStackParamList, 'PropDetail'> }) => ({
             title: route.params?.prop?.name ? `Prop - ${route.params.prop.name}` : 'Prop Detail',
           })}
         />
         <Stack.Screen
           name="ShowDetail"
           component={ShowDetailPage}
-          options={({ route }) => ({
+          options={({ route }: { route: RouteProp<RootStackParamList, 'ShowDetail'> }) => ({
             title: route.params?.show?.name ? `Show - ${route.params.show.name}` : 'Show Detail',
           })}
         />
@@ -98,7 +99,7 @@ export function AppNavigator() {
         {/* <Stack.Screen
           name="AddProp"
           component={AddPropPage}
-          options={({ route }) => ({
+          options={({ route }: { route: RouteProp<RootStackParamList, 'AddProp'> }) => ({
             title: route.params?.showId ? 'Add Prop to Show' : 'Add New Prop',
           })}
         /> */}
@@ -120,7 +121,7 @@ export function AppNavigator() {
         {/* <Stack.Screen
           name="PackingDetail"
           component={PackingPage} // PackingPage might also be missing/renamed
-          options={({ route }) => ({
+          options={({ route }: { route: RouteProp<RootStackParamList, 'PackingDetail'> }) => ({
             title: route.params?.show?.name ? `Packing - ${route.params.show.name}` : 'Packing',
           })}
         /> */}

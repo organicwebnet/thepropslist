@@ -11,6 +11,8 @@ import type { Prop, PropFormData, DigitalAsset, PropImage, PropLifecycleStatus }
 import type { Show, Act, Scene } from '@shared/types/props';
 import { WysiwygEditor } from './WysiwygEditor';
 import { HelpTooltip } from './HelpTooltip';
+import { v4 as uuidv4 } from 'uuid';
+import { lifecycleStatusLabels } from '@/types/lifecycle';
 
 export interface PropFormProps {
   onSubmit: (prop: PropFormData) => Promise<void>;
@@ -34,16 +36,8 @@ export const weightUnits: ReadonlyArray<{ value: 'kg' | 'lb' | 'g'; label: strin
   { value: 'g', label: 'g' },
 ];
 
-// Define the lifecycle statuses array based on the imported type
-const propLifecycleStatuses: ReadonlyArray<PropLifecycleStatus> = [
-  'confirmed' as PropLifecycleStatus,
-  'potential' as PropLifecycleStatus,
-  'deleted' as PropLifecycleStatus,
-  'unknown' as PropLifecycleStatus,
-  'archived' as PropLifecycleStatus,
-  'in_use' as PropLifecycleStatus,
-  'maintenance' as PropLifecycleStatus
-];
+// Define the lifecycle statuses array based on the imported type and labels
+const propLifecycleStatuses = Object.keys(lifecycleStatusLabels) as PropLifecycleStatus[];
 
 const initialFormState: PropFormData = {
   name: '',
@@ -51,7 +45,7 @@ const initialFormState: PropFormData = {
   description: '',
   category: 'Other' as PropCategory,
   quantity: 1,
-  status: 'confirmed', // Use PropLifecycleStatus default
+  status: 'confirmed' as PropLifecycleStatus,
   location: '',
   currentLocation: '', // Current location (e.g., on stage, rehearsal room)
   condition: '',
@@ -230,14 +224,15 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
     }
   };
 
-  // Fieldset styles (Tailwind example)
-  const fieldsetStyles = "bg-[#1F2937] p-4 rounded-lg border border-gray-700 mb-6"; // Use page bg or slightly different
-  const legendStyles = "text-lg font-semibold text-gray-200 mb-3";
-  const inputStyles = "w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-transparent transition-colors disabled:opacity-50";
-  const selectStyles = `${inputStyles}`;
-  const checkboxLabelStyles = "ml-2 text-sm text-gray-300";
-  const checkboxContainerStyles = "flex items-center mt-2 mb-2";
-  const conditionalFieldStyles = "mt-4 space-y-1"; // Style for conditional inputs
+  // Define base styles
+  const fieldsetStyles = "border border-[var(--border-color)] p-4 rounded-md mb-6";
+  const legendStyles = "text-base font-semibold text-blue-300 px-2 mb-3";
+  // Adjusted input/select classes: removed w-full, changed background
+  const inputStyles = "px-3 py-2 bg-gray-900 border border-gray-600 rounded-md text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed";
+  const selectStyles = "px-3 py-2 bg-gray-900 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed";
+  const checkboxContainerStyles = "flex items-center";
+  const checkboxLabelStyles = "ml-2 text-sm font-medium text-[var(--text-secondary)]";
+  const conditionalFieldStyles = "mt-4 space-y-1 pl-6"; // Removed border-l-2 border-gray-600
 
   return (
     // Match background of parent column: bg-[#111827]
@@ -254,7 +249,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={inputStyles}
+              className={`${inputStyles} w-full`}
               placeholder="Enter prop name"
               required
               disabled={disabled}
@@ -267,7 +262,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               id="category"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as PropCategory })}
-              className={selectStyles}
+              className={`${selectStyles} w-full`}
               required
               disabled={disabled}
             >
@@ -299,7 +294,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               min="1"
               value={formData.quantity}
               onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value, 10) || 1 })}
-              className={inputStyles}
+              className={`${inputStyles} max-w-xs`}
               required
               disabled={disabled}
             />
@@ -314,7 +309,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               id="condition"
               value={formData.condition ?? ''}
               onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
-              className={inputStyles}
+              className={`${inputStyles} w-full`}
               placeholder="e.g., New, Used, Needs Repair"
               disabled={disabled}
             />
@@ -329,7 +324,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               id="materials"
               value={(formData.materials || []).join(', ')}
               onChange={handleMaterialsChange}
-              className={inputStyles}
+              className={`${inputStyles} w-full`}
               placeholder="e.g., Wood, Metal, Plastic"
               disabled={disabled}
             />
@@ -351,110 +346,20 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
         </div>
       </div>
 
-      {/* Fieldset: Dimensions & Weight */}
-      <div className={fieldsetStyles}>
-        <h3 className={legendStyles}>Dimensions & Weight</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Dimensions */}
-          <div>
-             <label htmlFor="length" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Length</label>
-             <input type="number" id="length" value={formData.length ?? ''} onChange={(e) => setFormData({ ...formData, length: Number(e.target.value) })} className={inputStyles} placeholder="L" disabled={disabled} />
-          </div>
-           <div>
-             <label htmlFor="width" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Width</label>
-             <input type="number" id="width" value={formData.width ?? ''} onChange={(e) => setFormData({ ...formData, width: Number(e.target.value) })} className={inputStyles} placeholder="W" disabled={disabled} />
-           </div>
-           <div>
-             <label htmlFor="height" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Height</label>
-             <input type="number" id="height" value={formData.height ?? ''} onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })} className={inputStyles} placeholder="H" disabled={disabled} />
-           </div>
-           <div>
-             <label htmlFor="depth" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Depth</label>
-             <input type="number" id="depth" value={formData.depth ?? ''} onChange={(e) => setFormData({ ...formData, depth: Number(e.target.value) })} className={inputStyles} placeholder="D" disabled={disabled} />
-           </div>
-           <div className="md:col-span-2">
-             <label htmlFor="unit" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Dimension Unit</label>
-             <select id="unit" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value as DimensionUnit })} className={selectStyles} disabled={disabled}>
-               {dimensionUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-             </select>
-           </div>
-          {/* Weight */}
-          <div className="md:col-span-1">
-            <label htmlFor="weight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight</label>
-            <input type="number" id="weight" value={formData.weight ?? ''} onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })} className={inputStyles} placeholder="Weight" disabled={disabled} />
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="weightUnit" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight Unit</label>
-            <select id="weightUnit" value={formData.weightUnit} onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' | 'g' })} className={selectStyles} disabled={disabled}>
-               {weightUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      {/* Fieldset: Source & Acquisition - ADD sourceDetails */}
-      <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Source & Acquisition</h3>
-         <div className="space-y-4">
-            {/* Source Select */}
-            <div>
-               <label htmlFor="source" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Source</label>
-               <select id="source" value={formData.source} onChange={(e) => setFormData({ ...formData, source: e.target.value as any })} className={selectStyles} disabled={disabled}>
-                  <option value="bought">Bought</option>
-                  <option value="rented">Rented</option>
-                  <option value="made">Made</option>
-                  <option value="borrowed">Borrowed</option>
-                  <option value="owned">Owned</option>
-                  {/* Add other sources as needed */} 
-               </select>
-            </div>
-            
-            {/* Source Details Input */}
-            <div>
-               <label htmlFor="sourceDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                 Source Details <span className="text-xs text-gray-400">(Vendor, Builder, etc.)</span>
-               </label>
-               <input
-                 type="text"
-                 id="sourceDetails"
-                 value={formData.sourceDetails || ''}
-                 onChange={(e) => setFormData({ ...formData, sourceDetails: e.target.value })}
-                 className={inputStyles}
-                 placeholder="Enter source details"
-                 disabled={disabled}
-               />
-             </div>
-
-            {/* Conditional Rental Fields */}
-            {formData.source === 'rented' && (
-              <>
-                <div>
-                  <RequiredLabel>Rental Source</RequiredLabel>
-                  <input type="text" value={formData.rentalSource ?? ''} onChange={(e) => setFormData({ ...formData, rentalSource: e.target.value })} className={inputStyles} required disabled={disabled} />
-                </div>
-                 <div>
-                   <RequiredLabel>Return Due Date</RequiredLabel>
-                   <input type="date" value={formData.rentalDueDate ?? ''} onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })} className={inputStyles} required disabled={disabled} />
-                 </div>
-              </>
-            )}
-
-            {/* Price */}
-             <div>
-               <label htmlFor="price" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Price/Value (€)</label>
-               <input type="number" id="price" value={formData.price ?? ''} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })} className={inputStyles} placeholder="Enter price or estimated value" disabled={disabled} />
-             </div>
-         </div>
-      </div>
-
-       {/* Fieldset: Show Context */}
+      {/* Fieldset: Show Context - MOVED */}
        {show && (
           <div className={fieldsetStyles}>
              <h3 className={legendStyles}>Show Context (for {show.name})</h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                    <label htmlFor="act" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Act</label>
-                   <select id="act" value={formData.act ?? ''} onChange={(e) => setFormData({ ...formData, act: Number(e.target.value) })} className={selectStyles} disabled={disabled}>
+                   <select
+                     id="act"
+                     value={formData.act !== undefined ? formData.act : ""}
+                     onChange={(e) => setFormData({ ...formData, act: e.target.value === "" ? undefined : Number(e.target.value) })}
+                     className={selectStyles}
+                     disabled={disabled}
+                   >
                       <option value="">Select Act</option>
                       {(() => {
                          console.log(`[PropForm] Attempting to map show.acts for Act dropdown. show object:`, show);
@@ -468,7 +373,13 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                 </div>
                  <div>
                    <label htmlFor="scene" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Scene</label>
-                    <select id="scene" value={formData.scene ?? ''} onChange={(e) => setFormData({ ...formData, scene: Number(e.target.value) })} className={selectStyles} disabled={!formData.act || disabled}>
+                    <select
+                      id="scene"
+                      value={formData.scene !== undefined ? formData.scene : ""}
+                      onChange={(e) => setFormData({ ...formData, scene: e.target.value === "" ? undefined : Number(e.target.value) })}
+                      className={selectStyles}
+                      disabled={disabled || !formData.act}
+                    >
                        <option value="">Select Scene</option>
                        {(() => {
                          const currentAct = show?.acts && Array.isArray(show.acts) ? show.acts.find(a => a.id === formData.act) : undefined;
@@ -489,7 +400,163 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </div>
        )}
 
-      {/* Fieldset: Handling & Usage - MOVE transport/shipping checkboxes out */}
+      {/* Fieldset: Images - MOVED */}
+      <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Images</h3>
+         <ImageUpload 
+            onImagesChange={(newImages) => setFormData({ ...formData, images: newImages })}
+            currentImages={formData.images || []}
+            disabled={disabled}
+         />
+         {/* --- Image Previews --- */}
+         {formData.images && formData.images.length > 0 && (
+           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
+             {formData.images.map((image, index) => (
+               <div key={image.id || index} className="relative group flex flex-col space-y-2">
+                 {/* Image Display */}
+                 <div className="relative h-40 w-full bg-gray-800 rounded-md overflow-hidden border border-gray-700">
+                   <img 
+                     src={image.url} 
+                     alt={`Prop Image ${index + 1}`}
+                     className="h-full w-full object-contain" // Changed object-cover to object-contain
+                   />
+                   <button
+                     type="button"
+                     onClick={() => handleRemoveImage(image.id)}
+                     className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                     aria-label="Remove image"
+                     disabled={disabled}
+                   >
+                     <Trash2 size={14} />
+                   </button>
+                 </div>
+                 {/* Caption Input */}
+                 <input 
+                   type="text"
+                   value={image.caption || ''}
+                   onChange={(e) => {
+                     const newCaption = e.target.value;
+                     setFormData(prev => ({
+                       ...prev,
+                       images: (prev.images || []).map((img, imgIndex) => 
+                         img.id === image.id ? { ...img, caption: newCaption } : img
+                       )
+                     }));
+                   }}
+                   placeholder="Add a caption..."
+                   className={`${inputStyles} w-full text-sm mt-1`} // Use inputStyles and make full width
+                   disabled={disabled}
+                 />
+               </div>
+             ))}
+           </div>
+         )}
+      </div>
+
+      {/* Fieldset: Dimensions & Weight */}
+      <div className={fieldsetStyles}>
+        <h3 className={legendStyles}>Dimensions & Weight</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Dimensions */}
+          <div className="md:col-span-1">
+             <label htmlFor="length" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Length</label>
+             <input type="number" id="length" value={formData.length ?? ''} onChange={(e) => setFormData({ ...formData, length: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="L" disabled={disabled} />
+          </div>
+           <div className="md:col-span-1">
+             <label htmlFor="width" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Width</label>
+             <input type="number" id="width" value={formData.width ?? ''} onChange={(e) => setFormData({ ...formData, width: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="W" disabled={disabled} />
+           </div>
+           <div className="md:col-span-1">
+             <label htmlFor="height" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Height</label>
+             <input type="number" id="height" value={formData.height ?? ''} onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="H" disabled={disabled} />
+           </div>
+           <div className="md:col-span-1">
+             <label htmlFor="depth" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Depth</label>
+             <input type="number" id="depth" value={formData.depth ?? ''} onChange={(e) => setFormData({ ...formData, depth: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="D" disabled={disabled} />
+           </div>
+           <div className="md:col-span-2">
+             <label htmlFor="unit" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Dimension Unit</label>
+             <select id="unit" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value as DimensionUnit })} className={selectStyles} disabled={disabled}>
+               {dimensionUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+             </select>
+           </div>
+          {/* Weight */}
+          <div className="md:col-span-1">
+            <label htmlFor="weight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight</label>
+            <input type="number" id="weight" value={formData.weight ?? ''} onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="Weight" disabled={disabled} />
+          </div>
+          <div className="md:col-span-2">
+            <label htmlFor="weightUnit" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight Unit</label>
+            <select id="weightUnit" value={formData.weightUnit} onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' | 'g' })} className={selectStyles} disabled={disabled}>
+               {weightUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      {/* Fieldset: Source & Acquisition - ADD sourceDetails */}
+      <div className={fieldsetStyles}>
+         <h3 className={legendStyles}>Source & Acquisition</h3>
+         <div className="space-y-4">
+            {/* Source Select */}
+            <div>
+               <label htmlFor="source" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Source</label>
+               <select
+                 id="source"
+                 value={formData.source}
+                 onChange={(e) => setFormData({ ...formData, source: e.target.value as any })}
+                 className={`${selectStyles} w-full`}
+                 required
+                 disabled={disabled}
+               >
+                  <option value="bought">Bought</option>
+                  <option value="rented">Rented</option>
+                  <option value="made">Made</option>
+                  <option value="borrowed">Borrowed</option>
+                  <option value="owned">Owned</option>
+                  {/* Add other sources as needed */} 
+               </select>
+            </div>
+            
+            {/* Source Details Input */}
+            <div>
+               <label htmlFor="sourceDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                 Source Details <span className="text-xs text-gray-400">(Vendor, Builder, etc.)</span>
+               </label>
+               <input
+                 type="text"
+                 id="sourceDetails"
+                 value={formData.sourceDetails || ''}
+                 onChange={(e) => setFormData({ ...formData, sourceDetails: e.target.value })}
+                 className={`${inputStyles} w-full`}
+                 placeholder="Enter source details"
+                 disabled={disabled}
+               />
+             </div>
+
+            {/* Conditional Rental Fields */}
+            {formData.source === 'rented' && (
+              <>
+                <div>
+                  <RequiredLabel>Rental Source</RequiredLabel>
+                  <input type="text" value={formData.rentalSource ?? ''} onChange={(e) => setFormData({ ...formData, rentalSource: e.target.value })} className={inputStyles} required disabled={disabled} />
+                </div>
+                 <div>
+                   <RequiredLabel>Return Due Date</RequiredLabel>
+                   <input type="date" id="rentalDueDate" value={formData.rentalDueDate ?? ''} onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })} className={`${inputStyles} text-white`} required disabled={disabled} />
+                 </div>
+              </>
+            )}
+
+            {/* Price */}
+             <div>
+               <label htmlFor="price" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Price/Value (€)</label>
+               <input type="number" id="price" value={formData.price ?? ''} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })} className={inputStyles} placeholder="Enter price or estimated value" disabled={disabled} />
+             </div>
+         </div>
+      </div>
+
+       {/* Fieldset: Handling & Usage - MOVE transport/shipping checkboxes out */}
        <div className={fieldsetStyles}>
           <h3 className={legendStyles}>Handling & Usage</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
@@ -502,23 +569,61 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
              <div className={checkboxContainerStyles}><input type="checkbox" id="isHazardous" checked={!!formData.isHazardous} onChange={(e) => setFormData({ ...formData, isHazardous: e.target.checked })} disabled={disabled} /><label htmlFor="isHazardous" className={checkboxLabelStyles}>Hazardous Material</label></div>
              {/* -- REMOVED requiresPreShowSetup, hasOwnShippingCrate, requiresSpecialTransport, travelsUnboxed -- */} 
              <div className={checkboxContainerStyles}><input type="checkbox" id="hasBeenModified" checked={!!formData.hasBeenModified} onChange={(e) => setFormData({ ...formData, hasBeenModified: e.target.checked })} disabled={disabled} /><label htmlFor="hasBeenModified" className={checkboxLabelStyles}>Has Been Modified</label></div>
-              
-             {/* Handedness Select */}
-             <div className="md:col-span-2 mt-4">
-                <label htmlFor="handedness" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Handedness</label>
-                <select id="handedness" value={formData.handedness ?? 'either'} onChange={(e) => setFormData({ ...formData, handedness: e.target.value as any })} className={selectStyles} disabled={disabled}>
-                   <option value="either">Either / Not Applicable</option>
-                   <option value="left">Left-Handed</option>
-                   <option value="right">Right-Handed</option>
-                </select>
-             </div>
           </div>
 
           {/* Conditional Rich Text Editors / Textareas */}
-          {formData.hasUsageInstructions && ( <div className={conditionalFieldStyles}> {/* ... Usage Instructions WYSIWYG ... */} </div> )}
-          {formData.hasMaintenanceNotes && ( <div className={conditionalFieldStyles}> {/* ... Maintenance Notes WYSIWYG ... */} </div> )}
-          {formData.hasSafetyNotes && ( <div className={conditionalFieldStyles}> {/* ... Safety Notes WYSIWYG ... */} </div> )}
-          {formData.hasBeenModified && ( <div className={conditionalFieldStyles}> {/* ... Modification Details textarea ... */} </div> )}
+          {formData.hasUsageInstructions && (
+            <div className={conditionalFieldStyles}>
+              <label htmlFor="usageInstructions" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Usage Instructions</label>
+              <textarea
+                id="usageInstructions"
+                value={formData.usageInstructions || ''}
+                onChange={(e) => setFormData({ ...formData, usageInstructions: e.target.value })}
+                className={`${inputStyles} w-full min-h-[100px]`}
+                placeholder="Enter usage instructions..."
+                disabled={disabled}
+              />
+            </div>
+          )}
+          {formData.hasMaintenanceNotes && (
+            <div className={conditionalFieldStyles}>
+              <label htmlFor="maintenanceNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Maintenance Notes</label>
+              <textarea
+                id="maintenanceNotes"
+                value={formData.maintenanceNotes || ''}
+                onChange={(e) => setFormData({ ...formData, maintenanceNotes: e.target.value })}
+                className={`${inputStyles} w-full min-h-[100px]`}
+                placeholder="Enter maintenance notes..."
+                disabled={disabled}
+              />
+            </div>
+          )}
+          {formData.hasSafetyNotes && (
+            <div className={conditionalFieldStyles}>
+              <label htmlFor="safetyNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Safety Notes</label>
+              <textarea
+                id="safetyNotes"
+                value={formData.safetyNotes || ''}
+                onChange={(e) => setFormData({ ...formData, safetyNotes: e.target.value })}
+                className={`${inputStyles} w-full min-h-[100px]`}
+                placeholder="Enter safety notes..."
+                disabled={disabled}
+              />
+            </div>
+          )}
+          {formData.hasBeenModified && (
+            <div className={conditionalFieldStyles}>
+              <label htmlFor="modificationDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Modification Details</label>
+              <textarea
+                id="modificationDetails"
+                value={formData.modificationDetails || ''}
+                onChange={(e) => setFormData({ ...formData, modificationDetails: e.target.value })}
+                className={`${inputStyles} w-full min-h-[100px]`}
+                placeholder="Describe modifications made..."
+                disabled={disabled}
+              />
+            </div>
+          )}
        </div>
 
        {/* --- NEW Fieldset: Pre-show Setup --- */}
@@ -529,7 +634,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
            <label htmlFor="requiresPreShowSetup" className={checkboxLabelStyles}>Requires Pre-Show Setup</label>
          </div>
          {formData.requiresPreShowSetup && (
-           <div className="mt-4 space-y-4 pl-6 border-l-2 border-gray-600">
+           <div className="mt-4 space-y-4 pl-6">
              <div>
                <label htmlFor="preShowSetupDuration" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                  Setup Duration (minutes)
@@ -554,7 +659,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                  id="preShowSetupNotes"
                  value={formData.preShowSetupNotes || ''}
                  onChange={(e) => setFormData({ ...formData, preShowSetupNotes: e.target.value })}
-                 className={inputStyles + " min-h-[100px]"}
+                 className={`${inputStyles} w-full min-h-[100px]`}
                  placeholder="Enter setup instructions"
                  disabled={disabled}
                />
@@ -568,7 +673,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                  id="preShowSetupVideo"
                  value={formData.preShowSetupVideo || ''}
                  onChange={(e) => setFormData({ ...formData, preShowSetupVideo: e.target.value })}
-                 className={inputStyles}
+                 className={`${inputStyles} w-full`}
                  placeholder="Enter video URL (YouTube, Vimeo, etc.)"
                  disabled={disabled}
                />
@@ -601,26 +706,6 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
              />
          </div>
        </div>
-
-      {/* Fieldset: Images */}
-      <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Images</h3>
-         <ImageUpload 
-            onImagesChange={(newImages) => setFormData({ ...formData, images: newImages })}
-            currentImages={formData.images || []}
-            disabled={disabled}
-         />
-         <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {(formData.images || []).map((img) => (
-              <div key={img.id} className="relative group">
-                <img src={img.url} alt={img.caption || 'Prop Image'} className="w-full h-32 object-cover rounded-md" />
-                <button type="button" onClick={() => handleRemoveImage(img.id)} className="absolute top-1 right-1 bg-red-600/80 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Remove Image">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-         </div>
-      </div>
 
        {/* Fieldset: Digital Assets */}
        <div className={fieldsetStyles}>
@@ -682,7 +767,11 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
            <div>
              <label htmlFor="status" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Status</label>
              <select id="status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as PropLifecycleStatus })} className={selectStyles} required disabled={disabled}>
-               {propLifecycleStatuses.map((status) => ( <option key={status} value={status}>{status.charAt(0).toUpperCase() + status.slice(1)}</option> ))} 
+               {propLifecycleStatuses.map((status) => ( 
+                 <option key={status} value={status}>
+                   {lifecycleStatusLabels[status]} {/* Use label for display */}
+                 </option> 
+               ))} 
              </select>
            </div>
            {/* Status Notes Textarea */}
@@ -724,30 +813,13 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                id="currentLocation"
                value={formData.currentLocation || ''}
                onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
-               className={inputStyles}
+               className={`${inputStyles} w-full`}
                placeholder="e.g., Onstage SL, Rehearsal Room 1"
                disabled={disabled}
              />
            </div>
          </div>
        </div>
-
-      {/* Fieldset: Tags */}
-       <div className={fieldsetStyles}>
-          <h3 className={legendStyles}>Tags</h3>
-          {/* TODO: Implement Tag Input Component */}
-          <p className="text-gray-400 italic">Tag input component not implemented yet.</p>
-          <div className="flex flex-wrap gap-2 mt-2">
-             {(formData.tags || []).map((tag, index) => (
-                <span key={index} className="bg-gray-600 text-gray-200 px-2 py-1 rounded-full text-xs">
-                   {tag}
-                   {/* Add remove button here */} 
-                </span>
-             ))}
-          </div>
-       </div>
-       
-       {/* Add other fieldsets as needed: Materials, Status History, Maintenance History, Custom Fields */} 
 
       {/* Submit/Cancel Buttons */}
       <div className="flex justify-end gap-4 mt-8">

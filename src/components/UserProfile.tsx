@@ -8,6 +8,14 @@ import type { UserProfile } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
+// Define available fonts
+const fontOptions = [
+  { value: 'system', label: 'System Default' },
+  { value: 'OpenDyslexic', label: 'OpenDyslexic', note: '(Dyslexia-friendly)' },
+  { value: 'Arial', label: 'Arial' },
+  { value: 'Verdana', label: 'Verdana' },
+];
+
 interface UserProfileModalProps {
   onClose: () => void;
 }
@@ -26,6 +34,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     organization: '',
     role: '',
     bio: '',
+    fontPreference: 'system',
     googleLinked: user?.providerData.some(p => p.providerId === 'google.com') || false
   });
   const [activeTab, setActiveTab] = useState<TabType>('basic');
@@ -58,7 +67,8 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
           displayName: existingData.displayName || googleData?.displayName || user.displayName || '',
           email: user.email || '',
           photoURL: existingData.photoURL || googleData?.photoURL || user.photoURL || '',
-          googleLinked: hasGoogleProvider || existingData.googleLinked || false
+          googleLinked: hasGoogleProvider || existingData.googleLinked || false,
+          fontPreference: existingData.fontPreference || 'system'
         }));
         
         if (!profileDoc.exists() && googleData) {
@@ -239,10 +249,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
             <nav className="flex space-x-8">
               <button
                 onClick={() => setActiveTab('basic')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
+                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 text-sm font-medium ${
                   activeTab === 'basic'
-                    ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
-                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
+                    ? 'border-red-500 text-red-500'
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-gray-600'
                 }`}
               >
                 <UserIcon className="h-4 w-4" />
@@ -250,10 +260,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
               </button>
               <button
                 onClick={() => setActiveTab('appearance')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
+                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 text-sm font-medium ${
                   activeTab === 'appearance'
-                    ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
-                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
+                    ? 'border-red-500 text-red-500'
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-gray-600'
                 }`}
               >
                 <Settings className="h-4 w-4" />
@@ -261,10 +271,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
               </button>
               <button
                 onClick={() => setActiveTab('additional')}
-                className={`py-4 px-1 inline-flex items-center border-b-2 text-sm font-medium ${
+                className={`py-4 px-1 inline-flex items-center gap-2 border-b-2 text-sm font-medium ${
                   activeTab === 'additional'
-                    ? 'border-[var(--highlight-color)] text-[var(--highlight-color)]'
-                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
+                    ? 'border-red-500 text-red-500'
+                    : 'border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-gray-600'
                 }`}
               >
                 <Building className="h-4 w-4" />
@@ -290,7 +300,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     type="button"
                     onClick={handleGoogleLink}
                     disabled={loading}
-                    className="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                   >
                     <LinkIcon className="h-4 w-4" /> Link Google Account
                   </button>
@@ -343,7 +353,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       type="text"
                       value={profile.displayName}
                       onChange={(e) => setProfile({ ...profile, displayName: e.target.value })}
-                      className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
+                      className="flex-1 bg-gray-900 border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent w-full"
                       placeholder="Enter your name"
                     />
                   </div>
@@ -359,7 +369,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       type="email"
                       value={profile.email}
                       disabled
-                      className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-secondary)] cursor-not-allowed"
+                      className="flex-1 bg-gray-900 border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-secondary)] cursor-not-allowed w-full"
                     />
                   </div>
                 </div>
@@ -403,6 +413,29 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                   </button>
                 </div>
               </div>
+
+              {/* --- Font Section --- */}
+              <div>
+                <h3 className="text-xl font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2"><Type className="h-5 w-5" />Font</h3>
+                <div className="bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg p-4 space-y-3">
+                  {fontOptions.map((font) => (
+                    <label key={font.value} className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="fontPreference"
+                        value={font.value}
+                        checked={profile.fontPreference === font.value}
+                        onChange={(e) => setProfile({ ...profile, fontPreference: e.target.value as UserProfile['fontPreference'] })}
+                        className="form-radio h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-500 focus:ring-offset-gray-800"
+                      />
+                      <span className="text-sm text-[var(--text-primary)]">
+                        {font.label}
+                        {font.note && <span className="text-xs text-[var(--text-secondary)] ml-1">{font.note}</span>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -421,7 +454,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                         type="tel"
                         value={profile.phone}
                         onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                        className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
+                        className="flex-1 bg-gray-900 border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent w-full"
                         placeholder="Enter your phone number"
                       />
                     </div>
@@ -437,7 +470,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                         type="text"
                         value={profile.location}
                         onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                        className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
+                        className="flex-1 bg-gray-900 border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent w-full"
                         placeholder="Enter your location"
                       />
                     </div>
@@ -453,7 +486,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                         type="text"
                         value={profile.organization}
                         onChange={(e) => setProfile({ ...profile, organization: e.target.value })}
-                        className="flex-1 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
+                        className="flex-1 bg-gray-900 border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent w-full"
                         placeholder="Enter your organization"
                       />
                     </div>
@@ -466,7 +499,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     <select
                       value={profile.role}
                       onChange={(e) => setProfile({ ...profile, role: e.target.value })}
-                      className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
+                      className="w-full bg-gray-900 border border-[var(--border-color)] rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                     >
                       <option value="">Select your role</option>
                       <option value="props_master">Props Master</option>
@@ -485,7 +518,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     <textarea
                       value={profile.bio}
                       onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                      className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
+                      className="w-full bg-gray-900 border border-[var(--border-color)] rounded-md px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                       rows={4}
                       placeholder="Tell us about yourself"
                     />
@@ -495,19 +528,18 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
             </div>
           )}
 
-          <div className="mt-8 pt-6 border-t border-gray-800 flex justify-end space-x-4">
+          <div className="mt-8 pt-6 border-t border-gray-700 flex justify-end items-center space-x-4">
             <button
               type="button"
-              onClick={handleSignOut}
-              disabled={saving}
+              onClick={onClose}
               className="px-6 py-2 text-gray-400 hover:text-gray-200 transition-colors"
             >
-              Sign Out
+              Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center px-6 py-2 bg-gradient-to-r from-primary to-primary-dark text-white rounded-md hover:from-primary-dark hover:to-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-[#1A1A1A] disabled:opacity-50 transition-colors"
+              className="inline-flex items-center px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 transition-colors"
             >
               {saving ? (
                 <>

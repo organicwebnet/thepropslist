@@ -158,6 +158,7 @@ export interface PropFormData {
     rentalPeriod?: string;
     cost?: number;
   };
+  returnDueDate?: string | Date;
 }
 
 export interface Prop {

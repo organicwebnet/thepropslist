@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, onSnapshot, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { useFirebase } from '@/contexts/FirebaseContext';
 import { PackingBox, PackedProp } from '@/types/packing';
+import { FirebaseDocument } from '@/shared/services/firebase/types';
 
 interface PackingOperations {
   createBox: (props: PackedProp[], boxName: string, actNumber?: number, sceneNumber?: number) => Promise<string | undefined>;
   updateBox: (boxId: string, updates: Partial<PackingBox>) => Promise<void>;
   deleteBox: (boxId: string) => Promise<void>;
+  updateBoxLabelSettings: (boxId: string, settings: Pick<PackingBox, 'labelHandlingNote' | 'labelIncludeFragile' | 'labelIncludeThisWayUp' | 'labelIncludeKeepDry'>) => Promise<void>;
 }
 
 export function usePacking(showId?: string): {
@@ -14,6 +16,8 @@ export function usePacking(showId?: string): {
   loading: boolean;
   error: Error | null;
   operations: PackingOperations;
+  updateBoxLabelSettings: (boxId: string, settings: Pick<PackingBox, 'labelHandlingNote' | 'labelIncludeFragile' | 'labelIncludeThisWayUp' | 'labelIncludeKeepDry'>) => Promise<void>;
+  getDocument: (docId: string) => Promise<FirebaseDocument<PackingBox> | null>;
 } {
   const { service } = useFirebase();
   const [boxes, setBoxes] = useState<PackingBox[]>([]);
@@ -32,18 +36,25 @@ export function usePacking(showId?: string): {
     setError(null);
 
     const boxesCollectionRef = collection(firestoreInstance, 'packingBoxes');
-    const boxesQuery = query(boxesCollectionRef);
+    const boxesQuery = query(boxesCollectionRef, where("showId", "==", showId));
 
     const unsubscribe = onSnapshot(
       boxesQuery,
       (snapshot) => {
+        const receivedBoxIds = snapshot.docs.map(d => d.id);
+        console.log(`[usePacking Snapshot] Received ${snapshot.size} docs. IDs: [${receivedBoxIds.join(', ')}]`);
+        
         const boxesData = snapshot.docs
           .map(doc => {
             const data = doc.data();
-            if (data.showId !== showId) return null;
+            // Explicitly delete the internal 'id' field if it exists
+            if ('id' in data) {
+              // console.log(`Deleting internal id field (${data.id}) from data for doc ${doc.id}`); // Optional log
+              delete data.id;
+            }
             return {
-              id: doc.id,
-              ...data,
+              id: doc.id, // Assign the correct Firestore Document ID
+              ...data,    // Spread the rest (now definitely without the internal 'id')
               createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
               updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
             }
@@ -102,8 +113,8 @@ export function usePacking(showId?: string): {
       }
     },
     updateBox: async (boxId, updates) => {
-      if (!service?.updateDocument) {
-          console.error('Firebase service (updateDocument) not available');
+      if (!service?.setDocument) {
+          console.error('Firebase service (setDocument) not available');
           setError(new Error('Failed to update box: Service not ready.'));
           return;
       }
@@ -112,11 +123,14 @@ export function usePacking(showId?: string): {
          updatedAt: serverTimestamp() as any // Cast needed
         };
        try {
-           // Call updateDocument with path, id, and data
-           await service.updateDocument('packingBoxes', boxId, dataToUpdate);
+           // Add logging before the update call
+           console.log(`[usePacking] Attempting to update document (using setDoc merge) at path: packingBoxes, ID: ${boxId}`);
+           await service.setDocument('packingBoxes', boxId, dataToUpdate, { merge: true }); 
+           console.log(`[usePacking] Successfully updated document (using setDoc merge): ${boxId}`);
        } catch (err) {
-           console.error(`Error updating box ${boxId}:`, err);
-           setError(err instanceof Error ? err : new Error('Unknown error updating box'));
+           console.error(`Error updating box ${boxId} (using setDoc merge):`, err);
+           // Re-throw the error so the calling function (handleSettingChange) can catch it
+           throw err; 
        }
     },
     deleteBox: async (boxId) => {
@@ -132,9 +146,28 @@ export function usePacking(showId?: string): {
           console.error(`Error deleting box ${boxId}:`, err);
           setError(err instanceof Error ? err : new Error('Unknown error deleting box'));
       }
+    },
+    updateBoxLabelSettings: async (boxId, settings) => {
+      console.log('[usePacking] Updating label settings for box:', boxId, settings);
+      return operations.updateBox(boxId, settings);
     }
-    // Removed incorrect addItems, updateItem, etc. operations
   };
 
-  return { boxes, loading, error, operations };
+  // Function to get a specific document
+  const getDocument = async (docId: string): Promise<FirebaseDocument<PackingBox> | null> => {
+    if (!service?.getDocument) {
+      console.error('Firebase service (getDocument) not available');
+      setError(new Error('Failed to get document: Service not ready.'));
+      return null;
+    }
+    try {
+      return await service.getDocument<PackingBox>('packingBoxes', docId);
+    } catch (err) {
+      console.error(`Error getting document ${docId}:`, err);
+      setError(err instanceof Error ? err : new Error('Unknown error getting document'));
+      return null;
+    }
+  };
+
+  return { boxes, loading, error, operations, updateBoxLabelSettings: operations.updateBoxLabelSettings, getDocument };
 } 

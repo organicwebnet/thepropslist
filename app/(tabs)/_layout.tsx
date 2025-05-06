@@ -19,6 +19,7 @@ export default function TabsLayout() {
   };
 
   return (
+    // @ts-ignore - Suppress TS2786 for Tabs component
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#ffd33d',

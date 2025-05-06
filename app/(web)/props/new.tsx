@@ -114,18 +114,20 @@ export default function WebNewPropPage() {
 
   return (
     <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
-      <button onClick={() => router.back()} className="mb-4 text-blue-400 hover:text-blue-300">
-          &larr; Cancel
-      </button>
-      <h1 className="text-2xl font-bold mb-6">Add Prop to {selectedShow.name}</h1>
-      
-      <PropForm 
-        onSubmit={handleCreateSubmit} 
-        show={selectedShow}
-        mode="create"
-        disabled={isSubmitting}
-        onCancel={() => router.back()}
-      />
+      <div className="max-w-5xl mx-auto">
+        <button onClick={() => router.back()} className="mb-4 text-blue-400 hover:text-blue-300">
+            &larr; Cancel
+        </button>
+        <h1 className="text-2xl font-bold mb-6">Add Prop to {selectedShow.name}</h1>
+
+        <PropForm 
+          onSubmit={handleCreateSubmit} 
+          show={selectedShow}
+          mode="create"
+          disabled={isSubmitting}
+          onCancel={() => router.back()}
+        />
+      </div>
     </div>
   );
 } 

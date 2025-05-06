@@ -239,9 +239,11 @@ export class WebFirebaseService implements FirebaseService {
       (snapshot: DocumentSnapshot) => {
         if (snapshot.exists()) {
           const wrappedDoc = this.createDocumentWrapper(docRef as CustomDocumentReference<T>);
+          wrappedDoc.data = snapshot.data() as T;
           onNext(wrappedDoc as FirebaseDocument<T>);
         } else {
           console.log(`Document at path ${path} does not exist.`);
+          onNext(null as any);
         }
       },
       (error: Error) => {
@@ -471,6 +473,23 @@ export class WebFirebaseService implements FirebaseService {
       await sendPasswordResetEmail(this.authInstance, email);
     } catch (error) {
       throw this.createError(error);
+    }
+  }
+
+  // Implementation for setDocument
+  async setDocument<T extends CustomDocumentData>(
+    collectionPath: string,
+    documentId: string,
+    data: T,
+    options?: { merge?: boolean }
+  ): Promise<void> {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    const docRef = doc(this.dbInstance, collectionPath, documentId);
+    try {
+      await setDoc(docRef, data, options || {});
+    } catch (error) {
+      console.error(`Error setting document ${collectionPath}/${documentId}:`, error);
+      throw this.createError(error); // Re-throw custom error
     }
   }
 } 

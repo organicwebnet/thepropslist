@@ -15,6 +15,10 @@ export interface UserProfile {
   role: string;
   bio: string;
   updatedAt?: string;
+  fontPreference?: 'system' | 'OpenDyslexic' | 'Arial' | 'Verdana';
+  createdAt?: string;
+  lastUpdated?: string;
+  googleLinked?: boolean;
 }
 
 export interface Scene {

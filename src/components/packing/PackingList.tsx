@@ -225,9 +225,10 @@ export function PackingList({
               disabled={selectedProps.some(p => p.instanceId === propInstance.instanceId)}
               className={`
                 relative flex items-center p-4 rounded-lg text-left
-                ${selectedProps.some(p => p.instanceId === propInstance.instanceId)
-                  ? 'bg-blue-600/20 border-2 border-blue-400'
-                  : 'bg-[#1A1A1A] border border-gray-700 hover:border-gray-600'
+                ${
+                  selectedProps.some(p => p.instanceId === propInstance.instanceId)
+                    ? 'bg-blue-600/20 border-2 border-blue-400'
+                    : 'bg-blue-950 border border-gray-700 hover:border-gray-600'
                 }
                 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-150
               `}

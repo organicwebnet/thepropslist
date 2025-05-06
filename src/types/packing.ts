@@ -1,4 +1,5 @@
 import { WeightUnit } from '@/shared/types/props'; // Import WeightUnit
+import { Prop } from "./props";
 // import { PackedProp } from './packing'; // Assuming PackedProp is here or adjust import
 
 export interface PackingBox {
@@ -22,6 +23,12 @@ export interface PackingBox {
   // Keep original date fields or consolidate into metadata?
   createdAt: Date;
   updatedAt: Date;
+
+  // New fields for label settings
+  labelHandlingNote?: string;
+  labelIncludeFragile?: boolean;
+  labelIncludeThisWayUp?: boolean;
+  labelIncludeKeepDry?: boolean;
 }
 
 export interface PackedProp {

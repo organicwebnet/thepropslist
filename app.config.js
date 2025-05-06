@@ -13,7 +13,8 @@ module.exports = ({ config }) => {
     },
     assetBundlePatterns: [
       "**/*",
-      "assets/fonts/**/*"
+      "assets/fonts/**/*",
+      "assets/images/**/*"
     ],
     ios: {
       supportsTablet: true,

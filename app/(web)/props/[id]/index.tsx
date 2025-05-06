@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter, Link } from 'expo-router';
 import { useFirebase } from '@/contexts/FirebaseContext';
 import type { Prop } from '@/shared/types/props';
 import { PropLifecycleStatus, PropStatusUpdate as PropStatusUpdateType, MaintenanceRecord as MaintenanceRecordType } from '@/types/lifecycle';
-import { Pencil, Trash2, ArrowLeft, Wrench, History, ClipboardList } from 'lucide-react';
+import { Pencil, Trash2, ArrowLeft, Wrench, History, ClipboardList, CheckCircle, XCircle, FileText, Video as VideoIcon } from 'lucide-react';
 
 // Import Lifecycle Components
 import { PropStatusUpdate } from '@/components/lifecycle/PropStatusUpdate';
@@ -34,6 +34,10 @@ interface PropWithHistory extends Prop {
   isModified?: boolean;
   modificationDetails?: string;
   modifiedAt?: string | null;
+  rentalSource?: string;
+  rentalReferenceNumber?: string;
+  travelsUnboxed?: boolean;
+  statusNotes?: string;
 }
 
 export default function WebPropDetailScreen() {
@@ -251,68 +255,148 @@ export default function WebPropDetailScreen() {
         {/* Tab Content */} 
         <View>
           {activeTab === 'Details' && (
-            <View className="flex flex-row gap-6"> {/* Main row for two columns */} 
-              {/* Left Column: Main Details */}
-              <View className="flex-grow space-y-6"> {/* space-y adds vertical gap */} 
-                {/* Basic Info & Source Info (Combined Section) */}
-                <View className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                  <View>
-                    <Text className="text-lg font-semibold text-gray-200 mb-2">Basic Information</Text>
+            <View className="md:grid md:grid-cols-2 md:gap-x-8 lg:gap-x-12 space-y-6 md:space-y-0">
+              
+              {/* --- Left Column --- */}
+              <View className="space-y-6">
+                {/* Basic Details Section */}
+                <View>
+                  <Text className="text-xl font-semibold text-gray-200 mb-3">Basic Details</Text>
+                  <View className="space-y-3 bg-gray-800 p-4 rounded-md">
+                    <DetailItem label="Description" value={prop.description} />
                     <DetailItem label="Category" value={prop.category} />
                     <DetailItem label="Quantity" value={prop.quantity?.toString()} />
-                    <DetailItem label="Price" value={prop.price ? `£${prop.price.toFixed(2)}` : 'N/A'} />
-                  </View>
-                  <View>
-                     <Text className="text-lg font-semibold text-gray-200 mb-2">Source Information</Text>
-                     <DetailItem label="Source" value={prop.source} />
-                     {/* <DetailItem label="Source Details" value={prop.sourceDetails} /> */} 
-                     <Text className="text-lg font-semibold text-gray-200 mt-4 mb-2">Transport Information</Text>
-                     {/* <DetailItem label="Shipping Crate" value={prop.shippingCrateDetails} /> */}
-                     {/* <DetailItem label="Transport Notes" value={prop.transportNotes} /> */}
+                    <DetailItem label="Condition" value={prop.condition} />
+                    <DetailItem label="Last Modified" value={formatDate(prop.lastModifiedAt)} />
                   </View>
                 </View>
-
-                {/* Physical Properties */} 
+  
+                {/* Source & Acquisition Section */}
                 <View>
-                  <Text className="text-lg font-semibold text-gray-200 mb-2">Physical Properties</Text>
-                  {/* <DetailItem label="Dimensions" value={prop.dimensions} /> */}
-                  <DetailItem label="Weight" value={prop.weight} />
-                  {/* Add Materials if exists */} 
+                  <Text className="text-xl font-semibold text-gray-200 mb-3">Source & Acquisition</Text>
+                  <View className="space-y-3 bg-gray-800 p-4 rounded-md">
+                    <DetailItem label="Source" value={prop.source} />
+                    {prop.sourceDetails && <DetailItem label="Source Details" value={prop.sourceDetails} />}
+                    {prop.purchaseUrl && <DetailItem label="Purchase URL" value={<a href={prop.purchaseUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline break-all">{prop.purchaseUrl}</a>} />}
+                    {prop.source === 'rented' && (
+                      <>
+                        <DetailItem label="Rental Source" value={prop.rentalSource} />
+                        <DetailItem label="Rental Due Date" value={formatDate(prop.rentalDueDate)} />
+                        <DetailItem label="Reference Number" value={prop.rentalReferenceNumber} />
+                      </>
+                    )}
+                    <DetailItem label="Price/Value" value={prop.price ? `€${prop.price.toFixed(2)}` : 'N/A'} /> 
+                    <DetailItem label="Purchase Date" value={formatDate(prop.purchaseDate)} />
+                  </View>
+                </View>
+                
+                {/* Location Section */}
+                <View>
+                  <Text className="text-xl font-semibold text-gray-200 mb-3">Location</Text>
+                  <View className="space-y-3 bg-gray-800 p-4 rounded-md">
+                    <DetailItem label="Storage Location" value={prop.location} />
+                    <DetailItem label="Current Location" value={prop.currentLocation} />
+                  </View>
                 </View>
 
-                {/* Usage Info */} 
+                {/* Notes & Instructions Section - MOVED HERE */}
                 <View>
-                  <Text className="text-lg font-semibold text-gray-200 mb-2">Usage Information</Text>
-                  {/* <DetailItem label="Scene Usage" value={prop.sceneUsage} /> */}
-                  {/* <DetailItem label="Usage Instructions" value={prop.usageInstructions} /> */}
-                  {/* <DetailItem label="Maintenance Notes" value={prop.maintenanceNotes} /> */}
-                  {/* <DetailItem label="Safety Notes" value={prop.safetyNotes} /> */}
+                  <Text className="text-xl font-semibold text-gray-200 mb-3">Notes & Instructions</Text>
+                  <View className="space-y-4 bg-gray-800 p-4 rounded-md">
+                    {prop.usageInstructions && <DetailItem label="Usage Instructions" value={prop.usageInstructions} />}
+                    {prop.maintenanceNotes && <DetailItem label="Maintenance Notes" value={prop.maintenanceNotes} />}
+                    {prop.safetyNotes && <DetailItem label="Safety Notes" value={prop.safetyNotes} />}
+                    {prop.modificationDetails && <DetailItem label="Modification Details" value={prop.modificationDetails} />}
+                    {prop.statusNotes && <DetailItem label="Status Notes" value={prop.statusNotes} />}
+                    {prop.requiresPreShowSetup && (
+                      <>
+                        <DetailItem label="Pre-Show Setup Notes" value={prop.preShowSetupNotes} />
+                        <DetailItem label="Setup Duration" value={prop.preShowSetupDuration ? `${prop.preShowSetupDuration} mins` : 'N/A'} />
+                        {prop.preShowSetupVideo && <DetailItem label="Setup Video" value={<a href={prop.preShowSetupVideo} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline break-all">{prop.preShowSetupVideo}</a>} />}
+                      </>
+                    )}
+                    {prop.notes && <DetailItem label="General Notes" value={prop.notes} />}
+                  </View>
                 </View>
 
-                {/* Setup Info */} 
-                <View>
-                  <Text className="text-lg font-semibold text-gray-200 mb-2">Setup Information</Text>
-                  {/* <DetailItem label="Setup Duration" value={prop.setupDuration} /> */}
-                  {/* <DetailItem label="Setup Instructions" value={prop.setupInstructions} /> */}
-                  {/* Add Setup Video Player Here */} 
-                </View>
               </View>
 
-              {/* Right Column: Modified Prop Box (Conditional) */}
-              {prop.isModified && ( 
-                <View className="w-1/3 flex-shrink-0"> {/* Adjust width as needed */} 
-                  <View className="border border-red-500/50 bg-red-900/20 p-4 rounded-md">
-                      <Text className="text-red-400 font-bold mb-2">Modified Prop</Text>
-                      <Text className="text-red-300/90 text-sm mb-2">{prop.modificationDetails}</Text>
-                      <Text className="text-xs text-red-400/80 mt-1">Modified on: {formatDate(prop.modifiedAt)}</Text>
+              {/* --- Right Column --- */}
+              <View className="space-y-6">
+                {/* Dimensions & Weight Section */}
+                <View>
+                  <Text className="text-xl font-semibold text-gray-200 mb-3">Dimensions & Weight</Text>
+                  <View className="bg-gray-800 p-4 rounded-md grid grid-cols-2 gap-x-4 gap-y-3">
+                    <DetailItem label="Length" value={prop.length ? `${prop.length} ${prop.unit || ''}` : 'N/A'} />
+                    <DetailItem label="Width" value={prop.width ? `${prop.width} ${prop.unit || ''}` : 'N/A'} />
+                    <DetailItem label="Height" value={prop.height ? `${prop.height} ${prop.unit || ''}` : 'N/A'} />
+                    <DetailItem label="Depth" value={prop.depth ? `${prop.depth} ${prop.unit || ''}` : 'N/A'} />
+                    <DetailItem label="Weight" value={prop.weight ? `${prop.weight} ${prop.weightUnit || ''}` : 'N/A'} />
+                    <DetailItem label="Travel Weight" value={prop.travelWeight ? `${prop.travelWeight} ${prop.weightUnit || ''}` : 'N/A'} />
+                    <DetailItem label="Materials" value={prop.materials?.join(', ')} />
                   </View>
                 </View>
-              )}
+  
+                {/* Handling & Flags Section */}
+                <View>
+                  <Text className="text-xl font-semibold text-gray-200 mb-3">Handling & Flags</Text>
+                  <View className="bg-gray-800 p-4 rounded-md grid grid-cols-2 gap-x-4 gap-y-3">
+                    <FlagItem label="Multi-Scene" value={prop.isMultiScene ?? false} />
+                    <FlagItem label="Consumable" value={prop.isConsumable ?? false} />
+                    <FlagItem label="Breakable/Fragile" value={prop.isBreakable ?? false} />
+                    <FlagItem label="Hazardous Material" value={prop.isHazardous ?? false} />
+                    <FlagItem label="Modified" value={prop.hasBeenModified ?? false} />
+                    <FlagItem label="Requires Pre-Show Setup" value={prop.requiresPreShowSetup ?? false} />
+                    <FlagItem label="Has Own Shipping Crate" value={prop.hasOwnShippingCrate ?? false} />
+                    <FlagItem label="Requires Special Transport" value={prop.requiresSpecialTransport ?? false} />
+                    <FlagItem label="Travels Unboxed" value={prop.travelsUnboxed ?? false} />
+                  </View>
+                </View>
+  
+                {/* Assets Section */}
+                <View>
+                  <Text className="text-xl font-semibold text-gray-200 mb-3">Assets</Text>
+                  <View className="space-y-3 bg-gray-800 p-4 rounded-md">
+                    {prop.digitalAssets && prop.digitalAssets.length > 0 && (
+                      <View>
+                         <Text className="text-md font-medium text-gray-300 mb-2">Digital Assets:</Text>
+                         <ul className="space-y-1">
+                            {prop.digitalAssets.map(asset => (
+                               <li key={asset.id} className="flex items-center gap-2">
+                                  <FileText size={16} className="text-gray-400 flex-shrink-0" />
+                                  <a href={asset.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline break-all">{asset.name || asset.url}</a> 
+                                  <span className="text-xs text-gray-500">({asset.type})</span>
+                               </li>
+                            ))}
+                         </ul>
+                      </View>
+                    )}
+                    {prop.videos && prop.videos.length > 0 && (
+                      <View>
+                         <Text className="text-md font-medium text-gray-300 mb-2">Video Links:</Text>
+                         <ul className="space-y-1">
+                            {prop.videos.map(video => (
+                               <li key={video.id} className="flex items-center gap-2">
+                                  <VideoIcon size={16} className="text-gray-400 flex-shrink-0" />
+                                  <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline break-all">{video.name || video.url}</a>
+                               </li>
+                            ))}
+                         </ul>
+                      </View>
+                    )}
+                    {(!prop.digitalAssets || prop.digitalAssets.length === 0) && (!prop.videos || prop.videos.length === 0) && (
+                      <Text className="text-gray-400 italic">No digital assets or video links attached.</Text>
+                    )}
+                  </View>
+                </View>
+              </View> 
+              {/* End Right Column */}
+
             </View>
           )}
 
           {activeTab === 'Status Updates' && (
-            <View className="space-y-6">
+            <View className="space-y-6 mx-auto w-[800px]">
                {/* Use existing components */}
                <PropStatusUpdate 
                   currentStatus={prop.status as PropLifecycleStatus} // Cast current status
@@ -324,7 +408,7 @@ export default function WebPropDetailScreen() {
           )}
 
           {activeTab === 'Maintenance Records' && (
-             <View className="space-y-6">
+             <View className="space-y-6  mx-auto w-[800px]">
                 {/* Use existing components */} 
                 <MaintenanceRecordForm onSubmit={handleAddMaintenanceRecord} />
                 <MaintenanceHistory records={prop.maintenanceHistory || []} />
@@ -338,12 +422,20 @@ export default function WebPropDetailScreen() {
 }
 
 // Helper component for displaying detail items
-const DetailItem = ({ label, value }: { label: string; value: string | number | undefined | null }) => {
-  if (value === null || typeof value === 'undefined' || value === '') return null; // Don't render if value is empty
+const DetailItem = ({ label, value }: { label: string; value: React.ReactNode | string | number | undefined | null }): JSX.Element | null => {
+  if (value === undefined || value === null || value === '') {
+    return null; // Don't render if value is not provided
+  }
   return (
-    <View className="mb-2">
-      <Text className="text-sm font-medium text-gray-400">{label}</Text>
-      <Text className="text-base text-gray-100">{String(value)}</Text>
+    // Use flex-row, justify-start to place label and value next to each other
+    <View className="flex flex-row justify-start items-center gap-4">
+      <Text className="text-sm font-medium text-blue-300 flex-shrink-0">{label}:</Text> 
+      {typeof value === 'string' || typeof value === 'number' ? (
+         <Text className="text-base text-gray-100 break-words">{value}</Text>
+      ) : (
+         // Render React nodes directly
+         <View>{value}</View>
+      )}
     </View>
   );
 };
@@ -355,14 +447,36 @@ const TabButton = ({ label, activeTab, setActiveTab, icon: Icon }: {
     setActiveTab: (label: string) => void;
     icon: React.ElementType; // Accept icon component
 }) => {
-    const isActive = activeTab === label;
-    return (
-        <TouchableOpacity 
-            onPress={() => setActiveTab(label)} 
-            className={`flex flex-row items-center gap-2 py-2 px-4 ${isActive ? 'border-b-2 border-blue-500' : ''}`}
-        >
-            <Icon size={16} className={isActive ? 'text-white' : 'text-gray-400'} />
-            <Text className={`text-base ${isActive ? 'text-white' : 'text-gray-400'}`}>{label}</Text>
-        </TouchableOpacity>
-    );
+  const isActive = activeTab === label;
+  return (
+    <TouchableOpacity
+      onPress={() => setActiveTab(label)}
+      className={`flex-1 items-center py-3 px-2 border-b-2 flex-row justify-center gap-2 ${
+        isActive
+          ? 'border-blue-500 text-blue-500'
+          : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
+      }`}
+    >
+      <Icon size={16} className={isActive ? 'text-blue-500' : 'text-gray-400'} />
+      <Text 
+         className={`text-sm font-medium ${isActive ? 'text-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+       >
+         {label}
+       </Text>
+    </TouchableOpacity>
+  );
+};
+
+// FlagItem component
+const FlagItem = ({ label, value }: { label: string; value: boolean }): JSX.Element => {
+  return (
+    <View className="flex flex-row items-center gap-2">
+      {value ? (
+        <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
+      ) : (
+        <XCircle size={16} className="text-red-500 flex-shrink-0" />
+      )}
+      <Text className="text-base text-gray-100">{label}</Text>
+    </View>
+  );
 }; 

@@ -141,7 +141,7 @@ export function PropStatusUpdate({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
@@ -178,7 +178,7 @@ export function PropStatusUpdate({
           id="status-select"
           value={newStatus}
           onChange={(e) => setNewStatus(e.target.value as PropLifecycleStatus | '')}
-          className="flex-grow bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent disabled:opacity-50"
+          className="w-full flex-grow bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent disabled:opacity-50"
           disabled={isSubmitting || disabled}
         >
           <option value="">Select New Status</option>

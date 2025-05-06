@@ -26,4 +26,11 @@ body,
 }
 
 /* Your global CSS or Tailwind directives can go here */
-/* For example: @tailwind base; */ 
+/* For example: @tailwind base; */
+
+/* User requested style override */
+.r-maxWidth-hvns9x {
+  max-width: 499px !important; /* Added !important for higher specificity if needed */
+}
+
+/* REMOVED Print Styles for Label Preview */ 
