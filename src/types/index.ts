@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
+import { Address } from '../shared/types/address';
 
 export interface Show {
   id: string;
@@ -28,6 +29,8 @@ export interface Show {
   contacts?: Contact[];
   imageUrl?: string;
   logoImage?: File;
+  rehearsalAddresses?: Address[];
+  storageAddresses?: Address[];
 }
 
 export interface Act {
@@ -43,7 +46,7 @@ export interface Scene {
 
 export interface Venue {
   name: string;
-  address?: string;
+  address?: Address;
   startDate?: string;
   endDate?: string;
   notes?: string;

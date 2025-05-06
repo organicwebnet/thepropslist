@@ -213,11 +213,11 @@ export function PackingList({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Left column - Props list */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Column 1: Available Props */}
       <div className="space-y-6">
         <h2 className="text-xl font-semibold text-gray-200">Available Props</h2>
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
           {availablePropInstances.map((propInstance) => (
             <button
               key={propInstance.instanceId}
@@ -260,18 +260,13 @@ export function PackingList({
         </div>
       </div>
 
-      {/* Right column - Boxes list and creation/edit form */}
+      {/* Column 2: Create/Edit Box Form */}
       <div className="space-y-6">
-        {/* Box Creation/Edit Form */}
-        <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-6 space-y-6">
-          {/* Wrap title and icon in a flex container */}
-          <div className="flex items-center gap-2">
-             <PackageOpen className="h-5 w-5 text-gray-300" /> {/* Add Icon */}
-             <h2 className="text-xl font-semibold text-gray-200">
-               {editingBoxId ? 'Edit Box' : 'Create New Box'}
-             </h2>
-          </div>
-          
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 sticky top-6">
+          <h2 className="text-xl font-semibold text-gray-200 mb-4 flex items-center">
+             {editingBoxId ? <PackageOpen className="mr-2 h-5 w-5"/> : <Package className="mr-2 h-5 w-5"/>}
+             {editingBoxId ? 'Edit Box' : 'Create New Box'}
+          </h2>
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">
               Box Name
@@ -348,31 +343,27 @@ export function PackingList({
             </button>
           </div>
         </div>
-        
-        {/* Existing Boxes List */}
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-semibold text-gray-200">Packed Boxes</h2>
-        </div>
-        <div className="space-y-4">
-          {boxes
-            .filter(box => box.id !== editingBoxId)
-            .map((box) => (
-              <PackingBoxCard
-                key={box.id}
-                box={box}
-                onEdit={handleEditBox}
-                onDelete={onDeleteBox}
+      </div>
+      
+      {/* Column 3: Packed Boxes List (Moved out of column 2) */}
+      <div className="space-y-6">
+        <h2 className="text-xl font-semibold text-gray-200">Packed Boxes</h2>
+        {boxes.length === 0 ? (
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 text-center">
+            <p className="text-gray-400 italic">No boxes packed yet for this show.</p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
+            {boxes.map(box => (
+              <PackingBoxCard 
+                key={box.id} 
+                box={{...box, showId: show.id}} // Pass showId down
+                onEdit={handleEditBox} 
+                onDelete={onDeleteBox} 
               />
-          ))}
-          {boxes.filter(box => box.id !== editingBoxId).length === 0 && !isLoading && (
-             <p className="text-gray-400 italic text-center py-4">No boxes packed yet{editingBoxId ? ' (excluding the one being edited)' : ''}.</p>
-          )}
-          {isLoading && (
-            <div className="flex justify-center py-4">
-              <ActivityIndicator size="small" color="#9CA3AF" />
-            </div>
-           )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

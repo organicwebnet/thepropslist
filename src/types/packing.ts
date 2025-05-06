@@ -29,6 +29,7 @@ export interface PackingBox {
   labelIncludeFragile?: boolean;
   labelIncludeThisWayUp?: boolean;
   labelIncludeKeepDry?: boolean;
+  labelIncludeBatteries?: boolean;
 }
 
 export interface PackedProp {

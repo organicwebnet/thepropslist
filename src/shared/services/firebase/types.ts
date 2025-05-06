@@ -2,8 +2,11 @@
 // import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 // import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
 
+import { Auth as FirebaseAuthJs, User as FirebaseUserJs } from 'firebase/auth'; // For JS SDK Auth and User types
+import { FirebaseAuthTypes } from '@react-native-firebase/auth'; // For RN Firebase User type if needed for mobile-specific parts
+
 // Placeholder Types - Define the actual structure later based on usage
-export type CustomAuth = any; // Placeholder
+// export type CustomAuth = any; // Placeholder - REPLACED BELOW
 export type CustomFirestore = any; // Placeholder
 export type CustomStorage = any; // Placeholder
 export type CustomTransaction = any; // Placeholder
@@ -12,8 +15,21 @@ export type CustomDocumentData = Record<string, any>; // Basic placeholder
 export type CustomDocumentReference<T = CustomDocumentData> = any; // Placeholder
 export type CustomCollectionReference<T = CustomDocumentData> = any; // Placeholder
 export type CustomStorageReference = any; // Placeholder
-export type CustomUser = any; // Placeholder
+export type CustomUser = FirebaseUserJs | FirebaseAuthTypes.User; // Union type for user
 export type CustomUserCredential = any; // Placeholder for UserCredential
+
+// Define CustomAuth to be compatible with both Firebase JS SDK Auth and RNFirebase Auth module
+// It needs an onAuthStateChanged method, among others.
+export interface CustomAuth {
+  // Common methods (simplified subset for now)
+  onAuthStateChanged(callback: (user: CustomUser | null) => void): () => void; // Unsubscribe function
+  signInWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential>;
+  createUserWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential>;
+  sendPasswordResetEmail(email: string): Promise<void>;
+  signOut(): Promise<void>;
+  // Potentially add currentUser property if directly accessed
+  currentUser: CustomUser | null;
+}
 
 // Add exports for core service types using placeholders
 export type FirebaseAuth = CustomAuth;
@@ -128,7 +144,7 @@ export type QueryOptions = {
 export interface FirebaseService {
   initialize(): Promise<void>;
   initializeService?(): Promise<void>;
-  auth(): CustomAuth; // Updated type
+  auth(): CustomAuth; // Now uses the more specific CustomAuth interface
   firestore(): CustomFirestore; // Updated type
   storage(): FirebaseStorage | CustomStorage; // Updated type
   offline(): OfflineSync;

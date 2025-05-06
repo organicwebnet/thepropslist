@@ -1,77 +1,58 @@
+import { Address } from './address'; // Import the new Address type
+
 export enum UserRole {
   ADMIN = 'admin',
-  MANAGER = 'manager',
-  USER = 'user',
-  GUEST = 'guest'
+  EDITOR = 'editor',
+  VIEWER = 'viewer',
 }
 
+/**
+ * Defines permissions for different actions within the app.
+ */
 export interface UserPermissions {
-  canCreateProps: boolean;
   canEditProps: boolean;
   canDeleteProps: boolean;
   canManageUsers: boolean;
-  canManageShows: boolean;
-  canViewBudgets: boolean;
-  canEditBudgets: boolean;
-  canGenerateReports: boolean;
-  canAccessAdvancedFeatures: boolean;
-  // Add other specific permissions as needed
+  canEditShows: boolean;
 }
 
+/**
+ * Represents the user profile data stored in Firestore.
+ */
 export interface UserProfile {
-  uid: string;
+  id: string; // User ID (matches Firebase Auth UID)
   email: string | null;
   displayName: string | null;
-  photoURL?: string;
-  role: UserRole;
-  permissions: Partial<UserPermissions>;
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
+  photoURL?: string; // Optional photo URL from provider or custom upload
+  role?: UserRole; // User role (optional, might use permissions instead)
+  permissions?: Partial<UserPermissions>; // Granular permissions
+  createdAt?: Date;
+  updatedAt?: Date;
+  themePreference?: 'light' | 'dark' | 'system';
+  fontPreference?: string; // e.g., 'default', 'OpenDyslexic'
+
+  // Saved Addresses
+  savedSenderAddresses?: Address[];
+  savedDeliveryAddresses?: Address[];
 }
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
   [UserRole.ADMIN]: {
-    canCreateProps: true,
     canEditProps: true,
     canDeleteProps: true,
     canManageUsers: true,
-    canManageShows: true,
-    canViewBudgets: true,
-    canEditBudgets: true,
-    canGenerateReports: true,
-    canAccessAdvancedFeatures: true
+    canEditShows: true
   },
-  [UserRole.MANAGER]: {
-    canCreateProps: true,
+  [UserRole.EDITOR]: {
     canEditProps: true,
     canDeleteProps: true,
-    canManageUsers: false,
-    canManageShows: true,
-    canViewBudgets: true,
-    canEditBudgets: true,
-    canGenerateReports: true,
-    canAccessAdvancedFeatures: true
+    canManageUsers: true,
+    canEditShows: true
   },
-  [UserRole.USER]: {
-    canCreateProps: true,
-    canEditProps: true,
-    canDeleteProps: false,
-    canManageUsers: false,
-    canManageShows: true,
-    canViewBudgets: true,
-    canEditBudgets: true,
-    canGenerateReports: false,
-    canAccessAdvancedFeatures: false
-  },
-  [UserRole.GUEST]: {
-    canCreateProps: false,
+  [UserRole.VIEWER]: {
     canEditProps: false,
     canDeleteProps: false,
     canManageUsers: false,
-    canManageShows: false,
-    canViewBudgets: false,
-    canEditBudgets: false,
-    canGenerateReports: false,
-    canAccessAdvancedFeatures: false
+    canEditShows: false
   }
 }; 

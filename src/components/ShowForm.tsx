@@ -3,7 +3,8 @@ import { PlusCircle, MinusCircle, Save, Upload } from 'lucide-react';
 import { VenueForm } from './VenueForm';
 import { WysiwygEditor } from './WysiwygEditor';
 import { HelpTooltip } from './HelpTooltip';
-import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types';
+import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index';
+import { Address } from '../shared/types/address';
 
 interface ShowFormProps {
   mode: 'create' | 'edit';
@@ -40,6 +41,25 @@ const initialFormState: Show = {
   contacts: [],
   imageUrl: '',
   logoImage: undefined,
+  rehearsalAddresses: [],
+  storageAddresses: [],
+  startDate: '',
+  endDate: '',
+  venue: '',
+  status: 'planning',
+};
+
+const defaultAddress: Address = {
+  id: '', 
+  name: '',
+  companyName: '',
+  street1: '',
+  street2: '',
+  city: '',
+  region: '',
+  postalCode: '',
+  country: 'United Kingdom',
+  nickname: '',
 };
 
 function RequiredLabel({ children }: { children: React.ReactNode }) {
@@ -58,7 +78,9 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
     // Ensure nested properties always exist
     acts: (initialData.acts && initialData.acts.length > 0) ? initialData.acts : initialFormState.acts,
     venues: (initialData.venues && initialData.venues.length > 0) ? initialData.venues : initialFormState.venues,
-    contacts: Array.isArray(initialData.contacts) ? initialData.contacts : []
+    contacts: Array.isArray(initialData.contacts) ? initialData.contacts : [],
+    rehearsalAddresses: Array.isArray(initialData.rehearsalAddresses) ? initialData.rehearsalAddresses : [],
+    storageAddresses: Array.isArray(initialData.storageAddresses) ? initialData.storageAddresses : [],
   } : initialFormState;
 
   const [formData, setFormData] = useState<Show>(mergedInitialData);
@@ -78,7 +100,9 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
         // Ensure nested properties always exist
         acts: (initialData.acts && initialData.acts.length > 0) ? initialData.acts : initialFormState.acts,
         venues: (initialData.venues && initialData.venues.length > 0) ? initialData.venues : initialFormState.venues,
-        contacts: Array.isArray(initialData.contacts) ? initialData.contacts : []
+        contacts: Array.isArray(initialData.contacts) ? initialData.contacts : [],
+        rehearsalAddresses: Array.isArray(initialData.rehearsalAddresses) ? initialData.rehearsalAddresses : [],
+        storageAddresses: Array.isArray(initialData.storageAddresses) ? initialData.storageAddresses : [],
       };
       
       console.log('Setting form data to:', mergedData);
@@ -130,8 +154,8 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
     }
 
     // Validate at least one venue for non-touring shows
-    if (!formData.isTouringShow && (!formData.venues?.[0] || !formData.venues[0].name?.trim())) {
-      newErrors.venue = 'Venue is required for non-touring shows';
+    if (!formData.isTouringShow && (!formData.venues?.[0] || !formData.venues[0].name?.trim() || !formData.venues[0].address?.street1?.trim())) {
+      newErrors.venue = 'Venue name and at least Street 1 are required for non-touring shows';
     }
 
     // Validate acts and scenes
@@ -139,7 +163,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
       newErrors.acts = 'At least one act is required';
     } else {
       formData.acts.forEach((act: Act, actIndex: number) => {
-        if (!act.scenes || act.scenes.length === 0) {
+        if (!act || !act.scenes || act.scenes.length === 0) {
           newErrors[`act_${actIndex}_scenes`] = `At least one scene is required in Act ${actIndex + 1}`;
         }
       });
@@ -187,12 +211,15 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
         productionContactName: formData.productionContactName || '',
         productionContactEmail: formData.productionContactEmail || '',
         productionContactPhone: formData.productionContactPhone || '',
-        // If not a touring show, ensure only one venue
-        venues: formData.isTouringShow ? (formData.venues || []) : [(formData.venues && formData.venues[0]) || { name: '', address: '', startDate: '', endDate: '', notes: '' }],
+        startDate: formData.startDate || new Date().toISOString(),
+        endDate: formData.endDate || new Date().toISOString(),
+        venues: formData.isTouringShow ? (formData.venues || []) : [(formData.venues && formData.venues[0]) || { name: '', address: defaultAddress, startDate: '', endDate: '', notes: '' }],
         isTouringShow: !!formData.isTouringShow,
         contacts: formData.contacts || [],
         imageUrl: formData.imageUrl || '',
         logoImage: formData.logoImage,
+        rehearsalAddresses: formData.rehearsalAddresses || [],
+        storageAddresses: formData.storageAddresses || [],
       };
 
       console.log('Submitting data:', submissionData);
@@ -215,32 +242,37 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
     }
   };
 
-  const handleVenueChange = (index: number, value: string) => {
-    console.log(`Changing venue ${index} name to:`, value);
-    const updatedVenues = [...(formData.venues || [])];
-    if (!updatedVenues[index]) {
-      updatedVenues[index] = { name: value, address: '', startDate: '', endDate: '', notes: '' };
-    } else {
-      updatedVenues[index].name = value;
-    }
-    setFormData((prevData: Show) => ({ ...prevData, venues: updatedVenues }));
+  const handleVenuesChange = (updatedVenues: Venue[]) => {
+    setFormData(prevData => ({ ...prevData, venues: updatedVenues }));
   };
 
-  const addVenue = () => {
-    if (formData.isTouringShow) {
-      const newVenue: Venue = { name: '', address: '', startDate: '', endDate: '', notes: '' };
-      setFormData((prevData: Show) => ({ ...prevData, venues: [...(prevData.venues || []), newVenue] }));
-    }
+  const handleAddAddress = (type: 'rehearsal' | 'storage') => {
+    const field = type === 'rehearsal' ? 'rehearsalAddresses' : 'storageAddresses';
+    setFormData(prevData => ({
+      ...prevData,
+      [field]: [...(prevData[field] || []), { ...defaultAddress, id: `new-${Date.now()}` }]
+    }));
   };
 
-  const removeVenue = (index: number) => {
-    if (formData.venues.length > 1) {
-      const updatedVenues = formData.venues.filter((venue: Venue, i: number) => i !== index);
-      setFormData((prevData: Show) => ({ 
-        ...prevData, 
-        venues: updatedVenues 
-      }));
-    }
+  const handleRemoveAddress = (type: 'rehearsal' | 'storage', index: number) => {
+    const field = type === 'rehearsal' ? 'rehearsalAddresses' : 'storageAddresses';
+    setFormData(prevData => ({
+      ...prevData,
+      [field]: (prevData[field] || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAddressFieldChange = (type: 'rehearsal' | 'storage', index: number, field: keyof Address, value: string) => {
+    const listField = type === 'rehearsal' ? 'rehearsalAddresses' : 'storageAddresses';
+    setFormData(prevData => {
+      const updatedList = (prevData[listField] || []).map((addr, i) => {
+        if (i === index) {
+          return { ...addr, [field]: value };
+        }
+        return addr;
+      });
+      return { ...prevData, [listField]: updatedList };
+    });
   };
 
   const handleActChange = (actIndex: number, value: string) => {
@@ -553,7 +585,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
               Acts and Scenes
             </div>
             
-            {formData.acts.map((act, actIndex) => (
+            {(formData.acts || []).map((act, actIndex) => (
               <div key={`act-${actIndex}-${act.id}`} className="space-y-4 p-4 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-[var(--text-primary)]">Act {actIndex + 1}</h3>
@@ -645,7 +677,8 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
           {formData.isTouringShow ? (
             <VenueForm
               venues={formData.venues || []}
-              onChange={(venues) => setFormData({ ...formData, venues })}
+              onChange={handleVenuesChange}
+              isTouringShow={!!formData.isTouringShow}
             />
           ) : (
             <div>
@@ -656,7 +689,14 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 type="text"
                 id="venue"
                 value={(formData.venues && formData.venues[0] && formData.venues[0].name) || ''}
-                onChange={(e) => handleVenueChange(0, e.target.value)}
+                onChange={(e) => {
+                  const currentVenues = formData.venues || [];
+                  const updatedFirstVenue: Venue = { 
+                    ...(currentVenues[0] || { name: '', address: defaultAddress, startDate: '', endDate: '', notes: '' }),
+                    name: e.target.value 
+                  };
+                  handleVenuesChange([updatedFirstVenue]);
+                }}
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
                 placeholder="Enter venue name"
               />
@@ -817,6 +857,96 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 placeholder="Enter production contact phone number (optional)"
               />
             </div>
+          </div>
+
+          {/* --- Rehearsal Addresses Section --- */}
+          <div className="venue-section mt-6">
+            <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-300">Rehearsal Spaces</label>
+                <button
+                    type="button"
+                    onClick={() => handleAddAddress('rehearsal')}
+                    className="inline-flex items-center text-sm text-primary hover:text-primary/80"
+                >
+                    <PlusCircle className="h-4 w-4 mr-1" />
+                    Add Rehearsal Space
+                </button>
+            </div>
+            {(formData.rehearsalAddresses || []).map((addr, index) => (
+                <div key={addr.id || index} className="p-3 mb-2 bg-[#1A1A1A] border border-gray-800 rounded-lg space-y-2 relative">
+                    <button 
+                        type="button" 
+                        onClick={() => handleRemoveAddress('rehearsal', index)} 
+                        className="absolute top-2 right-2 text-gray-400 hover:text-red-400"
+                    >
+                        <MinusCircle className="h-4 w-4" />
+                    </button>
+                    {(Object.keys(defaultAddress) as Array<keyof Address>)
+                        .filter(key => key !== 'id')
+                        .map(addressKey => (
+                            <div key={addressKey}>
+                                <label className="block text-xs font-medium text-gray-300 mb-1">
+                                    {addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={addr[addressKey] || ''}
+                                    onChange={(e) => handleAddressFieldChange('rehearsal', index, addressKey, e.target.value)}
+                                    className="w-full bg-[#1F1F1F] border border-gray-700 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent"
+                                    placeholder={addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}
+                                />
+                            </div>
+                    ))}
+                </div>
+            ))}
+             {(!formData.rehearsalAddresses || formData.rehearsalAddresses.length === 0) && (
+                 <p className="text-xs text-gray-500 italic">No rehearsal spaces added.</p>
+             )}
+          </div>
+
+          {/* --- Storage Addresses Section --- */}
+          <div className="venue-section mt-6">
+            <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-300">Storage Locations</label>
+                 <button
+                    type="button"
+                    onClick={() => handleAddAddress('storage')}
+                    className="inline-flex items-center text-sm text-primary hover:text-primary/80"
+                >
+                    <PlusCircle className="h-4 w-4 mr-1" />
+                    Add Storage Location
+                </button>
+            </div>
+             {(formData.storageAddresses || []).map((addr, index) => (
+                <div key={addr.id || index} className="p-3 mb-2 bg-[#1A1A1A] border border-gray-800 rounded-lg space-y-2 relative">
+                     <button 
+                        type="button" 
+                        onClick={() => handleRemoveAddress('storage', index)} 
+                        className="absolute top-2 right-2 text-gray-400 hover:text-red-400"
+                    >
+                        <MinusCircle className="h-4 w-4" />
+                    </button>
+                    {(Object.keys(defaultAddress) as Array<keyof Address>)
+                        .filter(key => key !== 'id')
+                        .map(addressKey => (
+                            <div key={addressKey}>
+                                <label className="block text-xs font-medium text-gray-300 mb-1">
+                                    {addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={addr[addressKey] || ''}
+                                    onChange={(e) => handleAddressFieldChange('storage', index, addressKey, e.target.value)}
+                                    className="w-full bg-[#1F1F1F] border border-gray-700 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-transparent"
+                                    placeholder={addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}
+                                />
+                            </div>
+                     ))}
+                </div>
+            ))}
+             {(!formData.storageAddresses || formData.storageAddresses.length === 0) && (
+                 <p className="text-xs text-gray-500 italic">No storage locations added.</p>
+             )}
           </div>
 
           {/* Show validation errors */}

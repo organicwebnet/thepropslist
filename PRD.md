@@ -186,10 +186,15 @@ Production teams face significant challenges in managing, tracking, and coordina
 - Venue Management  
   -possible API lookup venue dates and detais
   - Multiple venue support
-  - Venue details (address, capacity, contact info)
+  - Venue details (name, capacity, contact info, etc.)
+  - Venue address stored as a structured Address object (Street, City, Postal Code, Country, etc.)
   - Stage/space specifications
   - Technical facilities available
   - Loading dock and storage information
+- Rehearsal Space Management
+  - Array of structured Address objects for rehearsal locations stored within the Show data.
+- Storage Location Management
+  - Array of structured Address objects for storage locations stored within the Show data.
 - Personnel Management 
   -possible API lookup of key personell of the show
   - Key production team members
@@ -215,6 +220,17 @@ Production teams face significant challenges in managing, tracking, and coordina
   - Performance reports
   - Incident reports
   - Budget vs. actual spending
+
+#### 3.1.9 Address Management & Selection
+- Centralized Address Handling:
+  - Show-specific addresses (Venues, Rehearsal Spaces, Storage Locations) are stored within the Show data.
+  - User-specific addresses (Saved Sender, Saved Delivery) are stored within the User Profile.
+- Reusable Address Selection Modal:
+  - A common modal component will be used wherever an address needs to be selected or added (e.g., Packing Labels, Show Setup).
+  - The modal will display available addresses grouped by source (Show-related, User Profile Saved).
+  - Users can select an existing address or add a new address via the modal.
+  - Logic for saving newly added addresses (e.g., to User Profile, to Show data) will be configurable within the modal context.
+  - UK Address Validation (using postcodes.io) can be triggered within the modal for new addresses.
 
 ### 3.2 Mobile-Specific Requirements (Android)
 
