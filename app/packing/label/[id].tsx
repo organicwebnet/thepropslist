@@ -206,7 +206,7 @@ export default function LabelPreviewPage() {
             <div class="label-container">
               <!-- Show Name Section -->
               <div class="section show-name-section">
-                ${show.name || 'Show Name Unavailable'}
+                    ${show.name || 'Show Name Unavailable'}
               </div>
 
               <!-- Top Content: Box Info & QR Code with Symbols -->
@@ -220,31 +220,31 @@ export default function LabelPreviewPage() {
                 </div>
                 <div class="qr-and-symbols-area">
                   <div class="qr-code-container">
-                    <img src="${qrDataURL}" alt="QR Code" class="qr-code" />
+                      <img src="${qrDataURL}" alt="QR Code" class="qr-code" />
                      <p>Scan to view Box contents</p>
                   </div>
                   <div class="symbols-column">
                     ${ (hasFragileItems || includeFragile || includeThisWayUp || includeKeepDry || includeBatteries) ? `<img src="${HANDLE_CARE_BASE64}" alt="Handle With Care" class="symbol-image" />` : ''}
-                    ${includeFragile ? `<img src="${FRAGILE_BASE64}" alt="Fragile" class="symbol-image" />` : ''}
-                    ${includeThisWayUp ? `<img src="${THIS_WAY_UP_BASE64}" alt="This Way Up" class="symbol-image" />` : ''}
-                    ${includeKeepDry ? `<img src="${KEEP_DRY_BASE64}" alt="Keep Dry" class="symbol-image" />` : ''}
+                        ${includeFragile ? `<img src="${FRAGILE_BASE64}" alt="Fragile" class="symbol-image" />` : ''}
+                        ${includeThisWayUp ? `<img src="${THIS_WAY_UP_BASE64}" alt="This Way Up" class="symbol-image" />` : ''}
+                        ${includeKeepDry ? `<img src="${KEEP_DRY_BASE64}" alt="Keep Dry" class="symbol-image" />` : ''}
                     ${includeBatteries ? `<img src="${BATTERY_INCLUDED}" alt="Includes Batteries" class="symbol-image" />` : ''}
-                  </div>
-                </div>
-              </div>
-
+                      </div>
+                    </div>
+                       </div>
+                      
               <!-- Box Name and Handling Notes Section -->
               <div class="section box-details-section">
                 <div class="box-name-main">${box.name || 'Box Name N/A'}</div>
                 <div class="handling-notes-label">Handling Notes:</div>
                 <div class="handling-notes-content">${handlingNote || 'None'}</div>
-              </div>
+                    </div>
 
               <!-- Addresses Section -->
               <div class="section address-section">
                 <div class="delivery-address-area">
                   <div class="address-title">DELIVERY:</div>
-                  <div class="address-details">
+                            <div class="address-details">
                     <p><strong>${deliveryAddress.name || ''}</strong></p>
                     <p>${deliveryAddress.companyName || ''}</p>
                     <p>${deliveryAddress.street1 || ''}</p>
@@ -253,11 +253,11 @@ export default function LabelPreviewPage() {
                     <p>${deliveryAddress.region || ''}</p>
                     <p>${deliveryAddress.postalCode || ''}</p>
                     <p>${deliveryAddress.country || ''}</p>
-                  </div>
-                </div>
+                            </div>
+                          </div>
                 <div class="sender-address-area">
                   <div class="address-title">SENDER:</div>
-                  <div class="address-details">
+                            <div class="address-details">
                     <p><strong>${senderAddress.name || ''}</strong></p>
                     <p>${senderAddress.companyName || ''}</p>
                     <p>${senderAddress.street1 || ''}</p>
@@ -266,8 +266,8 @@ export default function LabelPreviewPage() {
                     <p>${senderAddress.region || ''}</p>
                     <p>${senderAddress.postalCode || ''}</p>
                     <p>${senderAddress.country || ''}</p>
-                  </div>
-                </div>
+                            </div>
+                          </div>
               </div>
             </div>
           </body>
@@ -342,7 +342,7 @@ export default function LabelPreviewPage() {
       setIncludeKeepDry(value);
       handleSettingChange({ labelIncludeKeepDry: value });
   }
-  
+
   const handleBatteriesChange = (value: boolean) => {
     setIncludeBatteries(value);
     handleSettingChange({ labelIncludeBatteries: value });
@@ -430,7 +430,7 @@ export default function LabelPreviewPage() {
           Alert.alert('Error', 'Could not print the label.');
         } finally {
           setIsPrinting(false);
-        }
+      }
     }
   };
 
@@ -464,10 +464,10 @@ export default function LabelPreviewPage() {
           ) : (
             <Text style={styles.addressTextItalic}>No {type} address set.</Text>
           )}
-        </View>
+          </View>
         <TouchableOpacity style={styles.setAddressButton} onPress={handleOpenModal}>
           <Text style={styles.setAddressButtonText}>{address && address.name ? `Change ${type.charAt(0).toUpperCase() + type.slice(1)} Address` : `Set ${type.charAt(0).toUpperCase() + type.slice(1)} Address`}</Text>
-        </TouchableOpacity>
+                </TouchableOpacity>
       </View>
     );
   };
@@ -540,7 +540,7 @@ export default function LabelPreviewPage() {
                     <Text style={styles.sectionTitle}>Include Symbols</Text>
                     {renderCheckbox('Fragile', includeFragile, handleFragileChange)}
                     {renderCheckbox('This Way Up (↑↑)', includeThisWayUp, handleThisWayUpChange)}
-                    {renderCheckbox('Keep Dry (☂️)', includeKeepDry, handleKeepDryChange)} 
+                    {renderCheckbox('Keep Dry (☂️)', includeKeepDry, handleKeepDryChange)}
                     {renderCheckbox('Includes Batteries (🔋)', includeBatteries, handleBatteriesChange)}
                 </View>
 
