@@ -318,11 +318,18 @@ export class WebFirebaseService implements FirebaseService {
     return ref(this.storageInstance, path) as CustomStorageReference;
   }
 
-  async uploadFile(path: string, file: File): Promise<string> {
+  async uploadFile(path: string, file: File | string): Promise<string> {
     if (!this.isInitialized || !this.storageInstance) throw new Error('Firebase not initialized');
+    
+    // WebFirebaseService expects a File object
+    if (!(file instanceof File)) {
+      console.error('WebFirebaseService: uploadFile expects a File object.');
+      throw new FirebaseError('Invalid file type for web upload. Expected File object.', 'invalid-argument');
+    }
+
     try {
       const storageRef = ref(this.storageInstance, path);
-      await uploadBytes(storageRef, file);
+      await uploadBytes(storageRef, file as File); // Cast to File after check
       const downloadURL = await getStorageDownloadURL(storageRef);
       return downloadURL;
     } catch (error) {

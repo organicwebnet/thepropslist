@@ -19,6 +19,7 @@ import {
 } from '../../../shared/services/firebase/types';
 
 import { Timestamp } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
 class MobileOfflineSync implements OfflineSync {
   constructor(private firestoreInstance: FirebaseFirestoreTypes.Module) {}
@@ -108,7 +109,6 @@ export class MobileFirebaseService implements FirebaseService {
     try {
         console.log("[MobileFirebaseService] Attempting @react-native-firebase initialization...");
 
-        // Check native app initialization status using getApps()
         const apps = getApps(); 
         console.log(`[MobileFirebaseService] Checking apps.length: ${apps.length}`);
         if (apps.length === 0) { 
@@ -118,27 +118,25 @@ export class MobileFirebaseService implements FirebaseService {
              console.log(`[MobileFirebaseService] Native Default app instance found: ${apps[0].name}. Proceeding to get service instances.`);
         }
 
-        const defaultApp = firebase.app(); // Get the default app instance
+        const defaultApp = firebase.app();
 
         console.log("[MobileFirebaseService] Getting Auth instance...");
-        this._auth = auth(defaultApp); // Pass defaultApp
+        this._auth = auth(defaultApp);
         console.log("[MobileFirebaseService] Auth instance obtained:", this._auth ? 'Exists' : 'Failed');
 
         console.log("[MobileFirebaseService] Getting Firestore instance...");
-        this._firestore = firestore(defaultApp); // Pass defaultApp
+        this._firestore = firestore(defaultApp);
         console.log("[MobileFirebaseService] Firestore instance obtained:", this._firestore ? 'Exists' : 'Failed');
 
         console.log("[MobileFirebaseService] Getting Storage instance...");
-        this._storage = storage(defaultApp); // Pass defaultApp
+        this._storage = storage(defaultApp);
         console.log("[MobileFirebaseService] Storage instance obtained:", this._storage ? 'Exists' : 'Failed');
 
         console.log("[MobileFirebaseService] Initializing Offline Sync...");
         if (!this._firestore) throw new Error("Firestore must be initialized before Offline Sync");
         this._offlineSync = new MobileOfflineSync(this._firestore);
-        // await this._offlineSync.initialize(); // If MobileOfflineSync needs async init
         console.log("[MobileFirebaseService] Offline Sync initialized.");
 
-        // Final check
         if (!this._auth || !this._firestore || !this._storage || !this._offlineSync) {
            console.error("[MobileFirebaseService] One or more services failed to initialize.");
            throw new Error("Firebase service initialization failed internally.");
@@ -148,7 +146,7 @@ export class MobileFirebaseService implements FirebaseService {
         console.log("[MobileFirebaseService] Initialization flag set to true. Initialization successful.");
     } catch (error) {
         console.error("[MobileFirebaseService] Error during initialize():", error);
-        this._isInitialized = false; // Ensure flag is reset on error
+        this._isInitialized = false;
         if (error instanceof Error) {
              throw new FirebaseError(error.message, 'initialization-failed');
         } else {
@@ -162,8 +160,6 @@ export class MobileFirebaseService implements FirebaseService {
         console.error('MobileFirebaseService not initialized or Auth module failed to initialize.');
         throw new FirebaseError('MobileFirebaseService not initialized or Auth module failed to initialize.', 'not-initialized');
     }
-    // Cast needed if CustomAuth differs structurally from FirebaseAuthTypes.Module
-    // If they are compatible, casting might not be strictly necessary but clarifies intent.
     return this._auth as CustomAuth;
   }
 
@@ -172,8 +168,7 @@ export class MobileFirebaseService implements FirebaseService {
         console.error('MobileFirebaseService not initialized or Firestore module failed to initialize.');
         throw new FirebaseError('MobileFirebaseService not initialized or Firestore module failed to initialize.', 'not-initialized');
     }
-     // Cast needed if CustomFirestore differs structurally
-    return this._firestore as CustomFirestore;
+     return this._firestore as CustomFirestore;
   }
 
   getFirestoreJsInstance(): import('firebase/firestore').Firestore {
@@ -192,8 +187,7 @@ export class MobileFirebaseService implements FirebaseService {
         console.error('MobileFirebaseService not initialized or Storage module failed to initialize.');
         throw new FirebaseError('MobileFirebaseService not initialized or Storage module failed to initialize.', 'not-initialized');
     }
-     // Cast needed if CustomStorage differs structurally
-    return this._storage as CustomStorage;
+     return this._storage as CustomStorage;
   }
 
   offline(): OfflineSync {
@@ -293,13 +287,13 @@ export class MobileFirebaseService implements FirebaseService {
     if (!this._isInitialized || !this._firestore) {
       const err = new FirebaseError('MobileFirebaseService not initialized or Firestore module failed to initialize.', 'not-initialized');
       if (onError) onError(err);
-      return () => {}; // Return a no-op unsubscribe function
+      return () => {};
     }
 
     const collectionRef: FirebaseFirestoreTypes.CollectionReference<FirebaseFirestoreTypes.DocumentData> = fbCollection(this._firestore, path);
     let queryToListen: FirebaseFirestoreTypes.Query<FirebaseFirestoreTypes.DocumentData> = collectionRef;
 
-    const queryConstraints: any[] = []; // Kept as any[] for simplicity of pushing mixed constraint types
+    const queryConstraints: any[] = [];
 
     if (options) {
       if (options.where) {
@@ -343,23 +337,19 @@ export class MobileFirebaseService implements FirebaseService {
     if (!this._isInitialized || !this._firestore) {
       throw this.handleError('MobileFirebaseService not initialized or Firestore module failed to initialize.', 'not-initialized');
     }
-    // For mobile, docRef will be FirebaseFirestoreTypes.DocumentReference<T>
-    // We need to essentially replicate _snapshotToFirebaseDocument logic or call it if we can get a snapshot
-    // This method is more about creating a wrapper for an *existing* reference.
-    
-    const rnDocRef = docRef as FirebaseFirestoreTypes.DocumentReference<T>; // Assuming docRef is the RN version for mobile context
+    const rnDocRef = docRef as FirebaseFirestoreTypes.DocumentReference<T>;
 
     return {
       id: rnDocRef.id,
-      ref: rnDocRef as unknown as CustomDocumentReference<T>, // Store as CustomDocumentReference
-      data: undefined, // Data is typically fetched on demand or via listeners
+      ref: rnDocRef as unknown as CustomDocumentReference<T>,
+      data: undefined,
       get: async (): Promise<T | undefined> => {
         try {
           const docSnapshot = await rnDocRef.get();
           return docSnapshot.exists() ? docSnapshot.data() as T : undefined;
         } catch (error) {
           this.handleError(`Error getting document ${rnDocRef.id}`, error);
-          return undefined; // Ensure a promise is returned
+          return undefined;
         }
       },
       set: async (newData: T): Promise<void> => {
@@ -465,7 +455,6 @@ export class MobileFirebaseService implements FirebaseService {
     return new FirebaseError(errorMessage, code, error);
   }
 
-  // --- Implement Core CRUD Methods ---
   async deleteDocument(collectionPath: string, documentId: string): Promise<void> {
     if (!this._isInitialized || !this._firestore) throw this.handleError('Firestore not initialized', new Error('Firestore not initialized'));
     try {
@@ -533,7 +522,7 @@ export class MobileFirebaseService implements FirebaseService {
     try {
       const dataWithTimestamp = { 
         ...data, 
-        updatedAt: serverTimestamp() // Use server timestamp for consistency
+        updatedAt: serverTimestamp()
       };
       const docRef = fbDoc(this._firestore, collectionPath, documentId);
       await fbUpdate(docRef, dataWithTimestamp);
@@ -543,26 +532,59 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   async addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
-     if (!this._isInitialized || !this._firestore) throw this.handleError('Firestore not initialized', new Error('Firestore not initialized'));
+    if (!this._isInitialized || !this._firestore) throw this.handleError('Firestore not initialized', new Error('Firestore not initialized'));
     try {
       const dataWithTimestamps = {
         ...data,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      const collectionRef = fbCollection(this._firestore, collectionPath);
-      const docRef = await fbAdd(collectionRef, dataWithTimestamps);
+      const docRef = await fbAdd(fbCollection(this._firestore, collectionPath), dataWithTimestamps as any);
       const docSnapshot = await fbGetDoc(docRef);
-      return this._snapshotToFirebaseDocument<T>(docSnapshot as FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData>);
+      return this._snapshotToFirebaseDocument(docSnapshot as FirebaseFirestoreTypes.DocumentSnapshot<FirebaseFirestoreTypes.DocumentData>) as FirebaseDocument<T>;
+
     } catch (error) {
       throw this.handleError(`Error adding document to ${collectionPath}`, error);
     }
   }
 
-  // --- Placeholder for other methods ---
-  async uploadFile(path: string, file: File): Promise<string> {
-    console.warn(`Mobile uploadFile(${path}) is not implemented.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+  async uploadFile(filePath: string, fileUriOrBlob: string | File): Promise<string> {
+    if (!this._isInitialized || !this._storage) {
+      console.error('[MobileFirebaseService] Storage module not initialized.');
+      throw new FirebaseError('MobileFirebaseService not initialized or Storage module failed to initialize.', 'not-initialized');
+    }
+    
+    if (typeof fileUriOrBlob !== 'string') {
+      console.error('[MobileFirebaseService] uploadFile: expects a file URI string.', { received: typeof fileUriOrBlob });
+      throw new FirebaseError('Invalid file type for mobile upload. Expected a file URI string.', 'invalid-argument');
+    }
+    const fileUri = fileUriOrBlob;
+
+    const uriParts = fileUri.split('/');
+    const originalFileName = uriParts.pop() || `unknown-file-${Date.now()}`;
+    const uniqueFileName = `${uuidv4()}-${originalFileName}`;
+    const fullStoragePath = `${filePath}/${uniqueFileName}`;
+
+    console.log(`[MobileFirebaseService] Attempting to upload ${fileUri} to ${fullStoragePath}`);
+
+    try {
+      const storageRef = this._storage.ref(fullStoragePath);
+      
+      const uploadTask = await storageRef.putFile(fileUri);
+
+      if (uploadTask.state !== 'success') {
+        console.error('[MobileFirebaseService] File upload was not successful.', { state: uploadTask.state, metadata: uploadTask.metadata });
+        throw new FirebaseError('File upload failed, state was not "success".', 'upload-failed');
+      }
+      
+      const downloadURL = await storageRef.getDownloadURL();
+      console.log(`[MobileFirebaseService] File uploaded successfully. Download URL: ${downloadURL}`);
+      return downloadURL;
+    } catch (error: any) {
+      console.error(`[MobileFirebaseService] Error uploading file ${fileUri} to ${fullStoragePath}:`, error);
+      if (error instanceof FirebaseError) throw error;
+      throw new FirebaseError(error.message || 'An unknown error occurred during file upload.', error.code || 'upload-failed');
+    }
   }
 
   async deleteFile(path: string): Promise<void> {
@@ -574,7 +596,13 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   async deleteShow(showId: string): Promise<void> {
-    // For now, let's throw an error to indicate it's not functional
-    throw new FirebaseError('deleteShow is not yet implemented for mobile', 'unimplemented');
+    // TODO: Implement show deletion logic for mobile
+    // This might involve deleting the show document and all related sub-collections
+    // (props, characters, scenes, etc.) and any associated files in storage.
+    console.warn(`[MobileFirebaseService] deleteShow for ${showId} is not fully implemented. Placeholder.`);
+    // Example: Delete the show document
+    // await this.deleteDocument('shows', showId); 
+    // Need to handle related data deletion, which can be complex.
+    throw new FirebaseError('deleteShow is not yet implemented for mobile with full data cleanup', 'unimplemented');
   }
-} 
+}

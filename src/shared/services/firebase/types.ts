@@ -191,7 +191,7 @@ export interface FirebaseService {
   addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>>;
   getDocuments<T extends CustomDocumentData>(collectionPath: string, options?: QueryOptions): Promise<FirebaseDocument<T>[]>;
   setDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: T, options?: { merge?: boolean }): Promise<void>;
-  uploadFile(path: string, file: File): Promise<string>;
+  uploadFile(path: string, file: File | string): Promise<string>;
   deleteFile(path: string): Promise<void>;
   getSyncStatus?(): boolean;
   enableSync?(): Promise<void>;

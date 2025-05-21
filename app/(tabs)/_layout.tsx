@@ -46,7 +46,7 @@ export default function TabsLayout() {
         name="shows"
         options={{
           title: 'Shows',
-          tabBarIcon: ({ color, focused, size }) => (
+          tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'list-circle' : 'list-circle-outline'}
               size={size}
@@ -64,7 +64,7 @@ export default function TabsLayout() {
         name="propsTab/index"
         options={{
           title: 'Props',
-          tabBarIcon: ({ color, focused, size }) => (
+          tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'briefcase' : 'briefcase-outline'}
               size={size}
@@ -77,7 +77,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home', 
-          tabBarIcon: ({ color, focused, size }) => (
+          tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'home' : 'home-outline'} 
               size={size}
@@ -90,7 +90,7 @@ export default function TabsLayout() {
         name="packing"
         options={{
           title: 'Packing',
-          tabBarIcon: ({ color, focused, size }) => (
+          tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'archive' : 'archive-outline'}
               size={size}
@@ -103,7 +103,7 @@ export default function TabsLayout() {
         name="profile/index"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, focused, size }) => (
+          tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'person-circle' : 'person-circle-outline'}
               size={size}

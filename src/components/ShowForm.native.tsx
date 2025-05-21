@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ScrollView, Switch, Alert, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ScrollView, Switch, Alert, Platform, TouchableOpacity, Image } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 import { Show } from '@/types/index'; // Assuming Show type is available
 import { Address } from '@/shared/types/address'; // Correct import for Address
 import { Timestamp } from 'firebase/firestore'; // Import Timestamp
@@ -8,7 +9,7 @@ import { Timestamp } from 'firebase/firestore'; // Import Timestamp
 interface ShowFormNativeProps {
   mode: 'create' | 'edit';
   initialData?: Partial<Show>; // Partial to allow for incomplete data during dev
-  onSubmit: (data: Partial<Show>) => void;
+  onSubmit: (data: Partial<Show> & { _logoImageUri?: string | null }) => void;
   onCancel?: () => void;
 }
 
@@ -127,6 +128,10 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
+   // State for Logo Image
+   const [selectedLogoUri, setSelectedLogoUri] = useState<string | null>(initialData?.logoImage?.url || null);
+   const [isUploadingLogo, setIsUploadingLogo] = useState(false); // Keep for potential future direct upload
+
   useEffect(() => {
     if (initialData) {
        const merged = { ...initialNativeFormState, ...initialData };
@@ -140,11 +145,13 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
        // Update date states when initialData changes
        setStartDate(parseDateString(merged.startDate));
        setEndDate(parseDateString(merged.endDate));
+       setSelectedLogoUri(merged.logoImage?.url || null); // Get URL from logoImage object
     } else if (mode === 'create') {
         // Reset to initial state only if creating and no initial data
         setFormData(initialNativeFormState);
         setStartDate(new Date()); // Default to today for create mode
         setEndDate(new Date());
+        setSelectedLogoUri(null); // Reset logo URI for create mode
     }
   }, [initialData, mode]);
 
@@ -170,6 +177,29 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
     }
   };
 
+  const handlePickLogo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1], // Square aspect ratio for logos
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setSelectedLogoUri(result.assets[0].uri);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setSelectedLogoUri(null);
+  };
+
   const handleSubmit = () => {
     // Basic validation (can be expanded)
     if (!formData.name?.trim()) {
@@ -178,12 +208,27 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
     }
     // Add more validation as needed...
 
-    // Ensure dates in formData are strings before submitting
-    const dataToSubmit = {
+    const dataToSubmit: Partial<Show> & { _logoImageUri?: string | null } = {
         ...formData,
         startDate: formatDate(startDate),
         endDate: formatDate(endDate),
+        // logoImage object will be constructed by parent if _logoImageUri is new
+        // If selectedLogoUri is null, it means remove existing or don't add new.
+        // If selectedLogoUri is same as initialData.logoImage.url, no change to URI.
     };
+
+    // If a new logo URI is selected (or an existing one is kept), pass it.
+    // If logo was removed (selectedLogoUri is null), _logoImageUri will be null.
+    // If no logo was ever selected and none existed, it will be undefined.
+    if (selectedLogoUri !== (initialData?.logoImage?.url || null) || (selectedLogoUri === null && initialData?.logoImage)) {
+        dataToSubmit._logoImageUri = selectedLogoUri; 
+    } else if (!selectedLogoUri && !initialData?.logoImage) {
+        // Explicitly pass null if no logo is selected and none existed, to differentiate from not touching it
+        dataToSubmit._logoImageUri = null; 
+    }
+    // If selectedLogoUri is the same as the initial one, _logoImageUri won't be set,
+    // implying no change to the logo from the form's perspective for URI handling.
+    // The existing formData.logoImage (which is the object) will be passed.
 
     onSubmit(dataToSubmit);
   };
@@ -217,7 +262,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
         {/* <Text style={styles.placeholderText}>Rich Text Editor (Coming Soon)</Text> */}
       </FormField>
 
-      <FormField label="Image URL">
+      <FormField label="Image URL (Optional Poster/Banner)">
         <TextInput
           style={styles.input}
           placeholder="Enter image URL"
@@ -229,8 +274,20 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
       </FormField>
 
       <FormField label="Logo Image">
-         {/* Placeholder for Image Upload */}
-         <Text style={styles.placeholderText}>Image Upload (Coming Soon)</Text>
+        <TouchableOpacity onPress={handlePickLogo} style={styles.imagePickerButton}>
+          <Text style={styles.imagePickerButtonText}>{selectedLogoUri ? 'Change Logo' : 'Select Logo'}</Text>
+        </TouchableOpacity>
+        {selectedLogoUri && (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: selectedLogoUri }} style={styles.logoPreview} />
+            <TouchableOpacity onPress={handleRemoveLogo} style={styles.removeImageButton}>
+              <Text style={styles.removeImageButtonText}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {!selectedLogoUri && mode === 'edit' && initialData?.logoImage?.url && (
+          <Text style={styles.placeholderText}>Current logo will be kept unless a new one is selected.</Text>
+        )}
       </FormField>
 
       <FormField label="Is Touring Show?">
@@ -528,5 +585,37 @@ const styles = StyleSheet.create({
       color: '#FFFFFF',
       fontSize: 16,
   },
-  // Remove button styles as react-native Button is used
+  imagePickerButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  imagePickerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  logoPreview: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 8,
+  },
+  removeImageButton: {
+    backgroundColor: '#FF3B30',
+    padding: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  removeImageButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 }); 

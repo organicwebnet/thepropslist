@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import { NotificationService } from './NotificationService';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -7,8 +7,10 @@ import type { RootStackParamList } from '../../../../navigation/types';
 export function NotificationHandler() {
   const notificationService = NotificationService.getInstance();
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const notificationListener = useRef<Notifications.Subscription>();
-  const responseListener = useRef<Notifications.Subscription>();
+  const [expoPushToken, setExpoPushToken] = useState('');
+  const [notification, setNotification] = useState<Notifications.Notification | false>(false);
+  const notificationListener = useRef<Notifications.Subscription | undefined>(undefined);
+  const responseListener = useRef<Notifications.Subscription | undefined>(undefined);
 
   useEffect(() => {
     registerForPushNotifications();
@@ -16,7 +18,7 @@ export function NotificationHandler() {
     // Listen for incoming notifications
     notificationListener.current = notificationService.addNotificationReceivedListener(
       notification => {
-        const { type } = notification.request.content.data || {};
+        const type = notification.request.content.data?.type as string;
         handleNotification(type, notification);
       }
     );
@@ -24,7 +26,7 @@ export function NotificationHandler() {
     // Listen for notification responses
     responseListener.current = notificationService.addNotificationResponseReceivedListener(
       response => {
-        const { type } = response.notification.request.content.data || {};
+        const type = response.notification.request.content.data?.type as string;
         handleNotificationResponse(type, response);
       }
     );
@@ -44,6 +46,7 @@ export function NotificationHandler() {
     if (token) {
       // TODO: Send this token to your server
       console.log('Push Notification Token:', token);
+      setExpoPushToken(token);
     }
   };
 
