@@ -3,35 +3,22 @@ import { useAuth } from '../../contexts/AuthContext';
 import { UserRole, UserPermissions } from '../../shared/types/auth';
 
 const RBACTest: React.FC = () => {
-  const { user, profile, signIn, signOut, hasPermission, error, loading } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { user, userProfile, signOut, permissions, error, loading } = useAuth();
   const [testResults, setTestResults] = useState<Record<string, boolean>>({});
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await signIn(email, password);
-    } catch (err) {
-      console.error('Sign in failed:', err);
-    }
-  };
 
   const testPermissions = async () => {
     if (!user) return;
 
     const results: Record<string, boolean> = {};
-    const permissions: (keyof UserPermissions)[] = [
+    const permissionsToTest: (keyof UserPermissions)[] = [
       'canCreateProps',
       'canEditProps',
       'canDeleteProps',
       'canManageUsers',
-      'canGenerateReports',
-      'canAccessAdvancedFeatures'
     ];
 
-    for (const permission of permissions) {
-      results[permission] = await hasPermission(permission);
+    for (const permissionKey of permissionsToTest) {
+      results[permissionKey] = !!permissions[permissionKey];
     }
 
     setTestResults(results);
@@ -60,7 +47,7 @@ const RBACTest: React.FC = () => {
           }}>
             <h3 style={{ margin: '0 0 8px', color: '#166534' }}>User Info</h3>
             <p style={{ margin: '0 0 4px' }}><strong>Email:</strong> {user.email}</p>
-            <p style={{ margin: '0 0 4px' }}><strong>Role:</strong> {profile?.role || 'No role'}</p>
+            <p style={{ margin: '0 0 4px' }}><strong>Role:</strong> {userProfile?.role || 'No role'}</p>
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -124,53 +111,9 @@ const RBACTest: React.FC = () => {
           )}
         </div>
       ) : (
-        <form onSubmit={handleSignIn} style={{ display: 'grid', gap: '12px' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px' }}>
-              Email:
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  border: '1px solid #e2e8f0'
-                }}
-              />
-            </label>
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '4px' }}>
-              Password:
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  borderRadius: '4px',
-                  border: '1px solid #e2e8f0'
-                }}
-              />
-            </label>
-          </div>
-          <button
-            type="submit"
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Sign In
-          </button>
-        </form>
+        <div style={{ padding: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
+          <p>Please sign in to test RBAC permissions.</p>
+        </div>
       )}
 
       {error && (

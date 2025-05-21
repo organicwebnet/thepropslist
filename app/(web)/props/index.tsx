@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { useRouter, usePathname, useFocusEffect } from 'expo-router';
-import { View, Text, FlatList, ActivityIndicator, Alert, Button, TextInput, TouchableOpacity } from 'react-native'; // Simplified imports
+import { View, Text, FlatList, ActivityIndicator, Alert, Button, TextInput, TouchableOpacity, Platform } from 'react-native'; // Simplified imports, Added Platform
 import { ShowsContext } from '@/contexts/ShowsContext'; // Import ShowsContext
 import { useProps } from '@/contexts/PropsContext'; // Import useProps hook
 import type { Prop, PropCategory } from '@/shared/types/props';
 import { propCategories } from '@/shared/types/props';
-import { PlusCircle, FileDown, FileText, CopyX } from 'lucide-react'; // Import icons
-import type { Show, Act, Scene } from '@/types'; // Import Show, Act, Scene types
+import type { Show, Act, Scene } from '@/types/index'; // Import Show, Act, Scene types
+import { PlusCircle, FileDown, FileText, CopyX } from 'lucide-react'; // Changed to lucide-react for web
+import type { Show as SharedShow } from '@/shared/types/props'; // For comparison or specific use if needed
 import { WebPropCard } from '../../../src/platforms/web/components/WebPropCard';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Import lifecycle types/labels
 
@@ -31,6 +32,18 @@ const statusDisplayMap: Record<PropLifecycleStatus | 'All', string> = {
 };
 
 export default function WebPropsListPage() {
+  // Platform check at the beginning
+  if (Platform.OS !== 'web') {
+    console.error("[app/(web)/props/index.tsx] This WEB-ONLY page was reached on NATIVE. This should not happen. Check navigation.");
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <Text style={{color: 'red', textAlign: 'center', padding: 20}}>
+          Critical Error: Web page (WebPropsListPage) rendered on native platform. Please report this bug.
+        </Text>
+      </View>
+    );
+  }
+
   const pathname = usePathname(); // Get current pathname
   console.log(`--- Rendering: app/(web)/props/index.tsx (Pathname: ${pathname}) ---`);
 

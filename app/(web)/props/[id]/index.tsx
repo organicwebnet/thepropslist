@@ -126,45 +126,41 @@ export default function WebPropDetailScreen() {
      // TODO: Implement actual add logic
      const newRecord: MaintenanceRecordType = {
          ...recordData,
-         id: `maint_${Date.now()}`, // Simple temporary ID generation
+         id: `maint_${Date.now()}`,
          createdAt: new Date().toISOString(),
-         createdBy: 'web-user-placeholder' // Replace with actual user ID
+         createdBy: 'web-user-placeholder'
      };
      try {
-         // Example: Add record to history array (adjust based on your data model)
          await firebaseService.updateDocument('props', id, { 
-            maintenanceHistory: [...(prop.maintenanceHistory || []), newRecord] // Append to history
+            maintenanceHistory: [...(prop.maintenanceHistory || []), newRecord]
         });
          alert('Maintenance record added successfully!');
-         fetchPropData(); // Re-fetch data to show update
+         fetchPropData();
      } catch (err) {
          console.error("Error in handleAddMaintenanceRecord:", err);
          alert("Failed to add maintenance record.");
-         throw err; // Re-throw to inform the component
+         throw err;
      }
   }, [prop, id, firebaseService, fetchPropData]);
 
   const handleDelete = async () => {
     if (!id || !firebaseService?.deleteDocument) {
-      alert('Error: Cannot delete prop. Service unavailable.'); // Use browser alert
+      alert('Error: Cannot delete prop. Service unavailable.');
       return;
     }
 
-    if (window.confirm('Are you sure you want to delete this prop?')) { // Use browser confirm
+    if (window.confirm('Are you sure you want to delete this prop?')) {
         try {
           await firebaseService.deleteDocument('props', id);
           console.log('Prop deleted:', id);
           alert('Success: Prop deleted successfully.');
-          // Navigate back to the list after deletion
-          router.push('/props'); // Navigate to web props list
+          router.push('/props');
         } catch (err) {
           console.error('Error deleting prop:', err);
           alert('Error: Failed to delete prop.');
         }
     }
   };
-
-  // Edit is handled by linking to the existing edit page
 
   const renderImage = () => {
     const primaryImageUrl = prop?.images && prop.images.length > 0 ? prop.images[0]?.url : null;
@@ -178,11 +174,10 @@ export default function WebPropDetailScreen() {
     }
     const imageSource = { uri: primaryImageUrl };
     if (isValidImageSource(imageSource)) {
-        // Use web Image styling if needed via className
         return (
           <Image
             source={imageSource} 
-            className="w-full h-64 object-contain rounded-md bg-gray-800 mb-4" // Basic web image styling
+            className="w-full h-64 object-contain rounded-md bg-gray-800 mb-4"
             onError={() => setImageError(true)}
           />
         );
@@ -207,32 +202,25 @@ export default function WebPropDetailScreen() {
     return <View className="flex-1 justify-center items-center bg-gray-900 p-5"><Text className="text-gray-400 text-lg">Prop data unavailable.</Text></View>;
   }
 
-  // --- Main Layout --- 
   return (
     <ScrollView className="flex-1 bg-gray-900 text-white">
       <View className="p-4 md:p-6">
-        {/* Back Link */}
-        <Link href="/props" className="inline-flex items-center text-blue-400 hover:text-blue-300 mb-4">
+        {/* <Link href="/props" className="inline-flex items-center text-blue-400 hover:text-blue-300 mb-4">
           <ArrowLeft size={16} className="mr-1" />
           Back to Props
-        </Link>
+        </Link> */}
 
-        {/* Image Area */}
         {renderImage()}
 
-        {/* Title and Actions */}
         <View className="flex flex-row justify-between items-center mb-4">
-            {/* Title and Act/Scene Info */}
             <View> 
                 <Text className="text-3xl font-bold text-gray-100">{prop.name}</Text>
-                {/* Display Act/Scene if available */}
                 {(prop.act || prop.scene) && (
                     <Text className="text-sm text-gray-400 mt-1">
                         {prop.act ? `Act ${prop.act}` : ''}{prop.act && prop.scene ? ', ' : ''}{prop.scene ? `Scene ${prop.scene}` : ''}
                     </Text>
                 )}
             </View>
-            {/* Action Buttons */}
             <View className="flex flex-row gap-3">
                 <Link href={`/props/${id}/edit`} asChild>
                     <TouchableOpacity className="p-2 rounded-full hover:bg-gray-700"> 
@@ -245,21 +233,17 @@ export default function WebPropDetailScreen() {
             </View>
         </View>
 
-        {/* Tab Navigation */}
         <View className="flex flex-row border-b border-gray-700 mb-6">
           <TabButton label="Details" activeTab={activeTab} setActiveTab={setActiveTab} icon={ClipboardList} />
           <TabButton label="Status Updates" activeTab={activeTab} setActiveTab={setActiveTab} icon={History} />
           <TabButton label="Maintenance Records" activeTab={activeTab} setActiveTab={setActiveTab} icon={Wrench} />
         </View>
 
-        {/* Tab Content */} 
         <View>
           {activeTab === 'Details' && (
             <View className="md:grid md:grid-cols-2 md:gap-x-8 lg:gap-x-12 space-y-6 md:space-y-0">
               
-              {/* --- Left Column --- */}
               <View className="space-y-6">
-                {/* Basic Details Section */}
                 <View>
                   <Text className="text-xl font-semibold text-gray-200 mb-3">Basic Details</Text>
                   <View className="space-y-3 bg-gray-800 p-4 rounded-md">
@@ -271,7 +255,6 @@ export default function WebPropDetailScreen() {
                   </View>
                 </View>
   
-                {/* Source & Acquisition Section */}
                 <View>
                   <Text className="text-xl font-semibold text-gray-200 mb-3">Source & Acquisition</Text>
                   <View className="space-y-3 bg-gray-800 p-4 rounded-md">
@@ -290,7 +273,6 @@ export default function WebPropDetailScreen() {
                   </View>
                 </View>
                 
-                {/* Location Section */}
                 <View>
                   <Text className="text-xl font-semibold text-gray-200 mb-3">Location</Text>
                   <View className="space-y-3 bg-gray-800 p-4 rounded-md">
@@ -299,7 +281,6 @@ export default function WebPropDetailScreen() {
                   </View>
                 </View>
 
-                {/* Notes & Instructions Section - MOVED HERE */}
                 <View>
                   <Text className="text-xl font-semibold text-gray-200 mb-3">Notes & Instructions</Text>
                   <View className="space-y-4 bg-gray-800 p-4 rounded-md">
@@ -321,9 +302,7 @@ export default function WebPropDetailScreen() {
 
               </View>
 
-              {/* --- Right Column --- */}
               <View className="space-y-6">
-                {/* Dimensions & Weight Section */}
                 <View>
                   <Text className="text-xl font-semibold text-gray-200 mb-3">Dimensions & Weight</Text>
                   <View className="bg-gray-800 p-4 rounded-md grid grid-cols-2 gap-x-4 gap-y-3">
@@ -337,7 +316,6 @@ export default function WebPropDetailScreen() {
                   </View>
                 </View>
   
-                {/* Handling & Flags Section */}
                 <View>
                   <Text className="text-xl font-semibold text-gray-200 mb-3">Handling & Flags</Text>
                   <View className="bg-gray-800 p-4 rounded-md grid grid-cols-2 gap-x-4 gap-y-3">
@@ -353,7 +331,6 @@ export default function WebPropDetailScreen() {
                   </View>
                 </View>
   
-                {/* Assets Section */}
                 <View>
                   <Text className="text-xl font-semibold text-gray-200 mb-3">Assets</Text>
                   <View className="space-y-3 bg-gray-800 p-4 rounded-md">
@@ -390,18 +367,15 @@ export default function WebPropDetailScreen() {
                   </View>
                 </View>
               </View> 
-              {/* End Right Column */}
 
             </View>
           )}
 
           {activeTab === 'Status Updates' && (
             <View className="space-y-6 mx-auto w-[800px]">
-               {/* Use existing components */}
                <PropStatusUpdate 
-                  currentStatus={prop.status as PropLifecycleStatus} // Cast current status
+                  currentStatus={prop.status as PropLifecycleStatus}
                   onStatusUpdate={handleStatusUpdate} 
-                  // Pass optional email props if available/needed
                />
                <StatusHistory history={prop.statusHistory || []} />
             </View>
@@ -409,7 +383,6 @@ export default function WebPropDetailScreen() {
 
           {activeTab === 'Maintenance Records' && (
              <View className="space-y-6  mx-auto w-[800px]">
-                {/* Use existing components */} 
                 <MaintenanceRecordForm onSubmit={handleAddMaintenanceRecord} />
                 <MaintenanceHistory records={prop.maintenanceHistory || []} />
              </View>
@@ -421,31 +394,27 @@ export default function WebPropDetailScreen() {
   );
 }
 
-// Helper component for displaying detail items
 const DetailItem = ({ label, value }: { label: string; value: React.ReactNode | string | number | undefined | null }): JSX.Element | null => {
   if (value === undefined || value === null || value === '') {
-    return null; // Don't render if value is not provided
+    return null;
   }
   return (
-    // Use flex-row, justify-start to place label and value next to each other
     <View className="flex flex-row justify-start items-center gap-4">
       <Text className="text-sm font-medium text-blue-300 flex-shrink-0">{label}:</Text> 
       {typeof value === 'string' || typeof value === 'number' ? (
          <Text className="text-base text-gray-100 break-words">{value}</Text>
       ) : (
-         // Render React nodes directly
          <View>{value}</View>
       )}
     </View>
   );
 };
 
-// TabButton component
 const TabButton = ({ label, activeTab, setActiveTab, icon: Icon }: {
     label: string;
     activeTab: string;
     setActiveTab: (label: string) => void;
-    icon: React.ElementType; // Accept icon component
+    icon: React.ElementType;
 }) => {
   const isActive = activeTab === label;
   return (
@@ -467,7 +436,6 @@ const TabButton = ({ label, activeTab, setActiveTab, icon: Icon }: {
   );
 };
 
-// FlagItem component
 const FlagItem = ({ label, value }: { label: string; value: boolean }): JSX.Element => {
   return (
     <View className="flex flex-row items-center gap-2">

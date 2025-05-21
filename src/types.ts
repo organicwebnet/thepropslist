@@ -1,10 +1,13 @@
 import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './types/lifecycle';
 import { WeightUnit } from '@/shared/types/props';
 import authImport, { FirebaseAuthTypes, firebase as authFirebase } from '@react-native-firebase/auth';
-import firestoreImport, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import firestoreImport, { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firestore';
+import { Address } from '@/shared/types/address';
 
-import { PropList } from './components/PropList';
+// Import the master types from src/types/index.ts
+export type { Show, Act, Scene, Venue, Contact, ShowCollaborator } from './types/index';
 
+// UserProfile remains unique to this file for now
 export interface UserProfile {
   displayName: string;
   email: string;
@@ -21,87 +24,7 @@ export interface UserProfile {
   googleLinked?: boolean;
 }
 
-export interface Scene {
-  id: number;
-  name: string;
-  description?: string;
-}
-
-export interface Act {
-  id: number;
-  name?: string;
-  description?: string;
-  scenes: Scene[];
-}
-
-export interface Show {
-  id: string;
-  name: string;
-  description: string;
-  acts: Act[];
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-  collaborators: ShowCollaborator[];
-  stageManager: string;
-  stageManagerEmail: string;
-  stageManagerPhone?: string;
-  propsSupervisor: string;
-  propsSupervisorEmail: string;
-  propsSupervisorPhone?: string;
-  productionCompany: string;
-  productionContactName: string;
-  productionContactEmail: string;
-  productionContactPhone?: string;
-  venues: Venue[];
-  isTouringShow: boolean;
-  contacts: Contact[];
-  imageUrl?: string;
-  logoImage?: { id: string; url: string; caption?: string };
-}
-
-export interface ShowFormData {
-  name: string;
-  description: string;
-  acts: Act[];
-  stageManager: string;
-  stageManagerEmail: string;
-  stageManagerPhone?: string;
-  propsSupervisor: string;
-  propsSupervisorEmail: string;
-  propsSupervisorPhone?: string;
-  productionCompany: string;
-  productionContactName: string;
-  productionContactEmail: string;
-  productionContactPhone?: string;
-  venues: Venue[];
-  isTouringShow: boolean;
-  contacts: Contact[];
-  imageUrl?: string;
-  logoImage?: { id: string; url: string; caption?: string };
-}
-
-export interface ShowCollaborator {
-  email: string;
-  role: 'editor' | 'viewer';
-  addedAt: string;
-  addedBy: string;
-}
-
-export interface Venue {
-  name: string;
-  address: string;
-  startDate: string;
-  endDate: string;
-  notes: string;
-}
-
-export interface Contact {
-  name: string;
-  role: string;
-  email: string;
-  phone?: string;
-}
+// ShowFormData has been moved to src/types/index.ts
 
 export interface Filters {
   search: string;

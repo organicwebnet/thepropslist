@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { WebFirebaseService } from '../../platforms/web/services/firebase';
+import { collection, addDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 interface TestStatus {
   firestore: string;
@@ -48,16 +49,16 @@ const FirebaseTest: React.FC = () => {
         
         // Test Firestore
         try {
-          const db = firebase.firestore();
-          const testCollection = db.collection('test');
+          const db = firebase.getFirestoreJsInstance();
+          const testCollection = collection(db, 'test');
           
-          const testDoc = await testCollection.add({
+          const testDocRef = await addDoc(testCollection, {
             timestamp: new Date(),
             test: 'Hello Firebase!'
           });
           
-          const data = await testDoc.get();
-          await testDoc.delete();
+          const docSnap = await getDoc(testDocRef);
+          await deleteDoc(testDocRef);
           
           setStatus(prev => ({ ...prev, firestore: 'Firestore: ✅ Working' }));
         } catch (err) {

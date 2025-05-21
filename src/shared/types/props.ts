@@ -1,5 +1,9 @@
 import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle';
-import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firestore';
+import { Address } from './address';
+
+// Re-export master types from src/types/index.ts
+export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../types/index';
 
 // Re-export the type needed by PropForm using 'export type'
 export type { PropLifecycleStatus };
@@ -21,28 +25,6 @@ export interface DigitalAsset {
   title?: string;
   url: string;
   type: 'image' | 'video' | 'document' | 'other';
-}
-
-export interface ShowCollaborator {
-  email: string;
-  role: 'editor' | 'viewer';
-  addedAt: string;
-  addedBy: string;
-}
-
-export interface Venue {
-  name: string;
-  address: string;
-  startDate: string;
-  endDate: string;
-  notes: string;
-}
-
-export interface Contact {
-  name: string;
-  role: string;
-  email: string;
-  phone?: string;
 }
 
 export const propCategories = [
@@ -158,7 +140,9 @@ export interface PropFormData {
     rentalPeriod?: string;
     cost?: number;
   };
-  returnDueDate?: string | Date;
+  returnDueDate?: string | Date | null;
+  availabilityStatus?: string;
+  publicNotes?: string;
 }
 
 export interface Prop {
@@ -216,7 +200,6 @@ export interface Prop {
   nextMaintenanceDue?: string;
   hasBeenModified?: boolean;
   modificationDetails?: string;
-  lastModifiedAt?: string;
   createdAt: string;
   updatedAt: string;
   lastUsedAt?: string;
@@ -227,47 +210,44 @@ export interface Prop {
   isBreakable?: boolean;
   isHazardous?: boolean;
   storageRequirements?: string;
+  returnDueDate?: string | Date | null;
+  lastModifiedAt?: string;
+  isRented?: boolean;
+  rentalSource?: string;
+  rentalReferenceNumber?: string;
+  travelsUnboxed?: boolean;
+  statusNotes?: string;
+  lastStatusUpdate?: string;
+  lastInspectionDate?: string;
+  nextInspectionDue?: string;
+  lastMaintenanceDate?: string;
+  expectedReturnDate?: string;
+  replacementCost?: number;
+  replacementLeadTime?: number;
+  repairEstimate?: number;
+  repairPriority?: RepairPriority;
+  subcategory?: string;
+  customFields?: Record<string, any>;
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  barcode?: string;
+  warranty?: {
+    provider?: string;
+    expirationDate?: string;
+    details?: string;
+  };
+  color?: string;
+  period?: string;
+  style?: string;
+  sceneNotes?: string;
+  usageNotes?: string;
+  primaryImageUrl?: string;
+  availabilityStatus?: string;
+  publicNotes?: string;
 }
 
-export interface Show {
-  id: string;
-  userId: string;
-  name: string;
-  description: string;
-  venue?: string;
-  startDate?: string;
-  endDate?: string;
-  imageUrl?: string;
-  acts?: Act[];
-  createdAt: string;
-  updatedAt: string;
-  collaborators: ShowCollaborator[];
-  stageManager: string;
-  stageManagerEmail: string;
-  stageManagerPhone?: string;
-  propsSupervisor: string;
-  propsSupervisorEmail: string;
-  propsSupervisorPhone?: string;
-  productionCompany: string;
-  productionContactName: string;
-  productionContactEmail: string;
-  productionContactPhone?: string;
-  venues: Venue[];
-  isTouringShow: boolean;
-  contacts: Contact[];
-  logoImage?: { id: string; url: string; caption?: string };
-}
+export interface PropUpdateFormData extends Partial<PropFormData> {}
 
-export interface Act {
-  id: number;
-  name?: string;
-  description?: string;
-  scenes?: Scene[];
-}
-
-export interface Scene {
-  id: number;
-  name?: string;
-  setting?: string;
-  description?: string;
-} 
+// Show, Act, Scene definitions are now removed and re-exported from src/types/index.ts
+// Venue, Contact, ShowCollaborator were already removed. 

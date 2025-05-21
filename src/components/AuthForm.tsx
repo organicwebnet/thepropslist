@@ -218,7 +218,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
       </View>
 
       <ScrollView
-        className="w-full max-w-md bg-gray-900 bg-opacity-80 rounded-xl shadow-2xl overflow-hidden"
+        className="w-full max-w-md bg-gray-900 bg-opacity-80 rounded-xl overflow-hidden"
         contentContainerStyle={{ paddingHorizontal: Platform.OS === 'web' ? 32 : 24, paddingVertical: 32 }}
       >
         
@@ -290,7 +290,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
             )}
 
             <TouchableOpacity
-              className="w-full flex flex-row items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors disabled:opacity-50"
+              className="w-full flex flex-row items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors disabled:opacity-50"
               onPress={handleSubmit}
               disabled={loading || !isInitialized}
             >
@@ -306,7 +306,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
             </View>
 
             <TouchableOpacity
-              className="w-full bg-gray-800 hover:bg-gray-700 active:bg-gray-600 border border-gray-700 py-3 rounded-lg flex items-center justify-center flex-row transition-colors shadow-sm"
+              className="w-full bg-gray-800 hover:bg-gray-700 active:bg-gray-600 border border-gray-700 py-3 rounded-lg flex items-center justify-center flex-row transition-colors"
               onPress={handleGoogleSignIn}
               disabled={loading}
             >
@@ -356,7 +356,7 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
               />
             </View>
             <TouchableOpacity
-              className="w-full flex flex-row items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors disabled:opacity-50"
+              className="w-full flex flex-row items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors disabled:opacity-50"
               onPress={handleForgotPassword}
               disabled={loading || !isInitialized}
             >

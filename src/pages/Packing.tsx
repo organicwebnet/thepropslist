@@ -37,9 +37,12 @@ export default function Packing() {
             </View>
             <View style={styles.content}>
               <Text style={styles.showName}>{item.name}</Text>
-              <Text style={styles.showMeta}>
-                {item.acts.length} Acts • {item.productionCompany}
-              </Text>
+              <View style={styles.showItemDetails}>
+                <Text style={styles.showItemTitle}>{item.name}</Text>
+                <Text style={styles.showItemSubtitle}>
+                  {item.acts?.length || 0} Acts • {item.productionCompany}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
         )}
@@ -102,7 +105,17 @@ const styles = StyleSheet.create({
     color: '#E5E7EB',
     marginBottom: 4
   },
-  showMeta: {
+  showItemDetails: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  showItemTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#E5E7EB',
+    marginRight: 4
+  },
+  showItemSubtitle: {
     fontSize: 14,
     color: '#9CA3AF'
   },

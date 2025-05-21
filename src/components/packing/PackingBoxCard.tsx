@@ -4,7 +4,7 @@ import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { useRouter, Link } from 'expo-router';
-import { TouchableOpacity, Text } from 'react-native';
+import { TouchableOpacity, Text, View, StyleSheet, Alert } from 'react-native';
 
 interface PackingBoxCardProps {
   box: PackingBox & { showId?: string };
@@ -163,13 +163,17 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
           <div className="max-h-40 overflow-y-auto pr-2 space-y-1.5 custom-scrollbar">
             {box.props && box.props.length > 0 ? (
               box.props.map((prop, index) => (
-                <div key={`${prop.propId}-${index}`} className="flex justify-between items-center text-xs text-gray-400">
-                  <span className="truncate pr-2" title={prop.name}>{prop.name}</span>
-                  <span className="flex-shrink-0">
-                    Qty: {prop.quantity || 1} 
-                    {prop.weight ? ` | ${prop.weight.toFixed(1)}${prop.weightUnit || 'kg'}` : ''}
-                  </span>
-                </div>
+                <View style={styles.propItemContainer}>
+                  <View style={styles.propItemInfo}>
+                    <Text style={styles.propName}>{prop.name}</Text>
+                    {prop.quantity > 1 && (
+                      <Text style={styles.propQuantity}>(x{prop.quantity})</Text>
+                    )}
+                  </View>
+                  {prop.isFragile && (
+                    <Text style={styles.fragileIndicator} accessibilityLabel="Fragile item">⚠️</Text>
+                  )}
+                </View>
               ))
             ) : (
               <p className="text-xs text-gray-500 italic">No props added yet.</p>
@@ -193,6 +197,64 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
     </div>
   );
 }
+
+const styles = StyleSheet.create({
+  propItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  propItemInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  propName: {
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  propQuantity: {
+    flex: 0,
+    marginLeft: 4,
+  },
+  fragileIndicator: {
+    marginLeft: 4,
+  },
+  footerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  footerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusBadgeContainer: {
+    marginRight: 8,
+  },
+  statusBadge: {
+    padding: 4,
+    borderRadius: 4,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  weightAndDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailText: {
+    marginRight: 8,
+  },
+  heavyText: {
+    marginLeft: 4,
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+});
 
 /*
 // Original PackingBoxCard component commented out

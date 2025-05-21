@@ -58,11 +58,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
-    "types": [
-      "react",
-      "react-native",
-      "jest"
-    ],
     "plugins": [
       {
         "name": "nativewind/typescript/css-module-types"

@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View, ScrollView, Text, Alert } from 'react-native';
 import ShowForm from '@/components/ShowForm';
 import { useFirebase } from '@/contexts/FirebaseContext';
-import { Show } from '@/types';
+import { Show } from '@/types/index';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NewShowPage() {

@@ -45,7 +45,6 @@ const initialFormState: Show = {
   storageAddresses: [],
   startDate: '',
   endDate: '',
-  venue: '',
   status: 'planning',
 };
 
@@ -674,34 +673,19 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
             </label>
           </div>
 
-          {formData.isTouringShow ? (
-            <VenueForm
-              venues={formData.venues || []}
-              onChange={handleVenuesChange}
-              isTouringShow={!!formData.isTouringShow}
+          {/* Venue input - temporarily commented out, needs to become Venue[] management
+          <div className="form-group">
+            <label htmlFor="venue">Venue</label>
+            <input
+              type="text"
+              name="venue"
+              id="venue"
+              placeholder="Main Venue"
+              value={formData.venue} // This would need to change to handle Venue[]
+              onChange={handleChange}
             />
-          ) : (
-            <div>
-              <label htmlFor="venue" className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-                Venue
-              </label>
-              <input
-                type="text"
-                id="venue"
-                value={(formData.venues && formData.venues[0] && formData.venues[0].name) || ''}
-                onChange={(e) => {
-                  const currentVenues = formData.venues || [];
-                  const updatedFirstVenue: Venue = { 
-                    ...(currentVenues[0] || { name: '', address: defaultAddress, startDate: '', endDate: '', notes: '' }),
-                    name: e.target.value 
-                  };
-                  handleVenuesChange([updatedFirstVenue]);
-                }}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-                placeholder="Enter venue name"
-              />
-            </div>
-          )}
+          </div>
+          */}
 
           <div>
             <label htmlFor="stageManager" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">

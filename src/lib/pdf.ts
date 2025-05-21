@@ -287,8 +287,8 @@ export async function generatePDF(props: Prop[], show: Show, previewMode = false
     doc.setTextColor(COLORS.TEXT[0], COLORS.TEXT[1], COLORS.TEXT[2]);
 
     // Calculate total scenes
-    const totalActs = show.acts.length;
-    const totalScenes = show.acts.reduce((sum, act) => sum + act.scenes.length, 0);
+    const totalActs = show.acts?.length || 0;
+    const totalScenes = show.acts?.reduce((sum, act) => sum + (act.scenes?.length || 0), 0) || 0;
 
     const showDetails = [
       `Total Acts: ${totalActs}`,

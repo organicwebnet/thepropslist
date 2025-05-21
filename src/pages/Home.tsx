@@ -133,7 +133,9 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
               productionContactEmail: '',
               venues: [],
               isTouringShow: false,
-              contacts: []
+              contacts: [],
+              startDate: new Date().toISOString(),
+              endDate: new Date().toISOString()
             }
           })}
           style={styles.headerButton}
@@ -246,7 +248,9 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
               productionContactEmail: '',
               venues: [],
               isTouringShow: false,
-              contacts: []
+              contacts: [],
+              startDate: new Date().toISOString(),
+              endDate: new Date().toISOString()
             }
           })}
         >
@@ -296,10 +300,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 4,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+   
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },

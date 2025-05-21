@@ -12,12 +12,12 @@ export function useProps(showId: string | undefined) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!showId || !service?.firestore) {
+    if (!showId || !service?.getFirestoreJsInstance) {
       setLoading(false);
       setProps([]);
       return;
     }
-    const firestore = service.firestore();
+    const firestore = service.getFirestoreJsInstance();
 
     const propsRef = collection(firestore, 'props');
     const propsQuery = query(propsRef, where('showId', '==', showId));
@@ -45,9 +45,7 @@ export function useProps(showId: string | undefined) {
   }, [showId, service, user]);
 
   const addProp = useCallback(async (propData: Omit<Prop, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (!service?.firestore || !service.addDocument || !user?.uid) throw new Error('Service or user not available');
-    const firestore = service.firestore();
-    const propsCollectionRef = collection(firestore, 'props');
+    if (!service?.getFirestoreJsInstance || !service.addDocument || !user?.uid) throw new Error('Service or user not available');
     const dataToSave = { 
         ...propData, 
         userId: user.uid, 
@@ -58,13 +56,13 @@ export function useProps(showId: string | undefined) {
   }, [service, user]);
 
   const updateProp = useCallback(async (propId: string, updates: Partial<Prop>) => {
-     if (!service?.firestore || !service.updateDocument) throw new Error('Service not available');
+     if (!service?.getFirestoreJsInstance || !service.updateDocument) throw new Error('Service not available');
      const dataToUpdate = { ...updates, updatedAt: serverTimestamp() };
      await service.updateDocument('props', propId, dataToUpdate);
   }, [service]);
 
   const deleteProp = useCallback(async (propId: string) => {
-     if (!service?.firestore || !service.deleteDocument) throw new Error('Service not available');
+     if (!service?.getFirestoreJsInstance || !service.deleteDocument) throw new Error('Service not available');
      await service.deleteDocument('props', propId);
   }, [service]);
 

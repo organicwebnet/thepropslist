@@ -76,7 +76,7 @@ const createMockDocRef = (id: string = 'test-doc'): CustomDocumentReference => (
   update: jest.fn(),
   delete: jest.fn(),
   onSnapshot: jest.fn(),
-} as CustomDocumentReference);
+} as unknown as CustomDocumentReference);
 
 const createMockSnapshot = (id: string = 'test-doc', data: any = {}): FirebaseFirestoreTypes.DocumentSnapshot => ({
   id,

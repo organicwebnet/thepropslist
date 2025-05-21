@@ -3,6 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, I
 import { useRouter } from 'expo-router';
 import type { Prop, PropImage } from '../../types/props';
 import { lifecycleStatusLabels } from '@/types/lifecycle';
+import { Image as ImageIcon } from 'lucide-react-native';
 
 interface PropCardProps {
   prop: Prop;
@@ -20,66 +21,49 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
   const [imageError, setImageError] = useState(false);
   const router = useRouter();
 
+  // Log the prop object to check its contents, especially name and description - REMOVE THIS
+  // console.log(`PropCard received prop: ID=${prop.id}, Name=${prop.name}, Description=${prop.description}`);
+
   const renderImage = () => {
-    // Determine the primary image URL from the images array
-    const primaryImageUrl = prop.images && prop.images.length > 0 ? prop.images[0]?.url : null;
-    
-    // Condition 1: Already errored or no valid primary image URL found
-    if (imageError || !primaryImageUrl) {
+    // Use prop.primaryImageUrl first, then fallback to prop.imageUrl
+    const imageUrl = prop.primaryImageUrl || prop.imageUrl;
+
+    // Condition 1: Already errored, or no imageUrl string, or empty imageUrl string
+    if (imageError || typeof imageUrl !== 'string' || imageUrl.trim() === '') {
       return (
         <View style={styles.placeholderImage}>
-          <Text style={styles.placeholderText}>{prop.name?.[0]?.toUpperCase()}</Text>
+          <ImageIcon size={40} color="#FFFFFF" />
         </View>
       );
     }
 
-    let imageSource: ImageSourcePropType | null = null;
-    try {
-      // Condition 2: Ensure primaryImageUrl is a string (already checked implicitly by getting it from prop.images[0].url)
-      if (typeof primaryImageUrl === 'string' && primaryImageUrl.trim() !== '') {
-        imageSource = { uri: primaryImageUrl };
-      } else {
-        // This case should be rare if primaryImageUrl is correctly sourced
-        console.warn('PropCard: primaryImageUrl is not a valid string:', primaryImageUrl);
-        setImageError(true); 
-        return (
-          <View style={styles.placeholderImage}>
-            <Text style={styles.placeholderText}>{prop.name?.[0]?.toUpperCase()}</Text>
-          </View>
-        );
-      }
-      
-      // Condition 3: FINAL check before rendering <Image>
-      if (isValidImageSource(imageSource)) {
-        return (
-          <Image
-            source={imageSource} 
-            style={styles.image}
-            resizeMode="cover"
-            onError={(error) => {
-              console.warn('PropCard: Image loading error:', error.nativeEvent?.error || error.nativeEvent);
-              setImageError(true);
-            }}
-          />
-        );
-      } else {
-        console.error('PropCard: Invalid imageSource structure before rendering Image:', imageSource);
-        setImageError(true); 
-        return (
-          <View style={styles.placeholderImage}>
-            <Text style={styles.placeholderText}>{prop.name?.[0]?.toUpperCase()}</Text>
-          </View>
-        );
-      }
-    } catch (error) {
-      console.error('PropCard: Error processing image source:', error);
+    // At this point, imageUrl is a non-empty string
+    const imageSource: ImageSourcePropType = { uri: imageUrl };
+
+    // The isValidImageSource check is a bit redundant here if we've already confirmed imageUrl is a string
+    // but keeping it for safety, or it could be removed if confident.
+    if (isValidImageSource(imageSource)) { 
+    return (
+      <Image
+        source={imageSource} 
+        style={styles.image}
+        resizeMode="cover"
+        onError={(error) => {
+          console.warn(`PropCard: Image loading error for ${prop.name}, URI: ${imageUrl}:`, error.nativeEvent?.error || error.nativeEvent);
+          setImageError(true);
+        }}
+      />
+    );
+     } else {
+    //   // This path should ideally not be reached if imageUrl is a valid string.
+    //   console.error('PropCard: Invalid imageSource structure unexpectedly for ', imageUrl);
        setImageError(true); 
-      return (
+       return (
         <View style={styles.placeholderImage}>
-          <Text style={styles.placeholderText}>{prop.name?.[0]?.toUpperCase()}</Text>
-        </View>
-      );
-    }
+           <Text style={styles.placeholderText}>{prop.name?.[0]?.toUpperCase() || 'P'}</Text>
+         </View>
+       );
+     }
   };
 
   // Helper to format dimensions safely
@@ -96,7 +80,7 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
 
   const handleNavigate = () => {
     // Programmatic navigation
-    router.push({ pathname: `/props/[id]` as any, params: { id: prop.id } });
+    router.push({ pathname: `/propsTab/[id]` as any, params: { id: prop.id } });
   };
 
   return (
@@ -110,20 +94,17 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
             {renderImage()}
           </View>
           <View style={styles.contentContainer}>
-            {/* Top section: Name and Description */}
             <View style={styles.topContent}>
               <Text style={styles.name}>{prop.name}</Text>
-              {!compact && prop.description ? (
+             {!compact && prop.description ? (
                 <Text style={styles.description} numberOfLines={2}>
                   {prop.description}
                 </Text>
               ) : null}
             </View>
 
-            {/* Middle section: Details like Act/Scene, Category, Dimensions, Status */}
             {!compact ? (
               <View style={styles.detailsSection}>
-                {/* Act/Scene and Category Row */}
                 <View style={styles.detailRow}>
                   {(prop.act || prop.scene) ? (
                     <View style={[styles.tag, styles.actSceneTag]}>
@@ -139,7 +120,6 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
                   ) : null}
                 </View>
                 
-                {/* Dimensions and Status Row */}
                 <View style={styles.detailRow}>
                   {dimensionsText ? (
                      <Text style={styles.detailText}>{dimensionsText}</Text>
@@ -151,7 +131,6 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
               </View>
             ) : null}
 
-            {/* Bottom section: Buttons */}
             {(onEditPress || onDeletePress) ? (
               <View style={styles.buttonContainer}>
                 {onEditPress ? (
@@ -179,7 +158,7 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
                   </TouchableOpacity>
                 ) : null}
               </View>
-            ) : null}
+            ) : null} 
           </View>
         </View>
       </TouchableOpacity>
@@ -188,7 +167,6 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
 
 const baseContainerStyle: ViewStyle = {
   position: 'relative',
-  flexDirection: 'row',
   padding: 16,
   borderRadius: 8,
   backgroundColor: '#282828',
@@ -209,7 +187,6 @@ const styles = StyleSheet.create({
       ? { elevation: 3 }
       : {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 }, // <-- iOS shadow
           shadowOpacity: 0.2,
           shadowRadius: 1.41,
         }),
@@ -221,10 +198,15 @@ const styles = StyleSheet.create({
   },
   cardLayoutRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
+    // backgroundColor: '#555', // Removed main row debug color
   },
   imageContainer: {
     marginRight: 16,
+    width: 80,
+    height: 80,
+    // borderColor: 'orange', // Removed imageContainer debug border
+    // borderWidth: 2,
   },
   image: {
     width: 80,
@@ -246,19 +228,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   contentContainer: {
-    flex: 1,
+    flex: 1, 
+    // backgroundColor: 'yellow', // REMOVE yellow background
   },
   topContent: {
-    marginBottom: 8,
+    marginBottom: 12,
+    // backgroundColor: 'orange', // REMOVE orange background
+    minHeight: 30, 
   },
   detailsSection: {
-    marginBottom: 8,
+    marginBottom: 10,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   detailText: {
     color: '#A0A0A0',
@@ -268,10 +253,10 @@ const styles = StyleSheet.create({
   },
   tag: {
     borderRadius: 12,
-    paddingVertical: 2,
-    paddingHorizontal: 8,
-    marginRight: 8,
-    marginBottom: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    marginRight: 6,
+    marginBottom: 6,
   },
   actSceneTag: {
     backgroundColor: '#4B5563',
@@ -284,19 +269,20 @@ const styles = StyleSheet.create({
   },
   tagText: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
   name: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 6,
+    // backgroundColor: 'red', // REMOVE red background
   },
   description: {
     color: '#A0A0A0',
     fontSize: 14,
-    marginBottom: 8,
+    lineHeight: 18,
   },
   buttonContainer: {
     flexDirection: 'row',

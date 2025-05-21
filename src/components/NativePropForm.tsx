@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, ScrollView, SafeAreaView, Platform, Switch, Image, Alert, ActivityIndicator } from 'react-native';
 // import type { PropFormData, propCategories, PropSource, PropCategory } from '@/shared/types/props'; // Change this line
 import { type PropFormData, propCategories, type PropSource, type PropCategory } from '@/shared/types/props'; // Keep types as type-only, import propCategories as value
-import type { Show } from '@/types';
+import type { Show } from '@/types/index';
 import { type PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Keep PropLifecycleStatus as type-only, import labels as value
 import { Picker } from '@react-native-picker/picker'; // Import Picker
 import * as ImagePicker from 'expo-image-picker'; // Import expo-image-picker

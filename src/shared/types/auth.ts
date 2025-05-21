@@ -10,10 +10,11 @@ export enum UserRole {
  * Defines permissions for different actions within the app.
  */
 export interface UserPermissions {
-  canEditProps: boolean;
-  canDeleteProps: boolean;
-  canManageUsers: boolean;
-  canEditShows: boolean;
+  canEditProps?: boolean;
+  canDeleteProps?: boolean;
+  canManageUsers?: boolean;
+  canEditShows?: boolean;
+  canCreateProps?: boolean;
 }
 
 /**
@@ -41,18 +42,21 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canEditProps: true,
     canDeleteProps: true,
     canManageUsers: true,
-    canEditShows: true
+    canEditShows: true,
+    canCreateProps: true,
   },
   [UserRole.EDITOR]: {
     canEditProps: true,
     canDeleteProps: true,
     canManageUsers: true,
-    canEditShows: true
+    canEditShows: true,
+    canCreateProps: true,
   },
   [UserRole.VIEWER]: {
     canEditProps: false,
     canDeleteProps: false,
     canManageUsers: false,
-    canEditShows: false
+    canEditShows: false,
+    canCreateProps: false,
   }
 }; 

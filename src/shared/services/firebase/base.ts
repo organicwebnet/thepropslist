@@ -24,8 +24,13 @@ export abstract class BaseFirebaseService implements FirebaseService {
   ): FirebaseDocument<T>;
   abstract getStorageRef(path: string): CustomStorageReference;
 
+  // Add abstract getDocuments method
+  abstract getDocuments<T extends CustomDocumentData>(collectionPath: string, options?: import('./types').QueryOptions): Promise<FirebaseDocument<T>[]>;
+
   abstract auth(): FirebaseAuth;
   abstract firestore(): FirebaseFirestore;
+  abstract getFirestoreJsInstance(): import('firebase/firestore').Firestore;
+  abstract getFirestoreReactNativeInstance(): import('@react-native-firebase/firestore').FirebaseFirestoreTypes.Module;
   abstract storage(): FirebaseStorage;
   abstract offline(): OfflineSync;
 
@@ -80,6 +85,21 @@ export abstract class BaseFirebaseService implements FirebaseService {
 
   async sendPasswordResetEmail(email: string): Promise<void> {
     console.warn(`sendPasswordResetEmail(${email}) is not implemented in BaseFirebaseService.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async signOut(): Promise<void> {
+    console.warn('signOut() is not implemented in BaseFirebaseService.');
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async setDocument<T extends CustomDocumentData>(
+    collectionPath: string,
+    documentId: string,
+    data: T,
+    options?: { merge?: boolean }
+  ): Promise<void> {
+    console.warn(`setDocument(${collectionPath}, ${documentId}) is not implemented in BaseFirebaseService.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
   // --- End Missing Auth Method Stubs ---

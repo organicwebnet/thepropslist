@@ -1,6 +1,20 @@
 import { FirebaseService, FirebaseError, FirebaseDocument, FirebaseCollection } from '../firebase/types';
 import { VisionAPIService } from '../ai/vision';
 import { QRCodeService, QRCodeData } from '../qr/qrService';
+import { 
+  Firestore as WebFirestore,
+  collection as webCollection,
+  doc as webDoc,
+  addDoc as webAddDoc,
+  updateDoc as webUpdateDoc,
+  getDoc as webGetDoc,
+  deleteDoc as webDeleteDoc,
+  query as webQuery,
+  where as webWhere,
+  getDocs as webGetDocs,
+  orderBy as webOrderBy,
+  limit as webLimit
+} from 'firebase/firestore';
 
 export interface PropLocation {
   type: 'storage' | 'show' | 'maintenance' | 'transit';
@@ -112,16 +126,15 @@ export class DigitalInventoryService implements InventoryService {
         createdBy: this.firebase.auth().currentUser?.uid || 'system',
         updatedBy: this.firebase.auth().currentUser?.uid || 'system'
       };
-
-      const doc = await this.firebase.firestore()
-        .collection(this.collection)
-        .add({ ...prop, metadata });
+      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const collRef = webCollection(firestoreInstance, this.collection);
+      const docRef = await webAddDoc(collRef, { ...prop, metadata });
 
       // Generate and store QR code
-      const qrCode = await this.generateQRCode(doc.id);
-      await this.updateProp(doc.id, { qrCode });
+      const qrCode = await this.generateQRCode(docRef.id);
+      await this.updateProp(docRef.id, { qrCode });
 
-      return doc.id;
+      return docRef.id;
     } catch (error) {
       throw new FirebaseError(
         'inventory/add-failed',
@@ -137,11 +150,9 @@ export class DigitalInventoryService implements InventoryService {
         updatedAt: new Date(),
         updatedBy: this.firebase.auth().currentUser?.uid || 'system'
       };
-
-      await this.firebase.firestore()
-        .collection(this.collection)
-        .doc(id)
-        .update({
+      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const docRef = webDoc(firestoreInstance, this.collection, id);
+      await webUpdateDoc(docRef, {
           ...updates,
           'metadata.updatedAt': metadata.updatedAt,
           'metadata.updatedBy': metadata.updatedBy
@@ -157,30 +168,21 @@ export class DigitalInventoryService implements InventoryService {
 
   async getProp(id: string): Promise<InventoryProp> {
     try {
-      const docRef = this.firebase.firestore()
-        .collection(this.collection)
-        .doc(id);
-      
-      const docData = await docRef.get();
+      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const docRef = webDoc(firestoreInstance, this.collection, id);
+      const docSnap = await webGetDoc(docRef);
 
-      if (!docData) {
+      if (!docSnap.exists()) {
         throw new FirebaseError(
           'inventory/not-found',
           `Prop with ID ${id} not found`
         );
       }
 
-      const data = await docData.data();
-
-      if (!data) {
-        throw new FirebaseError(
-          'inventory/not-found',
-          `Prop with ID ${id} not found`
-        );
-      }
+      const data = docSnap.data();
 
       return {
-        id,
+        id: docSnap.id,
         ...data as Omit<InventoryProp, 'id'>
       };
     } catch (error) {
@@ -194,44 +196,43 @@ export class DigitalInventoryService implements InventoryService {
 
   async listProps(filters?: PropFilters): Promise<InventoryProp[]> {
     try {
-      let collection = this.firebase.firestore().collection(this.collection);
+      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      let q = webQuery(webCollection(firestoreInstance, this.collection));
 
       if (filters) {
         if (filters.categories?.length) {
-          collection = collection.where('category', 'in', filters.categories);
+          q = webQuery(q, webWhere('category', 'in', filters.categories));
         }
         if (filters.status?.length) {
-          collection = collection.where('status', 'in', filters.status);
+          q = webQuery(q, webWhere('status', 'in', filters.status));
         }
         if (filters.condition?.length) {
-          collection = collection.where('condition', 'in', filters.condition);
+          q = webQuery(q, webWhere('condition', 'in', filters.condition));
         }
         if (filters.location?.type) {
-          collection = collection.where('location.type', '==', filters.location.type);
+          q = webQuery(q, webWhere('location.type', '==', filters.location.type));
         }
         if (filters.location?.name) {
-          collection = collection.where('location.name', '==', filters.location.name);
+          q = webQuery(q, webWhere('location.name', '==', filters.location.name));
         }
         if (filters.updatedAfter) {
-          collection = collection.where('metadata.updatedAt', '>=', filters.updatedAfter);
+          q = webQuery(q, webWhere('metadata.updatedAt', '>=', filters.updatedAfter));
         }
         if (filters.maintainenceNeeded) {
-          collection = collection.where('maintenanceSchedule.nextCheck', '<=', new Date());
+          q = webQuery(q, webWhere('maintenanceSchedule.nextCheck', '<=', new Date()));
         }
       }
 
-      const docs = await collection.get();
+      const querySnapshot = await webGetDocs(q);
       const props: InventoryProp[] = [];
 
-      for (const doc of docs) {
-        const data = await doc.data();
-        if (data) {
-          props.push({
-            id: doc.id,
-            ...data as Omit<InventoryProp, 'id'>
-          });
-        }
-      }
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        props.push({
+          id: docSnap.id,
+          ...data as Omit<InventoryProp, 'id'>
+        });
+      });
 
       return props;
     } catch (error) {
@@ -245,10 +246,9 @@ export class DigitalInventoryService implements InventoryService {
 
   async deleteProp(id: string): Promise<void> {
     try {
-      await this.firebase.firestore()
-        .collection(this.collection)
-        .doc(id)
-        .delete();
+      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const docRef = webDoc(firestoreInstance, this.collection, id);
+      await webDeleteDoc(docRef);
     } catch (error) {
       throw new FirebaseError(
         'inventory/delete-failed',
@@ -300,48 +300,69 @@ export class DigitalInventoryService implements InventoryService {
   }
 
   async updateLocation(propId: string, location: PropLocation): Promise<void> {
-    await this.updateProp(propId, { location });
+    try {
+      await this.updateProp(propId, { location });
+    } catch (error) {
+      throw new FirebaseError(
+        'inventory/update-location-failed',
+        'Failed to update prop location',
+        error
+      );
+    }
   }
 
   async recordMaintenance(propId: string, maintenance: PropMaintenance): Promise<void> {
-    const prop = await this.getProp(propId);
-    const updates: Partial<InventoryProp> = {
-      lastMaintenance: maintenance,
-      status: 'available',
-    };
-
-    if (prop.maintenanceSchedule) {
-      const nextCheck = new Date();
-      nextCheck.setDate(nextCheck.getDate() + prop.maintenanceSchedule.frequency);
-      updates.maintenanceSchedule = {
-        ...prop.maintenanceSchedule,
-        lastCheck: new Date(),
-        nextCheck
-      };
+    try {
+      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const docRef = webDoc(firestoreInstance, this.collection, propId);
+      await webUpdateDoc(docRef, {
+          lastMaintenance: maintenance,
+          'metadata.updatedAt': new Date(),
+          'metadata.updatedBy': this.firebase.auth().currentUser?.uid || 'system',
+        });
+    } catch (error) {
+      throw new FirebaseError(
+        'inventory/record-maintenance-failed',
+        'Failed to record prop maintenance',
+        error
+      );
     }
-
-    await this.updateProp(propId, updates);
   }
 
   async searchProps(query: string): Promise<InventoryProp[]> {
     try {
-      // Note: This is a simple implementation. For production,
-      // you might want to use a dedicated search service like Algolia
-      const allProps = await this.listProps();
-      const searchTerms = query.toLowerCase().split(' ');
+      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const propsColl = webCollection(firestoreInstance, this.collection);
 
-      return allProps.filter(prop => {
-        const searchableText = [
-          prop.name,
-          prop.description,
-          prop.category,
-          prop.subcategory,
-          ...prop.tags,
-          prop.notes
-        ].join(' ').toLowerCase();
+      const nameQuery = webQuery(propsColl,
+        webWhere('name', '>=', query),
+        webWhere('name', '<=', query + '\uf8ff')
+      );
+      
+      const tagQuery = webQuery(propsColl, 
+        webWhere('tags', 'array-contains', query)
+      );
 
-        return searchTerms.every(term => searchableText.includes(term));
+      const [nameSnapshot, tagSnapshot] = await Promise.all([
+        webGetDocs(nameQuery),
+        webGetDocs(tagQuery),
+      ]);
+
+      const propsMap = new Map<string, InventoryProp>();
+
+      nameSnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        propsMap.set(docSnap.id, { id: docSnap.id, ...data as Omit<InventoryProp, 'id'> });
       });
+
+      tagSnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (!propsMap.has(docSnap.id)) {
+          propsMap.set(docSnap.id, { id: docSnap.id, ...data as Omit<InventoryProp, 'id'> });
+        }
+      });
+
+      return Array.from(propsMap.values());
     } catch (error) {
       throw new FirebaseError(
         'inventory/search-failed',

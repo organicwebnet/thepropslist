@@ -20,6 +20,7 @@ import { StatusHistory } from '@components/lifecycle/StatusHistory';
 import { MaintenanceHistory } from '@components/lifecycle/MaintenanceHistory';
 import { useFirebase } from '@/contexts/FirebaseContext';
 import { useAuth } from '../contexts/AuthContext';
+import { User } from 'firebase/auth';
 
 export default function PropDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,7 +35,8 @@ export default function PropDetailPage() {
   const [isAddingStatus, setIsAddingStatus] = useState(false);
   const [isAddingMaintenance, setIsAddingMaintenance] = useState(false);
 
-  const lifecycle = usePropLifecycle({ propId: id || undefined, currentUser: user });
+  const firebaseJsUser = user as User | null;
+  const lifecycle = usePropLifecycle({ propId: id || undefined, currentUser: firebaseJsUser });
 
   const [activeTab, setActiveTab] = useState<'details' | 'statusUpdates' | 'maintenanceRecords'>('details');
 
@@ -43,7 +45,7 @@ export default function PropDetailPage() {
     if (!id || !lifecycle?.updatePropStatus) return;
     try {
       await lifecycle.updatePropStatus(status, notes);
-      const propRef = doc(service.firestore(), 'props', id);
+      const propRef = doc(service.getFirestoreJsInstance(), 'props', id);
       const propSnap = await getDoc(propRef);
       if (propSnap.exists()) {
         setProp({ ...(propSnap.data() as Prop), id: propSnap.id });
@@ -59,7 +61,7 @@ export default function PropDetailPage() {
     if (!id || !lifecycle?.addMaintenanceRecord) return;
     try {
       await lifecycle.addMaintenanceRecord(record);
-      const propRef = doc(service.firestore(), 'props', id);
+      const propRef = doc(service.getFirestoreJsInstance(), 'props', id);
       const propSnap = await getDoc(propRef);
       if (propSnap.exists()) {
         setProp({ ...(propSnap.data() as Prop), id: propSnap.id });
@@ -74,12 +76,12 @@ export default function PropDetailPage() {
   useEffect(() => {
     let isMounted = true;
     const fetchProp = async () => {
-      if (!id || !service?.firestore || !user) {
+      if (!id || !service?.getFirestoreJsInstance || !user) {
         setError('Prop ID missing or service/user not available.');
         setLoading(false);
         return;
       }
-      const firestore = service.firestore();
+      const firestore = service.getFirestoreJsInstance();
 
       try {
         setLoading(true);
@@ -138,7 +140,7 @@ export default function PropDetailPage() {
   const handleEditSubmit = async (data: PropFormData) => {
     if (!prop) return;
     try {
-      await updateDoc(doc(service.firestore(), 'props', prop.id), {
+      await updateDoc(doc(service.getFirestoreJsInstance(), 'props', prop.id), {
          ...data,
          lastModifiedAt: new Date().toISOString()
        });

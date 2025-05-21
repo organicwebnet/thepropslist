@@ -1,245 +1,199 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView, Image, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { Prop } from '@/shared/types/props';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pencil, Trash2 } from 'lucide-react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useProps } from '@/contexts/PropsContext';
+import type { Prop } from '@/shared/types/props';
+import { lifecycleStatusLabels } from '@/types/lifecycle';
 
-// Helper to check if the source is a valid structure for RN <Image>
-function isValidImageSource(source: any): source is { uri: string } {
-  return typeof source === 'object' && source !== null && typeof source.uri === 'string';
-}
+export default function NativePropDetailScreen() {
+  const { id: propId } = useLocalSearchParams<{ id: string }>();
+  const { props, loading: propsLoading } = useProps();
 
-export default function PropDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const { service: firebaseService } = useFirebase();
-  const [prop, setProp] = useState<Prop | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [imageError, setImageError] = useState(false);
+  const prop = props.find(p => p.id === propId);
 
-  useEffect(() => {
-    if (!id || !firebaseService?.getDocument) {
-      setError('Required information missing.');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    firebaseService.getDocument<Prop>('props', id)
-      .then(propDoc => {
-        if (propDoc) { 
-          setProp({ id: propDoc.id, ...propDoc.data } as Prop);
-        } else {
-          setError('Prop not found.');
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching prop details:", err);
-        setError('Failed to load prop details.');
-        // Navigate back if possible
-        if (router.canGoBack()) router.back();
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-
-  }, [id, firebaseService]);
-
-  const handleDelete = async () => {
-    if (!id || !firebaseService?.deleteDocument) {
-      Alert.alert('Error', 'Cannot delete prop. Service unavailable.');
-      return;
-    }
-
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this prop?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await firebaseService.deleteDocument('props', id);
-              console.log('Prop deleted:', id);
-              Alert.alert('Success', 'Prop deleted successfully.');
-              // Navigate back to the list after deletion
-              if (router.canGoBack()) {
-                router.back();
-              }
-            } catch (err) {
-              console.error('Error deleting prop:', err);
-              Alert.alert('Error', 'Failed to delete prop.');
-            }
-          },
-        },
-      ]
+  if (propsLoading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
+      </View>
     );
-  };
-
-  const handleEdit = () => {
-    // TODO: Implement navigation to an edit screen or modal
-    // Example: router.push(`/(tabs)/props/${id}/edit`);
-    Alert.alert('Edit', 'Edit functionality not yet implemented.');
-  };
-
-  const renderImage = () => {
-    const primaryImageUrl = prop?.images && prop.images.length > 0 ? prop.images[0]?.url : null;
-    
-    if (imageError || !primaryImageUrl) {
-      return (
-        <View style={styles.placeholderImage}>
-          <Text style={styles.placeholderText}>{prop?.name?.[0]?.toUpperCase()}</Text>
-        </View>
-      );
-    }
-    const imageSource = { uri: primaryImageUrl };
-    if (isValidImageSource(imageSource)) {
-        return (
-          <Image
-            source={imageSource} 
-            style={styles.image}
-            resizeMode="contain"
-            onError={(e) => {console.warn('Image load error:', e.nativeEvent.error); setImageError(true);}}
-          />
-        );
-    } else {
-         return (
-            <View style={styles.placeholderImage}>
-                <Text style={styles.placeholderText}>{prop?.name?.[0]?.toUpperCase()}</Text>
-            </View>
-         );
-    }
-  };
-
-
-  if (loading) {
-    return <View style={styles.container}><ActivityIndicator size="large" /></View>;
-  }
-
-  if (error) {
-    return <View style={styles.container}><Text style={styles.errorText}>{error}</Text></View>;
   }
 
   if (!prop) {
-    // Should be covered by error state, but added for safety
-    return <View style={styles.container}><Text style={styles.errorText}>Prop data unavailable.</Text></View>;
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Stack.Screen options={{ title: 'Prop Not Found' }} />
+        <Text style={styles.errorText}>Prop not found.</Text>
+      </View>
+    );
   }
 
+  // Helper to format dimensions safely
+  const formatDimensions = (p: Prop) => {
+    const { length, width, height, depth, unit } = p;
+    const parts = [length, width, height, depth].filter(d => d != null && d > 0);
+    if (parts.length === 0) return null;
+    return `${parts.join(' x ')} ${unit || ''}`.trim();
+  };
+
+  const dimensionsText = formatDimensions(prop);
+  const statusLabel = prop.status ? (lifecycleStatusLabels[prop.status] || prop.status) : 'Unknown';
+  const imageUrl = prop.primaryImageUrl || prop.imageUrl;
+
+  // Helper to format dates (Example)
+  const formatDate = (dateString: string | undefined | null): string => {
+    if (!dateString) return 'N/A';
+    try {
+      // Assuming dateString is a string representation of a date
+      const date = new Date(dateString);
+      // Check if the date is valid after parsing
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date string provided to formatDate:", dateString);
+        return 'Invalid Date';
+      }
+      return date.toLocaleDateString();
+    } catch (e) {
+      console.warn("Error formatting date:", dateString, e);
+      return 'Invalid Date'; // Or handle error as appropriate
+    }
+  };
+
+  // Simple component to display boolean flags
+  const FlagDisplay = ({ label, value }: { label: string; value?: boolean }) => {
+    if (value === undefined) return null;
+    return <Text style={styles.detailItem}>{label}: {value ? 'Yes' : 'No'}</Text>;
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-        <ScrollView style={styles.scrollView}>
-            <View style={styles.imageContainer}>
-                {renderImage()}
-            </View>
-            <View style={styles.contentContainer}>
-                <Text style={styles.name}>{prop.name}</Text>
-                {prop.description ? <Text style={styles.description}>{prop.description}</Text> : null}
-                
-                {/* Add other prop details here as needed */}
-                <Text style={styles.detailLabel}>Category:</Text>
-                <Text style={styles.detailValue}>{prop.category}</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <Stack.Screen options={{ title: prop.name || 'Prop Details' }} />
+      
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <Text style={styles.imagePlaceholderText}>No Image</Text>
+        </View>
+      )}
 
-                <Text style={styles.detailLabel}>Status:</Text>
-                <Text style={styles.detailValue}>{prop.status}</Text>
+      <Text style={styles.title}>{prop.name}</Text>
+      
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Description</Text>
+        <Text style={styles.text}>{prop.description || 'No description provided.'}</Text>
+      </View>
 
-                {/* ... Add more fields ... */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Details</Text>
+        {prop.category && <Text style={styles.detailItem}>Category: {prop.category}</Text>}
+        {prop.act && prop.scene && <Text style={styles.detailItem}>Act {prop.act}, Scene {prop.scene}</Text>}
+        {statusLabel && <Text style={styles.detailItem}>Status: {statusLabel}</Text>}
+        {prop.source && <Text style={styles.detailItem}>Source: {prop.source}</Text>}
+        {prop.sourceDetails && <Text style={styles.detailItem}>Source Details: {prop.sourceDetails}</Text>}
+        {prop.purchaseUrl && <Text style={styles.detailItem}>Purchase URL: {prop.purchaseUrl}</Text>}
+        {dimensionsText && <Text style={styles.detailItem}>Dimensions: {dimensionsText}</Text>}
+        {prop.weight && <Text style={styles.detailItem}>Weight: {prop.weight}{prop.weightUnit || ''}</Text>}
+        {prop.quantity != null && <Text style={styles.detailItem}>Quantity: {prop.quantity}</Text>}
+        {prop.materials && <Text style={styles.detailItem}>Materials: {Array.isArray(prop.materials) ? prop.materials.join(', ') : prop.materials}</Text>}
+        {prop.period && <Text style={styles.detailItem}>Period: {prop.period}</Text>}
+        {prop.condition && <Text style={styles.detailItem}>Condition: {prop.condition}</Text>}
+        {prop.location && <Text style={styles.detailItem}>Current Location: {prop.location}</Text>}
+        {prop.availabilityStatus && <Text style={styles.detailItem}>Availability: {prop.availabilityStatus}</Text>}
+        {prop.price != null && <Text style={styles.detailItem}>Price: ${prop.price.toFixed(2)}</Text>}
+        {prop.purchaseDate && <Text style={styles.detailItem}>Purchase Date: {formatDate(prop.purchaseDate)}</Text>}
+      </View>
 
-                <View style={styles.buttonRow}>
-                    <TouchableOpacity onPress={handleEdit} style={styles.iconButton}>
-                      <Pencil size={24} color="#3B82F6" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleDelete} style={styles.iconButton}>
-                      <Trash2 size={24} color="#EF4444" />
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </ScrollView>
-    </SafeAreaView>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Notes & Instructions</Text>
+        {prop.usageInstructions && <Text style={styles.detailItem}>Usage Instructions: {prop.usageInstructions}</Text>}
+        {prop.maintenanceNotes && <Text style={styles.detailItem}>Maintenance Notes: {prop.maintenanceNotes}</Text>}
+        {prop.safetyNotes && <Text style={styles.detailItem}>Safety Notes: {prop.safetyNotes}</Text>}
+        {prop.handlingInstructions && <Text style={styles.detailItem}>Handling Instructions: {prop.handlingInstructions}</Text>}
+        {prop.statusNotes && <Text style={styles.detailItem}>Status Notes: {prop.statusNotes}</Text>}
+        {prop.notes && <Text style={styles.detailItem}>General Notes: {prop.notes}</Text>}
+      </View>
+      
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Flags</Text>
+        <FlagDisplay label="Consumable" value={prop.isConsumable} />
+        <FlagDisplay label="Multi-Scene" value={prop.isMultiScene} />
+        <FlagDisplay label="Requires Pre-Show Setup" value={prop.requiresPreShowSetup} />
+        <FlagDisplay label="Breakable" value={prop.isBreakable} />
+        <FlagDisplay label="Hazardous" value={prop.isHazardous} />
+      </View>
+
+      {prop.publicNotes && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Public Notes</Text>
+          <Text style={styles.text}>{prop.publicNotes}</Text>
+        </View>
+      )}
+
+      {/* Add more sections for other details as needed, e.g., private notes, maintenance, etc. */}
+
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
-    backgroundColor: '#1F1F1F', // Match background
+    backgroundColor: '#111827', // gray-900
   },
-  scrollView: {
-    flex: 1,
+  contentContainer: {
+    padding: 16,
   },
-  container: { // Used for loading/error states
-    flex: 1,
+  centered: {
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#1F1F1F',
-  },
-  contentContainer: { // Container for text content below image
-     padding: 16,
-  },
-  imageContainer: {
-     alignItems: 'center',
-     marginVertical: 20,
   },
   image: {
-    width: '90%', 
-    aspectRatio: 1, // Make it square, adjust as needed
+    width: '100%',
+    height: 250,
     borderRadius: 8,
-    backgroundColor: '#404040', // Placeholder bg
+    marginBottom: 16,
+    backgroundColor: '#374151', // gray-700 for placeholder bg
   },
-  placeholderImage: {
-    width: '90%', 
-    aspectRatio: 1,
+  imagePlaceholder: {
+    width: '100%',
+    height: 250,
     borderRadius: 8,
-    backgroundColor: '#404040',
+    backgroundColor: '#374151', // gray-700
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  placeholderText: {
-    color: '#FFFFFF',
-    fontSize: 48,
-    fontWeight: 'bold',
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 16,
-    color: '#A0A0A0',
     marginBottom: 16,
   },
-  detailLabel: {
-    fontSize: 14,
-    color: '#A0A0A0',
-    marginTop: 8,
-    marginBottom: 2,
+  imagePlaceholderText: {
+    color: '#9CA3AF', // gray-400
+    fontSize: 18,
+  },
+  title: {
+    fontSize: 28,
     fontWeight: 'bold',
-  },
-  detailValue: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    marginTop: 24,
+    color: '#F9FAFB', // gray-50
     marginBottom: 16,
   },
-  iconButton: {
-    padding: 12,
-    borderRadius: 50,
+  section: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#E5E7EB', // gray-200
+    marginBottom: 8,
+  },
+  text: {
+    fontSize: 16,
+    color: '#D1D5DB', // gray-300
+    lineHeight: 24,
+  },
+  detailItem: {
+    fontSize: 16,
+    color: '#D1D5DB', // gray-300
+    marginBottom: 4,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#F87171', // red-400
     fontSize: 18,
   },
 }); 

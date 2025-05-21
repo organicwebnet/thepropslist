@@ -56,10 +56,17 @@ export class OfflineSyncService {
   }
 
   private async getCollectionDocs(collectionName: string, afterTimestamp: number): Promise<FirebaseDocument[]> {
-    const db = this.firebase.firestore();
-    const collectionRef = db.collection(collectionName);
-    const docs = await collectionRef.where('updatedAt', '>', new Date(afterTimestamp)).get();
-    return docs;
+    const options = {
+      where: [['updatedAt', '>', new Date(afterTimestamp)] as [string, any, any]]
+    };
+    
+    try {
+      const documents = await this.firebase.getDocuments<any>(collectionName, options);
+      return documents;
+    } catch (error) {
+      console.error(`Error in getCollectionDocs for ${collectionName}:`, error);
+      throw error;
+    }
   }
 
   async syncCollection(collectionName: string): Promise<void> {

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import firestore from '@react-native-firebase/firestore';
+// import firestore from '@react-native-firebase/firestore'; // Keep this commented, use the passed instance
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore'; // Import the specific type
 import { FirebaseFirestore, FirebaseDocument } from '../../../../shared/services/firebase/types';
 // import { OfflineOperation } from './OfflineOperationStore'; // Commented out: Cannot find module
 
@@ -162,9 +163,10 @@ export class OfflineSyncManager {
     if (!isConnected) return;
 
     const operations = await this.getPendingOperations();
+    const rnFirestore = this.firestore as FirebaseFirestoreTypes.Module; // Cast to RN type
     for (const operation of operations) {
       try {
-        const collection = this.firestore.collection(operation.collection);
+        const collection = rnFirestore.collection(operation.collection);
         switch (operation.type) {
           case 'create':
             await collection.add(operation.data);
@@ -191,14 +193,15 @@ export class OfflineSyncManager {
 
     const metadata = await this.getSyncMetadata();
     if (!metadata) return;
+    const rnFirestore = this.firestore as FirebaseFirestoreTypes.Module; // Cast to RN type
 
     try {
-      const collection = this.firestore.collection(collectionName);
+      const collection = rnFirestore.collection(collectionName);
       const query = collection.where('updatedAt', '>', new Date(metadata.lastSyncTimestamp));
-      const docs = await query.get();
+      const docsSnapshot = await query.get();
 
-      for (const doc of docs) {
-        const data = await doc.get();
+      for (const doc of docsSnapshot.docs) {
+        const data = doc.data();
         await this.cacheDocument(collectionName, doc.id, data);
       }
 

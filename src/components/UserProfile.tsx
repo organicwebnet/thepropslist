@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { updateProfile, GoogleAuthProvider, linkWithPopup } from 'firebase/auth';
+import { updateProfile, GoogleAuthProvider, linkWithPopup, User } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { User as UserIcon, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
@@ -52,7 +52,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
       }
       setLoading(true);
       try {
-        const db = firebaseService.firestore();
+        const db = firebaseService.getFirestoreJsInstance();
         const profileDocRef = doc(db, 'userProfiles', user.uid);
         const profileDoc = await getDoc(profileDocRef);
         const existingData = profileDoc.exists() ? profileDoc.data() : {};
@@ -94,8 +94,8 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     fetchProfile();
   }, [user, isInitialized, firebaseService]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!user || !isInitialized || !firebaseService) return;
 
     setSaving(true);
@@ -103,9 +103,10 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
 
     try {
       const auth = firebaseService.auth();
-      const db = firebaseService.firestore();
+      const db = firebaseService.getFirestoreJsInstance();
 
-      await updateProfile(auth.currentUser!, {
+      const firebaseJsUser = auth.currentUser as User;
+      await updateProfile(firebaseJsUser, {
         displayName: profile.displayName,
         photoURL: profile.photoURL
       });
@@ -174,7 +175,8 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
       }
 
       const provider = new GoogleAuthProvider();
-      const result = await linkWithPopup(auth.currentUser, provider);
+      const firebaseJsUser = auth.currentUser as User;
+      const result = await linkWithPopup(firebaseJsUser, provider);
       
       const linkedUser = result.user;
       const googleProviderData = linkedUser.providerData.find(p => p.providerId === 'google.com');
@@ -185,7 +187,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
         photoURL: googleProviderData?.photoURL || prev.photoURL,
         googleLinked: true
       }));
-      const db = firebaseService.firestore();
+      const db = firebaseService.getFirestoreJsInstance();
       await setDoc(doc(db, 'userProfiles', user.uid), {
         googleLinked: true,
         lastUpdated: new Date().toISOString(),

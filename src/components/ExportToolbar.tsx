@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileSpreadsheet, FileText, AlertCircle, Pencil } from 'lucide-react';
 import type { Prop } from '@/shared/types/props';
-import type { Show } from '@/types';
+import type { Show } from '@/types/index';
 import { downloadCSV } from '../lib/sheets';
 import { generatePDF } from '../lib/pdf';
 

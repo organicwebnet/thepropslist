@@ -22,13 +22,18 @@ export function OnboardingGuide({ show, onComplete }: OnboardingGuideProps) {
 
   useEffect(() => {
     const checkCompletion = async () => {
-      if (show && service?.firestore && user) {
-        const firestore = service.firestore();
-        const completionRef = doc(firestore, 'users', user.uid, 'onboarding', 'guideCompleted');
-        const docSnap = await getDoc(completionRef);
-        if (docSnap.exists()) {
-          // Already completed, maybe call onComplete immediately or hide guide
-          // For now, we assume if 'show' is true, we show it regardless.
+      if (show && service && user) {
+        try {
+          const firestore = service.getFirestoreJsInstance();
+          const completionRef = doc(firestore, 'users', user.uid, 'onboarding', 'guideCompleted');
+          const docSnap = await getDoc(completionRef);
+          if (docSnap.exists()) {
+            // Already completed, maybe call onComplete immediately or hide guide
+            // For now, we assume if 'show' is true, we show it regardless.
+          }
+        } catch (error) {
+          console.error("Error checking onboarding completion:", error);
+          // Handle cases where getFirestoreJsInstance might fail (e.g. on mobile if not implemented robustly)
         }
       }
     };
@@ -50,13 +55,14 @@ export function OnboardingGuide({ show, onComplete }: OnboardingGuideProps) {
   };
 
   const handleComplete = async () => {
-    if (service?.firestore && user) {
-      const firestore = service.firestore();
-      const completionRef = doc(firestore, 'users', user.uid, 'onboarding', 'guideCompleted');
+    if (service && user) {
       try {
+        const firestore = service.getFirestoreJsInstance();
+        const completionRef = doc(firestore, 'users', user.uid, 'onboarding', 'guideCompleted');
         await setDoc(completionRef, { completed: true, completedAt: new Date() });
       } catch (error) {
         console.error("Error marking onboarding complete:", error);
+        // Handle cases where getFirestoreJsInstance might fail
       }
     }
     onComplete();

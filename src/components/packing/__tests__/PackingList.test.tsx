@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 import { PackingList } from '../PackingList';
 import { Prop, PropSource } from '@/shared/types/props';
 import { PropLifecycleStatus } from '@/types/lifecycle';
-import { Show } from '@/types';
+import { Show } from '@/types/index';
 
 // Mock Props conforming to src/shared/types/props
 const mockProps: Prop[] = [
@@ -48,25 +48,27 @@ const mockProps: Prop[] = [
 const mockShow: Show = {
   id: 'show1',
   name: 'Test Show',
-  userId: 'user1',
+  userId: 'user123',
   acts: [
     { id: 1, name: 'Act 1', scenes: [{ id: 1, name: 'Scene 1' }, { id: 2, name: 'Scene 2' }] },
-    { id: 2, name: 'Act 2', scenes: [{ id: 1, name: 'Scene 1' }] },
+    { id: 2, name: 'Act 2', scenes: [{ id: 3, name: 'Scene 1' }] },
   ],
-  description: 'A test show description',
+  description: 'A test show description.',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   collaborators: [],
-  stageManager: 'Jane Doe',
-  stageManagerEmail: 'jane.doe@example.com',
-  propsSupervisor: 'John Smith',
-  propsSupervisorEmail: 'john.smith@example.com',
+  stageManager: 'John Doe',
+  stageManagerEmail: 'john.doe@example.com',
+  propsSupervisor: 'Jane Smith',
+  propsSupervisorEmail: 'jane.smith@example.com',
   productionCompany: 'Test Productions',
-  productionContactName: 'Contact Person',
-  productionContactEmail: 'contact@test.com',
+  productionContactName: 'Prod Contact',
+  productionContactEmail: 'prod@example.com',
   venues: [],
   isTouringShow: false,
   contacts: [],
+  startDate: new Date().toISOString(),
+  endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
 };
 
 const mockOnCreateBox = jest.fn();

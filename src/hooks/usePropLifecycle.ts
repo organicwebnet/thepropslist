@@ -35,11 +35,11 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!propId || !service?.firestore) {
+    if (!propId || !service?.getFirestoreJsInstance) {
       setLoading(false);
       return;
     }
-    const firestore = service.firestore();
+    const firestore = service.getFirestoreJsInstance();
 
     // Cast reference to expect Firestore data structure
     const statusRef = collection(firestore, 'props', propId, 'statusHistory') as CollectionReference<PropStatusFirestoreData>; 
@@ -107,10 +107,10 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
     notes?: string,
     images?: File[]
   ): Promise<void> => {
-    if (!propId || !currentUser || !service?.firestore) {
+    if (!propId || !currentUser || !service?.getFirestoreJsInstance) {
       throw new Error('PropId, currentUser, and Firebase service are required to update status');
     }
-    const firestore = service.firestore();
+    const firestore = service.getFirestoreJsInstance();
 
     try {
       const statusRef = collection(firestore, 'props', propId, 'statusHistory');
@@ -145,10 +145,9 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
     record: Omit<MaintenanceRecord, 'id' | 'date' | 'createdAt' | 'performedBy' | 'createdBy'>, // Adjust Omit based on what's passed vs generated
     images?: File[]
   ): Promise<void> => {
-    if (!propId || !currentUser || !service?.firestore || !service.addDocument) { // Check addDocument
+    if (!propId || !currentUser || !service?.getFirestoreJsInstance || !service.addDocument) {
       throw new Error('PropId, currentUser, and Firebase service are required to add maintenance record');
     }
-    const firestore = service.firestore();
 
     try {
       // Assuming service.addDocument takes path and data

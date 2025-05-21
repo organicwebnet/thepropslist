@@ -13,9 +13,9 @@ export function Footer() {
   const [showHelpCenter, setShowHelpCenter] = React.useState(false);
   
   const handleSignOut = async () => {
-    if (service?.auth) { 
+    if (service) {
       try {
-        await service.auth().signOut();
+        await service.signOut();
         console.log('User signed out');
       } catch (error) {
         console.error("Error signing out: ", error);

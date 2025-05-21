@@ -62,7 +62,7 @@ import type {
 // Import FirebaseError as a value if needed for instantiation
 import { FirebaseError } from '../shared/services/firebase/types';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle';
-import type { Show } from '@/types';
+import type { Show } from '@/types/index';
 import { getFirebaseConfig } from '../config/firebase'; // Import the central config getter
 
 // Add QueryOptions type
@@ -454,4 +454,68 @@ export class WebFirebaseService implements FirebaseService {
   }
   // --- End missing Auth methods ---
 
+  // Add methods required by FirebaseService interface
+  async signOut(): Promise<void> {
+    if (!this.isInitialized || !this.authInstance) throw this.createError(new Error('Firebase not initialized'));
+    try {
+      // Use the signOut imported from 'firebase/auth'
+      await signOut(this.authInstance);
+    } catch (error) {
+      throw this.createError(error);
+    }
+  }
+
+  async setDocument<T extends CustomDocumentData>(
+    collectionPath: string,
+    documentId: string,
+    data: T,
+    options?: { merge?: boolean }
+  ): Promise<void> {
+    if (!this.isInitialized || !this.dbInstance) throw this.createError(new Error('Firebase not initialized'));
+    try {
+      await setDoc(doc(this.dbInstance, collectionPath, documentId), data, options || {});
+    } catch (error) {
+      throw this.createError(error);
+    }
+  }
+
+  // --- Added methods for FirebaseService interface ---
+  getFirestoreJsInstance(): Firestore {
+    if (!this.isInitialized || !this.dbInstance) throw new FirebaseError('Firebase not initialized', 'initialization-error');
+    return this.dbInstance;
+  }
+
+  getFirestoreReactNativeInstance(): any { // FirebaseFirestoreTypes.Module
+    console.warn('getFirestoreReactNativeInstance called on WebFirebaseService. This is not applicable.');
+    throw new FirebaseError('Not applicable for web platform', 'unsupported-operation');
+  }
+
+  async getDocuments<T extends CustomDocumentData>(
+    collectionPath: string, 
+    queryOptions?: QueryOptions
+  ): Promise<FirebaseDocument<T>[]> {
+    if (!this.isInitialized || !this.dbInstance) throw new FirebaseError('Firebase not initialized', 'initialization-error');
+    
+    let q: Query<T> = collection(this.dbInstance, collectionPath) as CollectionReference<T>;
+
+    if (queryOptions?.where) {
+      for (const w of queryOptions.where) {
+        q = query(q, where(w[0], w[1], w[2]));
+      }
+    }
+    if (queryOptions?.orderBy) {
+      for (const o of queryOptions.orderBy) {
+        q = query(q, orderBy(o[0], o[1]));
+      }
+    }
+    if (queryOptions?.limit) {
+      q = query(q, limit(queryOptions.limit));
+    }
+
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnapshot => 
+      this.createDocumentWrapper(docSnapshot.ref as CustomDocumentReference<T>)
+    );
+  }
+  // --- End of added methods ---
 } 

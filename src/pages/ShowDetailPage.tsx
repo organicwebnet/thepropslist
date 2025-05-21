@@ -1,181 +1,160 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { doc, onSnapshot, query, collection, where, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Show, ShowFormData, Act, Scene, Venue, Contact } from '../types';
+import { View, Text, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter, Link } from 'expo-router';
+import { Show, Act, Scene, Venue, Contact } from '@/types/index';
 import { Prop } from '@/shared/types/props';
 import { useFirebase } from '@/contexts/FirebaseContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Edit, Trash2, Plus, Package } from 'lucide-react-native';
 import { Pencil, ArrowLeft, UserMinus } from 'lucide-react';
 
 export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => void }) {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { service } = useFirebase();
+  const { service: firebaseService } = useFirebase();
   const { user } = useAuth();
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
-  const [propStats, setPropStats] = useState({
-    totalProps: 0,
-    totalValue: 0,
-    totalWeight: 0
-  });
-  const [props, setProps] = useState<Prop[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [propStats, setPropStats] = useState({ totalProps: 0, totalValue: 0, totalWeight: 0 });
 
   useEffect(() => {
-    if (!id || !service?.firestore) {
-      setLoading(false);
-      setError("Show ID missing or service not available.");
-      return;
-    }
-    const firestore = service.firestore();
-
+    if (!id || !firebaseService) return;
     setLoading(true);
-    setError(null);
 
-    const showRef = doc(firestore, 'shows', id);
-    const unsubscribe = onSnapshot(showRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        // Ensure acts is always an array and has the correct structure
-        const acts = Array.isArray(data.acts) ? data.acts : [];
-        const formattedActs = acts.map(act => ({
-          id: act.id || 0,
-          name: act.name || '',
-          description: act.description || '',
-          scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
-            id: scene.id || 0,
-            name: scene.name || '',
-            description: scene.description || ''
-          })) : []
-        }));
-
-        setShow({
-          id: doc.id,
-          name: data.name || '',
-          description: data.description || '',
-          acts: formattedActs,
-          userId: data.userId || '',
-          createdAt: data.createdAt || new Date().toISOString(),
-          collaborators: Array.isArray(data.collaborators) ? data.collaborators : [],
-          stageManager: data.stageManager || '',
-          propsSupervisor: data.propsSupervisor || '',
-          productionCompany: data.productionCompany || '',
-          venues: Array.isArray(data.venues) ? data.venues : [],
-          isTouringShow: Boolean(data.isTouringShow),
-          contacts: Array.isArray(data.contacts) ? data.contacts : [],
-          imageUrl: data.imageUrl || '',
-          logoImage: data.logoImage || undefined,
-          stageManagerEmail: data.stageManagerEmail || '',
-          stageManagerPhone: data.stageManagerPhone || '',
-          propsSupervisorEmail: data.propsSupervisorEmail || '',
-          propsSupervisorPhone: data.propsSupervisorPhone || '',
-          productionContactName: data.productionContactName || '',
-          productionContactEmail: data.productionContactEmail || '',
-          productionContactPhone: data.productionContactPhone || ''
-        } as Show);
-      } else {
-        router.push('/shows');
-      }
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching show details:', error);
-      setError('Failed to load show details.');
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [id, service]);
-
-  // Add effect to fetch prop statistics
-  useEffect(() => {
-    if (!id) return;
-
-    const unsubscribe = onSnapshot(
-      query(collection(service.firestore(), 'props'), where('showId', '==', id)),
-      (snapshot) => {
-        const stats = snapshot.docs.reduce((acc, doc) => {
-          const prop = doc.data();
-          return {
-            totalProps: acc.totalProps + 1,
-            totalValue: acc.totalValue + (prop.price || 0),
-            totalWeight: acc.totalWeight + (prop.weight || 0)
-          };
-        }, { totalProps: 0, totalValue: 0, totalWeight: 0 });
-        
-        setPropStats(stats);
+    const unsubscribeShow = firebaseService.listenToDocument<Show>(
+      `shows/${id}`,
+      (doc) => {
+        if (doc && doc.data) {
+          setShow({ ...doc.data, id: doc.id } as Show);
+          setError(null);
+        } else {
+          setShow(null);
+          setError('Show not found.');
+        }
+      },
+      (err) => {
+        console.error('Error fetching show:', err);
+        setError('Failed to load show details.');
+        setShow(null);
+        setLoading(false);
       }
     );
 
-    return () => unsubscribe();
-  }, [id, service]);
+    const unsubscribeProps = firebaseService.listenToCollection<Prop>(
+      'props',
+      (docs) => {
+        let totalValue = 0;
+        let totalWeight = 0;
+        docs.forEach(doc => {
+          const propData = doc.data;
+          if (propData) {
+            totalValue += (propData.price || 0) * (propData.quantity || 1);
+            totalWeight += (propData.weight || 0) * (propData.quantity || 1);
+          }
+        });
+        setPropStats({ totalProps: docs.length, totalValue, totalWeight });
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error fetching props for stats:', err);
+        setLoading(false);
+      },
+      { where: [['showId', '==', id]] }
+    );
+
+    return () => {
+      if (unsubscribeShow) unsubscribeShow();
+      if (unsubscribeProps) unsubscribeProps();
+    };
+  }, [id, firebaseService]);
 
   const handleEdit = () => {
-    if (!show) return;
-    router.push(`/shows/edit/${show.id}` as any);
-  };
-
-  const handleAddProp = () => {
-    router.push(`/shows/${id}/props/new` as any);
-  };
-
-  const handleViewProp = (propId: string) => {
-    router.push(`/shows/${id}/props/${propId}` as any);
+    if (Platform.OS === 'web') {
+      if (onEdit && show) {
+          onEdit(show)
+      } else {
+          console.error("Show edit page route /shows/[id]/edit is not yet implemented or defined. Edit cannot proceed via navigation.");
+          if (id) {
+            Alert.alert("Edit Show", "This feature (editing show details via a separate page) is not yet implemented.");
+          } else {
+            console.error("Show ID is undefined, cannot navigate to edit page.");
+          }
+      }
+    } else {
+        Alert.alert("Feature not available", "Editing shows is currently only supported on the web version.");
+    }
   };
 
   const handleDelete = async () => {
-    if (!id || !service?.deleteDocument) {
-      Alert.alert("Error", "Cannot delete show. Service unavailable.");
-      return;
-    }
-    Alert.alert(
-      "Delete Show",
-      "Are you sure you want to delete this show?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await service.deleteDocument('shows', id);
-              router.back();
-            } catch (error) {
-              console.error('Error deleting show:', error);
-              Alert.alert("Error", "Failed to delete show. Please try again.");
-            } finally {
-              setLoading(false);
-            }
-          }
+    if (!id || !firebaseService || !show) return;
+
+    const confirmDelete = async () => {
+        try {
+          await firebaseService.deleteShow(id); 
+          router.push('/shows');
+        } catch (err) {
+          console.error('Error deleting show:', err);
+          Alert.alert('Error', 'Failed to delete show.');
         }
-      ]
-    );
+    };
+
+    if (Platform.OS === 'web') {
+        if (window.confirm(`Are you sure you want to delete "${show.name}"? This action cannot be undone.`)) {
+            confirmDelete();
+        }
+    } else {
+        Alert.alert(
+          'Delete Show',
+          `Are you sure you want to delete "${show.name}"? This action cannot be undone.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: confirmDelete },
+          ]
+        );
+    }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] p-8 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[var(--text-secondary)]">Loading show details...</p>
-        </div>
+      <div className="flex items-center justify-center h-screen">
+        <ActivityIndicator size="large" color="var(--highlight-color)" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ color: 'red', fontSize: 18, textAlign: 'center', marginBottom: 20 }}>{error}</Text>
+        {Platform.OS === 'web' ? (
+            <Link href="/shows" className="text-[var(--highlight-color)] hover:underline">
+              Go back to Shows
+            </Link>
+        ) : (
+            <TouchableOpacity onPress={() => router.push('/shows')}>
+                <Text style={{ color: 'blue'}}>Go back to Shows</Text>
+            </TouchableOpacity>
+        )}
+      </View>
     );
   }
 
   if (!show) return null;
 
-  // Ensure we have arrays even if they're undefined
   const acts = Array.isArray(show.acts) ? show.acts : [];
   const venues = Array.isArray(show.venues) ? show.venues : [];
   const contacts = Array.isArray(show.contacts) ? show.contacts : [];
+
+  if (Platform.OS !== 'web') {
+    return (
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+            <Text style={{color: 'orange', fontSize: 16, textAlign: 'center'}}>
+                Show Detail Page is currently available on web only.
+            </Text>
+        </View>
+    )
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -293,12 +272,16 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                     {venues.map((venue: Venue, index: number) => (
                       <div key={index} className="p-3 bg-[var(--bg-secondary)] rounded-lg">
                         <p className="font-medium text-[var(--text-primary)]">{venue.name}</p>
-                        <p className="text-sm text-[var(--text-secondary)]">{venue.address}</p>
+                        {venue.address && (
+                          <p className="text-sm text-[var(--text-secondary)]">
+                            {`${venue.address.street1 || ''}${venue.address.street2 ? `, ${venue.address.street2}` : ''}${venue.address.city ? `, ${venue.address.city}` : ''}${venue.address.postalCode ? `, ${venue.address.postalCode}` : ''}`.trim().replace(/^,|,$/g, '') || 'Address not specified'}
+                          </p>
+                        )}
                         <div className="mt-1 text-xs text-[var(--text-secondary)]">
-                          {venue.startDate} - {venue.endDate}
+                          {venue.startDate && venue.endDate ? `${venue.startDate} - ${venue.endDate}` : 'Dates not specified'}
                         </div>
                         {venue.notes && (
-                          <p className="mt-2 text-sm text-[var(--text-secondary)]">{venue.notes}</p>
+                          <p className="mt-2 text-sm text-[var(--text-secondary)]">Notes: {venue.notes}</p>
                         )}
                       </div>
                     ))}
@@ -307,7 +290,22 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
               ) : (
                 <div>
                   <h3 className="text-sm font-medium text-[var(--text-secondary)]">Venue</h3>
-                  <p className="text-[var(--text-primary)]">{venues[0]?.name || 'Not specified'}</p>
+                  {venues[0] ? (
+                    <div className="p-3 bg-[var(--bg-secondary)] rounded-lg">
+                        <p className="font-medium text-[var(--text-primary)]">{venues[0].name}</p>
+                        {venues[0].address && (
+                          <p className="text-sm text-[var(--text-secondary)]">
+                            {`${venues[0].address.street1 || ''}${venues[0].address.street2 ? `, ${venues[0].address.street2}` : ''}${venues[0].address.city ? `, ${venues[0].address.city}` : ''}${venues[0].address.postalCode ? `, ${venues[0].address.postalCode}` : ''}`.trim().replace(/^,|,$/g, '') || 'Address not specified'}
+                          </p>
+                        )}
+                        <div className="mt-1 text-xs text-[var(--text-secondary)]">
+                          {venues[0].startDate && venues[0].endDate ? `${venues[0].startDate} - ${venues[0].endDate}` : 'Dates not specified'}
+                        </div>
+                        {venues[0].notes && (
+                          <p className="mt-2 text-sm text-[var(--text-secondary)]">Notes: {venues[0].notes}</p>
+                        )}
+                    </div>
+                    ) : <p className="text-[var(--text-primary)]">Not specified</p> }
                 </div>
               )}
             </div>
@@ -341,9 +339,9 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           <div className="space-y-6">
             {acts.length > 0 ? (
               acts.map((act: Act) => (
-                <div key={act.id} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <div key={act.id as string | number} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
                   <h3 className="text-lg font-medium text-[var(--text-primary)] mb-3">
-                    Act {act.id}
+                    Act {act.id as string | number}
                     {act.name && <span className="text-[var(--text-secondary)] ml-2">- {act.name}</span>}
                   </h3>
                   {act.description && (
@@ -351,12 +349,15 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {Array.isArray(act.scenes) && act.scenes.map((scene: Scene) => (
-                      <div key={scene.id} className="p-3 bg-[var(--input-bg)] rounded-lg">
+                      <div key={scene.id as string | number} className="p-3 bg-[var(--input-bg)] rounded-lg">
                         <p className="font-medium text-[var(--text-primary)]">
-                          Scene {scene.id}: {scene.name || 'Untitled Scene'}
+                          Scene {scene.id as string | number}: {scene.name || 'Untitled Scene'}
                         </p>
+                        {scene.setting && (
+                          <p className="text-sm text-[var(--text-secondary)]">Setting: {scene.setting}</p>
+                        )}
                         {scene.description && (
-                          <p className="mt-1 text-sm text-[var(--text-secondary)]">{scene.description}</p>
+                          <p className="text-sm text-[var(--text-secondary)] mt-1">{scene.description}</p>
                         )}
                       </div>
                     ))}
@@ -364,32 +365,65 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                 </div>
               ))
             ) : (
-              <p className="text-[var(--text-secondary)]">No acts defined for this show.</p>
+              <p className="text-[var(--text-secondary)]">No acts or scenes defined for this show yet.</p>
             )}
           </div>
         </div>
 
-        {contacts.length > 0 && (
+        {Array.isArray(show.collaborators) && show.collaborators.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Key Contacts</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {contacts.map((contact: Contact, index: number) => (
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Collaborators</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {show.collaborators.map((collaborator, index) => (
                 <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
-                  <h3 className="font-medium text-[var(--text-primary)]">{contact.name}</h3>
-                  <p className="text-sm text-[var(--text-secondary)] mb-2">{contact.role}</p>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-[var(--text-secondary)]">{contact.email}</p>
-                    {contact.phone && (
-                      <p className="text-[var(--text-secondary)]">{contact.phone}</p>
-                    )}
-                  </div>
+                  <p className="font-medium text-[var(--text-primary)]">{collaborator.email}</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Role: {collaborator.role}</p>
+                  <p className="text-xs text-gray-400 mt-1">Added by: {collaborator.addedBy} on {typeof collaborator.addedAt === 'string' ? collaborator.addedAt : collaborator.addedAt?.toDate().toLocaleDateString()}</p>
+                  {user?.email === collaborator.addedBy && (
+                     <button 
+                        className="mt-2 text-xs text-red-500 hover:text-red-700"
+                      >
+                       <UserMinus className="inline h-3 w-3 mr-1"/> Remove
+                     </button>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Collaborators Section */}
+        {Array.isArray(contacts) && contacts.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Key Contacts</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {contacts.map((contact: Contact, index: number) => (
+                <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                  <p className="font-medium text-[var(--text-primary)]">{contact.name} <span className="text-sm text-[var(--text-secondary)]">({contact.role})</span></p>
+                  {contact.email && <p className="text-sm text-[var(--text-secondary)]"><a href={`mailto:${contact.email}`} className="hover:text-primary">{contact.email}</a></p>}
+                  {contact.phone && <p className="text-sm text-[var(--text-secondary)]"><a href={`tel:${contact.phone}`} className="hover:text-primary">{contact.phone}</a></p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-12 flex justify-end space-x-4">
+          <button
+            onClick={() => router.push(`/props/add?showId=${id}`)}
+            className="px-6 py-2.5 bg-[var(--highlight-color)] text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 transition-colors flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Add Prop
+          </button>
+          <button
+            onClick={handleDelete}
+            className="px-6 py-2.5 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition-colors flex items-center"
+          >
+            <Trash2 className="h-5 w-5 mr-2" />
+            Delete Show
+          </button>
+        </div>
+
         {show.collaborators && show.collaborators.length > 0 && (
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
@@ -411,7 +445,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                         </span>
                         {collaborator.addedAt && (
                           <span className="ml-2 text-xs text-[var(--text-secondary)]">
-                            Added {new Date(collaborator.addedAt).toLocaleDateString()}
+                            Added {typeof collaborator.addedAt === 'string' ? collaborator.addedAt : collaborator.addedAt?.toDate().toLocaleDateString()}
                           </span>
                         )}
                       </div>

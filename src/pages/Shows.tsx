@@ -39,7 +39,7 @@ export default function Shows() {
             <Text style={styles.showDescription}>{item.description}</Text>
             <View style={styles.showMeta}>
               <Text style={styles.showMetaText}>
-                {item.acts.length} Acts • {item.productionCompany}
+                {item.acts?.length || 0} Acts • {item.productionCompany}
               </Text>
             </View>
           </TouchableOpacity>

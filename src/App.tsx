@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, doc, addDoc, deleteDoc, updateDoc, arrayUnion, arrayRemove, setDoc, getDocs, getDoc } from 'firebase/firestore';
-import { onAuthStateChanged, signOut, getRedirectResult, GoogleAuthProvider, linkWithCredential } from 'firebase/auth';
+import { onAuthStateChanged, signOut, getRedirectResult, GoogleAuthProvider, linkWithCredential, User as FirebaseUserJs } from 'firebase/auth';
+import { arrayUnion, arrayRemove } from 'firebase/firestore';
 import { AuthForm } from './components/AuthForm';
 import { PropForm } from './components/PropForm';
 import { PropList } from './components/PropList';
@@ -9,7 +9,8 @@ import { UserProfileModal } from './components/UserProfile';
 import { ShareModal } from './components/ShareModal';
 import { WebFirebaseService } from './platforms/web/services/firebase';
 import type { Prop, PropFormData } from './shared/types/props';
-import type { Filters, Show, ShowFormData } from './types';
+import type { Filters } from './types';
+import type { Show, ShowFormData } from './types/index';
 import { LogOut, PlusCircle, Pencil, Trash2, Plus } from 'lucide-react';
 import ShowForm from './components/ShowForm';
 import { SearchBar } from './components/SearchBar';
@@ -17,6 +18,17 @@ import { PropFilters } from './components/PropFilters';
 import { ExportToolbar } from './components/ExportToolbar';
 import { OnboardingGuide } from './components/OnboardingGuide';
 import Sidebar from './components/Sidebar';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ShowsProvider } from './contexts/ShowsContext';
+import { PropsProvider } from './contexts/PropsContext';
+import { FirebaseProvider, useFirebase } from './contexts/FirebaseContext';
+// import { OfflineSyncProvider } from './contexts/OfflineSyncContext'; // Commented out as file not found
+import { RootNavigator } from './navigation/RootNavigator';
+import { useFonts } from './hooks/useFonts';
+// import SplashScreen from './screens/SplashScreen'; // Commented out as file not found
 
 const initialFilters: Filters = {
   search: '',
@@ -28,8 +40,9 @@ const initialFilters: Filters = {
 // Instantiate the service
 const firebaseService = new WebFirebaseService();
 // Get auth and db instances (assuming firestore() returns the db instance)
-let auth: ReturnType<typeof firebaseService.auth> | null = null;
-let db: ReturnType<typeof firebaseService.firestore> | null = null;
+// let auth: ReturnType<typeof firebaseService.auth> | null = null; // Old: CustomAuth | null
+let webAuthInstance: import('firebase/auth').Auth | null = null; // New: Firebase JS Auth | null
+// let db: ReturnType<typeof firebaseService.firestore> | null = null;
 
 function App() {
   const [showAuth, setShowAuth] = useState(false);
@@ -39,7 +52,8 @@ function App() {
   const [props, setProps] = useState<Prop[]>([]);
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(auth?.currentUser);
+  // User state will be FirebaseUserJs | null due to webAuthInstance.currentUser and onAuthStateChanged
+  const [user, setUser] = useState(webAuthInstance?.currentUser); 
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [activeTab, setActiveTab] = useState<'props' | 'shows' | 'packing'>('props');
   const [selectedProp, setSelectedProp] = useState<Prop | null>(null);
@@ -54,8 +68,9 @@ function App() {
     const initFirebase = async () => {
       try {
         await firebaseService.initialize();
-        auth = firebaseService.auth(); // Assign after initialization
-        db = firebaseService.firestore(); // Assign after initialization
+        // auth = firebaseService.auth(); // Old
+        webAuthInstance = firebaseService.getFirebaseAuthJsInstance(); // New
+        // db = firebaseService.firestore(); 
         setFirebaseInitialized(true);
         console.log('Firebase initialized in App.tsx');
       } catch (error) {
@@ -67,11 +82,11 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!firebaseInitialized || !auth) { // Wait for initialization and auth instance
+    if (!firebaseInitialized || !webAuthInstance) { // New guard
       return;
     }
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribeAuth = onAuthStateChanged(webAuthInstance, (user) => {
+      setUser(user as FirebaseUserJs | null);
       if (!user) {
         setShowAuth(true);
         setShows([]);
@@ -85,162 +100,150 @@ function App() {
   }, [firebaseInitialized]); // Depend on initialization state
 
   useEffect(() => {
-    if (!user || !db || !firebaseInitialized) { // Wait for user, db, and initialization
+    if (!user || !firebaseInitialized || !firebaseService) { 
       return;
     }
-
-    const showsQuery = query(
-      collection(db, 'shows'),
-      where('userId', '==', user.uid)
+    const showsUnsubscribe = firebaseService.listenToCollection<Show>(
+      'shows',
+      (docs) => {
+        const showsData = docs.map(doc => {
+          const data = { ...doc.data }; // Clone data to safely delete id if it exists
+          if (!data) return null;
+          if ('id' in data && typeof data.id === 'string') { // Ensure data.id is not doc.id
+            delete data.id; 
+          }
+          const acts = Array.isArray(data.acts) ? data.acts.map((act: any) => ({
+            ...act,
+            id: act.id || 1,
+            scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
+              ...scene,
+              id: scene.id || 1
+            })) : []
+          })) : [{
+            id: 1,
+            name: 'Act 1',
+            scenes: [{ id: 1, name: 'Scene 1' }]
+          }];
+          return { id: doc.id, ...data, acts, collaborators: Array.isArray(data.collaborators) ? data.collaborators : [] } as Show;
+        }).filter(Boolean) as Show[];
+        
+        setShows(showsData);
+        if (showsData.length > 0 && !selectedShow) {
+          setSelectedShow(showsData[0]);
+        }
+      },
+      (error) => console.error('Error listening to shows:', error),
+      { where: [['userId', '==', user.uid]] }
     );
-
-    const showsUnsubscribe = onSnapshot(showsQuery, (snapshot) => {
-      const showsData: Show[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        // Ensure acts array is properly initialized with scenes
-        const acts = Array.isArray(data.acts) ? data.acts.map((act: any) => ({
-          ...act,
-          id: act.id || 1,
-          scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
-            ...scene,
-            id: scene.id || 1
-          })) : []
-        })) : [{
-          id: 1,
-          name: 'Act 1',
-          scenes: [{ id: 1, name: 'Scene 1' }]
-        }];
-
-        showsData.push({
-          id: doc.id,
-          ...data,
-          acts,
-          collaborators: Array.isArray(data.collaborators) ? data.collaborators : []
-        } as Show);
-      });
-      setShows(showsData);
-      
-      // Automatically select the first show if no show is currently selected
-      if (showsData.length > 0 && !selectedShow) {
-        console.log('Auto-selecting first show:', showsData[0].id);
-        setSelectedShow(showsData[0]);
-      }
-    });
-
     return () => {
-      showsUnsubscribe();
+      if (showsUnsubscribe) showsUnsubscribe();
     };
-  }, [user, selectedShow, firebaseInitialized]); // Depend on initialization state
+  }, [user, selectedShow, firebaseInitialized, firebaseService]);
 
   useEffect(() => {
-    if (!user || !selectedShow || !db || !firebaseInitialized) { // Wait for user, show, db, and initialization
+    if (!user || !selectedShow || !firebaseInitialized || !firebaseService) { // Wait for user, show, firebaseService, and initialization
       setProps([]);
       setLoading(false);
       return;
     }
 
     console.log('Loading props for show:', selectedShow.id);
-    console.log('Current user ID:', user.uid);
 
-    const propsQuery = query(
-      collection(db, 'props'),
-      where('showId', '==', selectedShow.id)
-    );
-
-    console.log('Creating listener for props with query:', { showId: selectedShow.id });
-
-    const unsubscribe = onSnapshot(propsQuery, (snapshot) => {
-      try {
-        console.log('Props snapshot received, document count:', snapshot.docs.length);
-        const propsData: Prop[] = [];
-        snapshot.forEach((doc) => {
-          console.log('Processing prop document:', doc.id);
-          propsData.push({ id: doc.id, ...doc.data() } as Prop);
-        });
+    // Use firebaseService.listenToCollection for props
+    const propsUnsubscribe = firebaseService.listenToCollection<Prop>(
+      'props',
+      (docs) => {
+        console.log('Props snapshot received, document count:', docs.length);
+        const propsData = docs.map(doc => ({ id: doc.id, ...doc.data } as Prop));
         console.log('Loaded props:', propsData.length);
         setProps(propsData);
         setLoading(false);
-      } catch (error) {
-        console.error('Error processing props data:', error);
+      },
+      (error) => {
+        console.error('Error in props snapshot listener:', error);
         setLoading(false);
-      }
-    }, (error) => {
-      console.error('Error in props snapshot listener:', error);
-      setLoading(false);
-    });
+      },
+      { where: [['showId', '==', selectedShow.id]] } // QueryOptions
+    );
 
-    return () => unsubscribe();
-  }, [user, selectedShow, firebaseInitialized]); // Depend on initialization state
+    return () => {
+      if (propsUnsubscribe) propsUnsubscribe();
+    };
+  }, [user, selectedShow, firebaseInitialized, firebaseService]); // Add firebaseService
 
   // Handle redirect result from Google Sign-in
   useEffect(() => {
-    if (!firebaseInitialized || !auth || !db) { // Wait for initialization, auth, and db
+    if (!firebaseInitialized || !webAuthInstance || !firebaseService) { // Use firebaseService instead of db
        return;
     }
+    const currentAuth = webAuthInstance;
+
     const handleRedirectResult = async () => {
       try {
-        // Check if there's a redirect result
-        const result = await getRedirectResult(auth);
-        
-        if (result) {
+        const result = await getRedirectResult(currentAuth);
+        if (result && user) { // ensure user is not null
           console.log('Redirect authentication result:', result);
-
-          // Check if we were trying to link accounts
           const shouldLink = localStorage.getItem('linkGoogleAccount') === 'true';
           const linkEmail = localStorage.getItem('linkEmail');
           
-          if (shouldLink && linkEmail && user) {
+          if (shouldLink && linkEmail) {
             console.log(`Attempting to link Google account to ${linkEmail}`);
-
-            try {
-              // Check if the Google account email matches the user's email
-              const googleEmail = result.user.email;
+            const googleEmail = result.user.email;
+            if (googleEmail !== linkEmail) {
+              console.error('Email mismatch:', { googleEmail, linkEmail });
+              window.alert('Please use the same Google account as your current email.');
+              return;
+            }
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential) {
+              await linkWithCredential(user as FirebaseUserJs, credential); // Cast user
               
-              if (googleEmail !== linkEmail) {
-                console.error('Email mismatch:', { googleEmail, linkEmail });
-                window.alert('Please use the same Google account as your current email.');
-                return;
-              }
-              
-              // Get the credential from the redirect result
-              const credential = GoogleAuthProvider.credentialFromResult(result);
-              
-              if (credential) {
-                // Link the credential to the current user
-                await linkWithCredential(user, credential);
-                
-                // Update the user profile in Firestore
-                await setDoc(doc(db, 'userProfiles', user.uid), {
+              // Use firebaseService.setDocument
+              const firebaseUserForSet = user as FirebaseUserJs;
+              console.log('[App.tsx] Attempting to setDoc for user:', firebaseUserForSet?.uid);
+              try {
+                await firebaseService.setDocument('userProfiles', firebaseUserForSet.uid, { 
                   googleLinked: true,
-                  photoURL: result.user.photoURL || user.photoURL,
-                  displayName: result.user.displayName || user.displayName,
+                  photoURL: result.user.photoURL || firebaseUserForSet.photoURL,
+                  displayName: result.user.displayName || firebaseUserForSet.displayName,
                   lastUpdated: new Date().toISOString()
                 }, { merge: true });
-                
                 console.log('Successfully linked Google account');
                 window.alert('Successfully linked your Google account!');
-              } else {
-                window.alert('Failed to link Google account. No valid credentials received.');
+              } catch (e) {
+                console.error("Error updating user profile after link:", e);
+                window.alert('Failed to update profile after linking. Please try again.');
               }
-            } catch (error: any) {
-              console.error('Error linking account:', error);
-              window.alert(error?.message || 'Failed to link Google account. The account may already be in use.');
+            } else {
+              window.alert('Failed to link Google account. No valid credentials received.');
             }
+            localStorage.removeItem('linkGoogleAccount');
+            localStorage.removeItem('linkEmail');
+          } else if (!shouldLink) {
+            // This is a fresh sign-in, not an account link
+            const firebaseUserForGet = result.user as FirebaseUserJs;
+            const profileDocSnap = await firebaseService.getDocument('userProfiles', firebaseUserForGet.uid);
+            
+            if (!profileDocSnap || !profileDocSnap.data?.onboardingCompleted) {
+              setShowOnboarding(true);
+            } 
           }
         }
       } catch (error: any) {
-        console.error('Error handling redirect result:', error);
-        window.alert(error?.message || 'An error occurred while handling Google sign-in.');
-      } finally {
-        // Always clear the localStorage flags
-        localStorage.removeItem('linkGoogleAccount');
-        localStorage.removeItem('linkEmail');
+        console.error("Error handling redirect result:", error);
+        if (error.code === 'auth/account-exists-with-different-credential') {
+          window.alert('An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.');
+        }
       }
     };
-    
-    handleRedirectResult();
-  }, [user, firebaseInitialized]); // Depend on initialization state
+
+    if (document.readyState === "complete") { // Ensure DOM is ready for localStorage interaction
+        handleRedirectResult();
+    } else {
+        window.addEventListener('load', handleRedirectResult);
+        return () => window.removeEventListener('load', handleRedirectResult);
+    }
+  }, [firebaseInitialized, webAuthInstance, user, firebaseService]); // Add firebaseService, user
 
   // Add effect to sync activeTab with current route
   useEffect(() => {
@@ -256,20 +259,19 @@ function App() {
 
   // Check if onboarding is needed
   useEffect(() => {
-    if (!user || !db || !firebaseInitialized) { // Wait for user, db, and initialization
+    if (!user || !firebaseInitialized || !firebaseService) { // Wait for user, firebaseService, and initialization
       return;
     }
     const checkOnboarding = async () => {
-      if (!user) { // This condition seems wrong, should likely be if(user)
-        const profileDoc = await getDoc(doc(db, 'userProfiles', user.uid));
-        if (!profileDoc.exists() || !profileDoc.data().onboardingCompleted) {
+      if (user) {
+        const profileDocSnap = await firebaseService.getDocument('userProfiles', user.uid);
+        if (!profileDocSnap || !profileDocSnap.data?.onboardingCompleted) {
           setShowOnboarding(true);
         }
       }
     };
-
     checkOnboarding();
-  }, [user, firebaseInitialized]); // Depend on initialization state
+  }, [user, firebaseInitialized, firebaseService]); // Depend on initialization state
 
   // Add effect to log computed styles after mount & init
   useEffect(() => {
@@ -299,64 +301,41 @@ function App() {
   };
 
   const handlePropSubmit = async (data: PropFormData) => {
-    if (!user || !selectedShow || !db || !firebaseInitialized) { // Check db and initialization
-      console.error('User, selected show, or DB not available');
-      return;
-    }
-
+    if (!user || !selectedShow || !firebaseService) return; // Use firebaseService
+    const propData = { ...data, userId: user.uid, showId: selectedShow.id, createdAt: new Date().toISOString() };
     try {
-      console.log('Creating prop for show:', selectedShow.id);
-      const propData = {
-        ...data,
-        userId: user.uid,
-        showId: selectedShow.id,
-        createdAt: new Date().toISOString()
-      };
-
-      console.log('Prop data to be created:', propData);
-      const docRef = await addDoc(collection(db, 'props'), propData);
-      console.log('Created prop with ID:', docRef.id);
-    } catch (error) {
-      console.error('Error adding prop:', error);
-      alert('Failed to add prop. Please try again.');
+      await firebaseService.addDocument('props', propData); // Use firebaseService.addDocument
+      setShowEditModal(false);
+    } catch (e) {
+      console.error("Error adding prop: ", e);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!db || !firebaseInitialized) return; // Check db and initialization
+    if (!firebaseService) return; // Use firebaseService
     try {
-      await deleteDoc(doc(db, 'props', id));
-      console.log('Prop deleted successfully');
-    } catch (error) {
-      console.error('Error deleting prop:', error);
-      alert('Failed to delete prop. Please try again.');
+      await firebaseService.deleteDocument('props', id); // Use firebaseService.deleteDocument
+    } catch (e) {
+      console.error("Error deleting prop: ", e);
     }
   };
 
   const handleUpdatePrice = async (id: string, newPrice: number) => {
-    if (!db || !firebaseInitialized) return; // Check db and initialization
-    const propRef = doc(db, 'props', id); // Use db instance
+    if (!firebaseService) return; // Use firebaseService
     try {
-      await updateDoc(propRef, { price: newPrice });
-      console.log('Prop price updated successfully');
-    } catch (error) {
-      console.error('Error updating price:', error);
-      alert('Failed to update price. Please try again.');
+      await firebaseService.updateDocument('props', id, { price: newPrice }); // Use firebaseService.updateDocument
+    } catch (e) {
+      console.error("Error updating prop price: ", e);
     }
   };
 
   const handleEdit = async (id: string, data: PropFormData) => {
-    if (!db || !firebaseInitialized) return; // Check db and initialization
-    const propRef = doc(db, 'props', id); // Use db instance
+    if (!firebaseService) return; // Use firebaseService
     try {
-      await updateDoc(propRef, {
-        ...data,
-        lastModifiedAt: new Date().toISOString()
-      });
-      console.log('Prop updated successfully');
-    } catch (error) {
-      console.error('Error updating prop:', error);
-      alert('Failed to update prop. Please try again.');
+      await firebaseService.updateDocument('props', id, data); // Use firebaseService.updateDocument
+      setShowEditModal(false);
+    } catch (e) {
+      console.error("Error editing prop: ", e);
     }
   };
 
@@ -366,35 +345,32 @@ function App() {
   };
 
   const handleAddCollaborator = async (email: string, role: 'editor' | 'viewer') => {
-    if (!selectedShow || !user || !db || !firebaseInitialized) return;
-
+    if (!selectedShow || !user || !firebaseService) return;
+    const collaborator = { email, role, addedBy: user.email, addedAt: new Date().toISOString() };
     try {
-      const collaborator = {
-        email,
-        role,
-        addedAt: new Date().toISOString(),
-        addedBy: user.email || ''
-      };
-
-      await updateDoc(doc(db, 'shows', selectedShow.id), {
-        collaborators: arrayUnion(collaborator)
-      });
-    } catch (error) {
-      console.error('Error adding collaborator:', error);
-      throw error;
+      await firebaseService.updateDocument('shows', selectedShow.id, { collaborators: arrayUnion(collaborator) });
+      const updatedShowDoc = await firebaseService.getDocument<Show>('shows', selectedShow.id);
+      if (updatedShowDoc && updatedShowDoc.data) {
+        setSelectedShow({ ...updatedShowDoc.data, id: updatedShowDoc.id });
+      }
+      setShowShareModal(false);
+    } catch (e) {
+      console.error("Error adding collaborator: ", e);
     }
   };
 
   const handleRemoveCollaborator = async (email: string) => {
-    if (!selectedShow || !db || !firebaseInitialized) return;
-    const showRef = doc(db, 'shows', selectedShow.id);
+    if (!selectedShow || !firebaseService) return;
+    const collaboratorToRemove = selectedShow.collaborators?.find(c => c.email === email);
+    if (!collaboratorToRemove) return;
     try {
-      await updateDoc(showRef, {
-        collaborators: arrayRemove(email)
-      });
-    } catch (error) {
-      console.error('Error removing collaborator:', error);
-      throw error;
+      await firebaseService.updateDocument('shows', selectedShow.id, { collaborators: arrayRemove(collaboratorToRemove) });
+      const updatedShowDoc = await firebaseService.getDocument<Show>('shows', selectedShow.id);
+      if (updatedShowDoc && updatedShowDoc.data) {
+        setSelectedShow({ ...updatedShowDoc.data, id: updatedShowDoc.id });
+      }
+    } catch (e) {
+      console.error("Error removing collaborator: ", e);
     }
   };
 
@@ -403,126 +379,114 @@ function App() {
   };
 
   const handleCreateShow = async () => {
-    if (!user || !db || !firebaseInitialized) return; // Check db and initialization
-
-    const newShowData = {
+    if (!user || !firebaseService) return;
+    const newShowData: Omit<Show, 'id'> & { userId: string; createdAt: string } = {
       name: 'New Show',
-      description: '',
-      acts: [{ id: 1, name: 'Act 1', scenes: [{ id: 1, name: 'Scene 1' }] }],
       userId: user.uid,
-      createdAt: new Date().toISOString(),
-      collaborators: [],
+      description: '',
+      startDate: null,
+      endDate: null,
+      imageUrl: '',
       stageManager: '',
       stageManagerEmail: '',
+      stageManagerPhone: '',
       propsSupervisor: '',
       propsSupervisorEmail: '',
+      propsSupervisorPhone: '',
       productionCompany: '',
       productionContactName: '',
       productionContactEmail: '',
-      venues: [],
+      productionContactPhone: '',
       isTouringShow: false,
+      venues: [],
+      acts: [{ id: 1, name: 'Act 1', scenes: [{ id: 1, name: 'Scene 1', setting: '', description: '' }], description: '' }],
+      collaborators: [],
       contacts: [],
-      lastUpdated: new Date().toISOString()
+      status: 'planning',
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      defaultActId: '1',
+      defaultSceneId: '1'
     };
-
     try {
-      const docRef = await addDoc(collection(db, 'shows'), newShowData);
-      console.log('New show created with ID:', docRef.id);
-      // Optionally select the new show immediately
-      // const newShow = { id: docRef.id, ...newShowData } as Show;
-      // setSelectedShow(newShow);
-    } catch (error) {
-      console.error('Error creating new show:', error);
-      alert('Failed to create new show. Please try again.');
+      const docRef = await firebaseService.addDocument('shows', newShowData as any);
+      if (docRef) {
+        const fullNewShow = { ...newShowData, id: docRef.id } as Show;
+        setSelectedShow(fullNewShow);
+        handleOpenShowForm('edit', fullNewShow);
+      }
+    } catch (e) {
+      console.error("Error creating show: ", e);
     }
   };
 
   const handleShowSubmit = async (data: Show) => {
-    if (!user || !db || !firebaseInitialized) return; // Check db and initialization
-
-    console.log('Submitting show form data:', data);
-
-    // Prepare the data for Firestore, ensuring acts/scenes have IDs if missing
-    const showDataToSave = {
-      ...data,
-      userId: user.uid,
-      lastUpdated: new Date().toISOString(),
-      acts: (data.acts || []).map((act, actIndex) => ({
-        id: act.id || actIndex + 1, // Ensure act ID
-        name: act.name || `Act ${actIndex + 1}`,
-        scenes: (act.scenes || []).map((scene, sceneIndex) => ({
-          id: scene.id || sceneIndex + 1, // Ensure scene ID
-          name: scene.name || `Scene ${sceneIndex + 1}`
-        }))
-      }))
-    };
-
+    if (!user || !firebaseService) return; // Use firebaseService
+    setLoading(true);
     try {
-      if (showFormMode === 'edit' && editingShow) {
-        console.log('Updating show:', editingShow.id);
-        const showRef = doc(db, 'shows', editingShow.id);
-        await updateDoc(showRef, showDataToSave);
-        console.log('Show updated successfully');
+      if (editingShow && editingShow.id) {
+        // Update existing show
+        const showDataToSave = { ...data };
+        delete (showDataToSave as any).id; // Remove id before saving, Firestore uses document ID
+        await firebaseService.setDocument('shows', editingShow.id, showDataToSave); // Use firebaseService.setDocument
+        setEditingShow(null);
       } else {
-        console.log('Adding new show');
-        const docRef = await addDoc(collection(db, 'shows'), showDataToSave);
-        console.log('Show added successfully with ID:', docRef.id);
-        // Optionally, select the newly created show
-        // setSelectedShow({ ...showDataToSave, id: docRef.id });
+        // Create new show
+        const showDataToSave = { ...data, userId: user.uid, createdAt: new Date().toISOString() };
+        delete (showDataToSave as any).id;
+        const docRef = await firebaseService.addDocument('shows', showDataToSave);
+        if (docRef) {
+          setSelectedShow({ ...data, id: docRef.id }); 
+        }
       }
-      setEditingShow(null);
-      setShowEditModal(false);
-    } catch (error) {
-      console.error('Error saving show:', error);
-      // Consider adding user feedback here (e.g., toast notification)
+      setShowFormMode('create');
+      // Refresh shows list implicitly by onSnapshot listener
+    } catch (e) {
+      console.error("Error saving show: ", e);
+      // Potentially show an error to the user
+    } finally {
+      setLoading(false);
+      setEditingShow(null); // Close modal/form
     }
   };
 
   const handleDeleteShow = async (showId: string) => {
-    if (!db || !firebaseInitialized) return; // Check db and initialization
-    console.log('Attempting to delete show:', showId);
-    if (!window.confirm('Are you sure you want to delete this show and all its props? This cannot be undone.')) {
-      return;
-    }
-
+    if (!firebaseService) return; // Use firebaseService
+    setLoading(true);
     try {
-      // Delete props associated with the show
-      const propsQuery = query(collection(db, 'props'), where('showId', '==', showId));
-      const propsSnapshot = await getDocs(propsQuery);
-      const deletePromises: Promise<void>[] = [];
-      propsSnapshot.forEach((propDoc) => {
-        console.log('Deleting prop:', propDoc.id);
-        deletePromises.push(deleteDoc(doc(db, 'props', propDoc.id)));
-      });
+      // First, delete all props associated with the show
+      const propsSnapshot = await firebaseService.getDocuments<Prop>(
+        'props',
+        { where: [['showId', '==', showId]] }
+      );
+      const deletePromises = propsSnapshot.map(propDoc => firebaseService.deleteDocument('props', propDoc.id));
       await Promise.all(deletePromises);
-      console.log('Deleted associated props for show:', showId);
 
-      // Delete the show document
-      await deleteDoc(doc(db, 'shows', showId));
-      console.log('Show deleted successfully:', showId);
+      // Then, delete the show itself
+      await firebaseService.deleteDocument('shows', showId);
 
-      // Reset selected show if it was the one deleted
+      setShows(prevShows => prevShows.filter(s => s.id !== showId));
       if (selectedShow?.id === showId) {
-        setSelectedShow(null);
-        setShows(shows.filter(s => s.id !== showId));
-        if (shows.length > 1) {
-           setSelectedShow(shows.find(s => s.id !== showId) || null);
-        }
+        setSelectedShow(shows.length > 0 ? shows[0] : null);
       }
-    } catch (error) {
-      console.error('Error deleting show:', error);
+    } catch (e) {
+      console.error("Error deleting show and its props: ", e);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    if (!auth || !firebaseInitialized) return; // Check auth and initialization
+    if (!webAuthInstance || !firebaseService) return; // Use firebaseService for signOut
     try {
-      await signOut(auth);
+      // await signOut(webAuthInstance); // Old direct call
+      await firebaseService.signOut(); // Use service method
       setUser(null);
       setProps([]);
       setShows([]);
       setSelectedShow(null);
       setShowAuth(true);
+      setShowProfile(false);
     } catch (error) {
       console.error('Error signing out: ', error);
     }

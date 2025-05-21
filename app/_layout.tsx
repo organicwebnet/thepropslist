@@ -1,90 +1,44 @@
 // import '../global.css'; // REMOVE THIS LINE - Incorrect for native
 // Conditionally import global CSS for web
-if (Platform.OS === 'web') {
-  require('../global.css'); 
-}
+// if (Platform.OS === 'web') {
+//   require('../global.css'); 
+// }
 
 import React, { useEffect, type PropsWithChildren } from 'react';
-import { Stack, router, Slot } from 'expo-router';
-import { useFonts } from 'expo-font';
+import { Slot, Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
 import { PropsProvider } from '../src/contexts/PropsContext';
 import { ShowsProvider } from '../src/contexts/ShowsContext';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
-import { AuthForm } from '../src/components/AuthForm';
+import { FontProvider, useFont, FontChoice } from '../src/contexts/FontContext';
 import { NativeAuthScreen } from '../src/components/NativeAuthScreen';
-import { TopNavBar } from '../src/components/navigation/TopNavBar';
-import { View, Text, StyleSheet, Platform, ActivityIndicator } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
-import * as Linking from 'expo-linking';
-// Import getApps alongside the default import
-import nativeFirebaseApp, { getApps } from '@react-native-firebase/app';
+import { View, ActivityIndicator, Platform, StyleSheet, Text } from 'react-native';
+import { useFonts } from 'expo-font';
+// import * as SplashScreen from 'expo-splash-screen'; // Commented out
 
-// Use getApps() for the check
-console.log('--- RNFirebase App Check:', getApps().length > 0 ? 'Apps found' : 'NO APPS FOUND');
+// SplashScreen.preventAutoHideAsync(); // Commented out
 
-// Uncomment SplashScreen 
-SplashScreen.preventAutoHideAsync();
-// const prefix = Linking.createURL('/');
-
-// Keep unstable_settings with initialRouteName set
-export const unstable_settings = {
-//  initialRouteName: '(tabs)/props', // Temporarily remove to see if it affects web routing
-  router: {
-    unstable_enableDirectoryLinks: true,
-  },
-};
-
+// Original RootLayoutNav (slightly simplified for now)
 function RootLayoutNav() {
   console.log("--- Rendering: RootLayoutNav (Mobile) ---");
   return (
     <Stack
       screenOptions={{
-        headerStyle: {
-          backgroundColor: '#25292e', // Match tab bar color
-        },
-        headerTintColor: '#FFFFFF', // White text for dark background
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
-        // gestureEnabled: false, // Keep gestureEnabled if needed
-        // headerShown: false // Remove default hiding
-        headerShown: true // Show headers by default for this stack
+        headerShown: true 
       }}
     >
-      {/* Hide header specifically for the tab screen */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }}/> 
-      <Stack.Screen name="props/add" options={{ title: 'Add New Prop' }}/>
-      <Stack.Screen name="props/[id]/edit" options={{ title: 'Edit Prop' }}/>
-      {/* Define other screens pushed onto the stack here if needed */}
+      {/* Add other stack screens as needed, but keep minimal for now */}
+      {/* <Stack.Screen name="props/add" options={{ title: 'Add New Prop' }}/> */}
+      {/* <Stack.Screen name="props/[id]/edit" options={{ title: 'Edit Prop' }}/> */}
       <Stack.Screen name="+not-found" options={{ title: 'Oops!', presentation: 'modal' }} />
     </Stack>
   );
 }
 
 // Restore ErrorBoundary and its styles correctly
-type ErrorBoundaryProps = PropsWithChildren<{
-  error?: Error | null; // Allow null as error type
-}>;
-
-function ErrorBoundary({ error, children }: ErrorBoundaryProps) {
-  if (error) {
-    console.error("ErrorBoundary caught error:", error); // Log the error
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorTitle}>Something went wrong!</Text>
-        {/* Safely render error message */}
-        <Text style={styles.errorMessage}>{String(error.message || 'Unknown error')}</Text>
-      </View>
-    );
-  }
-
-  return <>{children}</>;
-}
-
-const styles = StyleSheet.create({
-  // Ensure styles are definitely uncommented
+const errorBoundaryStyles = StyleSheet.create({
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -98,6 +52,22 @@ const styles = StyleSheet.create({
   errorMessage: {
     color: 'red',
   },
+});
+
+function ErrorBoundary({ error, children }: PropsWithChildren<{ error?: Error | null}>) {
+  if (error) {
+    console.error("ErrorBoundary caught error:", error);
+    return (
+      <View style={errorBoundaryStyles.errorContainer}>
+        <Text style={errorBoundaryStyles.errorTitle}>Something went wrong!</Text>
+        <Text style={errorBoundaryStyles.errorMessage}>{String(error.message || 'Unknown error')}</Text>
+      </View>
+    );
+  }
+  return <>{children}</>;
+}
+
+const appContentStyles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -105,83 +75,106 @@ const styles = StyleSheet.create({
   },
 });
 
-function AppContent() {
+function AppContent({ currentFont }: { currentFont: FontChoice }) {
   console.log("--- Rendering: AppContent --- ");
   const { user, loading: authLoading, error: authError } = useAuth();
-  console.log(`--- AppContent State: authLoading=${authLoading}, user=${user?.uid}, authError=${authError} ---`);
+  // console.log(`--- AppContent State: authLoading=${authLoading}, user=${user?.uid}, authError=${authError}, font=${currentFont} ---`);
 
-  // Original Logic Restored
+  // Define base text style based on currentFont
+  // const baseTextStyle = {
+  //   fontFamily: currentFont === 'openDyslexic' ? 'OpenDyslexic-Regular' : undefined, // undefined will use system default
+  //   // Add other global text properties if needed, e.g., color from theme
+  // };
+
+  // This is a conceptual attempt. Text components need to individually apply this.
+  // It's more common to create a <StyledText> component that consumes the font context.
+
   if (authLoading) {
     console.log("--- AppContent: Showing loading indicator --- ");
     return (
-      <View style={styles.loadingContainer}>
+      <View style={appContentStyles.loadingContainer}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
+  
+  // Pass authError to ErrorBoundary if it exists
+  // Note: This ErrorBoundary will only catch errors from its children (AppContent's return values here)
+  // For a more global error boundary, it would need to be higher up.
+  if (authError) {
+      return <ErrorBoundary error={authError}><View /></ErrorBoundary>; // Render error via ErrorBoundary
+  }
 
-  // If user is logged in, show platform-specific layout
   if (user) {
       console.log(`--- AppContent: User logged in, rendering for Platform: ${Platform.OS} --- `);
       if (Platform.OS === 'web') {
-        // On Web, render Slot. Expo Router uses file structure to find the layout.
-        // For routes matching (web)/*, it will use app/(web)/_layout.tsx.
-        return <Slot />;
+        // For web, you might apply to a root element or rely on CSS
+        // Removed baseTextStyle from here
+        return <View style={{flex: 1}}><Slot /></View>;
       } else {
-        // On Native, render the specific Native Stack Navigator.
-        return <RootLayoutNav />;
+        // For mobile, wrap RootLayoutNav, hoping Text children inherit, or use defaultProps if possible (less standard)
+        // Removed baseTextStyle from here
+        return <View style={{flex: 1}}><RootLayoutNav /></View>;
       }
-  }
-  
-  // If NOT logged in, show platform-specific Auth screen
-  if (Platform.OS === 'web') {
-    console.log("--- AppContent: Showing AuthForm (Web) --- ");
-    return <AuthForm onClose={() => console.log("AuthForm closed/completed")} />;
   } else {
+    // No user, show NativeAuthScreen for mobile. For web, you might have a different auth form.
+    // Assuming this path is for mobile as per previous context.
     console.log("--- AppContent: Showing NativeAuthScreen (Mobile) --- ");
-    return <NativeAuthScreen />; // Use Native Auth Screen for mobile
+    return <NativeAuthScreen />;
   }
 }
 
-export default function RootLayout() {
-  console.log("--- Rendering: RootLayout --- ");
-  // Uncomment font loading
-  const [fontsLoaded, fontError] = useFonts({
+// MainApp is kept but not rendered directly if FontProvider is removed, to avoid useFont() crash
+function MainApp() {
+  console.log("--- Rendering: MainApp (consumes font context) ---");
+  const { font: chosenFont, isLoadingFont } = useFont(); 
+  const [expoFontsLoaded, expoFontError] = useFonts({
     'OpenDyslexic-Regular': require('../assets/fonts/OpenDyslexic/OpenDyslexic-Regular.otf'),
     'OpenDyslexic-Bold': require('../assets/fonts/OpenDyslexic/OpenDyslexic-Bold.otf'),
     'OpenDyslexic-Italic': require('../assets/fonts/OpenDyslexic/OpenDyslexic-Italic.otf'),
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      // Hide the splash screen after fonts have loaded or an error occurred
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
+    // if (expoFontsLoaded && !isLoadingFont && !expoFontError) { // Commented out
+    //   SplashScreen.hideAsync(); // Commented out
+    // }
+  }, [expoFontsLoaded, isLoadingFont, expoFontError]);
 
-  // Prevent rendering until the fonts have loaded or an error occurred
-  if (!fontsLoaded && !fontError) {
-    return null; // Render nothing or a basic loading indicator if preferred
+  if (!expoFontsLoaded || isLoadingFont) {
+    return null;
   }
 
-  // Handle font loading errors (optional, but recommended)
-  if (fontError) {
-      console.error("Font loading error in RootLayout:", fontError);
-      // Optionally render an error message or fallback UI
-      // For now, we allow rendering to continue with system fonts
+  if (expoFontError) {
+      console.error("Expo Font loading error in MainApp:", expoFontError);
+      // SplashScreen.hideAsync().catch(e => console.warn("SplashScreen.hideAsync failed in error path:", e)); // Commented out
+      return (
+        <View style={{flex:1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black'}}>
+            <Text style={{color: 'orange', padding: 10, textAlign: 'center'}}>
+                There was an error loading custom fonts. The application will use default fonts.
+            </Text>
+            <AppContent currentFont={'default'} />
+        </View>
+      );
   }
+  
+  return <AppContent currentFont={chosenFont} />;
+}
 
-  // Wrap AppContent with providers
-  console.log("--- RootLayout: Rendering Providers + AppContent --- ");
+// SplashScreen.preventAutoHideAsync(); // Also comment out this one if it was duplicated, ensure only one instance if re-enabled
+
+export default function RootLayout() {
+  console.log("--- Rendering: RootLayout (ALL PROVIDERS + MainApp) ---");
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <ThemeProvider>
           <ShowsProvider>
             <PropsProvider>
-              <ErrorBoundary>
-                <AppContent />
-              </ErrorBoundary>
+              <FontProvider>
+                <ErrorBoundary>
+                  <MainApp />
+                </ErrorBoundary>
+              </FontProvider>
             </PropsProvider>
           </ShowsProvider>
         </ThemeProvider>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 // import { db } from '../lib/firebase';
 import { useFirebase } from '@/contexts/FirebaseContext';
-import type { Show } from '@/types'; // Corrected import path
+import type { Show } from '@/types/index'; // Corrected import path
 import { useAuth } from '../contexts/AuthContext'; // Keep if user context is needed
 
 export function useShow(showId: string | undefined) {

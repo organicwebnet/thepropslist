@@ -102,7 +102,7 @@ export const PropCard: React.FC<PropCardProps> = ({
         )}
         <View style={styles.textContainer}>
           <Text style={styles.name}>{prop.name}</Text>
-          <Text style={styles.description} numberOfLines={2}>
+          <Text style={styles.description} /* numberOfLines={2} */>
             {prop.description || 'No description provided'}
           </Text>
           {prop.price && (
@@ -211,18 +211,14 @@ const styles = StyleSheet.create({
     color: '#9CA3AF'
   },
   textContainer: {
-    flex: 1,
-    gap: 4
+    backgroundColor: 'purple',
   },
   name: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#E5E7EB'
+    color: '#FFFF00',
+    backgroundColor: 'green',
   },
   description: {
-    fontSize: 14,
     color: '#9CA3AF',
-    lineHeight: 20
   },
   price: {
     fontSize: 14,

@@ -1,9 +1,15 @@
 import { Prop } from '@/shared/types/props';
+import { PropInstance } from './PackingList.native';
+
+interface TemporaryPropInstance extends Prop { 
+  instanceId: string; 
+  isPacked: boolean;
+}
 
 interface PropSelectorProps {
-  props: Prop[];
-  selectedProps: Prop[];
-  onChange: (props: Prop[]) => void;
+  props: TemporaryPropInstance[];
+  selectedProps: TemporaryPropInstance[];
+  onChange: (props: TemporaryPropInstance[]) => void;
   disabled?: boolean;
 }
 
@@ -13,10 +19,10 @@ export function PropSelector({
   onChange,
   disabled = false,
 }: PropSelectorProps) {
-  const handlePropToggle = (prop: Prop) => {
-    const isSelected = selectedProps.some(p => p.id === prop.id);
+  const handlePropToggle = (prop: TemporaryPropInstance) => {
+    const isSelected = selectedProps.some(p => p.instanceId === prop.instanceId);
     if (isSelected) {
-      onChange(selectedProps.filter(p => p.id !== prop.id));
+      onChange(selectedProps.filter(p => p.instanceId !== prop.instanceId));
     } else {
       onChange([...selectedProps, prop]);
     }
@@ -29,10 +35,10 @@ export function PropSelector({
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         {props.map((prop) => {
-          const isSelected = selectedProps.some(p => p.id === prop.id);
+          const isSelected = selectedProps.some(p => p.instanceId === prop.instanceId);
           return (
             <button
-              key={prop.id}
+              key={prop.instanceId}
               onClick={() => handlePropToggle(prop)}
               disabled={disabled}
               className={`

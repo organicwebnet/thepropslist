@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Theater, User, Building, Pencil, Trash2 } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
-import type { Show, ShowFormData } from '../types';
+import type { Show } from '../types/index';
+import type { ShowFormData } from '../types/index';
 import ShowForm from './ShowForm';
 import { useAuth } from '../contexts/AuthContext';
+import { ShowsContext } from '../contexts/ShowsContext';
 
 interface ShowListProps {
   shows: Show[];

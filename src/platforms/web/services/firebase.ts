@@ -25,8 +25,8 @@ import {
   orderBy,
   limit,
   Firestore,
-  CollectionReference,
-  DocumentReference,
+  CollectionReference as WebCollectionReference,
+  DocumentReference as WebDocumentReference,
   Query,
   WhereFilterOp,
   enableIndexedDbPersistence,
@@ -35,7 +35,7 @@ import {
   onSnapshot,
   DocumentSnapshot,
   QuerySnapshot,
-  type DocumentData
+  type DocumentData as WebDocumentData
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -59,15 +59,13 @@ import type {
   CustomDocumentReference,
   CustomStorageReference,
   CustomUserCredential,
-  SyncStatus,
-  // FirebaseError // Keep as type import initially if only used for type annotations
+  SyncStatus
 } from '../../../shared/services/firebase/types';
-// Import FirebaseError as a value if needed for instantiation
 import { FirebaseError } from '../../../shared/services/firebase/types';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle';
-import type { Show } from '@/types';
+import { Show } from '@/types/index';
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
-// Add QueryOptions type
 type QueryOptions = {
   where?: [string, WhereFilterOp, any][];
   orderBy?: [string, 'asc' | 'desc'][];
@@ -132,14 +130,31 @@ export class WebFirebaseService implements FirebaseService {
     }
   }
 
+  // Method for FirebaseService interface (returns minimal CustomAuth)
   auth(): CustomAuth {
     if (!this.isInitialized || !this.authInstance) throw new Error('Firebase not initialized');
+    // This cast is for the interface, consumers should be aware CustomAuth is minimal.
     return this.authInstance as CustomAuth;
+  }
+
+  // Method for web-specific consumers to get the full Firebase JS SDK Auth object
+  getFirebaseAuthJsInstance(): Auth {
+    if (!this.isInitialized || !this.authInstance) throw new Error('Firebase not initialized');
+    return this.authInstance;
   }
 
   firestore(): CustomFirestore {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
     return this.dbInstance as CustomFirestore;
+  }
+
+  getFirestoreJsInstance(): Firestore {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    return this.dbInstance;
+  }
+
+  getFirestoreReactNativeInstance(): FirebaseFirestoreTypes.Module {
+    throw new Error('getFirestoreReactNativeInstance is not available in WebFirebaseService');
   }
 
   storage(): CustomStorage {
@@ -202,27 +217,26 @@ export class WebFirebaseService implements FirebaseService {
   }
 
   createDocumentWrapper<T extends CustomDocumentData>(
-    docRef: CustomDocumentReference<T>
+    docRef: WebDocumentReference<T>
   ): FirebaseDocument<T> {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
     
-    const firestoreDocRef = docRef as DocumentReference<T>;
     return {
-      id: firestoreDocRef.id,
-      ref: firestoreDocRef as CustomDocumentReference<T>,
+      id: docRef.id,
+      ref: docRef,
       data: undefined,
       get: async () => {
-        const snapshot = await getDoc(firestoreDocRef);
+        const snapshot = await getDoc(docRef);
         return snapshot.exists() ? (snapshot.data() as T) : undefined;
       },
       set: async (data: T) => {
-        await setDoc(firestoreDocRef, data);
+        await setDoc(docRef, data);
       },
       update: async (data: Partial<T>) => {
-        await updateDoc(firestoreDocRef, data as any);
+        await updateDoc(docRef, data as any);
       },
       delete: async () => {
-        await deleteDoc(firestoreDocRef);
+        await deleteDoc(docRef);
       },
     };
   }
@@ -233,14 +247,14 @@ export class WebFirebaseService implements FirebaseService {
     onError?: (error: Error) => void
   ): () => void {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
-    const docRef = doc(this.dbInstance, path) as DocumentReference<T>;
+    const docRef = doc(this.dbInstance, path) as WebDocumentReference<T>;
     
     const unsubscribe = onSnapshot(docRef, 
-      (snapshot: DocumentSnapshot) => {
+      (snapshot: DocumentSnapshot<T>) => {
         if (snapshot.exists()) {
-          const wrappedDoc = this.createDocumentWrapper(docRef as CustomDocumentReference<T>);
+          const wrappedDoc = this.createDocumentWrapper(docRef);
           wrappedDoc.data = snapshot.data() as T;
-          onNext(wrappedDoc as FirebaseDocument<T>);
+          onNext(wrappedDoc);
         } else {
           console.log(`Document at path ${path} does not exist.`);
           onNext(null as any);
@@ -260,14 +274,12 @@ export class WebFirebaseService implements FirebaseService {
     path: string,
     onNext: (docs: FirebaseDocument<T>[]) => void,
     onError?: (error: Error) => void,
-    options?: QueryOptions // Accept options object
+    options?: QueryOptions
   ): () => void {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
 
-    // Start with base collection reference
-    let q: Query<T> = collection(this.dbInstance, path) as CollectionReference<T>;
+    let q: Query<T> = collection(this.dbInstance, path) as WebCollectionReference<T>;
 
-    // Apply query constraints if provided
     if (options?.where) {
       options.where.forEach(([field, op, value]) => {
         q = query(q, where(field, op, value));
@@ -282,19 +294,14 @@ export class WebFirebaseService implements FirebaseService {
       q = query(q, limit(options.limit));
     }
 
-    // Listen to the potentially modified query (q)
     const unsubscribe = onSnapshot(q,
-      (querySnapshot: QuerySnapshot) => {
+      (querySnapshot: QuerySnapshot<T>) => {
         const documents = querySnapshot.docs.map(snapshotDoc => {
-          // Get the reference
-          const docRef = snapshotDoc.ref as DocumentReference<T>;
-          // Create the wrapper
-          const wrappedDoc = this.createDocumentWrapper(docRef as CustomDocumentReference<T>);
-          // Assign the data from the snapshot to the wrapper's data property
+          const wrappedDoc = this.createDocumentWrapper(snapshotDoc.ref as WebDocumentReference<T>);
           wrappedDoc.data = snapshotDoc.data() as T;
           return wrappedDoc;
         });
-        onNext(documents as FirebaseDocument<T>[]); // Pass the array of wrappers
+        onNext(documents as FirebaseDocument<T>[]);
       },
       (error: Error) => {
         console.error(`Error listening to collection ${path}:`, error);
@@ -359,27 +366,59 @@ export class WebFirebaseService implements FirebaseService {
   async getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null> {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
     try {
-      const docRef = doc(this.dbInstance, collectionPath, documentId) as DocumentReference<T>;
+      const docRef = doc(this.getFirestoreJsInstance(), collectionPath, documentId) as WebDocumentReference<T>;
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        // Use the existing wrapper creator
-        const wrappedDoc = this.createDocumentWrapper(docRef as CustomDocumentReference<T>);
-        // Manually add the data to the wrapper as getDoc doesn't populate it automatically
-        wrappedDoc.data = docSnap.data() as T; 
-        return wrappedDoc as FirebaseDocument<T>;
-      } else {
-        return null;
+        const wrappedDoc = this.createDocumentWrapper(docRef);
+        wrappedDoc.data = docSnap.data() as T;
+        return wrappedDoc;
       }
+      return null;
     } catch (error) {
-      console.error(`Error getting document ${collectionPath}/${documentId}:`, error);
-      throw this.createError(error); // Use existing error handler if available
+      this.handleError(`Error getting document ${collectionPath}/${documentId}`, error);
+    }
+  }
+
+  async getDocuments<T extends CustomDocumentData>(collectionPath: string, options?: QueryOptions): Promise<FirebaseDocument<T>[]> {
+    if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
+    try {
+      const firestoreInstance = this.getFirestoreJsInstance();
+      let q: Query<T> = collection(firestoreInstance, collectionPath) as Query<T>; // Use Query<T>
+
+      if (options?.where) {
+        for (const w of options.where) {
+          q = query(q, where(w[0], w[1], w[2]));
+        }
+      }
+      if (options?.orderBy) {
+        for (const o of options.orderBy) {
+          q = query(q, orderBy(o[0], o[1]));
+        }
+      }
+      if (options?.limit) {
+        q = query(q, limit(options.limit));
+      }
+
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(docSnap => {
+        // We need to cast docSnap.ref because createDocumentWrapper expects WebDocumentReference<T>
+        // and docSnap.ref is DocumentReference<DocumentData> by default from Query<T> if T is not specific enough
+        // or Query<T> where T is CustomDocumentData.
+        // This cast should be safe if T is indeed the type stored in Firestore.
+        const webDocRef = docSnap.ref as WebDocumentReference<T>;
+        const wrappedDoc = this.createDocumentWrapper(webDocRef);
+        wrappedDoc.data = docSnap.data() as T;
+        return wrappedDoc;
+      });
+    } catch (error) {
+      this.handleError(`Error getting documents from ${collectionPath}`, error);
     }
   }
 
   async addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
     try {
-      const collRef = collection(this.dbInstance, collectionPath) as CollectionReference<T>;
+      const collRef = collection(this.dbInstance, collectionPath) as WebCollectionReference<T>;
       // Add createdAt/updatedAt timestamps if they aren't part of the data/backend rules
       const dataWithTimestamps = {
         ...data,
@@ -387,7 +426,7 @@ export class WebFirebaseService implements FirebaseService {
         updatedAt: new Date().toISOString(),
       };
       const docRef = await addDoc(collRef, dataWithTimestamps as any); // Use any for potential timestamp mismatch temporarily
-      return this.createDocumentWrapper(docRef as CustomDocumentReference<T>) as FirebaseDocument<T>;
+      return this.createDocumentWrapper(docRef as WebDocumentReference<T>) as FirebaseDocument<T>;
     } catch (error) {
       console.error(`Error adding document to ${collectionPath}:`, error);
       throw this.createError(error);
@@ -397,7 +436,7 @@ export class WebFirebaseService implements FirebaseService {
   async updateDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void> {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
     try {
-      const docRef = doc(this.dbInstance, collectionPath, documentId) as DocumentReference<T>;
+      const docRef = doc(this.dbInstance, collectionPath, documentId) as WebDocumentReference<T>;
       // Add updatedAt timestamp
       const dataWithTimestamp = { 
         ...data, 
@@ -413,7 +452,7 @@ export class WebFirebaseService implements FirebaseService {
   async deleteDocument(collectionPath: string, documentId: string): Promise<void> {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
     try {
-      const docRef = doc(this.dbInstance, collectionPath, documentId);
+      const docRef = doc(this.dbInstance, collectionPath, documentId) as WebDocumentReference<any>;
       await deleteDoc(docRef);
     } catch (error) {
       console.error(`Error deleting document ${collectionPath}/${documentId}:`, error);
@@ -476,6 +515,15 @@ export class WebFirebaseService implements FirebaseService {
     }
   }
 
+  async signOut(): Promise<void> {
+    if (!this.isInitialized || !this.authInstance) throw this.createError(new Error('Firebase not initialized'));
+    try {
+      await signOut(this.authInstance);
+    } catch (error) {
+      throw this.createError(error);
+    }
+  }
+
   // Implementation for setDocument
   async setDocument<T extends CustomDocumentData>(
     collectionPath: string,
@@ -484,7 +532,7 @@ export class WebFirebaseService implements FirebaseService {
     options?: { merge?: boolean }
   ): Promise<void> {
     if (!this.isInitialized || !this.dbInstance) throw new Error('Firebase not initialized');
-    const docRef = doc(this.dbInstance, collectionPath, documentId);
+    const docRef = doc(this.dbInstance, collectionPath, documentId) as WebDocumentReference<T>;
     try {
       await setDoc(docRef, data, options || {});
     } catch (error) {

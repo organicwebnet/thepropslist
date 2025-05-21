@@ -1,5 +1,5 @@
 import { DigitalInventoryService, InventoryProp, PropLocation, PropMaintenance } from '../inventoryService';
-import { FirebaseService, FirebaseDocument, FirebaseCollection } from '../../firebase/types';
+import { FirebaseService, FirebaseDocument, FirebaseCollection, CustomFirestore } from '../../firebase/types';
 import { VisionAPIService } from '../../ai/vision';
 import { QRCodeService } from '../../qr/qrService';
 import { Firestore, DocumentData } from 'firebase/firestore';
@@ -77,8 +77,8 @@ describe('DigitalInventoryService', () => {
           orderBy: jest.fn().mockReturnThis(),
           limit: jest.fn().mockReturnThis(),
           get: jest.fn().mockResolvedValue([{ id: 'test-id', data: () => mockProp }])
-        } as FirebaseCollection)
-      }),
+        })
+      } as unknown as CustomFirestore),
       offline: jest.fn().mockReturnValue({
         queueOperation: jest.fn().mockResolvedValue(undefined),
         getSyncStatus: jest.fn().mockResolvedValue(true)
@@ -121,14 +121,14 @@ describe('DigitalInventoryService', () => {
 
       const result = await service.addProp(propData);
       
-      expect(mockFirebaseService.firestore().collection).toHaveBeenCalledWith('props');
+      expect((mockFirebaseService.firestore() as any).collection).toHaveBeenCalledWith('props');
       expect(mockQRService.generateQRCode).toHaveBeenCalledWith('test-prop-1');
       expect(result).toBe('test-prop-1');
     });
 
     it('should handle errors during prop creation', async () => {
       const error = new Error('Creation failed');
-      mockFirebaseService.firestore().collection().add.mockRejectedValueOnce(error);
+      (mockFirebaseService.firestore() as any).collection().add.mockRejectedValueOnce(error);
       
       await expect(service.addProp({
         name: 'Test Prop',
@@ -153,7 +153,7 @@ describe('DigitalInventoryService', () => {
 
       await service.updateProp('test-prop-1', updateData);
       
-      expect(mockFirebaseService.firestore().collection().doc().update)
+      expect((mockFirebaseService.firestore() as any).collection().doc().update)
         .toHaveBeenCalledWith(expect.objectContaining(updateData));
     });
   });
@@ -162,13 +162,13 @@ describe('DigitalInventoryService', () => {
     it('should retrieve a prop by ID', async () => {
       const result = await service.getProp('test-prop-1');
       
-      expect(mockFirebaseService.firestore().collection().doc().get)
+      expect((mockFirebaseService.firestore() as any).collection().doc().get)
         .toHaveBeenCalled();
       expect(result).toEqual(mockProp);
     });
 
     it('should throw error if prop not found', async () => {
-      mockFirebaseService.firestore().collection().doc().get
+      (mockFirebaseService.firestore() as any).collection().doc().get
         .mockResolvedValueOnce({
           exists: false,
           data: () => null

@@ -167,25 +167,28 @@ export class MobileFirebaseService implements FirebaseService {
     return this._storage.ref(path);
   }
 
-  createDocumentWrapper(
-    docRef: FirebaseFirestoreTypes.DocumentReference<FirebaseFirestoreTypes.DocumentData>
-  ): FirebaseDocument<any> {
-    const firestoreDocRef = docRef;
+  createDocumentWrapper<T extends CustomDocumentData>(
+    docRef: CustomDocumentReference<T>
+  ): FirebaseDocument<T> {
+    // Since CustomDocumentReference is a union, we might need to handle or cast
+    // For simplicity, assuming it's compatible with RN Firebase operations here
+    // or that the specific instance passed will be the RN Firebase one.
+    const firestoreDocRef = docRef as FirebaseFirestoreTypes.DocumentReference<T>; // Cast to RN specific type for now
     return {
       id: firestoreDocRef.id,
-      ref: firestoreDocRef as any,
-      data: undefined,
-      get: async () => {
+      ref: firestoreDocRef as CustomDocumentReference<T>, // Ensure this matches the interface
+      // data: undefined, // data property is optional in FirebaseDocument, can be omitted if fetched on demand
+      get: async (): Promise<T | undefined> => {
         const snapshot = await firestoreDocRef.get();
-        return snapshot.exists() ? snapshot.data() : undefined;
+        return snapshot.exists() ? snapshot.data() as T : undefined;
       },
-      set: async (data: any) => {
-        await firestoreDocRef.set(data);
+      set: async (data: T): Promise<void> => {
+        await firestoreDocRef.set(data as any);
       },
-      update: async (data: any) => {
-        await firestoreDocRef.update(data);
+      update: async (data: Partial<T>): Promise<void> => {
+        await firestoreDocRef.update(data as any); // RN update might not be strictly typed Partial<T>
       },
-      delete: async () => {
+      delete: async (): Promise<void> => {
         await firestoreDocRef.delete();
       },
     };
@@ -217,8 +220,14 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   async getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null> {
-    console.warn(`Mobile getDocument(${collectionPath}, ${documentId}) is not implemented.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+    if (!this._firestore) throw new FirebaseError("Firestore not initialized", "initialization-error");
+    const docPath = `${collectionPath}/${documentId}`;
+    const docRef = this._firestore.doc(docPath) as FirebaseFirestoreTypes.DocumentReference<T>;
+    const snapshot = await docRef.get();
+    if (snapshot.exists()) {
+      return this.createDocumentWrapper(docRef as CustomDocumentReference<T>);
+    }
+    return null;
   }
 
   async updateDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void> {
@@ -246,6 +255,37 @@ export class MobileFirebaseService implements FirebaseService {
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
+  // Required by FirebaseService interface
+  getFirestoreJsInstance(): any { // WebFirestore type
+    // This is a mobile-specific service
+    console.warn('getFirestoreJsInstance called on MobileFirebaseService. This is not applicable.');
+    throw new FirebaseError('Not applicable for mobile platform', 'unsupported-operation');
+  }
+
+  getFirestoreReactNativeInstance(): FirebaseFirestoreTypes.Module {
+    if (!this._firestore) {
+      this.initializeService(); // Ensure it's initialized
+      if (!this._firestore) throw new FirebaseError("Firestore not initialized after attempt.", "initialization-error");
+    }
+    return this._firestore;
+  }
+
+  async getDocuments<T extends CustomDocumentData>(collectionPath: string, options?: any /* QueryOptions */): Promise<FirebaseDocument<T>[]> {
+    console.warn(`Mobile getDocuments(${collectionPath}) is not fully implemented.`);
+    // Basic implementation without options for now
+    if (!this._firestore) throw new FirebaseError("Firestore not initialized", "initialization-error");
+    const collectionRef = this._firestore.collection(collectionPath) as FirebaseFirestoreTypes.CollectionReference<T>;
+    const snapshot = await collectionRef.get();
+    return snapshot.docs.map(docSnapshot => {
+      // Need to use the updated createDocumentWrapper
+      // However, createDocumentWrapper itself takes a CustomDocumentReference,
+      // and docSnapshot.ref is FirebaseFirestoreTypes.DocumentReference.
+      // This might need an internal helper or careful casting.
+      const docRef = docSnapshot.ref as CustomDocumentReference<T>; 
+      return this.createDocumentWrapper<T>(docRef);
+    });
+  }
+
   // --- Add Missing Auth Method Stubs ---
   async signInWithEmailAndPassword(email: string, password: string): Promise<any> { // Use actual RNFirebase Auth if available
     if (!this._auth) throw new Error("Auth not initialized");
@@ -270,14 +310,24 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   async sendPasswordResetEmail(email: string): Promise<void> {
-    if (!this._auth) throw new Error("Auth not initialized");
-    console.log(`Mobile attempting sendPasswordResetEmail for ${email}`);
-    try {
-      await this._auth.sendPasswordResetEmail(email);
-    } catch (error) {
-      console.error("Mobile password reset failed:", error);
-      throw this.createError(error);
-    }
+    if (!this._auth) throw this.createError(new Error('Auth service not initialized.'));
+    return this._auth.sendPasswordResetEmail(email);
+  }
+
+  async signOut(): Promise<void> {
+    if (!this._auth) throw this.createError(new Error('Auth service not initialized.'));
+    return this._auth.signOut();
+  }
+
+  async setDocument<T extends CustomDocumentData>(
+    collectionPath: string,
+    documentId: string,
+    data: T,
+    options?: { merge?: boolean }
+  ): Promise<void> {
+    if (!this._firestore) throw this.createError(new Error('Firestore service not initialized.'));
+    // Basic implementation, does not handle merge option specifically unless RNFirebase set does.
+    return this._firestore.collection(collectionPath).doc(documentId).set(data, options);
   }
   // --- End Missing Auth Method Stubs ---
 } 

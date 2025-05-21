@@ -10,6 +10,12 @@ const projectRoot = __dirname;
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(projectRoot);
 
+// Explicitly disable Package Exports
+config.resolver = {
+  ...config.resolver,
+  // unstable_enablePackageExports: false, // Try removing or commenting out this line
+};
+
 // --- Remove all custom alias logic --- 
 // config.resolver.nodeModulesPaths = [ ... ]; // Keep default
 // config.resolver.extraNodeModules = ... ; // REMOVE ALL ALIAS BLOCKS (Proxy and manual)

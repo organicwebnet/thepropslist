@@ -2,6 +2,7 @@ import React from 'react';
 import { PlusCircle, X } from 'lucide-react';
 import type { Venue } from '../types/index';
 import type { Address } from '../shared/types/address';
+import type { CustomTimestamp } from '../shared/services/firebase/types';
 
 const defaultAddress: Address = {
   id: '',
@@ -20,6 +21,30 @@ interface VenueFormProps {
   onChange: (venues: Venue[]) => void;
   isTouringShow: boolean;
 }
+
+// Helper function to format date for input[type="date"]
+const formatDateForInput = (dateValue: string | CustomTimestamp | null | undefined): string => {
+  if (!dateValue) {
+    return '';
+  }
+  if (typeof dateValue === 'string') {
+    // Assuming if it's a string, it might already be in YYYY-MM-DD or a full ISO string
+    // Input type="date" can sometimes handle ISO strings, but YYYY-MM-DD is safest.
+    if (dateValue.includes('T')) { // Likely an ISO string
+      return dateValue.split('T')[0];
+    }
+    return dateValue; // Assume it's YYYY-MM-DD or compatible
+  }
+  // Check if it's a Firebase Timestamp (has toDate method)
+  if (dateValue && typeof (dateValue as CustomTimestamp).toDate === 'function') {
+    const date = (dateValue as CustomTimestamp).toDate();
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return ''; // Fallback for unexpected types
+};
 
 export function VenueForm({ venues = [], onChange, isTouringShow }: VenueFormProps) {
   const addVenue = () => {
@@ -142,7 +167,7 @@ export function VenueForm({ venues = [], onChange, isTouringShow }: VenueFormPro
                 </label>
                 <input
                   type="date"
-                  value={venue.startDate}
+                  value={formatDateForInput(venue.startDate)}
                   onChange={(e) => updateVenue(index, 'startDate', e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
@@ -153,7 +178,7 @@ export function VenueForm({ venues = [], onChange, isTouringShow }: VenueFormPro
                 </label>
                 <input
                   type="date"
-                  value={venue.endDate}
+                  value={formatDateForInput(venue.endDate)}
                   onChange={(e) => updateVenue(index, 'endDate', e.target.value)}
                   className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />

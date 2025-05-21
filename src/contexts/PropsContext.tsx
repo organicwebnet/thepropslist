@@ -15,8 +15,8 @@ import { useAuth } from './AuthContext'; // Assuming AuthContext might be needed
 import { ShowsContext } from './ShowsContext';
 import { useFirebase } from './FirebaseContext';
 // Corrected and consolidated type imports
-import type { Prop, PropFormData } from '@/shared/types/props'; 
-import type { Show } from '@/types'; // Changed import path to match useShow hook
+import type { Prop, PropFormData } from '@/shared/types/props';
+import type { Show } from '@/types/index'; // Changed import path to match useShow hook
 // Import FirebaseDocument type
 import { FirebaseDocument } from '@/shared/services/firebase/types';
 import { QueryOptions } from '../shared/services/firebase/types'; // Import QueryOptions
@@ -72,10 +72,27 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
           'props', // Collection path
           (docs: FirebaseDocument<Prop>[]) => {
             // Map FirebaseDocument array to Prop array
-            const propsData: Prop[] = docs.map(doc => ({
-              id: doc.id,
-              ...(doc.data || {})
-            } as Prop)); // Assuming data structure matches Prop type
+            const propsData: Prop[] = docs.map(docSnapshot => {
+              const data = docSnapshot.data || ({} as Partial<Prop>);
+              let determinedImageUrl = data.primaryImageUrl || data.imageUrl;
+
+              // Attempt to derive from images array if no direct URL is found
+              if (!determinedImageUrl && Array.isArray(data.images) && data.images.length > 0) {
+                const mainImage = data.images.find(img => img.isMain === true && img.url);
+                if (mainImage) {
+                  determinedImageUrl = mainImage.url;
+                } else if (data.images[0] && data.images[0].url) {
+                  // Fallback to the first image if no main image is found
+                  determinedImageUrl = data.images[0].url;
+                }
+              }
+
+              return {
+                id: docSnapshot.id,
+                ...data, // Spread existing data
+                primaryImageUrl: determinedImageUrl, // Explicitly set/override primaryImageUrl
+              } as Prop;
+            });
             
             console.log(`PropsProvider: Fetched ${propsData.length} props for show ${selectedShow.id}.`);
             setProps(propsData);

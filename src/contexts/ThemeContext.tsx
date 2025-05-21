@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import React, { createContext, useContext, useState, /* useEffect */ } from 'react';
+// import AsyncStorage from '@react-native-async-storage/async-storage'; // Commented out
+import { Platform } from 'react-native'; // Platform is still used for web document update
 
 export type Theme = 'light' | 'dark';
 
@@ -12,69 +12,34 @@ export interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
-  const [isLoading, setIsLoading] = useState(true);
+  const [currentTheme, setCurrentThemeState] = useState<Theme>('dark'); // Renamed to avoid conflict with theme in value
+  // const [isLoading, setIsLoading] = useState(true); // REMOVE isLoading state
 
-  useEffect(() => {
-    const loadTheme = async () => {
-      let savedTheme: Theme = 'dark';
-      try {
-        const storedValue = Platform.OS === 'web' 
-          ? localStorage.getItem('theme') 
-          : await AsyncStorage.getItem('theme');
-        
-        if (storedValue === 'light' || storedValue === 'dark') {
-          savedTheme = storedValue;
-        }
-      } catch (error) {
-        console.error("Failed to load theme from storage", error);
-      } finally {
-        setThemeState(savedTheme);
-        setIsLoading(false);
-        if (Platform.OS === 'web') {
-           document.documentElement.setAttribute('data-theme', savedTheme);
-           const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-           if (metaThemeColor) {
-             metaThemeColor.setAttribute('content', savedTheme === 'light' ? '#ffffff' : '#0A0A0A');
-           }
-        }
-      }
-    };
-    loadTheme();
-  }, []);
-
-  useEffect(() => {
-    if (isLoading) return;
-
-    const saveTheme = async () => {
-      try {
-        if (Platform.OS === 'web') {
-          localStorage.setItem('theme', theme);
-          document.documentElement.setAttribute('data-theme', theme);
-          const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-          if (metaThemeColor) {
-            metaThemeColor.setAttribute('content', theme === 'light' ? '#ffffff' : '#0A0A0A');
-          }
-        } else {
-          await AsyncStorage.setItem('theme', theme);
-        }
-      } catch (error) {
-        console.error("Failed to save theme to storage", error);
-      }
-    };
-    saveTheme();
-  }, [theme, isLoading]);
+  // All useEffect hooks REMOVED for now
+  // useEffect(() => { ... loadTheme ... });
+  // useEffect(() => { ... saveTheme ... });
 
   const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
+    setCurrentThemeState(newTheme);
+    // Actual saving logic removed for now, but update document for web if possible
+    if (Platform.OS === 'web') { 
+       document.documentElement.setAttribute('data-theme', newTheme);
+       const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+       if (metaThemeColor) {
+         metaThemeColor.setAttribute('content', newTheme === 'light' ? '#ffffff' : '#0A0A0A');
+       }
+    }
   };
 
-  if (isLoading) {
-     return null;
-  }
+  // REMOVE isLoading check
+  // if (isLoading) {
+  //    return null; 
+  // }
+  console.log("--- ThemeProvider: Rendering children (SIMPLIFIED, NO LOADING STATE) ---");
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    // Use the state-managed currentTheme here to allow setTheme to reflect visually if possible
+    <ThemeContext.Provider value={{ theme: currentTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -86,4 +51,4 @@ export const useTheme = (): ThemeContextType => {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
-} 
+}; 

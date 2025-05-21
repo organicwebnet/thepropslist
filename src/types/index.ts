@@ -1,66 +1,102 @@
 import { Timestamp } from 'firebase/firestore';
+import type { CustomTimestamp } from '@/shared/services/firebase/types';
 import { Address } from '../shared/types/address';
 
-export interface Show {
-  id: string;
+export interface Scene {
+  id: number;
   name: string;
   description?: string;
-  startDate: Timestamp | string;
-  endDate: Timestamp | string;
-  venue?: string;
-  status?: 'planning' | 'active' | 'completed';
-  createdAt: Timestamp | string;
-  updatedAt: Timestamp | string;
-  userId: string;
-  acts?: Act[];
-  collaborators?: ShowCollaborator[];
-  isTouringShow?: boolean;
-  venues?: Venue[];
-  stageManager?: string;
-  stageManagerEmail?: string;
-  stageManagerPhone?: string;
-  propsSupervisor?: string;
-  propsSupervisorEmail?: string;
-  propsSupervisorPhone?: string;
-  productionCompany?: string;
-  productionContactName?: string;
-  productionContactEmail?: string;
-  productionContactPhone?: string;
-  contacts?: Contact[];
-  imageUrl?: string;
-  logoImage?: File;
-  rehearsalAddresses?: Address[];
-  storageAddresses?: Address[];
+  setting?: string;
 }
 
 export interface Act {
   id: number;
   name: string;
+  description?: string;
   scenes: Scene[];
-}
-
-export interface Scene {
-  id: number;
-  name: string;
-}
-
-export interface Venue {
-  name: string;
-  address?: Address;
-  startDate?: string;
-  endDate?: string;
-  notes?: string;
 }
 
 export interface Contact {
   name: string;
   role: string;
   email: string;
+  phone?: string;
 }
 
 export interface ShowCollaborator {
+  email: string;
+  role: 'editor' | 'viewer';
+  addedAt: string | CustomTimestamp;
+  addedBy: string;
+}
+
+export interface Venue {
+  name: string;
+  address?: Address;
+  startDate?: string | CustomTimestamp | null;
+  endDate?: string | CustomTimestamp | null;
+  notes?: string;
+}
+
+export interface Show {
+  id: string;
   userId: string;
-  role: string;
+  name: string;
+  description: string;
+  startDate: string | CustomTimestamp | null;
+  endDate: string | CustomTimestamp | null;
+  imageUrl?: string;
+  acts?: Act[];
+  createdAt: string | CustomTimestamp;
+  updatedAt: string | CustomTimestamp;
+  collaborators: ShowCollaborator[];
+  stageManager: string;
+  stageManagerEmail: string;
+  stageManagerPhone?: string;
+  propsSupervisor: string;
+  propsSupervisorEmail: string;
+  propsSupervisorPhone?: string;
+  productionCompany: string;
+  productionContactName: string;
+  productionContactEmail: string;
+  productionContactPhone?: string;
+  venues: Venue[];
+  isTouringShow: boolean;
+  contacts: Contact[];
+  logoImage?: { id: string; url: string; caption?: string };
+  status?: 'planning' | 'active' | 'completed';
+  rehearsalAddresses?: Address[];
+  storageAddresses?: Address[];
+  defaultActId?: string | number;
+  defaultSceneId?: string | number;
+}
+
+export interface ShowFormData {
+  name: string;
+  description: string;
+  acts: Act[];
+  stageManager: string;
+  stageManagerEmail: string;
+  stageManagerPhone?: string;
+  propsSupervisor: string;
+  propsSupervisorEmail: string;
+  propsSupervisorPhone?: string;
+  productionCompany: string;
+  productionContactName: string;
+  productionContactEmail: string;
+  productionContactPhone?: string;
+  venues: Venue[];
+  isTouringShow: boolean;
+  contacts: Contact[];
+  imageUrl?: string;
+  logoImage?: { id: string; url: string; caption?: string };
+  startDate?: string;
+  endDate?: string;
+  status?: 'planning' | 'active' | 'completed';
+  rehearsalAddresses?: Address[];
+  storageAddresses?: Address[];
+  collaborators?: ShowCollaborator[];
+  userId?: string;
 }
 
 export interface Prop {

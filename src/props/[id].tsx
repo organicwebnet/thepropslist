@@ -27,12 +27,12 @@ export default function PropDetails() {
   useEffect(() => {
     const fetchProp = async () => {
       // Use service
-      if (!service?.firestore || !id) {
+      if (!service?.getFirestoreJsInstance || !id) {
           setLoading(false);
           setError('Service not available or ID missing.');
           return;
       }
-      const firestore = service.firestore();
+      const firestore = service.getFirestoreJsInstance();
 
       try {
         // Use firestore instance from service

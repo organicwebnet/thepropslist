@@ -1,0 +1,261 @@
+import React, { useState } from 'react';
+import { PackingBox, PackedProp } from '../../types/packing';
+import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, LucideIcon } from 'lucide-react'; // Will change to lucide-react-native
+import { formatDistanceToNow } from 'date-fns';
+import { Timestamp } from 'firebase/firestore';
+import { useRouter, Link } from 'expo-router';
+import { TouchableOpacity, Text, View, StyleSheet, Image, ActivityIndicator } from 'react-native'; // Added View, StyleSheet, Image, ActivityIndicator for native version
+
+interface PackingBoxCardProps {
+  box: PackingBox & { showId?: string };
+  onEdit: (box: PackingBox) => void;
+  onDelete: (boxId: string) => Promise<void>;
+}
+
+// We'll need to use lucide-react-native for native icons
+import { Trash2 as Trash2Native, Pencil as PencilNative, Box as BoxNative, AlertTriangle as AlertTriangleNative, CheckCircle as CheckCircleNative, PackageCheck as PackageCheckNative, PackageX as PackageXNative } from 'lucide-react-native';
+
+type StatusStyle = { bg: string; text: string; icon: React.ElementType }; // Icon type for React Native components
+const statusStyles: Record<string, StatusStyle> = {
+  draft: { bg: '#374151', text: '#9CA3AF', icon: PencilNative }, // gray-700, gray-400
+  packed: { bg: '#1D4ED8', text: '#93C5FD', icon: PackageCheckNative }, // blue-700, blue-300
+  shipped: { bg: '#7E22CE', text: '#C4B5FD', icon: BoxNative }, // purple-700, purple-300
+  delivered: { bg: '#16A34A', text: '#86EFAC', icon: CheckCircleNative }, // green-700, green-300
+  cancelled: { bg: '#DC2626', text: '#F87171', icon: PackageXNative }, // red-700, red-300
+};
+
+export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+        await onDelete(box.id);
+    } catch (error) {
+        console.error("Error during delete operation:", error);
+    } finally {
+        setIsDeleting(false);
+    }    
+  };
+
+  const updatedAt = box.updatedAt;
+  let timeAgo = 'Just now';
+  if (updatedAt && updatedAt instanceof Timestamp) {
+    try {
+      timeAgo = formatDistanceToNow(updatedAt.toDate(), { addSuffix: true });
+    } catch (e) { /* ignore */ }
+  } else if (updatedAt && updatedAt instanceof Date) {
+      try {
+        timeAgo = formatDistanceToNow(updatedAt, { addSuffix: true });
+      } catch (e) { /* ignore */ }
+  } else if (typeof updatedAt === 'string') {
+      try {
+          const date = new Date(updatedAt);
+          if (!isNaN(date.getTime())) {
+              timeAgo = formatDistanceToNow(date, { addSuffix: true });
+          }
+      } catch(e) { /* ignore */ }
+  }
+  
+  const totalWeightKg = box.props?.reduce((sum, p) => sum + (p.weight || 0), 0) ?? 0;
+  const status = box.status ?? 'draft';
+  const currentStatusStyle = statusStyles[status] || { bg: '#F59E0B', text: '#FCD34D', icon: AlertTriangleNative }; // yellow-500, yellow-300
+  const StatusIcon = currentStatusStyle.icon;
+
+  // const handleNavigateToLabel = () => { // Commenting out for simplification
+  //   console.log("Navigate to label (Native) - ID:", box.id, "Show ID:", box.showId);
+  //   router.push({ pathname: '/(web)/packing/label/[id]' as any, params: { id: box.id, showId: box.showId } });
+  // };
+
+  return (
+    <View style={styles.cardContainer}>
+      <View style={styles.cardContent}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity 
+            onPress={() => router.push({ pathname: '/props_shared_details/[id]' as any, params: { id: box.id, showId: box.showId, entityType: 'box' }})} 
+            style={styles.titleContainer}
+          >
+            <Text style={styles.titleText} numberOfLines={1}>{box.name ?? 'Unnamed Box'}</Text>
+          </TouchableOpacity>
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity onPress={() => onEdit(box)} style={styles.iconButton}>
+              <PencilNative size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDelete} disabled={isDeleting} style={styles.iconButton}>
+              {isDeleting ? 
+                <ActivityIndicator size="small" color="#EF4444" /> : 
+                <Trash2Native size={18} color="#9CA3AF" />
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.statusRow}>
+          <Text style={{color: 'white'}}>Status Placeholder - {status.charAt(0).toUpperCase() + status.slice(1)} | {timeAgo}</Text>
+        </View>
+
+        {box.description && <Text style={{color: 'white'}}>Description: {box.description}</Text>}
+
+        <View style={styles.contentSection}>
+          <Text style={{color: 'white'}}>Contents Placeholder ({box.props?.length || 0} items)</Text>
+        </View>
+
+        <View style={styles.footerSection}>
+          <Text style={{color: 'white'}}>Footer Placeholder - Weight: {totalWeightKg.toFixed(1)} kg</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    backgroundColor: '#1F2937', // gray-800
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#374151', // gray-700
+    marginVertical: 8, // For spacing between cards
+    overflow: 'hidden',
+  },
+  cardContent: {
+    padding: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  titleContainer: {
+    flex: 1, // Allow title to take available space
+    marginRight: 8, 
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#F3F4F6', // gray-100
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    padding: 6,
+    marginLeft: 8,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8, // For spacing between badge and button
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999, // Pill shape
+  },
+  statusIcon: {
+    marginRight: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  labelButton: {
+    backgroundColor: '#3B82F6', // blue-500
+    paddingVertical: 3, 
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  labelButtonText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  timeAgoText: {
+    fontSize: 10,
+    color: '#6B7280', // gray-500
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: '#9CA3AF', // gray-400
+    marginBottom: 12,
+  },
+  contentSection: {
+    borderTopWidth: 1,
+    borderColor: '#374151', // gray-700
+    paddingTop: 12,
+  },
+  contentTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#D1D5DB', // gray-300
+    marginBottom: 8,
+  },
+  propsListScrollContainer: {
+    maxHeight: 100, // Example, adjust as needed
+  },
+  propItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  propItemName: {
+    flex: 1, // To allow truncation if name is long
+    marginRight: 8,
+    color: '#9CA3AF', 
+    fontSize: 12,
+  },
+  propItemDetails: {
+    color: '#9CA3AF', 
+    fontSize: 12,
+    flexShrink: 0, // Prevent details from shrinking too much
+  },
+  noPropsText: {
+    fontSize: 12,
+    color: '#6B7280', // gray-500
+    fontStyle: 'italic',
+  },
+  footerSection: {
+    borderTopWidth: 1,
+    borderColor: '#374151', // gray-700
+    marginTop: 12,
+    paddingTop: 10,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    // gap: 8, // gap is not supported on View, use margins if needed
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#6B7280', // gray-500
+  },
+  heavyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)', // yellow-700/30 approximation
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8, // Space from weight text
+  },
+  heavyIcon: {
+    marginRight: 4,
+  },
+  heavyText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#FCD34D', // yellow-300
+  },
+}); 

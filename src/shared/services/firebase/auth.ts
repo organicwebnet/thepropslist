@@ -6,7 +6,7 @@ export class AuthService {
   constructor(private firebase: FirebaseService) {}
 
   async getCurrentUser(): Promise<User | null> {
-    return this.firebase.auth().currentUser;
+    return this.firebase.auth().currentUser as User | null;
   }
 
   async getUserProfile(uid: string): Promise<UserProfile | null> {
@@ -29,7 +29,7 @@ export class AuthService {
       
       // Assume UserProfile includes these fields, potentially optional
       return {
-        uid: uid, 
+        id: uid,
         email: data.email,
         displayName: data.displayName,
         photoURL: data.photoURL, // Keep photoURL, assume it exists (possibly optional)
@@ -44,7 +44,7 @@ export class AuthService {
     }
   }
 
-  async createUserProfile(user: User, role: UserRole = UserRole.USER): Promise<void> {
+  async createUserProfile(user: User, role: UserRole = UserRole.VIEWER): Promise<void> {
     const now = new Date();
     // Use UserProfile directly, assuming uid is handled by the path/set logic
     // Ensure UserProfile allows optional fields like displayName, photoURL if needed
@@ -126,10 +126,10 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
-    await this.firebase.auth().signOut();
+    await this.firebase.signOut();
   }
 
-  async createUser(email: string, password: string, role: UserRole = UserRole.USER): Promise<void> {
+  async createUser(email: string, password: string, role: UserRole = UserRole.VIEWER): Promise<void> {
     const userCredential = await this.firebase.createUserWithEmailAndPassword(email, password);
     const user = userCredential.user;
     

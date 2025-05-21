@@ -1,134 +1,201 @@
 import React from 'react';
-import { View, ScrollView, Pressable, Platform, TouchableOpacity, StyleSheet, Text } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { ShowList } from '../../src/components/ShowList';
-import { useShows } from '../../src/contexts/ShowsContext';
-import ShowForm from '../../src/components/ShowForm';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useShows } from '../../src/contexts/ShowsContext'; // Adjusted path
+import { useRouter } from 'expo-router';
+import type { Show } from '../../src/types'; // Assuming Show type is here
+import { Ionicons } from '@expo/vector-icons'; // Added Ionicons import
+import { ShadowedView, shadowStyle } from 'react-native-fast-shadow'; // Added import
+
+// Define colors based on your tailwind config for clarity (can be moved to a central theme/colors file)
+const darkThemeColors = {
+  bg: '#111827',          // dark-bg
+  cardBg: '#1F2937',      // dark-card-bg
+  textPrimary: '#F9FAFB', // dark-text-primary
+  textSecondary: '#9CA3AF',// dark-text-secondary
+  primary: '#3B82F6',     // dark-primary (blue accent)
+  border: '#374151',      // dark-border
+  // Add any other specific colors from your theme that might be used here
+};
 
 export default function ShowsScreen() {
-  const { shows, selectedShow, setSelectedShow, loading: showsLoading, error: showsError } = useShows();
+  const { shows, loading, error, setSelectedShow } = useShows();
   const router = useRouter();
 
-  const handleAddShowMobile = () => {
-    router.push('/shows/new' as any);
+  const handleShowPress = (show: Show) => {
+    setSelectedShow(show);
+    // For now, log or navigate to a generic detail placeholder if it exists
+    // Example: router.push(`/show-detail/${show.id}`);
+    console.log('Selected show:', show.name);
+    // Navigate to a detail screen, e.g., app/shows/[id].tsx if that's the pattern
+    // router.push(`/shows/${show.id}`); // This would be outside tabs
   };
 
-  const handleCreateShowWeb = async (formData: any /* TODO: Use Show type */) => {
-    console.log('Creating show (Web):', formData);
-    // TODO: Call actual create function (e.g., addShow from context/service)
-    try {
-        // await addShow(formData); // Example call - Commented out
-        setSelectedShow(null); // Clear selection/form after create
-    } catch (err) {
-        console.error("Error creating show:", err);
-        // TODO: Show error message to user
-    }
+  const handleAddNewShow = () => {
+    // Navigate to a screen for creating a new show
+    // Example: router.push('/(tabs)/shows/new'); or a modal
+    console.log('Navigate to add new show screen');
+     router.push('/props_shared_details/newShowForm'); // Placeholder, actual route will depend on where the form is
   };
 
-  const handleUpdateShowWeb = async (showId: string, formData: any /* TODO: Use Show type */) => {
-    console.log(`Updating show ${showId} (Web):`, formData);
-    // TODO: Call actual update function (e.g., updateShow from context/service)
-    try {
-        // await updateShow(showId, formData); // Example call - Commented out
-        // Optionally refetch or rely on context update
-    } catch (err) {
-        console.error("Error updating show:", err);
-        // TODO: Show error message to user
-    }
-  };
-
-  const handleDeleteShowWeb = async (showId: string) => {
-     console.log(`Deleting show ${showId} (Web):`);
-     // TODO: Call actual delete function (e.g., deleteShow from context/service)
-     try {
-         // await deleteShow(showId); // Example call - Commented out
-         setSelectedShow(null); // Clear selection if deleted show was selected
-     } catch (err) {
-         console.error("Error deleting show:", err);
-     }
-  };
-
-  if (Platform.OS === 'web') {
+  if (loading) {
     return (
-      <View style={styles.webContainer}>
-        <View style={styles.webListColumn}>
-          <ScrollView style={{ flex: 1 }}>
-            <ShowList
-              shows={shows}
-              selectedShowId={selectedShow?.id}
-              onSelect={(show) => setSelectedShow(show)}
-            />
-          </ScrollView>
-        </View>
-        
-        <View style={styles.webFormColumn}>
-          <ScrollView style={{ flex: 1 }}>
-            <ShowForm
-              mode={selectedShow ? 'edit' : 'create'}
-              initialData={selectedShow ?? undefined}
-              onSubmit={selectedShow 
-                ? (formData) => handleUpdateShowWeb(selectedShow.id, formData)
-                : handleCreateShowWeb
-              }
-              onCancel={selectedShow ? () => setSelectedShow(null) : undefined}
-            />
-          </ScrollView>
-        </View>
+      <View style={styles.loadingContainer}> {/* Changed from styles.container to avoid conflict if styles.container has padding */}
+        <ActivityIndicator size="large" color={darkThemeColors.primary} />
       </View>
     );
-  } else {
+  }
+
+  if (error) {
     return (
-      <View style={styles.container}>
-        <ShowList
-          shows={shows}
-          selectedShowId={selectedShow?.id}
-          onSelect={(show) => setSelectedShow(show)}
-        />
+      <View style={styles.loadingContainer}> {/* Changed from styles.container */}
+        <Text style={styles.errorText}>Error loading shows: {error.message}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={shows}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <ShadowedView style={[styles.showItemShadowContainer, shadowStyle({
+            radius: 2,
+            opacity: 0.2,
+            color: '#000',
+            offset: [0, 1],
+          })]}>
+            <TouchableOpacity style={styles.showItem} onPress={() => handleShowPress(item)}>
+              <Text style={styles.showName}>{item.name}</Text>
+              {/* Add more details like item.productionCompany or number of acts */}
+              <Text style={styles.showDetails}>{item.productionCompany || 'No company'}</Text>
+              <Text style={styles.showDetails}>{item.acts?.length || 0} Acts</Text>
+            </TouchableOpacity>
+          </ShadowedView>
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyListContainer}> {/* Changed from styles.emptyContainer */}
+            <Text style={styles.emptyText}>No shows available.</Text>
+            <Text style={styles.emptySubtext}>Tap "+" to create one.</Text>
+          </View>
+        }
+        contentContainerStyle={shows.length === 0 ? styles.listContentWhenEmpty : styles.listContent}
+      />
+      <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
+        radius: 5,
+        opacity: 0.3,
+        color: '#000',
+        offset: [0, 2],
+      })]}>
         <TouchableOpacity
           style={styles.fab}
-          onPress={handleAddShowMobile}
+          onPress={handleAddNewShow}
           activeOpacity={0.7}
         >
           <Ionicons name="add" size={30} color="#FFFFFF" />
         </TouchableOpacity>
-      </View>
-    );
-  }
+      </ShadowedView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1F1F1F',
+  container: { 
+    flex: 1, 
+    backgroundColor: darkThemeColors.bg, // Use dark background
+    // padding: 10, // Padding applied to list container or individual items for more control
   },
-  webContainer: {
+  loadingContainer: { // For loading and error states, centered
     flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#1F1F1F',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: darkThemeColors.bg,
   },
-  webListColumn: {
-    flex: 1,
-    borderRightWidth: 1,
-    borderColor: '#333',
+  errorText: { 
+    fontSize: 16, 
+    color: darkThemeColors.textSecondary, // Use secondary text color for errors
+    textAlign: 'center', 
+    paddingHorizontal: 20,
   },
-  webFormColumn: {
+  showItem: {
+    backgroundColor: darkThemeColors.cardBg, // Use card background
+    padding: 15,
+    marginVertical: 8,
+    marginHorizontal: 16, // Added horizontal margin for card-like appearance
+    borderRadius: 8,      // Rounded corners for cards
+    // width: '100%', // Removed, marginHorizontal will handle spacing
+    // minWidth: 300, 
+    // alignSelf: 'stretch',
+    // shadowColor: '#000', // Removed
+    
+    // shadowOpacity: 0.2, // Removed
+    // shadowRadius: 2, // Removed
+    // elevation: 3, // Removed
+  },
+  showItemShadowContainer: { // New style for ShadowedView for showItem
+    marginVertical: 8,
+    marginHorizontal: 16,
+    borderRadius: 8,
+  },
+  showName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: darkThemeColors.textPrimary, // Use primary text color
+    marginBottom: 4, // Space between name and details
+  },
+  showDetails: {
+    fontSize: 14,
+    color: darkThemeColors.textSecondary, // Use secondary text color
+  },
+  emptyListContainer: { // For the ListEmptyComponent
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: darkThemeColors.textSecondary,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: darkThemeColors.textSecondary, // Slightly less prominent than emptyText
+    opacity: 0.7,
+  },
+  listContent: {
+    paddingHorizontal: 8, // Give some padding if items don't have horizontal margin
+    paddingVertical: 10,
+  },
+  listContentWhenEmpty: { // Ensures empty message is centered
+    flex: 1, 
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   fab: {
     position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#007AFF',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: darkThemeColors.primary, // Use primary accent color
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    right: 20,
-    bottom: 20,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    // elevation: 8, // Removed
+    // shadowColor: '#000', // Removed
+    // shadowRadius: 5, // Removed
+    // shadowOpacity: 0.3, // Removed
+    
   },
+  fabShadowContainer: { // New style for ShadowedView for fab
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  }
 }); 

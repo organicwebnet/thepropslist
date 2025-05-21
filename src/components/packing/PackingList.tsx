@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ActivityIndicator, Text, View, Button } from 'react-native'; // Correct import for ActivityIndicator and Button
+import { ActivityIndicator, Text, View, Button, StyleSheet } from 'react-native'; // Correct import for ActivityIndicator and Button
 // Import PackingBox/PackedProp from correct sub-directory
 import { PackingBox, PackedProp } from '../../types/packing'; 
 import { Show } from '../../types'; // Keep Show from main types
@@ -212,6 +212,25 @@ export function PackingList({
     setSelectedProps([]);
   };
 
+  const styles = StyleSheet.create({
+    selectedPropsSummary: {
+      padding: 10,
+      backgroundColor: '#f0f0f0',
+      borderTopWidth: 1,
+      borderTopColor: '#ccc',
+      alignItems: 'center',
+    },
+    summaryText: {
+      fontSize: 14,
+      color: '#333',
+      marginBottom: 5,
+    },
+    heavyText: {
+      color: 'red',
+      fontWeight: 'bold',
+    },
+  });
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Column 1: Available Props */}
@@ -314,16 +333,12 @@ export function PackingList({
             )}
           </div>
 
-          <div className="border-t border-gray-700 pt-4 space-y-2 text-sm">
-            <div className="flex justify-between text-gray-400">
-              <span>Total Items:</span>
-              <span>{selectedProps.length}</span>
-            </div>
-            <div className={`flex justify-between ${isBoxHeavy ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-              <span>Estimated Weight:</span>
-              <span>{totalWeight.toFixed(2)} kg {isBoxHeavy && '(Heavy)'}</span>
-            </div>
-          </div>
+          <View style={styles.selectedPropsSummary}>
+            <Text style={styles.summaryText}>Total Items: {selectedProps.length}</Text>
+            <Text style={styles.summaryText}>
+              Estimated Weight: {totalWeight.toFixed(2)} kg {isBoxHeavy && <Text style={styles.heavyText}>(Heavy)</Text>}
+            </Text>
+          </View>
 
           <div className="flex gap-4">
             {editingBoxId && (

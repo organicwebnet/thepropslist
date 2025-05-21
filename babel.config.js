@@ -3,8 +3,9 @@ module.exports = function (api) {
   
   return {
     presets: [
-      ["babel-preset-expo", { jsxImportSource: "nativewind" }],
-      "nativewind/babel",
+      'babel-preset-expo',
+      // 'module:@react-native/babel-preset', // Removed to avoid conflict with babel-preset-expo
+      "nativewind/babel", // Re-enabled NativeWind preset
     ],
     plugins: [
       [
@@ -23,8 +24,7 @@ module.exports = function (api) {
           }
         }
       ],
-      "react-native-reanimated/plugin",
-      "@babel/plugin-proposal-export-namespace-from",
+      // "react-native-reanimated/plugin", // Temporarily commented out
     ],
     env: {
       production: {
