@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, StyleSheet, type TextProps } from 'react-native';
-import { useFont } from '../contexts/FontContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useFont } from '../contexts/FontContext.tsx';
+import { useTheme } from '../contexts/ThemeContext.tsx';
 
 // Define a mapping for your theme colors to simplify usage
 // This should ideally come from a shared constants/theme file
@@ -25,7 +25,8 @@ interface StyledTextProps extends TextProps {
 
 export const StyledText: React.FC<StyledTextProps> = ({ style, type = 'primary', customColor, ...props }) => {
   const { font } = useFont();
-  const { theme } = useTheme();
+  const { theme: currentThemeValue } = useTheme();
+  const theme = currentThemeValue as 'light' | 'dark'; // Explicitly type theme
 
   const fontFamily = font === 'openDyslexic' ? 'OpenDyslexic-Regular' : undefined; // undefined uses system default
   

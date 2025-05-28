@@ -1,4 +1,4 @@
-import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle';
+import { PropLifecycleStatus, lifecycleStatusLabels } from '../../../types/lifecycle.ts';
 
 // Status color mapping using Tailwind classes
 export const statusColorMap: Record<PropLifecycleStatus, { bg: string; text: string; border: string }> = {

@@ -3,7 +3,9 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { QRScannerService } from './QRScannerService';
+import { QRScannerService } from './QRScannerService.ts';
+import { useRouter } from 'expo-router';
+import { Package, X } from 'lucide-react-native';
 
 interface QRScannerScreenProps {
   onScan: (data: Record<string, any>) => void;
@@ -20,7 +22,7 @@ export function QRScannerScreen({ onScan, onClose }: QRScannerScreenProps) {
       const permission = await qrService.requestPermissions();
       setHasPermission(permission);
     })();
-  }, []);
+  }, [qrService]);
 
   const handleBarCodeScanned = ({ type, data }: BarCodeScannerResult) => {
     setScanned(true);

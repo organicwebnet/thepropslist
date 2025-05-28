@@ -1,12 +1,16 @@
-import { generateId } from "../lib/utils";
-import { PackedProp } from "../types";
-import { PackingBox } from '../types';
-import type { Prop } from '@shared/types';
+import { generateId } from "../lib/utils.ts";
+import { PackedProp } from "../types/index.ts";
+import { PackingBox } from '../types/index.ts';
+import type { Prop } from '../shared/types/props.ts';
+import { Platform } from 'react-native';
+import { FirebaseService } from '../shared/services/firebase/types.ts';
 
 export class PackingService {
   private static instance: PackingService;
 
-  private constructor() {}
+  private constructor() {
+    // Private constructor to prevent direct instantiation
+  }
 
   static getInstance(): PackingService {
     if (!PackingService.instance) {

@@ -1,37 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { usePacking } from '../../src/hooks/usePacking';
 
-// Consistent dark theme colors
-const darkThemeColors = {
-  background: '#111827', // gray-900
-  cardBg: '#1F2937',      // gray-800
-  textPrimary: '#F9FAFB',  // gray-50
-  textSecondary: '#9CA3AF',// gray-400
-  inputBg: '#374151',     // gray-700
-  inputBorder: '#4B5563', // gray-600
-  primary: '#3B82F6',     // blue-500
-  error: '#EF4444',       // red-500
-};
+import { useTheme } from '../../src/contexts/ThemeContext.tsx';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/theme.ts';
+import { usePacking } from '../../src/hooks/usePacking.ts';
 
 export default function CreateBoxScreen() {
   const router = useRouter();
-  const { showId } = useLocalSearchParams<{ showId?: string }>();
+  const { showId } = useLocalSearchParams<{ showId: string }>();
+  const { theme: themeName } = useTheme();
+  const currentThemeColors = themeName === 'light' ? appLightTheme.colors : appDarkTheme.colors;
+  const styles = getStyles(currentThemeColors);
 
-  const { operations, loading: packingLoading, error: packingError } = usePacking(showId);
-  const { createBox } = operations;
+  const { operations, loading: packingHookLoading, error: packingHookError } = usePacking(showId);
 
   const [boxName, setBoxName] = useState('');
   const [description, setDescription] = useState('');
-  const [actNumber, setActNumber] = useState('');
-  const [sceneNumber, setSceneNumber] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveBox = async () => {
     if (!boxName.trim()) {
-      Alert.alert('Missing Name', 'Please enter a name for the box.');
+      Alert.alert('Missing Information', 'Please enter a name for the box.');
       return;
     }
     if (!showId) {
@@ -41,186 +32,156 @@ export default function CreateBoxScreen() {
 
     setIsSaving(true);
     try {
-      // For now, we create an empty box in terms of props.
-      // Props can be added later via an edit screen for the box.
-      const newBoxId = await createBox(
-        [], // Empty PackedProp[] for now
-        boxName.trim(),
-        actNumber ? parseInt(actNumber, 10) : undefined,
-        sceneNumber ? parseInt(sceneNumber, 10) : undefined
-      );
-
+      // Props array is empty for a new box
+      const newBoxId = await operations.createBox([], boxName.trim(), description.trim());
       if (newBoxId) {
-        Alert.alert('Success', 'Packing box created successfully!');
-        // Navigate back to the packing list, which should refresh
-        if (router.canGoBack()) {
-          router.back();
-        } else {
-          router.replace('/(tabs)/packing');
-        }
+        Alert.alert('Success', 'Box created successfully!', [
+          { text: 'OK', onPress: () => router.replace(`/packing/box/${newBoxId}?showId=${showId}`) }
+        ]);
       } else {
-        Alert.alert('Error', 'Failed to create box. No ID returned.');
+        Alert.alert('Error', packingHookError?.message || 'Failed to create box. No ID returned.');
       }
-    } catch (err) {
-      console.error('Error saving box:', err);
-      Alert.alert('Error', err instanceof Error ? err.message : 'An unknown error occurred while saving the box.');
+    } catch (error: any) {
+      console.error('Error creating box:', error);
+      Alert.alert('Error', error.message || 'An unexpected error occurred while creating the box.');
     } finally {
       setIsSaving(false);
     }
   };
-
-  if (!showId) {
+  
+  if (packingHookLoading && !isSaving) { // Show loading only if packing hook is initially loading
     return (
-      <View style={styles.container}>
-        <Stack.Screen options={{ title: 'Error' }} />
-        <Text style={styles.errorText}>Show ID is missing. Cannot create a box.</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={currentThemeColors.primary} />
       </View>
     );
   }
-  
-  if (packingLoading && !isSaving) { // Show packing hook loading only if not currently saving form
-    return (
-        <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={darkThemeColors.primary} />
-        </View>
-    );
-  }
-
-  if (packingError) {
-      return (
-          <View style={styles.container}>
-              <Stack.Screen options={{ title: 'Error' }} />
-              <Text style={styles.errorText}>Error loading packing context: {packingError.message}</Text>
-          </View>
-      );
-  }
-
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContentContainer}>
-      <Stack.Screen options={{ title: 'Create New Packing Box' }} />
-      
-      <Text style={styles.label}>Box Name*</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., Act 1 Props, Backstage Right"
-        value={boxName}
-        onChangeText={setBoxName}
-        placeholderTextColor={darkThemeColors.textSecondary}
-      />
-
-      <Text style={styles.label}>Description</Text>
-      <TextInput
-        style={[styles.input, styles.multilineInput]}
-        placeholder="Optional: Details about the box contents or purpose"
-        value={description}
-        onChangeText={setDescription}
-        placeholderTextColor={darkThemeColors.textSecondary}
-        multiline
-        numberOfLines={3}
-      />
-
-      <View style={styles.row}>
-        <View style={styles.column}>
-          <Text style={styles.label}>Act Number</Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <Stack.Screen options={{ title: 'Create New Box' }} />
+      <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+        <View style={styles.formContainer}>
+          <Text style={styles.label}>Box Name*</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., 1"
-            value={actNumber}
-            onChangeText={setActNumber}
-            keyboardType="numeric"
-            placeholderTextColor={darkThemeColors.textSecondary}
+            placeholder="e.g., Act I Props, Kitchenware"
+            value={boxName}
+            onChangeText={setBoxName}
+            placeholderTextColor={currentThemeColors.textSecondary || '#ccc'}
           />
-        </View>
-        <View style={styles.column}>
-          <Text style={styles.label}>Scene Number</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., 3"
-            value={sceneNumber}
-            onChangeText={setSceneNumber}
-            keyboardType="numeric"
-            placeholderTextColor={darkThemeColors.textSecondary}
-          />
-        </View>
-      </View>
 
-      <TouchableOpacity 
-        style={[styles.button, isSaving && styles.buttonDisabled]} 
-        onPress={handleSaveBox}
-        disabled={isSaving}
-      >
-        {isSaving ? (
-          <ActivityIndicator size="small" color={darkThemeColors.textPrimary} />
-        ) : (
-          <Text style={styles.buttonText}>Create Box</Text>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+          <Text style={styles.label}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Optional: Add any details about the box contents or handling instructions."
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={4}
+            placeholderTextColor={currentThemeColors.textSecondary || '#ccc'}
+          />
+
+          {packingHookError && !isSaving && (
+            <Text style={styles.errorText}>Error with packing context: {packingHookError.message}</Text>
+          )}
+
+          <TouchableOpacity
+            style={[styles.saveButton, isSaving ? styles.saveButtonDisabled : {}]}
+            onPress={handleSaveBox}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator color={styles.saveButtonText.color} />
+            ) : (
+              <>
+                <Ionicons name="checkmark-circle-outline" size={22} color={styles.saveButtonText.color} style={styles.buttonIcon} />
+                <Text style={styles.saveButtonText}>Save Box</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors: typeof appLightTheme.colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: darkThemeColors.background,
-  },
-  scrollContentContainer: {
-    padding: 20,
+    backgroundColor: themeColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: darkThemeColors.background,
+    backgroundColor: themeColors.background,
+  },
+  scrollContentContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  formContainer: {
+    backgroundColor: themeColors.card,
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
   },
   label: {
     fontSize: 16,
-    color: darkThemeColors.textSecondary,
+    color: themeColors.text,
     marginBottom: 8,
-    marginTop: 16,
+    fontWeight: '600',
   },
   input: {
-    backgroundColor: darkThemeColors.inputBg,
-    color: darkThemeColors.textPrimary,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 8,
-    fontSize: 16,
+    backgroundColor: themeColors.background, // Slightly different background for input
+    color: themeColors.text,
     borderWidth: 1,
-    borderColor: darkThemeColors.inputBorder,
+    borderColor: themeColors.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginBottom: 20,
   },
-  multilineInput: {
+  textArea: {
     height: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: 'top', // For Android
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  column: {
-    flex: 1,
-    marginRight: 5, // Or some spacing
-  },
-  button: {
-    backgroundColor: darkThemeColors.primary,
-    padding: 15,
+  saveButton: {
+    backgroundColor: themeColors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 30,
+    justifyContent: 'center',
   },
-  buttonDisabled: {
-    backgroundColor: '#555', // A darker/disabled shade for primary
+  saveButtonDisabled: {
+    backgroundColor: themeColors.primary, // Or a disabled color from theme
+    opacity: 0.7,
   },
-  buttonText: {
-    color: darkThemeColors.textPrimary,
+  saveButtonText: {
+    color: themeColors.card, // Assuming primary button text is light/contrasting
     fontSize: 18,
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   errorText: {
-    color: darkThemeColors.error,
-    fontSize: 16,
+    color: themeColors.error,
+    fontSize: 14,
     textAlign: 'center',
-    padding: 20,
+    marginBottom: 15,
   },
 }); 

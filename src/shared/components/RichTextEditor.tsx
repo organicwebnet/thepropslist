@@ -25,7 +25,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       setIsLoadingWebEditor(true);
       // Dynamically import the web editor only on the web platform
       import('react-simple-wysiwyg').then(module => {
-        setWebEditorComponent(() => module.default);
+        setWebEditorComponent(module.default as unknown as React.ComponentType<any>);
         setIsLoadingWebEditor(false);
       }).catch(err => {
         console.error("Failed to load web editor:", err);
@@ -51,7 +51,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     // We need to dynamically import these too or ensure they are tree-shaken if not used on mobile
     // For simplicity, let's assume they are part of the default export or handle dynamically as well
     // This part might need refinement based on 'react-simple-wysiwyg' exports
-    const { Toolbar, BtnBold, BtnItalic, BtnUnderline, BtnLink, BtnBulletList, BtnNumberedList } = require('react-simple-wysiwyg');
+    const { Toolbar, BtnBold, BtnItalic, BtnUnderline, BtnLink, BtnBulletList, BtnNumberedList } = Editor as any; // Using WebEditorComponent which should have these properties after dynamic import
 
     // NOTE: The inline style tag won't work directly in React Native.
     // Web-specific styles should be handled via CSS Modules, Tailwind, or other web styling methods.

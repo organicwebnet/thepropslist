@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FileSpreadsheet, FileText, AlertCircle, Pencil } from 'lucide-react';
-import type { Prop } from '@/shared/types/props';
-import type { Show } from '@/types/index';
-import { downloadCSV } from '../lib/sheets';
-import { generatePDF } from '../lib/pdf';
+import type { Prop } from '../shared/types/props.ts';
+import type { Show } from '../types/index.ts';
+import { downloadCSV } from '../lib/sheets.ts';
+import { generatePDF } from '../lib/pdf.ts';
 
 interface ExportToolbarProps {
   props: Prop[];

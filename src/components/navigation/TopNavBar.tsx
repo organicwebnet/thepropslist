@@ -1,15 +1,22 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { Link } from 'expo-router';
-import { useTheme } from '../../contexts/ThemeContext'; // Assuming ThemeContext provides theme info
-import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
-import { useRouter } from 'expo-router'; // Import useRouter
-// import { LogOut, User as UserIcon } from 'lucide-react-native'; // Temporarily remove icon imports
+import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, Image } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+import { Menu, Moon, Sun, UserCircle, LogOut, HelpCircle, MessageSquare } from 'lucide-react-native';
+import { useTheme } from '../../contexts/ThemeContext.tsx';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+const appConfigFunction = require('../../../app.config.js'); // Corrected import for app.config.js
 
 export const TopNavBar = () => {
-  const { theme } = useTheme(); // Example: Get theme for styling
-  const { user, signOut } = useAuth(); // Get user object and signOut
-  const router = useRouter(); // Get router instance
+  const { theme, setTheme } = useTheme();
+  const { user, signOut } = useAuth();
+  const router = useRouter();
+  const colorScheme = useColorScheme();
+  const APP_CONFIG = appConfigFunction({ config: {} });
+  const APP_NAME = APP_CONFIG.name;
+
+  const handleToggleTheme = () => {
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
 
   // Define common link styles
   const linkStyle = "text-lg font-semibold px-4 py-2 rounded-md hover:bg-gray-700";
@@ -33,9 +40,6 @@ export const TopNavBar = () => {
     >
       {/* Left side links */}
       <View className="flex-row items-center space-x-4">
-        <Text className="text-xl font-bold text-white mr-6">PropsBible</Text>
-        {/* Navigation Links */}
-        
         <Link href="/shows" asChild>
           <TouchableOpacity>
             <Text className={`${linkStyle} ${textStyle}`}>Shows</Text>
@@ -49,6 +53,11 @@ export const TopNavBar = () => {
         <Link href="/packing" asChild>
            <TouchableOpacity>
              <Text className={`${linkStyle} ${textStyle}`}>Packing</Text>
+           </TouchableOpacity>
+        </Link>
+        <Link href="/todos" asChild>
+           <TouchableOpacity>
+             <Text className={`${linkStyle} ${textStyle}`}>Task Boards</Text>
            </TouchableOpacity>
         </Link>
       </View>
@@ -84,6 +93,23 @@ export const TopNavBar = () => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  logoContainer: {
+    // Add styles if needed, e.g., for alignment
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 30,
+    height: 30,
+    resizeMode: 'contain',
+  },
+  appName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+});
 
 // Note: Added TouchableOpacity wrapper for better web interaction/styling consistency if needed.
 // Also added placeholder ThemeContext usage - adjust path and implementation as needed.

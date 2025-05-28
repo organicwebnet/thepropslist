@@ -110,7 +110,15 @@ Production teams face significant challenges in managing, tracking, and coordina
 - Timeline integration with production schedule
 
 #### 3.1.5 Collaboration Tools
-- Real-time updates and notifications
+- Real-time updates and notifications:
+  - Centralized notification feed on the home page/dashboard.
+  - Alerts for:
+    - New prop requests or requests for information.
+    - Changes to prop lifecycle statuses (e.g., 'Needs Repair', 'Ready for Show', 'Returned to Storage').
+    - Requests from other team members (e.g., task assignments, collaboration invites, comments needing attention).
+    - Upcoming deadlines or important dates related to props or tasks.
+  - Customizable notification preferences (e.g., by type, by show, push notifications, email digests).
+  - In-app indicators for unread notifications.
 - Team member assignment and tracking
 - Comment and discussion threads on specific props
 - Shared calendars and deadlines

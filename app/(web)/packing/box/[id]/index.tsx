@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, TextInput } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter, Link } from 'expo-router';
-import { usePacking } from '@/hooks/usePacking'; // Import usePacking
-import type { PackingBox, PackedProp } from '@/types/packing'; // Import PackingBox type
-import { useProps } from '@/contexts/PropsContext'; // Import useProps
-import { type Prop } from '@/shared/types/props'; // Import Prop type
+import { usePacking } from '@/hooks/usePacking.ts';
+import type { PackingBox, PackedProp } from '@/types/packing.ts';
+import { useProps } from '@/contexts/PropsContext.tsx';
+import { type Prop } from '@/shared/types/props.ts';
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
-import { Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, ArrowLeft, Save, Loader2, X } from 'lucide-react'; // Keep only one import line
-import PropCard from '@/shared/components/PropCard'; // Changed to default import
+import { Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, ArrowLeft, Save, Loader2, X } from 'lucide-react';
+import PropCard from '@/shared/components/PropCard/index.tsx';
 
 // Reuse status styles logic (consider moving to a shared location later)
 type StatusStyle = { bg: string; text: string; icon: React.ElementType };
@@ -62,19 +62,19 @@ export default function BoxDetailPage() {
     }
 
     if (!currentLoading && boxId && showId && boxes.length > 0 && allProps.length > 0) {
-      const foundBox = boxes.find(b => b.id === boxId);
+      const foundBox = boxes.find((b: PackingBox) => b.id === boxId);
       if (foundBox) {
         setBox(foundBox);
         setNoteContent(foundBox.notes || '');
-        const packedPropIds = new Set(foundBox.props?.map(p => p.propId) || []);
-        const filteredProps = allProps.filter(p => packedPropIds.has(p.id));
+        const packedPropIds = new Set(foundBox.props?.map((p: PackedProp) => p.propId) || []);
+        const filteredProps = allProps.filter((p: Prop) => packedPropIds.has(p.id));
         setBoxPropsData(filteredProps);
 
       } else {
         setError(`Box with ID ${boxId} not found in show ${showId}.`);
       }
     } else if (!currentLoading && boxId && showId) {
-       const foundBox = boxes.find(b => b.id === boxId);
+       const foundBox = boxes.find((b: PackingBox) => b.id === boxId);
        if (!foundBox) {
          setError(`Box with ID ${boxId} not found in show ${showId}.`);
        }
@@ -118,7 +118,7 @@ export default function BoxDetailPage() {
   const currentStatusStyle = statusStyles[status] || statusStyles.unknown;
   const StatusIcon = currentStatusStyle.icon;
   const timeAgo = formatUpdateTime(box.updatedAt);
-  const totalWeightKg = box.props?.reduce((sum, p) => sum + (p.weight || 0), 0) ?? 0;
+  const totalWeightKg = box.props?.reduce((sum: number, p: PackedProp) => sum + (p.weight || 0), 0) ?? 0;
 
   // Function to handle saving the note
   const handleSaveNote = async () => {

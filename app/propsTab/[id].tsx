@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { Prop } from '@/shared/types/props';
+import { useFirebase } from '@/contexts/FirebaseContext.tsx';
+import { Prop } from '@/shared/types/props.ts';
+import { FirebaseDocument } from '@/shared/services/firebase/types.ts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pencil, Trash2 } from 'lucide-react-native';
 
@@ -29,14 +30,14 @@ export default function PropDetailScreen() {
 
     setLoading(true);
     firebaseService.getDocument<Prop>('props', id)
-      .then(propDoc => {
-        if (propDoc) { 
-          setProp({ id: propDoc.id, ...propDoc.data } as Prop);
+      .then((propDoc: FirebaseDocument<Prop> | null) => {
+        if (propDoc && propDoc.data) {
+          setProp({ ...propDoc.data, id: propDoc.id } as Prop);
         } else {
           setError('Prop not found.');
         }
       })
-      .catch(err => {
+      .catch((err: any) => {
         console.error("Error fetching prop details:", err);
         setError('Failed to load prop details.');
         // Navigate back if possible

@@ -1,11 +1,14 @@
 import React from 'react';
-import { Link } from 'expo-router'; // Import Link for navigation
-import type { Prop } from '@/shared/types/props';
+import { Link, useRouter } from 'expo-router'; // Import Link for navigation, Added useRouter
+import type { Prop } from '../../../shared/types/props.ts';
 // Remove direct import of lifecycle types if no longer needed here
 // import { PropLifecycleStatus, lifecycleStatusLabels, lifecycleStatusPriority } from '@/types/lifecycle'; 
 
 // Import helpers from the new utility file
-import { statusColorMap, getStatusLabel, formatDateTime } from '@/platforms/web/utils/propDisplayUtils';
+import { statusColorMap, getStatusLabel, formatDateTime } from '../utils/propDisplayUtils.ts';
+import { Card, CardContent, CardActions, Typography, Button, Chip, Box, Grid } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { Calendar as CalendarIcon, Image as ImageIcon } from 'lucide-react';
 
 // --- SVG Icons ---
 const EditIcon = () => (
@@ -23,14 +26,14 @@ const DeleteIcon = () => (
 
 interface WebPropCardProps {
   prop: Prop;
-  onEdit: (id: string) => void; // Keep for button action
   onDelete: (id: string) => void; // Keep for button action
 }
 
 // Remove local helper definitions (statusColorMap, getStatusLabel, formatDateTime)
 // They are now imported from propDisplayUtils.ts
 
-export function WebPropCard({ prop, onEdit, onDelete }: WebPropCardProps) {
+export function WebPropCard({ prop, onDelete }: WebPropCardProps) {
+  const router = useRouter(); // Added router
   // Use imported helpers
   const statusLabel = getStatusLabel(prop.status);
   const colors = statusColorMap[prop.status] || { bg: 'bg-gray-600/20', text: 'text-gray-400', border: 'border-gray-500/50' };
@@ -48,13 +51,14 @@ export function WebPropCard({ prop, onEdit, onDelete }: WebPropCardProps) {
     <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-md flex flex-col overflow-hidden h-full relative group"> {/* Added relative and group */}
       {/* Edit/Delete Icons - Positioned top-right */}
       <div className="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-        <button
-          onClick={(e) => { e.stopPropagation(); e.preventDefault(); onEdit(prop.id); }} // Prevent link navigation
-          className="p-1 rounded-full bg-gray-700/80 hover:bg-blue-600 text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          aria-label="Edit Prop"
-        >
-          <EditIcon />
-        </button>
+        <Link href={`/props/${prop.id}/edit`} asChild>
+          <button
+            className="p-1 rounded-full bg-gray-700/80 hover:bg-blue-600 text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Edit Prop"
+          >
+            <EditIcon />
+          </button>
+        </Link>
         <button
           onClick={(e) => { e.stopPropagation(); e.preventDefault(); onDelete(prop.id); }} // Prevent link navigation
           className="p-1 rounded-full bg-gray-700/80 hover:bg-red-600 text-gray-300 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -64,7 +68,7 @@ export function WebPropCard({ prop, onEdit, onDelete }: WebPropCardProps) {
         </button>
       </div>
 
-      {/* Link wrapper for card content */}
+      {/* Link wrapper for card content - this is the outer link */}
       <Link href={`/props/${prop.id}` as any} className="cursor-pointer">
         {displayImage ? (
           <img

@@ -1,4 +1,4 @@
-import { TicketmasterEvent, TicketmasterEventSearchResponse, TicketmasterSimplifiedEvent } from '../../types/ticketmaster';
+import { TicketmasterEvent, TicketmasterEventSearchResponse, TicketmasterSimplifiedEvent } from '../../types/ticketmaster.ts';
 
 /**
  * Searches for events by calling our backend API route.

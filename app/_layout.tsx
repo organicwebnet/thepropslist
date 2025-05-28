@@ -7,12 +7,12 @@
 import React, { useEffect, type PropsWithChildren } from 'react';
 import { Slot, Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ThemeProvider } from '../src/contexts/ThemeContext';
-import { PropsProvider } from '../src/contexts/PropsContext';
-import { ShowsProvider } from '../src/contexts/ShowsContext';
-import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
-import { FontProvider, useFont, FontChoice } from '../src/contexts/FontContext';
-import { NativeAuthScreen } from '../src/components/NativeAuthScreen';
+import { ThemeProvider } from '../src/contexts/ThemeContext.tsx';
+import { PropsProvider } from '../src/contexts/PropsContext.tsx';
+import { ShowsProvider } from '../src/contexts/ShowsContext.tsx';
+import { AuthProvider, useAuth } from '../src/contexts/AuthContext.tsx';
+import { FontProvider, useFont, FontChoice } from '../src/contexts/FontContext.tsx';
+import { NativeAuthScreen } from '../src/components/NativeAuthScreen.tsx';
 import { View, ActivityIndicator, Platform, StyleSheet, Text } from 'react-native';
 import { useFonts } from 'expo-font';
 // import * as SplashScreen from 'expo-splash-screen'; // Commented out

@@ -1,16 +1,16 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Props, Shows, Packing } from '../pages';
-import PropDetailPage from '../pages/PropDetailPage';
-import ShowDetailPage from '../pages/ShowDetailPage';
-import { PackingPage } from '../pages/PackingPage';
+import Props from '../pages/Props.tsx';
+import Shows from '../pages/Shows.tsx';
+import Packing from '../pages/Packing.tsx';
+import PropDetailPage from '../pages/PropDetailPage.tsx';
+import ShowDetailPage from '../pages/ShowDetailPage.tsx';
 import { Package, Theater, Box } from 'lucide-react-native';
-import type { RootStackParamList } from './types';
-import { Show } from '../types';
-import { Prop } from '@/shared/types/props';
-import { RouteProp } from '@react-navigation/native';
+import type { RootStackParamList } from './types.ts';
+import { Show } from '../types/index.ts';
+import { Prop } from '../shared/types/props.ts';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
@@ -84,14 +84,14 @@ export function AppNavigator() {
         <Stack.Screen
           name="PropDetail"
           component={PropDetailPage}
-          options={({ route }: { route: RouteProp<RootStackParamList, 'PropDetail'> }) => ({
+          options={({ route }: NativeStackScreenProps<RootStackParamList, 'PropDetail'>) => ({
             title: route.params?.prop?.name ? `Prop - ${route.params.prop.name}` : 'Prop Detail',
           })}
         />
         <Stack.Screen
           name="ShowDetail"
           component={ShowDetailPage}
-          options={({ route }: { route: RouteProp<RootStackParamList, 'ShowDetail'> }) => ({
+          options={({ route }: NativeStackScreenProps<RootStackParamList, 'ShowDetail'>) => ({
             title: route.params?.show?.name ? `Show - ${route.params.show.name}` : 'Show Detail',
           })}
         />

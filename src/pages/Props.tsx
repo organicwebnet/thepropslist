@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, ActivityIndicator, Button } from 'react-native';
-import { Stack, Link } from 'expo-router';
+import { View, StyleSheet, Text, ActivityIndicator, Button, TouchableOpacity } from 'react-native';
+import { Stack, Link, useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
-import { PropList } from '../components/PropList';
-import type { Prop } from '@shared/types';
-import type { Show } from '../types';
-import type { Filters } from '../types';
+import { PropList } from '../components/PropList.tsx';
+import type { Prop } from '../shared/types/index.ts';
+import type { Show } from '../types/index.ts';
+import type { Filters } from '../types/props.ts';
+import { useProps } from '../contexts/PropsContext.tsx';
+import { useShows } from '../contexts/ShowsContext.tsx';
 
 export default function Props() {
   const [props, setProps] = useState<Prop[]>([]);

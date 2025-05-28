@@ -1,12 +1,12 @@
-import { DigitalInventoryService, InventoryProp, PropLocation, PropMaintenance } from '../inventoryService';
-import { FirebaseService, FirebaseDocument, FirebaseCollection, CustomFirestore } from '../../firebase/types';
-import { VisionAPIService } from '../../ai/vision';
-import { QRCodeService } from '../../qr/qrService';
+import { DigitalInventoryService, InventoryProp, PropLocation, PropMaintenance } from '../inventoryService.ts';
+import { FirebaseService, FirebaseDocument, FirebaseCollection, CustomFirestore } from '../../firebase/types.ts';
+import { VisionAPIService } from '../../ai/vision.ts';
+import { QRCodeService } from '../../qr/qrService.ts';
 import { Firestore, DocumentData } from 'firebase/firestore';
 
-jest.mock('../../firebase/types');
-jest.mock('../../ai/vision');
-jest.mock('../../qr/qrService');
+jest.mock('../../firebase/types.ts');
+jest.mock('../../ai/vision.ts');
+jest.mock('../../qr/qrService.ts');
 
 describe('DigitalInventoryService', () => {
   let service: DigitalInventoryService;

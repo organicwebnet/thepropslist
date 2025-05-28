@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, Platform } from 'react-native';
-import { Address } from '../types/address'; // Assuming Address type is in shared/types
+import { Address } from '../types/address.ts'; // Assuming Address type is in shared/types
 import { Picker } from '@react-native-picker/picker';
 
 interface AddressSelectionModalProps {

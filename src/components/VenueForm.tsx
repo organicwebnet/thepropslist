@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, X } from 'lucide-react';
-import type { Venue } from '../types/index';
-import type { Address } from '../shared/types/address';
-import type { CustomTimestamp } from '../shared/services/firebase/types';
+import type { Venue } from '../types/index.ts';
+import type { Address } from '../shared/types/address.ts';
+import type { CustomTimestamp } from '../shared/services/firebase/types.ts';
 
 const defaultAddress: Address = {
   id: '',

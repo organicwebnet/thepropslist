@@ -2,9 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { Stack, useRouter, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useProps } from '@/contexts/PropsContext';
-import { useShows } from '@/contexts/ShowsContext';
-import type { Prop } from '@/shared/types/props';
+import { useProps } from '@/contexts/PropsContext.tsx';
+import { useShows } from '@/contexts/ShowsContext.tsx';
+import type { Prop } from '@/shared/types/props.ts';
 import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
 
 // Native screen component for the Props tab
@@ -26,7 +26,8 @@ export default function PropsTabScreen() {
         return;
     }
     // Navigate to the shared add prop screen (adjust path if needed)
-    router.push({ pathname: '/props_shared_details/add', params: { showId: selectedShow.id } });
+    // router.push({ pathname: '/props_shared_details/add', params: { showId: selectedShow.id } });
+    router.push({ pathname: '/props/create', params: { showId: selectedShow.id } } as any);
   };
 
   const handleViewPropDetails = (propId: string) => {

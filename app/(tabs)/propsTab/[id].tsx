@@ -1,6 +1,6 @@
 import React from 'react';
 // Go up two levels from app/(tabs)/propsTab/ to app/, then into props_shared_details/[id]
-import NativePropDetailScreenShared from '../../props_shared_details/[id]';
+import NativePropDetailScreenShared from '../../props_shared_details/[id]/index.tsx';
 
 export default function NativePropDetailScreenTabWrapper() {
   // The NativePropDetailScreenShared component uses useLocalSearchParams internally

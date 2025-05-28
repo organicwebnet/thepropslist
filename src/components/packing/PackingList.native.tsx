@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     ActivityIndicator, Text, View, Button, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform
 } from 'react-native';
-import { PackingBox, PackedProp } from '../../types/packing'; 
-import { Show } from '../../types'; 
-import { Prop } from '@/shared/types/props'; 
-import { PackingBoxCard } from './PackingBoxCard';
-import { PropSelector } from './PropSelector';
+import { PackingBox, PackedProp } from '../../types/packing.ts'; 
+import { Show } from '../../types/index.ts'; 
+import { Prop } from '../../shared/types/props.ts'; 
+import { PackingBoxCard } from './PackingBoxCard.tsx';
+import { PropSelector } from './PropSelector.tsx';
 // For icons, we need to use lucide-react-native
 import { X, Clock, HandCoins, Package, PackageOpen, AlertTriangle } from 'lucide-react-native'; 
 import { Timestamp } from 'firebase/firestore';
@@ -59,7 +59,7 @@ export function PackingList({
     setPropInstances(prevInstances => {
       const packedPropIds = new Set<string>();
       boxes.forEach(box => {
-        box.props?.forEach(packedProp => {
+        box.props?.forEach((packedProp: PackedProp) => {
           for (let i = 0; i < (packedProp.quantity || 1); i++) {
             packedPropIds.add(`${packedProp.propId}-${i}`);
           }
@@ -157,7 +157,7 @@ export function PackingList({
     setEditingBoxId(box.id);
     setCurrentBoxName(box.name ?? '');
     const propsToSelect: PropInstance[] = [];
-    box.props?.forEach(packedProp => {
+    box.props?.forEach((packedProp: PackedProp) => {
       const matchingInstances = propInstances.filter(inst => inst.id === packedProp.propId);
       for (let i = 0; i < (packedProp.quantity || 1); i++) {
         const instanceId = `${packedProp.propId}-${i}`;
@@ -197,12 +197,14 @@ export function PackingList({
           />
           
           <Text style={styles.subHeader}>Select Props for this Box:</Text>
-          <PropSelector
-            props={availablePropInstances}
-            selectedProps={selectedProps}
-            onChange={setSelectedProps}
-            // disabled={isLoading} // Optional: disable while loading/saving
-          />
+          <View style={styles.selectorContainer}>
+            <PropSelector 
+              props={availablePropInstances} 
+              selectedProps={selectedProps}
+              onChange={(newSelectedProps: PropInstance[]) => setSelectedProps(newSelectedProps)} 
+              // disabled={isLoading} // Optional: disable while loading/saving
+            />
+          </View>
 
           <Text style={styles.subHeader}>Currently Selected for Box:</Text>
           <ScrollView 
@@ -494,5 +496,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 6,
     // backgroundColor: 'rgba(255,255,255,0.1)', // Example subtle background
+  },
+  selectorContainer: {
+    marginBottom: 16,
   },
 }); 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Image, Loader2, X, Plus } from 'lucide-react';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import * as ImagePicker from 'expo-image-picker';
 
 interface PhotoImportProps {
   onPhotosSelected: (photos: GooglePhoto[]) => void;

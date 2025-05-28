@@ -1,4 +1,4 @@
-import { PropLifecycleStatus } from './lifecycle';
+import { PropLifecycleStatus } from './lifecycle.ts';
 
 export interface PropImage {
   url: string;

@@ -43,6 +43,18 @@ This document outlines the current state of the native Android application compa
 
 ## 3. Key Mobile Features & Enhancements (Beyond Basic CRUD)
 
+*   **Task Management / To-Do Boards (New Feature Integration):**
+    *   **Status:** Partially Implemented (Core CRUD for Boards, Lists, Cards)
+    *   **Details:** A new "Task Boards" tab integrates functionality from the `todo-list-master` project. Core features include creating boards, adding lists to boards, and adding cards (tasks) to lists. Card details (title, description, due date, link) can be viewed and edited via a modal.
+    *   **Gap (Android Specific & Cross-Platform Refinements):**
+        *   **Drag and Drop (DndKit):** The original to-do project used `@dnd-kit/sortable` for drag-and-drop reordering of lists and cards. This is currently commented out. For Android, if this feature is reinstated, it will require careful integration with `react-native-gesture-handler` to ensure native performance and feel. Web compatibility of this setup also needs verification.
+        *   **Rich Text Editor for Card Descriptions:** The current implementation uses a plain `TextInput` for card descriptions. If rich text editing (as potentially available in the original `todo-list-master` via `react-simple-wysiwyg`) is desired for mobile, a React Native-specific rich text editor component would need to be integrated for Android and iOS, as web-centric editors may not work or offer a good UX on native.
+        *   **Native UI/UX for Pickers/Modals:** Ensure `DateTimePicker` for due dates and `Picker` for moving cards between lists have a native look, feel, and behavior on Android. Test modal interactions (`CardDetailPanel`) for smoothness.
+        *   **Offline Support:** The current integration relies on Firestore's default offline caching. For more robust offline capabilities for task boards (e.g., creating/editing tasks extensively offline, conflict resolution beyond Firestore's default), a dedicated local data storage strategy (e.g., using WatermelonDB, SQLite via Expo's API) and synchronization logic would be a significant addition for Android (and iOS).
+        *   **Notifications:** For task reminders (due dates, assignments), integration with Android's notification system using `expo-notifications` will be necessary. This includes scheduling local notifications and potentially handling push notifications if tasks can be assigned by other users.
+        *   **Image Attachments to Cards:** Functionality for attaching images to cards (likely via `expo-image-picker` and Firebase Storage) was present in the original `CardDetailPanel` but is currently commented out. This needs to be re-enabled and tested on Android, ensuring proper permission handling and upload/display flows.
+        *   **Performance with Large Boards:** Test performance on Android with boards containing many lists and cards, especially with active listeners. Optimize data fetching and rendering if slowdowns are observed.
+
 *   **Props Management - AI Features (PRD 3.1.1 - Mobile):**
     *   **Status:** Not Implemented
     *   **Gap:** Google Vision API for title suggestion; Speech-to-Text for form filling.

@@ -1,52 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { PropStatusUpdate as PropStatusUpdateType, MaintenanceRecord, PropLifecycleStatus, lifecycleStatusLabels, lifecycleStatusPriority, RepairPriority, repairPriorityLabels } from '../../types/lifecycle';
-import { PropStatusUpdate } from './PropStatusUpdate';
-import { MaintenanceRecordForm } from './MaintenanceRecordForm';
-import { StatusHistory } from './StatusHistory';
-import { MaintenanceHistory } from './MaintenanceHistory';
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority, repairPriorityLabels, StatusPriority, lifecycleStatusLabels, lifecycleStatusPriority } from '../../types/lifecycle.ts';
+import { PropStatusUpdate as PropStatusUpdateComponent } from './PropStatusUpdate.tsx';
+import { MaintenanceRecordForm } from './MaintenanceRecordForm.tsx';
+import { StatusHistory } from './StatusHistory.tsx';
+import { MaintenanceHistory } from './MaintenanceHistory.tsx';
 import { Clock, Activity, Calendar, AlertTriangle, CircleAlert, Navigation, DollarSign } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Show } from '../../types';
+import { Show } from '../../types/index.ts';
 
 interface PropLifecycleProps {
-  status: PropLifecycleStatus;
-  statusNotes?: string;
-  statusHistory: PropStatusUpdateType[];
+  propId: string;
+  currentStatus: PropLifecycleStatus;
   maintenanceHistory: MaintenanceRecord[];
-  lastInspectionDate?: string;
+  statusHistory: PropStatusUpdate[];
+  onStatusUpdate: (newStatus: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[]) => Promise<void>;
+  onMaintenanceRecordAdd: (record: Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>) => Promise<void>;
+  show?: Show;
   nextInspectionDue?: string;
-  lastMaintenanceDate?: string;
+  lastInspectionDate?: string;
   nextMaintenanceDue?: string;
-  currentLocation?: string;
+  lastMaintenanceDate?: string;
   expectedReturnDate?: string;
+  repairEstimate?: number;
   replacementCost?: number;
   replacementLeadTime?: number;
-  repairEstimate?: number;
   repairPriority?: RepairPriority;
-  onStatusUpdate: (status: PropLifecycleStatus, notes: string, notifyTeam: boolean) => Promise<void>;
-  onAddMaintenanceRecord: (record: Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>) => Promise<void>;
-  show?: Show;
+  statusNotes?: string;
+  currentLocation?: string;
   userId: string;
 }
 
 export function PropLifecycle({
-  status,
-  statusNotes,
-  statusHistory,
+  propId,
+  currentStatus,
   maintenanceHistory,
-  lastInspectionDate,
+  statusHistory,
+  onStatusUpdate,
+  onMaintenanceRecordAdd,
+  show,
   nextInspectionDue,
-  lastMaintenanceDate,
+  lastInspectionDate,
   nextMaintenanceDue,
-  currentLocation,
+  lastMaintenanceDate,
   expectedReturnDate,
+  repairEstimate,
   replacementCost,
   replacementLeadTime,
-  repairEstimate,
   repairPriority,
-  onStatusUpdate,
-  onAddMaintenanceRecord,
-  show,
+  statusNotes,
+  currentLocation,
   userId
 }: PropLifecycleProps) {
   const [activeTab, setActiveTab] = useState<'status' | 'maintenance'>('status');
@@ -83,7 +85,7 @@ export function PropLifecycle({
 
   // Get status color
   const getStatusColor = () => {
-    const priority = lifecycleStatusPriority[status];
+    const priority = lifecycleStatusPriority[currentStatus];
     switch (priority) {
       case 'critical':
         return 'text-red-500 bg-red-500/10';
@@ -107,16 +109,16 @@ export function PropLifecycle({
   const isMaintenanceOverdue = nextMaintenanceDue && new Date(nextMaintenanceDue) < new Date();
 
   // Check if return date is overdue (for loaned props)
-  const isReturnOverdue = status === 'loaned_out' && expectedReturnDate && new Date(expectedReturnDate) < new Date();
+  const isReturnOverdue = currentStatus === 'loaned_out' && expectedReturnDate && new Date(expectedReturnDate) < new Date();
 
   // Status that need attention
   const needsAttention = 
     isInspectionOverdue || 
     isMaintenanceOverdue || 
     isReturnOverdue || 
-    status === 'damaged_awaiting_repair' || 
-    status === 'damaged_awaiting_replacement' || 
-    status === 'missing';
+    currentStatus === 'damaged_awaiting_repair' || 
+    currentStatus === 'damaged_awaiting_replacement' || 
+    currentStatus === 'missing';
 
   return (
     <div className="space-y-6">
@@ -126,7 +128,7 @@ export function PropLifecycle({
           Prop Lifecycle Management
         </h2>
         <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}>
-          {lifecycleStatusLabels[status]}
+          {lifecycleStatusLabels[currentStatus]}
         </div>
       </div>
 
@@ -139,9 +141,9 @@ export function PropLifecycle({
               {isInspectionOverdue && <li>Inspection overdue since {new Date(nextInspectionDue!).toLocaleDateString()}</li>}
               {isMaintenanceOverdue && <li>Maintenance overdue since {new Date(nextMaintenanceDue!).toLocaleDateString()}</li>}
               {isReturnOverdue && <li>Return overdue since {new Date(expectedReturnDate!).toLocaleDateString()}</li>}
-              {status === 'damaged_awaiting_repair' && <li>Prop is awaiting repair</li>}
-              {status === 'damaged_awaiting_replacement' && <li>Prop is awaiting replacement</li>}
-              {status === 'missing' && <li>Prop is missing</li>}
+              {currentStatus === 'damaged_awaiting_repair' && <li>Prop is awaiting repair</li>}
+              {currentStatus === 'damaged_awaiting_replacement' && <li>Prop is awaiting replacement</li>}
+              {currentStatus === 'missing' && <li>Prop is missing</li>}
             </ul>
           </div>
         </div>
@@ -208,22 +210,22 @@ export function PropLifecycle({
         )}
 
         {/* Repair/Replacement info */}
-        {(status === 'damaged_awaiting_repair' || status === 'damaged_awaiting_replacement') && (
+        {(currentStatus === 'damaged_awaiting_repair' || currentStatus === 'damaged_awaiting_replacement') && (
           <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-medium text-[var(--text-secondary)] uppercase">
-                {status === 'damaged_awaiting_repair' ? 'Repair' : 'Replacement'} Info
+                {currentStatus === 'damaged_awaiting_repair' ? 'Repair' : 'Replacement'} Info
               </h3>
               <DollarSign className="h-4 w-4 text-[var(--text-secondary)]" />
             </div>
             
-            {status === 'damaged_awaiting_repair' && repairEstimate !== undefined && (
+            {currentStatus === 'damaged_awaiting_repair' && repairEstimate !== undefined && (
               <p className="text-[var(--text-primary)]">
                 Estimated Cost: £{repairEstimate.toFixed(2)}
               </p>
             )}
             
-            {status === 'damaged_awaiting_replacement' && replacementCost !== undefined && (
+            {currentStatus === 'damaged_awaiting_replacement' && replacementCost !== undefined && (
               <p className="text-[var(--text-primary)]">
                 Replacement Cost: £{replacementCost.toFixed(2)}
               </p>
@@ -278,8 +280,8 @@ export function PropLifecycle({
       <div className="space-y-6">
         {activeTab === 'status' && (
           <>
-            <PropStatusUpdate
-              currentStatus={status}
+            <PropStatusUpdateComponent
+              currentStatus={currentStatus}
               onStatusUpdate={onStatusUpdate}
               showManagerEmail={show?.stageManagerEmail}
               propsSupervisorEmail={show?.propsSupervisorEmail}
@@ -290,7 +292,7 @@ export function PropLifecycle({
 
         {activeTab === 'maintenance' && (
           <>
-            <MaintenanceRecordForm onSubmit={onAddMaintenanceRecord} />
+            <MaintenanceRecordForm onSubmit={onMaintenanceRecordAdd} />
             <MaintenanceHistory records={maintenanceHistory} />
           </>
         )}

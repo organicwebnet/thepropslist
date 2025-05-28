@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { PlusCircle, X, Video, Link2 } from 'lucide-react';
+import { PlusCircle, X, Video, Link2, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import type { DigitalAsset } from '@/shared/types/props'; // Use DigitalAsset for now
+import type { DigitalAsset } from '@shared/types/props.ts'; // Use DigitalAsset for now, added .js
 
 interface VideoAssetFormProps {
   assets: DigitalAsset[];

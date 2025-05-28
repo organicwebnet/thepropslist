@@ -11,8 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { QRScannerScreen } from '../features/qr/QRScannerScreen';
+import { QRScannerScreen } from '../features/qr/QRScannerScreen.tsx';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 interface PropFormData {
   name: string;

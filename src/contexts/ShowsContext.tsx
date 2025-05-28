@@ -7,14 +7,16 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 //   where, 
 //   onSnapshot 
 // } from '@react-native-firebase/firestore'; 
-import { useAuth } from './AuthContext';
+import { useAuth } from './AuthContext.tsx';
 // import { ShowsContext } from './ShowsContext'; // REMOVE self-import
-import { useFirebase } from './FirebaseContext';
-import type { Show } from '../types';
+import { useFirebase } from './FirebaseContext.tsx';
+import { Show } from '../shared/services/firebase/types.ts';
 // Import FirebaseDocument type
-import { FirebaseDocument } from '../shared/services/firebase/types';
+import { FirebaseDocument /* QueryOptions */ } from '../shared/services/firebase/types.ts'; // Removed QueryOptions
 import { Platform } from 'react-native';
-import type { FirebaseService } from '@/shared/services/firebase/types';
+// import type { FirebaseService } from '../shared/services/firebase/types.ts'; // Removed FirebaseService type import, service is used directly
+// Remove direct firestore imports as service is used
+// import { collection, onSnapshot, query, where, orderBy, limit, doc, getDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 interface ShowsContextType {
   shows: Show[];
@@ -52,9 +54,14 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setErrorState] = useState<Error | null>(null);
 
+  // setSelectedShowInternal is now wrapped in useCallback
+  const stableSetSelectedShowInternal = useCallback((show: Show | null) => {
+    setSelectedShowInternal(show);
+  }, []);
+
   const setSelectedShow = useCallback((show: Show | null) => {
     console.log(`[ShowsContext] setSelectedShow called with:`, show ? `ID: ${show.id}, Name: ${show.name}` : 'null');
-    setSelectedShowInternal(show);
+    stableSetSelectedShowInternal(show); // Use the stable internal setter
     if (show && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
        try {
            localStorage.setItem('lastSelectedShowId', show.id);
@@ -66,7 +73,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
        // Optional: Clear localStorage if show is deselected
        // localStorage.removeItem('lastSelectedShowId');
     }
-  }, []);
+  }, [stableSetSelectedShowInternal]); // Dependency is now the stable internal setter
 
   // REMOVE Direct db instance derivation here
   // const db = firebaseService?.firestore() as FirebaseFirestoreTypes.Module | undefined;
@@ -179,7 +186,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
         unsubscribe();
     };
   // Dependencies: service availability, user (if re-enabled)
-  }, [firebaseInitialized, firebaseService, firebaseError]); // user removed temporarily
+  }, [firebaseInitialized, firebaseService, firebaseError, selectedShow, stableSetSelectedShowInternal, setSelectedShow]); // Added setSelectedShow
 
   const setSelectedShowById = useCallback((id: string | null) => {
     if (id === null) {
@@ -188,7 +195,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       const showToSelect = shows.find(s => s.id === id);
       setSelectedShow(showToSelect || null);
     }
-  }, [shows]);
+  }, [shows, setSelectedShow]); // Added setSelectedShow
 
   const addShow = useCallback(async (showData: Omit<Show, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<string | null> => {
     if (!user || !firebaseService?.addDocument) {
@@ -254,7 +261,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
          // Rollback optimistic update if implemented
          // setShows(originalShows);
       }
-   }, [firebaseService, selectedShow?.id]);
+   }, [firebaseService, selectedShow, setSelectedShow]); // Added selectedShow and setSelectedShow
 
   // --- Add getShowById implementation --- 
   const getShowById = useCallback(async (id: string): Promise<Show | null> => {

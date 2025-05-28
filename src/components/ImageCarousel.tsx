@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Maximize } from 'lucide-react';
 import { Platform, View, Text, StyleSheet } from 'react-native';
-import type { PropImage } from '@/shared/types/props';
+import type { PropImage } from '../shared/types/props.ts';
 
 interface ImageCarouselProps {
   images: PropImage[];

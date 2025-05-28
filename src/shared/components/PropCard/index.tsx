@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
-import type { Prop, PropImage } from '../../types/props';
-import { lifecycleStatusLabels } from '@/types/lifecycle';
+import { useNavigation } from '@react-navigation/native';
+import { formatDistanceToNow } from 'date-fns';
+import { Edit3, Trash2, Package, CalendarDays, UserCircle, Building, Palette, Paperclip } from 'lucide-react';
+import type { Prop, PropImage } from '../../types/props.ts';
+import { lifecycleStatusLabels } from '../../../types/lifecycle.ts';
 import { Image as ImageIcon } from 'lucide-react-native';
+import { PrintLabelButton } from './PrintLabelButton.tsx';
 
 interface PropCardProps {
   prop: Prop;
@@ -76,7 +80,9 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
   };
 
   const dimensionsText = formatDimensions();
-  const statusLabel = prop.status ? (lifecycleStatusLabels[prop.status] || prop.status) : 'Unknown';
+  const statusLabel = prop.status && prop.status in lifecycleStatusLabels 
+    ? lifecycleStatusLabels[prop.status as keyof typeof lifecycleStatusLabels] 
+    : (prop.status || 'Unknown');
 
   const handleNavigate = () => {
     // Programmatic navigation

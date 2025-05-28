@@ -1,6 +1,8 @@
 import React from 'react';
 import { Filter } from 'lucide-react';
-import type { Filters } from '../types';
+import type { Filters } from '../types.ts';
+import { View, Text, TextInput, Switch, TouchableOpacity, StyleSheet } from 'react-native';
+import { XIcon, FilterIcon } from 'lucide-react-native';
 
 interface ProductFiltersProps {
   filters: Filters;

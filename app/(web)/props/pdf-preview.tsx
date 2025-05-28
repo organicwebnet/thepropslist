@@ -3,11 +3,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 // import { PDFViewer, BlobProvider } from '@react-pdf/renderer'; // Comment out PDF renderer imports
 import { Download, Loader2 } from 'lucide-react';
 
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useShows } from '@/contexts/ShowsContext';
-import type { Prop, Show, Act, Scene } from '@/shared/types/props';
-import type { FirebaseDocument } from '@/shared/services/firebase/types';
-// import { PropListDocument } from '@/platforms/web/pdf/PropListDocument'; // Comment out custom document
+import { useFirebase } from '../../../src/contexts/FirebaseContext.tsx';
+import { useShows } from '../../../src/contexts/ShowsContext.tsx';
+import type { Prop, Show, Act, Scene } from '../../../src/shared/types/props.ts';
+import type { FirebaseDocument } from '../../../src/shared/services/firebase/types.ts';
+// import { PropListDocument } from '../../../src/platforms/web/pdf/PropListDocument.tsx'; // Corrected extension
 
 // Helper to get displayable keys from Prop type (excluding complex/internal fields)
 const getDisplayablePropKeys = (): (keyof Prop)[] => {
@@ -100,7 +100,7 @@ export default function PdfPreviewPage() {
      // Default common fields to true
      const defaultSelected: (keyof Prop)[] = ['name', 'category', 'description', 'location', 'status', 'quantity', 'condition'];
      getDisplayablePropKeys().forEach(key => {
-         initialFields[key] = defaultSelected.includes(key);
+         initialFields[key as string] = defaultSelected.includes(key);
      });
      return initialFields as Record<keyof Prop, boolean>;
   });
@@ -118,10 +118,10 @@ export default function PdfPreviewPage() {
      if (show?.acts) {
         const initialActsChecked: Record<string, boolean> = {};
         const initialScenesChecked: Record<string, boolean> = {};
-        show.acts.forEach(act => {
+        show.acts.forEach((act: Act) => {
            const actIdStr = String(act.id);
            initialActsChecked[actIdStr] = true; // Default acts to checked
-           act.scenes?.forEach(scene => {
+           act.scenes?.forEach((scene: Scene) => {
               const sceneIdStr = String(scene.id);
               initialScenesChecked[sceneIdStr] = true; // Default scenes to checked
            });
@@ -165,7 +165,7 @@ export default function PdfPreviewPage() {
             setPropData(extractedData);
             setIsLoading(false);
           },
-          (err) => {
+          (err: Error) => {
             console.error("Error fetching props for PDF:", err);
             setError('Failed to load props for PDF.');
             setIsLoading(false);
@@ -254,16 +254,16 @@ export default function PdfPreviewPage() {
 
   // --- Checkbox Handlers ---
   const handleActCheckboxChange = (actId: number, isChecked: boolean) => {
-     const actIdStr = String(actId);
-     handleOptionChange(() => {
+    const actIdStr = String(actId);
+    handleOptionChange(() => {
         setCheckedActs(prev => ({ ...prev, [actIdStr]: isChecked }));
         // Also toggle all scenes within this act
         const scenesToToggle: Record<string, boolean> = {};
-        show?.acts?.find(a => a.id === actId)?.scenes?.forEach(scene => {
+        show?.acts?.find((a: Act) => Number(a.id) === actId)?.scenes?.forEach((scene: Scene) => { // Added optional chaining
            scenesToToggle[String(scene.id)] = isChecked;
         });
         setCheckedScenes(prev => ({ ...prev, ...scenesToToggle }));
-     });
+    });
   };
 
   const handleSceneCheckboxChange = (sceneId: number, actId: number, isChecked: boolean) => {
@@ -388,37 +388,40 @@ export default function PdfPreviewPage() {
              <label className="block text-sm font-medium text-gray-300 mb-2">Filter by Act/Scene:</label>
              <div className="max-h-60 overflow-y-auto space-y-2 pr-2 border border-gray-600 p-2 rounded-md"> {/* Scrollable filter list */}
                {(!show?.acts || show.acts.length === 0) && <p className="text-sm text-gray-400 italic">No acts defined for this show.</p>}
-               {show?.acts?.map((act) => (
-                 <div key={`act-${act.id}`}>
-                   <div className="flex items-center">
-                     <input
-                       type="checkbox"
-                       id={`act-${act.id}`}
-                       checked={checkedActs[String(act.id)] ?? false}
-                       onChange={(e) => handleActCheckboxChange(act.id, e.target.checked)}
-                       className="mr-2 rounded"
-                     />
-                     <label htmlFor={`act-${act.id}`} className="text-sm font-semibold">{act.name || `Act ${act.id}`}</label>
+               {show?.acts?.map((a: Act) => { // Added optional chaining
+                 const actIdStr = String(a.id);
+                 return (
+                   <div key={`act-filter-${a.id}`} className="mb-3 p-3 bg-gray-800 rounded">
+                     <label className="flex items-center space-x-2 text-gray-200 font-medium">
+                       <input
+                         type="checkbox"
+                         checked={checkedActs[actIdStr] || false}
+                         onChange={(e) => handleActCheckboxChange(Number(a.id), e.target.checked)}
+                         className="form-checkbox h-4 w-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                       />
+                       <span>{a.name || `Act ${a.id}`}</span>
+                     </label>
+                     {checkedActs[actIdStr] && a.scenes && a.scenes.length > 0 && (
+                       <div className="pl-6 mt-2 space-y-1">
+                         {a.scenes?.map((scene: Scene) => { // Typed scene
+                           const sceneIdStr = String(scene.id);
+                           return (
+                             <label key={`scene-filter-${scene.id}`} className="flex items-center space-x-2 text-gray-300 text-sm">
+                               <input
+                                 type="checkbox"
+                                 checked={checkedScenes[sceneIdStr] || false}
+                                 onChange={(e) => handleSceneCheckboxChange(Number(scene.id), Number(a.id), e.target.checked)}
+                                 className="form-checkbox h-3 w-3 text-blue-500 bg-gray-600 border-gray-500 rounded focus:ring-blue-400"
+                               />
+                               <span>{scene.name || `Scene ${scene.id}`}</span>
+                             </label>
+                           );
+                         })}
+                       </div>
+                     )}
                    </div>
-                   {/* Nested Scenes */}
-                   {act.scenes && act.scenes.length > 0 && (
-                     <div className="pl-6 mt-1 space-y-1">
-                       {act.scenes.map((scene) => (
-                         <div key={`scene-${scene.id}`} className="flex items-center">
-                           <input
-                             type="checkbox"
-                             id={`scene-${scene.id}`}
-                             checked={checkedScenes[String(scene.id)] ?? false}
-                             onChange={(e) => handleSceneCheckboxChange(scene.id, act.id, e.target.checked)}
-                             className="mr-2 rounded text-blue-500 focus:ring-blue-600"
-                           />
-                           <label htmlFor={`scene-${scene.id}`} className="text-sm text-gray-300">{scene.name || `Scene ${scene.id}`}</label>
-                         </div>
-                       ))}
-                     </div>
-                   )}
-                 </div>
-               ))}
+                 );
+               })}
              </div>
            </div>
            {/* --- End Act/Scene Checkbox Filters --- */}

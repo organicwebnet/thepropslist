@@ -11,16 +11,18 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 //   updateDoc, 
 //   deleteDoc 
 // } from '@react-native-firebase/firestore';
-import { useAuth } from './AuthContext'; // Assuming AuthContext might be needed later
-import { ShowsContext } from './ShowsContext';
-import { useFirebase } from './FirebaseContext';
+// import { useAuth } from './AuthContext.tsx'; // Removed unused import
+import { ShowsContext } from './ShowsContext.tsx';
+import { useFirebase } from './FirebaseContext.tsx';
+// import { Platform } from 'react-native'; // Removed unused import
 // Corrected and consolidated type imports
-import type { Prop, PropFormData } from '@/shared/types/props';
-import type { Show } from '@/types/index'; // Changed import path to match useShow hook
+import type { Prop, PropFormData } from '../shared/types/props.ts';
+// import type { Show } from '../types/index.ts'; // Removed unused import
+// import type { StorageReference } from 'firebase/storage'; // Removed unused import
 // Import FirebaseDocument type
-import { FirebaseDocument } from '@/shared/services/firebase/types';
-import { QueryOptions } from '../shared/services/firebase/types'; // Import QueryOptions
-import { WhereFilterOp } from 'firebase/firestore'; // Import WhereFilterOp
+import { FirebaseDocument } from '../shared/services/firebase/types.ts';
+import { QueryOptions } from '../shared/services/firebase/types.ts'; // Import QueryOptions
+// import { WhereFilterOp } from 'firebase/firestore'; // Removed unused import
 // Removed unused import: import { useFirestoreCollectionData } from '../shared/services/firebase/useFirestoreCollectionData';
 
 interface PropsContextType {
@@ -47,7 +49,9 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
   // const db = React.useMemo(() => { ... }, [firebaseInitialized, firebaseService]);
 
   useEffect(() => {
-    let unsubscribe = () => {};
+    let unsubscribe = () => {
+      // This is a no-op function, it will be replaced by the actual unsubscribe later
+    };
 
     // Check if service is ready and a show is selected
     if (firebaseInitialized && firebaseService && selectedShow) {
@@ -134,10 +138,11 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       console.log("PropsProvider: Unsubscribing props listener.");
-      unsubscribe();
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
     };
-  // Depend on service readiness and selected show ID
-  }, [firebaseInitialized, firebaseService, selectedShow?.id, firebaseError]); 
+  }, [firebaseInitialized, firebaseService, selectedShow, firebaseError]);
 
   // --- CRUD Operations using FirebaseService --- 
 
@@ -145,19 +150,25 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
     if (!firebaseService || !selectedShow) throw new Error("Firebase service or selected show not available.");
     try {
       // Prepare data, ensuring showId is included
-      const dataToSave = { 
+      const dataToSave: Partial<Prop> = { // Use Partial<Prop> for more flexibility before final type assertion
           ...propData, 
           showId: selectedShow.id,
-          // Ensure required fields for Prop type are present or defaulted if needed
-          // Assuming service's addDocument handles createdAt/updatedAt
+          // createdAt and updatedAt are typically handled by Firestore or backend triggers
       };
-      // Use service method - removing explicit generic <Prop>
+
+      // Remove undefined fields to prevent Firestore errors
+      Object.keys(dataToSave).forEach(key => {
+        if (dataToSave[key as keyof Partial<Prop>] === undefined) {
+          delete dataToSave[key as keyof Partial<Prop>];
+        }
+      });
+
+      // Use service method
       const newDoc = await firebaseService.addDocument('props', dataToSave as Omit<Prop, 'id'>); 
       console.log("PropsProvider: Added prop with ID:", newDoc.id);
       return newDoc.id; // Return the new document ID
     } catch (err) {
       console.error("PropsProvider: Error adding prop:", err);
-      // Consider re-throwing a more specific error or handling it
       throw err;
     }
   }, [firebaseService, selectedShow]);
@@ -165,8 +176,18 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
   const updateProp = useCallback(async (propId: string, propData: Partial<PropFormData>): Promise<void> => {
     if (!firebaseService) throw new Error("Firebase service not available.");
     try {
+      // Prepare data for update
+      const dataToUpdate: Partial<Prop> = { ...propData }; // Use Partial<Prop>
+
+      // Remove undefined fields to prevent Firestore errors
+      Object.keys(dataToUpdate).forEach(key => {
+        if (dataToUpdate[key as keyof Partial<Prop>] === undefined) {
+          delete dataToUpdate[key as keyof Partial<Prop>];
+        }
+      });
+
       // Use service method - assuming it handles updatedAt timestamp
-      await firebaseService.updateDocument<Prop>('props', propId, propData as Partial<Prop>);
+      await firebaseService.updateDocument<Prop>('props', propId, dataToUpdate as Partial<Prop>);
       console.log("PropsProvider: Updated prop with ID:", propId);
     } catch (err) {
       console.error("PropsProvider: Error updating prop:", err);

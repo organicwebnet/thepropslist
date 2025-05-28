@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType, ScrollView, TextInput, Switch, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { HelpCircle, Upload, Trash2, AlertTriangle, CheckCircle, Video } from 'lucide-react';
 import { PlusCircle, Save, Loader2 } from 'lucide-react';
-import { ImageUpload } from './ImageUpload';
-import { DigitalAssetForm } from './DigitalAssetForm';
-import { VideoAssetForm } from './VideoAssetForm';
-import { propCategories, PropCategory, DimensionUnit } from '@shared/types/props';
-import type { Prop, PropFormData, DigitalAsset, PropImage, PropLifecycleStatus } from '@shared/types/props';
-import type { Show, Act, Scene } from '@shared/types/props';
-import { WysiwygEditor } from './WysiwygEditor';
-import { HelpTooltip } from './HelpTooltip';
+import { ImageUpload } from './ImageUpload.tsx';
+import { DigitalAssetForm } from './DigitalAssetForm.tsx';
+import { VideoAssetForm } from './VideoAssetForm.tsx';
+import { propCategories, PropCategory, DimensionUnit, PropSource } from '../shared/types/props.ts';
+import type { Prop, PropFormData, DigitalAsset, PropImage, PropLifecycleStatus, Act, Scene } from '../shared/types/props.ts';
+import type { Show } from '../shared/services/firebase/types.ts';
+import { WysiwygEditor } from './WysiwygEditor.tsx';
+import { HelpTooltip } from './HelpTooltip.tsx';
 import { v4 as uuidv4 } from 'uuid';
-import { lifecycleStatusLabels } from '@/types/lifecycle';
+import { lifecycleStatusLabels } from '../types/lifecycle.ts';
 
 export interface PropFormProps {
   onSubmit: (prop: PropFormData) => Promise<void>;
@@ -88,9 +89,9 @@ const initialFormState: PropFormData = {
 // Helper for Required Label
 function RequiredLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-      {children} <span className="text-red-500">*</span>
-    </span>
+    <Text className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+      {children} <Text className="text-red-500">*</Text>
+    </Text>
   );
 }
 
@@ -111,20 +112,12 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
   });
 
   useEffect(() => {
-    console.log('=== PROP FORM EFFECT DEBUG ===');
-    console.log('1. Effect triggered with initialData:', initialData);
-    console.log('2. Current formData state:', formData);
     if (initialData) {
       setFormData(initialData);
     }
   }, [initialData]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('=== PROP FORM SUBMIT DEBUG ===');
-    console.log('1. Form submission started');
-    console.log('2. Submitting formData:', formData);
-
+  const handleSubmit = async (/* e: React.FormEvent */) => {
     if (formData.source === 'rented') {
       if (!(formData.rentalSource || '').trim()) {
         alert('Please enter the rental source');
@@ -140,31 +133,6 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
     if (mode === 'create') {
       setFormData({ ...initialFormState });
     }
-  };
-
-  const handleImageUpload = (urls: string[]) => {
-    const newImages: PropImage[] = urls.map((url, index) => ({ 
-      id: `new-${Date.now()}-${index}`,
-      url: url,
-      caption: '' 
-    }));
-    setFormData({ ...formData, images: [...(formData.images || []), ...newImages] });
-  };
-
-  const handleDigitalAssetAdd = (asset: Omit<DigitalAsset, 'id'>) => {
-    const newAsset: DigitalAsset = { ...asset, id: `new-${Date.now()}` };
-    setFormData({ 
-      ...formData, 
-      digitalAssets: [...(formData.digitalAssets || []), newAsset]
-    });
-  };
-
-  const handleVideoAssetAdd = (asset: Omit<DigitalAsset, 'id'>) => {
-    const newAsset: DigitalAsset = { ...asset, id: `new-vid-${Date.now()}`, type: 'video' };
-    setFormData((prevData) => ({
-      ...prevData,
-      videos: [...(prevData.videos || []), newAsset]
-    }));
   };
 
   const handleRemoveImage = (imageId: string) => {
@@ -236,613 +204,706 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
   return (
     // Match background of parent column: bg-[#111827]
-    <form onSubmit={handleSubmit} className="p-1 bg-[#111827]">
+    <View className="p-1 bg-[#111827]">
       
       {/* Fieldset: Basic Information */}
-      <div className={fieldsetStyles}>
-        <h3 className={legendStyles}>Basic Information</h3>
-        <div className="space-y-4">
-          <div>
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Basic Information</Text>
+        <View className="space-y-4">
+          <View>
             <RequiredLabel>Name</RequiredLabel>
-            <input
-              type="text"
-              id="name"
+            <TextInput
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={`${inputStyles} w-full`}
-              placeholder="Enter prop name"
-              required
-              disabled={disabled}
-            />
-          </div>
-
-          <div>
-            <RequiredLabel>Category</RequiredLabel>
-            <select
-              id="category"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value as PropCategory })}
-              className={`${selectStyles} w-full`}
-              required
-              disabled={disabled}
-            >
-              <option value="">Select a category</option>
-              {propCategories.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Description
-            </label>
-            <WysiwygEditor
-                value={formData.description ?? ''}
-                onChange={handleDescriptionChange}
-                disabled={disabled}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="quantity" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Quantity
-            </label>
-            <input
-              type="number"
-              id="quantity"
-              min="1"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value, 10) || 1 })}
-              className={`${inputStyles} max-w-xs`}
-              required
-              disabled={disabled}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="condition" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Condition
-            </label>
-            <input
-              type="text"
-              id="condition"
-              value={formData.condition ?? ''}
-              onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
-              className={`${inputStyles} w-full`}
-              placeholder="e.g., New, Used, Needs Repair"
-              disabled={disabled}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="materials" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Materials <span className="text-xs text-gray-400">(comma-separated)</span>
-            </label>
-            <input
-              type="text"
-              id="materials"
-              value={(formData.materials || []).join(', ')}
-              onChange={handleMaterialsChange}
-              className={`${inputStyles} w-full`}
-              placeholder="e.g., Wood, Metal, Plastic"
-              disabled={disabled}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="lastModifiedAt" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Last Modified Date
-            </label>
-            <input
-              type="date"
-              id="lastModifiedAt"
-              value={formData.lastModifiedAt || ''}
-              onChange={(e) => setFormData({ ...formData, lastModifiedAt: e.target.value })}
+              onChangeText={(text) => setFormData({ ...formData, name: text })}
               className={inputStyles}
+              placeholder="Enter prop name"
+              editable={!disabled}
+            />
+          </View>
+
+          <View>
+            <RequiredLabel>Description</RequiredLabel>
+            <WysiwygEditor
+              value={formData.description ?? ''}
+              onChange={handleDescriptionChange}
               disabled={disabled}
             />
-          </div>
-        </div>
-      </div>
+          </View>
 
-      {/* Fieldset: Show Context - MOVED */}
-       {show && (
-          <div className={fieldsetStyles}>
-             <h3 className={legendStyles}>Show Context (for {show.name})</h3>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                   <label htmlFor="act" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Act</label>
-                   <select
-                     id="act"
-                     value={formData.act !== undefined ? formData.act : ""}
-                     onChange={(e) => setFormData({ ...formData, act: e.target.value === "" ? undefined : Number(e.target.value) })}
-                     className={selectStyles}
-                     disabled={disabled}
-                   >
-                      <option value="">Select Act</option>
-                      {(() => {
-                         console.log(`[PropForm] Attempting to map show.acts for Act dropdown. show object:`, show);
-                         if (!show || !Array.isArray(show.acts)) {
-                            console.warn('[PropForm] show.acts is not an array or show is missing!');
-                            return null; // Don't render options if acts isn't an array
-                         }
-                         return show.acts.map(act => <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>);
-                      })()}
-                   </select>
-                </div>
-                 <div>
-                   <label htmlFor="scene" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Scene</label>
-                    <select
-                      id="scene"
-                      value={formData.scene !== undefined ? formData.scene : ""}
-                      onChange={(e) => setFormData({ ...formData, scene: e.target.value === "" ? undefined : Number(e.target.value) })}
-                      className={selectStyles}
-                      disabled={disabled || !formData.act}
-                    >
-                       <option value="">Select Scene</option>
-                       {(() => {
-                         const currentAct = show?.acts && Array.isArray(show.acts) ? show.acts.find(a => a.id === formData.act) : undefined;
-                         console.log(`[PropForm] Attempting to map scenes for selected Act (${formData.act}). Found Act object:`, currentAct);
-                         if (!currentAct || !Array.isArray(currentAct.scenes)) {
-                            console.warn('[PropForm] currentAct.scenes is not an array or currentAct is missing!');
-                            return null; // Don't render options if scenes isn't an array
-                         }
-                         return currentAct.scenes.map(scene => <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>);
-                       })()}
-                    </select>
-                 </div>
-                  <div className={checkboxContainerStyles + " md:col-span-2"}>
-                     <input type="checkbox" id="isMultiScene" checked={!!formData.isMultiScene} onChange={(e) => setFormData({ ...formData, isMultiScene: e.target.checked })} className="rounded" disabled={disabled} />
-                     <label htmlFor="isMultiScene" className={checkboxLabelStyles}>Used in multiple scenes?</label>
-                  </div>
-             </div>
-          </div>
-       )}
-
-      {/* Fieldset: Images - MOVED */}
-      <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Images</h3>
-         <ImageUpload 
-            onImagesChange={(newImages) => setFormData({ ...formData, images: newImages })}
-            currentImages={formData.images || []}
-            disabled={disabled}
-         />
-         {/* --- Image Previews --- */}
-         {formData.images && formData.images.length > 0 && (
-           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-4">
-             {formData.images.map((image, index) => (
-               <div key={image.id || index} className="relative group flex flex-col space-y-2">
-                 {/* Image Display */}
-                 <div className="relative h-40 w-full bg-gray-800 rounded-md overflow-hidden border border-gray-700">
-                   <img 
-                     src={image.url} 
-                     alt={`Prop Image ${index + 1}`}
-                     className="h-full w-full object-contain" // Changed object-cover to object-contain
-                   />
-                   <button
-                     type="button"
-                     onClick={() => handleRemoveImage(image.id)}
-                     className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                     aria-label="Remove image"
-                     disabled={disabled}
-                   >
-                     <Trash2 size={14} />
-                   </button>
-                 </div>
-                 {/* Caption Input */}
-                 <input 
-                   type="text"
-                   value={image.caption || ''}
-                   onChange={(e) => {
-                     const newCaption = e.target.value;
-                     setFormData(prev => ({
-                       ...prev,
-                       images: (prev.images || []).map((img, imgIndex) => 
-                         img.id === image.id ? { ...img, caption: newCaption } : img
-                       )
-                     }));
-                   }}
-                   placeholder="Add a caption..."
-                   className={`${inputStyles} w-full text-sm mt-1`} // Use inputStyles and make full width
-                   disabled={disabled}
-                 />
-               </div>
-             ))}
-           </div>
-         )}
-      </div>
-
-      {/* Fieldset: Dimensions & Weight */}
-      <div className={fieldsetStyles}>
-        <h3 className={legendStyles}>Dimensions & Weight</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Dimensions */}
-          <div className="md:col-span-1">
-             <label htmlFor="length" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Length</label>
-             <input type="number" id="length" value={formData.length ?? ''} onChange={(e) => setFormData({ ...formData, length: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="L" disabled={disabled} />
-          </div>
-           <div className="md:col-span-1">
-             <label htmlFor="width" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Width</label>
-             <input type="number" id="width" value={formData.width ?? ''} onChange={(e) => setFormData({ ...formData, width: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="W" disabled={disabled} />
-           </div>
-           <div className="md:col-span-1">
-             <label htmlFor="height" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Height</label>
-             <input type="number" id="height" value={formData.height ?? ''} onChange={(e) => setFormData({ ...formData, height: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="H" disabled={disabled} />
-           </div>
-           <div className="md:col-span-1">
-             <label htmlFor="depth" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Depth</label>
-             <input type="number" id="depth" value={formData.depth ?? ''} onChange={(e) => setFormData({ ...formData, depth: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="D" disabled={disabled} />
-           </div>
-           <div className="md:col-span-2">
-             <label htmlFor="unit" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Dimension Unit</label>
-             <select id="unit" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value as DimensionUnit })} className={selectStyles} disabled={disabled}>
-               {dimensionUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-             </select>
-           </div>
-          {/* Weight */}
-          <div className="md:col-span-1">
-            <label htmlFor="weight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight</label>
-            <input type="number" id="weight" value={formData.weight ?? ''} onChange={(e) => setFormData({ ...formData, weight: Number(e.target.value) })} className={`${inputStyles} max-w-[100px]`} placeholder="Weight" disabled={disabled} />
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="weightUnit" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight Unit</label>
-            <select id="weightUnit" value={formData.weightUnit} onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' | 'g' })} className={selectStyles} disabled={disabled}>
-               {weightUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-      
-      {/* Fieldset: Source & Acquisition - ADD sourceDetails */}
-      <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Source & Acquisition</h3>
-         <div className="space-y-4">
-            {/* Source Select */}
-            <div>
-               <label htmlFor="source" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Source</label>
-               <select
-                 id="source"
-                 value={formData.source}
-                 onChange={(e) => setFormData({ ...formData, source: e.target.value as any })}
-                 className={`${selectStyles} w-full`}
-                 required
-                 disabled={disabled}
-               >
-                  <option value="bought">Bought</option>
-                  <option value="rented">Rented</option>
-                  <option value="made">Made</option>
-                  <option value="borrowed">Borrowed</option>
-                  <option value="owned">Owned</option>
-                  {/* Add other sources as needed */} 
-               </select>
-            </div>
-            
-            {/* Source Details Input */}
-            <div>
-               <label htmlFor="sourceDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                 Source Details <span className="text-xs text-gray-400">(Vendor, Builder, etc.)</span>
-               </label>
-               <input
-                 type="text"
-                 id="sourceDetails"
-                 value={formData.sourceDetails || ''}
-                 onChange={(e) => setFormData({ ...formData, sourceDetails: e.target.value })}
-                 className={`${inputStyles} w-full`}
-                 placeholder="Enter source details"
-                 disabled={disabled}
-               />
-             </div>
-
-            {/* Conditional Rental Fields */}
-            {formData.source === 'rented' && (
-              <>
-                <div>
-                  <RequiredLabel>Rental Source</RequiredLabel>
-                  <input type="text" value={formData.rentalSource ?? ''} onChange={(e) => setFormData({ ...formData, rentalSource: e.target.value })} className={inputStyles} required disabled={disabled} />
-                </div>
-                 <div>
-                   <RequiredLabel>Return Due Date</RequiredLabel>
-                   <input type="date" id="rentalDueDate" value={formData.rentalDueDate ?? ''} onChange={(e) => setFormData({ ...formData, rentalDueDate: e.target.value })} className={`${inputStyles} text-white`} required disabled={disabled} />
-                 </div>
-              </>
-            )}
-
-            {/* Price */}
-             <div>
-               <label htmlFor="price" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Price/Value (€)</label>
-               <input type="number" id="price" value={formData.price ?? ''} onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })} className={inputStyles} placeholder="Enter price or estimated value" disabled={disabled} />
-             </div>
-         </div>
-      </div>
-
-       {/* Fieldset: Handling & Usage - MOVE transport/shipping checkboxes out */}
-       <div className={fieldsetStyles}>
-          <h3 className={legendStyles}>Handling & Usage</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-             {/* Checkboxes - REMOVE transport/shipping related ones */}
-             <div className={checkboxContainerStyles}><input type="checkbox" id="isConsumable" checked={!!formData.isConsumable} onChange={(e) => setFormData({ ...formData, isConsumable: e.target.checked })} disabled={disabled} /><label htmlFor="isConsumable" className={checkboxLabelStyles}>Consumable</label></div>
-             <div className={checkboxContainerStyles}><input type="checkbox" id="isBreakable" checked={!!formData.isBreakable} onChange={(e) => setFormData({ ...formData, isBreakable: e.target.checked })} disabled={disabled} /><label htmlFor="isBreakable" className={checkboxLabelStyles}>Breakable/Fragile</label></div>
-             <div className={checkboxContainerStyles}><input type="checkbox" id="hasUsageInstructions" checked={!!formData.hasUsageInstructions} onChange={(e) => setFormData({ ...formData, hasUsageInstructions: e.target.checked })} disabled={disabled} /><label htmlFor="hasUsageInstructions" className={checkboxLabelStyles}>Has Usage Instructions</label></div>
-             <div className={checkboxContainerStyles}><input type="checkbox" id="hasMaintenanceNotes" checked={!!formData.hasMaintenanceNotes} onChange={(e) => setFormData({ ...formData, hasMaintenanceNotes: e.target.checked })} disabled={disabled} /><label htmlFor="hasMaintenanceNotes" className={checkboxLabelStyles}>Has Maintenance Notes</label></div>
-             <div className={checkboxContainerStyles}><input type="checkbox" id="hasSafetyNotes" checked={!!formData.hasSafetyNotes} onChange={(e) => setFormData({ ...formData, hasSafetyNotes: e.target.checked })} disabled={disabled} /><label htmlFor="hasSafetyNotes" className={checkboxLabelStyles}>Has Safety Notes</label></div>
-             <div className={checkboxContainerStyles}><input type="checkbox" id="isHazardous" checked={!!formData.isHazardous} onChange={(e) => setFormData({ ...formData, isHazardous: e.target.checked })} disabled={disabled} /><label htmlFor="isHazardous" className={checkboxLabelStyles}>Hazardous Material</label></div>
-             {/* -- REMOVED requiresPreShowSetup, hasOwnShippingCrate, requiresSpecialTransport, travelsUnboxed -- */} 
-             <div className={checkboxContainerStyles}><input type="checkbox" id="hasBeenModified" checked={!!formData.hasBeenModified} onChange={(e) => setFormData({ ...formData, hasBeenModified: e.target.checked })} disabled={disabled} /><label htmlFor="hasBeenModified" className={checkboxLabelStyles}>Has Been Modified</label></div>
-          </div>
-
-          {/* Conditional Rich Text Editors / Textareas */}
-          {formData.hasUsageInstructions && (
-            <div className={conditionalFieldStyles}>
-              <label htmlFor="usageInstructions" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Usage Instructions</label>
-              <textarea
-                id="usageInstructions"
-                value={formData.usageInstructions || ''}
-                onChange={(e) => setFormData({ ...formData, usageInstructions: e.target.value })}
-                className={`${inputStyles} w-full min-h-[100px]`}
-                placeholder="Enter usage instructions..."
+          <View>
+            <RequiredLabel>Category</RequiredLabel>
+            <View className="relative">
+              <select
+                id="category"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as PropCategory })}
+                className={selectStyles}
+                required
                 disabled={disabled}
-              />
-            </div>
-          )}
-          {formData.hasMaintenanceNotes && (
-            <div className={conditionalFieldStyles}>
-              <label htmlFor="maintenanceNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Maintenance Notes</label>
-              <textarea
-                id="maintenanceNotes"
-                value={formData.maintenanceNotes || ''}
-                onChange={(e) => setFormData({ ...formData, maintenanceNotes: e.target.value })}
-                className={`${inputStyles} w-full min-h-[100px]`}
-                placeholder="Enter maintenance notes..."
+              >
+                <option value="">Select a category</option>
+                {propCategories.map((category) => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+              </select>
+            </View>
+          </View>
+
+          <View>
+            <RequiredLabel>Quantity</RequiredLabel>
+            <TextInput
+              value={formData.quantity?.toString() ?? '1'}
+              onChangeText={(text) => setFormData({ ...formData, quantity: parseInt(text, 10) || 1 })}
+              className={inputStyles}
+              keyboardType="numeric"
+              editable={!disabled}
+            />
+          </View>
+
+          <View>
+            <RequiredLabel>Price</RequiredLabel>
+            <TextInput
+              value={formData.price?.toString() ?? '0'}
+              onChangeText={(text) => setFormData({ ...formData, price: parseFloat(text) || 0 })}
+              className={inputStyles}
+              keyboardType="numeric"
+              placeholder="Enter price or estimated value"
+              editable={!disabled}
+            />
+          </View>
+
+          <View>
+            <RequiredLabel>Source</RequiredLabel>
+            <View className="relative">
+              <select
+                id="source"
+                value={formData.source}
+                onChange={(e) => setFormData({ ...formData, source: e.target.value as PropSource })}
+                className={selectStyles}
+                required
                 disabled={disabled}
-              />
-            </div>
+              >
+                <option value="bought">Bought</option>
+                <option value="rented">Rented</option>
+                <option value="made">Made</option>
+                <option value="borrowed">Borrowed</option>
+                <option value="owned">Owned</option>
+                {/* Add other sources as needed */} 
+              </select>
+            </View>
+          </View>
+
+          {formData.source === 'rented' && (
+            <View className={conditionalFieldStyles}>
+              <View>
+                <RequiredLabel>Rental Source</RequiredLabel>
+                <TextInput
+                  value={formData.rentalSource ?? ''}
+                  onChangeText={(text) => setFormData({ ...formData, rentalSource: text })}
+                  className={inputStyles}
+                  editable={!disabled}
+                />
+              </View>
+              <View>
+                <RequiredLabel>Return Due Date</RequiredLabel>
+                <TextInput
+                  value={formData.rentalDueDate ?? ''}
+                  onChangeText={(text) => setFormData({ ...formData, rentalDueDate: text })}
+                  className={`${inputStyles} text-white`}
+                  placeholder="YYYY-MM-DD"
+                  editable={!disabled}
+                />
+              </View>
+              <View>
+                <label htmlFor="rentalReferenceNumber" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Rental Reference #</label>
+                <TextInput
+                  value={formData.rentalReferenceNumber ?? ''}
+                  onChangeText={(text) => setFormData({ ...formData, rentalReferenceNumber: text })}
+                  className={inputStyles}
+                  placeholder="Enter rental reference number"
+                  editable={!disabled}
+                />
+              </View>
+            </View>
           )}
-          {formData.hasSafetyNotes && (
-            <div className={conditionalFieldStyles}>
-              <label htmlFor="safetyNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Safety Notes</label>
-              <textarea
-                id="safetyNotes"
-                value={formData.safetyNotes || ''}
-                onChange={(e) => setFormData({ ...formData, safetyNotes: e.target.value })}
-                className={`${inputStyles} w-full min-h-[100px]`}
-                placeholder="Enter safety notes..."
-                disabled={disabled}
+
+          {formData.source !== 'rented' && (
+            <View>
+              <label htmlFor="sourceDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Source Details</label>
+              <TextInput
+                value={formData.sourceDetails || ''}
+                onChangeText={(text) => setFormData({ ...formData, sourceDetails: text })}
+                className={`${inputStyles} w-full`}
+                placeholder="Enter source details"
+                editable={!disabled}
               />
-            </div>
+            </View>
           )}
-          {formData.hasBeenModified && (
-            <div className={conditionalFieldStyles}>
-              <label htmlFor="modificationDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Modification Details</label>
-              <textarea
-                id="modificationDetails"
-                value={formData.modificationDetails || ''}
-                onChange={(e) => setFormData({ ...formData, modificationDetails: e.target.value })}
-                className={`${inputStyles} w-full min-h-[100px]`}
-                placeholder="Describe modifications made..."
-                disabled={disabled}
-              />
-            </div>
-          )}
-       </div>
+        </View>
+      </View>
 
-       {/* --- NEW Fieldset: Pre-show Setup --- */}
-       <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Pre-show Setup</h3>
-         <div className={checkboxContainerStyles}>
-           <input type="checkbox" id="requiresPreShowSetup" checked={!!formData.requiresPreShowSetup} onChange={(e) => setFormData({ ...formData, requiresPreShowSetup: e.target.checked })} disabled={disabled} />
-           <label htmlFor="requiresPreShowSetup" className={checkboxLabelStyles}>Requires Pre-Show Setup</label>
-         </div>
-         {formData.requiresPreShowSetup && (
-           <div className="mt-4 space-y-4 pl-6">
-             <div>
-               <label htmlFor="preShowSetupDuration" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                 Setup Duration (minutes)
-               </label>
-               <input
-                 type="number"
-                 id="preShowSetupDuration"
-                 value={formData.preShowSetupDuration ?? ''}
-                 onChange={(e) => setFormData({ ...formData, preShowSetupDuration: Number(e.target.value) || undefined })}
-                 className={inputStyles}
-                 placeholder="Enter setup time in minutes"
-                 min="0"
-                 disabled={disabled}
-               />
-             </div>
-             <div>
-               <label htmlFor="preShowSetupNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                 Setup Instructions
-               </label>
-               {/* Consider using WysiwygEditor here too if needed */}
-               <textarea
-                 id="preShowSetupNotes"
-                 value={formData.preShowSetupNotes || ''}
-                 onChange={(e) => setFormData({ ...formData, preShowSetupNotes: e.target.value })}
-                 className={`${inputStyles} w-full min-h-[100px]`}
-                 placeholder="Enter setup instructions"
-                 disabled={disabled}
-               />
-             </div>
-             <div>
-               <label htmlFor="preShowSetupVideo" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-                 Setup Video URL (Optional)
-               </label>
-               <input
-                 type="url"
-                 id="preShowSetupVideo"
-                 value={formData.preShowSetupVideo || ''}
-                 onChange={(e) => setFormData({ ...formData, preShowSetupVideo: e.target.value })}
-                 className={`${inputStyles} w-full`}
-                 placeholder="Enter video URL (YouTube, Vimeo, etc.)"
-                 disabled={disabled}
-               />
-             </div>
-           </div>
-         )}
-       </div>
-
-       {/* --- NEW Fieldset: Transport Information --- */}
-       <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Transport Information</h3>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-           <div className={checkboxContainerStyles}><input type="checkbox" id="hasOwnShippingCrate" checked={!!formData.hasOwnShippingCrate} onChange={(e) => setFormData({ ...formData, hasOwnShippingCrate: e.target.checked })} disabled={disabled} /><label htmlFor="hasOwnShippingCrate" className={checkboxLabelStyles}>Has Own Shipping Crate</label></div>
-           <div className={checkboxContainerStyles}><input type="checkbox" id="requiresSpecialTransport" checked={!!formData.requiresSpecialTransport} onChange={(e) => setFormData({ ...formData, requiresSpecialTransport: e.target.checked })} disabled={disabled} /><label htmlFor="requiresSpecialTransport" className={checkboxLabelStyles}>Requires Special Transport</label></div>
-           <div className={checkboxContainerStyles}><input type="checkbox" id="travelsUnboxed" checked={!!formData.travelsUnboxed} onChange={(e) => setFormData({ ...formData, travelsUnboxed: e.target.checked })} disabled={disabled} /><label htmlFor="travelsUnboxed" className={checkboxLabelStyles}>Travels Unboxed</label></div>
-         </div>
-         <div className="mt-4">
-             <label htmlFor="travelWeight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-               Travel Weight ({formData.weightUnit || 'kg'}) {/* Use selected weight unit */}
-             </label>
-             <input
-               type="number"
-               id="travelWeight"
-               value={formData.travelWeight ?? ''}
-               onChange={(e) => setFormData({ ...formData, travelWeight: Number(e.target.value) || undefined })}
-               className={inputStyles}
-               placeholder={`Enter weight in ${formData.weightUnit || 'kg'}`}
-               min="0"
-               disabled={disabled}
-             />
-         </div>
-       </div>
-
-       {/* Fieldset: Digital Assets */}
-       <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Digital Assets (Manuals, Schematics, etc.)</h3>
-         <DigitalAssetForm 
-            onChange={(newAssets) => setFormData({ ...formData, digitalAssets: newAssets })}
-            assets={formData.digitalAssets || []}
-            disabled={disabled}
-         />
-          <div className="mt-4 space-y-2">
-            {(formData.digitalAssets || []).map((asset) => (
-              <div key={asset.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded">
-                <a href={asset.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate pr-2">{asset.name} ({asset.type})</a>
-                <button type="button" onClick={() => handleRemoveDigitalAsset(asset.id)} className="text-red-500 hover:text-red-400 flex-shrink-0" aria-label="Remove Asset">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-       </div>
-
-       {/* Fieldset: Videos */}
-       <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Videos (Links)</h3>
-         <VideoAssetForm
-            onChange={(newVideos: DigitalAsset[]) => setFormData({ ...formData, videos: newVideos })}
-            assets={(formData.videos as DigitalAsset[]) || []}
-            disabled={disabled}
-         />
-          {/* Display Added Videos */} 
-          <div className="mt-4 space-y-2">
-            {((formData.videos as DigitalAsset[]) || []).map((video) => (
-              <div key={video.id} className="flex justify-between items-center bg-gray-700/50 p-2 rounded">
-                 <div className="flex items-center space-x-2 flex-1 min-w-0">
-                    <Video size={16} className="text-gray-400 flex-shrink-0"/>
-                    <a href={video.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate pr-2">
-                       {video.name || video.url}
-                    </a>
-                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveVideoAsset(video.id)}
-                  className="text-red-500 hover:text-red-400 flex-shrink-0"
-                  aria-label="Remove Video Link"
+      {/* Fieldset: Images */}
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Images</Text>
+        <ImageUpload 
+          currentImages={formData.images || []}
+          onImagesChange={(updatedImages) => setFormData({ ...formData, images: updatedImages })}
+          disabled={disabled} 
+        />
+        {(formData.images || []).length > 0 && (
+          <View className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {(formData.images || []).map((image: PropImage) => (
+              <View key={image.id} className="relative group">
+                <img src={image.url} alt={image.caption || 'Prop Image'} className="w-full h-32 object-cover rounded-md" />
+                <TouchableOpacity
+                  onPress={() => handleRemoveImage(image.id)}
+                  className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   disabled={disabled}
                 >
                   <Trash2 size={16} />
-                </button>
-              </div>
+                </TouchableOpacity>
+                <TextInput
+                  value={image.caption || ''}
+                  onChangeText={(text: string) => {
+                    const updatedImages = (formData.images || []).map(img => 
+                      img.id === image.id ? { ...img, caption: text } : img
+                    );
+                    setFormData({ ...formData, images: updatedImages });
+                  }}
+                  placeholder="Caption"
+                  className={inputStyles + " mt-1 w-full text-xs"}
+                  editable={!disabled}
+                />
+              </View>
             ))}
-          </div>
-       </div>
+          </View>
+        )}
+      </View>
 
-       {/* --- NEW Fieldset: Lifecycle Status & Location --- */}
-       <div className={fieldsetStyles}>
-         <h3 className={legendStyles}>Lifecycle Status & Location</h3>
-         <div className="space-y-4">
-           {/* Status Select */}
-           <div>
-             <label htmlFor="status" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Status</label>
-             <select id="status" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as PropLifecycleStatus })} className={selectStyles} required disabled={disabled}>
-               {propLifecycleStatuses.map((status) => ( 
-                 <option key={status} value={status}>
-                   {lifecycleStatusLabels[status]} {/* Use label for display */}
-                 </option> 
-               ))} 
-             </select>
-           </div>
-           {/* Status Notes Textarea */}
-           <div>
-             <label htmlFor="statusNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-               Status Notes
-             </label>
-             <textarea
-               id="statusNotes"
-               value={formData.statusNotes || ''}
-               onChange={(e) => setFormData({ ...formData, statusNotes: e.target.value })}
-               className={inputStyles + " min-h-[80px]"}
-               placeholder="Add notes about the current status"
-               disabled={disabled}
-             />
-           </div>
-           {/* Storage Location Input - Moved and Relabeled */}
-           <div>
-             <label htmlFor="location" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-               Storage Location
-             </label>
-             <input
-               type="text"
-               id="location"
-               value={formData.location || ''}
-               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-               className={inputStyles}
-               placeholder="e.g., Shelf A-3, Warehouse B"
-               disabled={disabled}
-             />
-           </div>
-           {/* Current Location Input */}
-           <div>
-             <label htmlFor="currentLocation" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-               Current Location
-             </label>
-             <input
-               type="text"
-               id="currentLocation"
-               value={formData.currentLocation || ''}
-               onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
-               className={`${inputStyles} w-full`}
-               placeholder="e.g., Onstage SL, Rehearsal Room 1"
-               disabled={disabled}
-             />
-           </div>
-         </div>
-       </div>
+      {/* Fieldset: Dimensions & Weight */}
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Dimensions & Weight</Text>
+        <View className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <View>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Length</label>
+            <TextInput
+              value={formData.length?.toString() ?? ''}
+              onChangeText={(text) => setFormData({ ...formData, length: parseFloat(text) || undefined })}
+              className={`${inputStyles} max-w-[100px]`}
+              placeholder="L"
+              keyboardType="numeric"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Width</label>
+            <TextInput
+              value={formData.width?.toString() ?? ''}
+              onChangeText={(text) => setFormData({ ...formData, width: parseFloat(text) || undefined })}
+              className={`${inputStyles} max-w-[100px]`}
+              placeholder="W"
+              keyboardType="numeric"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Height</label>
+            <TextInput
+              value={formData.height?.toString() ?? ''}
+              onChangeText={(text) => setFormData({ ...formData, height: parseFloat(text) || undefined })}
+              className={`${inputStyles} max-w-[100px]`}
+              placeholder="H"
+              keyboardType="numeric"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Depth</label>
+            <TextInput
+              value={formData.depth?.toString() ?? ''}
+              onChangeText={(text) => setFormData({ ...formData, depth: parseFloat(text) || undefined })}
+              className={`${inputStyles} max-w-[100px]`}
+              placeholder="D"
+              keyboardType="numeric"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Unit</label>
+            <View className="relative">
+              <select
+                id="unit"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value as DimensionUnit })}
+                className={selectStyles}
+                disabled={disabled}
+              >
+                {dimensionUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select>
+            </View>
+          </View>
+          <View>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight</label>
+            <TextInput
+              value={formData.weight?.toString() ?? ''}
+              onChangeText={(text) => setFormData({ ...formData, weight: parseFloat(text) || undefined })}
+              className={`${inputStyles} max-w-[100px]`}
+              placeholder="Weight"
+              keyboardType="numeric"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight Unit</label>
+            <View className="relative">
+              <select
+                id="weightUnit"
+                value={formData.weightUnit}
+                onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value as 'kg' | 'lb' | 'g' })}
+                className={selectStyles}
+                disabled={disabled}
+              >
+                {weightUnits.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
+              </select>
+            </View>
+          </View>
+        </View>
+      </View>
+      
+      {/* Fieldset: Scene Information - Conditionally render if show is provided */}
+      {show && (
+        <View className={fieldsetStyles}>
+          <Text className={legendStyles}>Scene Information (for {show.name})</Text>
+          <View className="space-y-4">
+            <View>
+              <label htmlFor="act" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Act</label>
+              <View className="relative">
+                <select
+                  id="act"
+                  value={formData.act || ''}
+                  onChange={(e) => setFormData({ ...formData, act: parseInt(e.target.value), scene: undefined, sceneName: undefined })} // Reset scene on act change
+                  className={selectStyles + " w-full"}
+                  disabled={disabled}
+                >
+                  <option value="" disabled>Select Act</option>
+                  {(show.acts || []).map((act: Act, index: number) => (
+                    <option key={act.id || index} value={act.id || index + 1}>
+                      {act.name || `Act ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </View>
+            </View>
 
-      {/* Submit/Cancel Buttons */}
-      <div className="flex justify-end gap-4 mt-8">
+            {formData.act && (show.acts || []).find(a => (a.id || (show.acts?.indexOf(a) ?? -1) + 1) === formData.act) && (
+              <View>
+                <label htmlFor="scene" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Scene</label>
+                <View className="relative">
+                  <select
+                    id="scene"
+                    value={formData.scene || ''}
+                    onChange={(e) => {
+                      const selectedSceneObject = (show.acts || [])
+                        .find(a => (a.id || (show.acts?.indexOf(a) ?? -1) + 1) === formData.act)
+                        ?.scenes.find(s => (s.id || ((show.acts || []).find(a => (a.id || (show.acts?.indexOf(a) ?? -1) + 1) === formData.act)?.scenes.indexOf(s) ?? -1) + 1) === parseInt(e.target.value));
+                      
+                      setFormData({ 
+                        ...formData, 
+                        scene: parseInt(e.target.value),
+                        sceneName: selectedSceneObject?.name || '' 
+                      });
+                    }}
+                    className={selectStyles + " w-full"}
+                    disabled={disabled}
+                  >
+                    <option value="" disabled>Select Scene</option>
+                    {((show.acts || []).find(a => (a.id || (show.acts?.indexOf(a) ?? -1) + 1) === formData.act)?.scenes || []).map((scene: Scene, index: number) => (
+                      <option key={scene.id || index} value={scene.id || index + 1}>
+                        {scene.name || `Scene ${index + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </View>
+              </View>
+            )}
+
+            <View className={checkboxContainerStyles}>
+              <Switch
+                value={formData.isMultiScene || false}
+                onValueChange={(value) => setFormData({ ...formData, isMultiScene: value })}
+                trackColor={{ false: "#767577", true: "#81b0ff" }}
+                thumbColor={formData.isMultiScene ? "#f5dd4b" : "#f4f3f4"}
+                disabled={disabled}
+              />
+              <label htmlFor="isMultiScene" className={checkboxLabelStyles}>Used in multiple scenes</label>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Fieldset: Characteristics */}
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Characteristics</Text>
+        <View className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.isConsumable || false}
+              onValueChange={(value) => setFormData({ ...formData, isConsumable: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.isConsumable ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="isConsumable" className={checkboxLabelStyles}>Consumable</label>
+          </View>
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.isBreakable || false}
+              onValueChange={(value) => setFormData({ ...formData, isBreakable: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.isBreakable ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="isBreakable" className={checkboxLabelStyles}>Breakable/Fragile</label>
+          </View>
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.isHazardous || false}
+              onValueChange={(value) => setFormData({ ...formData, isHazardous: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.isHazardous ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="isHazardous" className={checkboxLabelStyles}>Hazardous Material</label>
+          </View>
+          <View>
+            <label htmlFor="materials" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Materials (comma-separated)</label>
+            <TextInput
+              value={(formData.materials || []).join(', ')}
+              onChangeText={(text) => {
+                const materialsArray = text.split(',').map(m => m.trim()).filter(Boolean);
+                setFormData({ ...formData, materials: materialsArray });
+              }}
+              className={`${inputStyles} w-full`}
+              placeholder="e.g., Wood, Metal, Plastic"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label htmlFor="tags" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Tags (comma-separated)</label>
+            <TextInput
+              value={(formData.tags || []).join(', ')}
+              onChangeText={(text) => {
+                const tagsArray = text.split(',').map(t => t.trim()).filter(Boolean);
+                setFormData({ ...formData, tags: tagsArray });
+              }}
+              className={`${inputStyles} w-full`}
+              placeholder="Enter tags"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label htmlFor="color" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Color</label>
+            <TextInput
+              value={formData.color || ''}
+              onChangeText={(text) => setFormData({ ...formData, color: text })}
+              className={`${inputStyles} w-full`}
+              placeholder="Enter color"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label htmlFor="handedness" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Handedness</label>
+            <View className="relative">
+              <select
+                id="handedness"
+                value={formData.handedness}
+                onChange={(e) => setFormData({ ...formData, handedness: e.target.value as 'left' | 'right' | 'either' })}
+                className={selectStyles}
+                disabled={disabled}
+              >
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="either">Either</option>
+              </select>
+            </View>
+          </View>
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.hasUsageInstructions || false}
+              onValueChange={(value) => setFormData({ ...formData, hasUsageInstructions: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.hasUsageInstructions ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="hasUsageInstructions" className={checkboxLabelStyles}>Has Usage Instructions</label>
+          </View>
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.hasMaintenanceNotes || false}
+              onValueChange={(value) => setFormData({ ...formData, hasMaintenanceNotes: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.hasMaintenanceNotes ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="hasMaintenanceNotes" className={checkboxLabelStyles}>Has Maintenance Notes</label>
+          </View>
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.hasSafetyNotes || false}
+              onValueChange={(value) => setFormData({ ...formData, hasSafetyNotes: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.hasSafetyNotes ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="hasSafetyNotes" className={checkboxLabelStyles}>Has Safety Notes</label>
+          </View>
+        </View>
+      </View>
+
+      {/* Fieldset: Handling & Usage */}
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Handling & Usage</Text>
+        <View className="space-y-4">
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.requiresPreShowSetup || false}
+              onValueChange={(value) => setFormData({ ...formData, requiresPreShowSetup: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.requiresPreShowSetup ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="requiresPreShowSetup" className={checkboxLabelStyles}>Requires Pre-Show Setup</label>
+          </View>
+          {formData.requiresPreShowSetup && (
+            <View className={conditionalFieldStyles}>
+              <View>
+                <label htmlFor="preShowSetupDuration" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Duration (minutes)</label>
+                <TextInput
+                  value={formData.preShowSetupDuration?.toString() ?? ''}
+                  onChangeText={(text) => setFormData({ ...formData, preShowSetupDuration: parseInt(text, 10) || undefined })}
+                  className={`${inputStyles} max-w-xs`}
+                  placeholder="e.g., 30"
+                  keyboardType="numeric"
+                  editable={!disabled}
+                />
+              </View>
+              <View>
+                <label htmlFor="preShowSetupNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Notes</label>
+                <WysiwygEditor
+                  value={formData.preShowSetupNotes || ''}
+                  onChange={(content) => setFormData({ ...formData, preShowSetupNotes: content })}
+                  disabled={disabled}
+                />
+              </View>
+              <View>
+                <label htmlFor="preShowSetupVideo" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Video URL</label>
+                <TextInput
+                  value={formData.preShowSetupVideo || ''}
+                  onChangeText={(text) => setFormData({ ...formData, preShowSetupVideo: text })}
+                  className={`${inputStyles} w-full`}
+                  placeholder="https://youtu.be/..."
+                  keyboardType="url"
+                  editable={!disabled}
+                />
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Fieldset: Transport Information */}
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Transport Information</Text>
+        <View className="space-y-4">
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.hasOwnShippingCrate || false}
+              onValueChange={(value) => setFormData({ ...formData, hasOwnShippingCrate: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.hasOwnShippingCrate ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="hasOwnShippingCrate" className={checkboxLabelStyles}>Has Own Shipping Crate</label>
+          </View>
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.requiresSpecialTransport || false}
+              onValueChange={(value) => setFormData({ ...formData, requiresSpecialTransport: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.requiresSpecialTransport ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="requiresSpecialTransport" className={checkboxLabelStyles}>Requires Special Transport</label>
+          </View>
+          <View className={checkboxContainerStyles}>
+            <Switch
+              value={formData.travelsUnboxed || false}
+              onValueChange={(value) => setFormData({ ...formData, travelsUnboxed: value })}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={formData.travelsUnboxed ? "#f5dd4b" : "#f4f3f4"}
+              disabled={disabled}
+            />
+            <label htmlFor="travelsUnboxed" className={checkboxLabelStyles}>Travels Unboxed</label>
+          </View>
+          <View>
+            <label htmlFor="travelWeight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Travel Weight (if different)</label>
+            <TextInput
+              value={formData.travelWeight?.toString() ?? ''}
+              onChangeText={(text) => setFormData({ ...formData, travelWeight: parseFloat(text) || undefined })}
+              className={inputStyles}
+              placeholder={`Weight in ${formData.weightUnit || 'kg'}`}
+              keyboardType="numeric"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label htmlFor="transportNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Transport Notes</label>
+            <WysiwygEditor
+              value={formData.transportNotes || ''}
+              onChange={(content) => setFormData({ ...formData, transportNotes: content })}
+              disabled={disabled}
+            />
+          </View>
+        </View>
+      </View>
+      
+      {/* Fieldset: Digital Assets */}
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Digital Assets (Manuals, Schematics, etc.)</Text>
+        <DigitalAssetForm 
+          assets={formData.digitalAssets || []}
+          onChange={(updatedAssets) => setFormData({ ...formData, digitalAssets: updatedAssets })}
+          disabled={disabled}
+        />
+        <View className="mt-4 space-y-2">
+          {(formData.digitalAssets || []).map((asset: DigitalAsset) => (
+            <View key={asset.id} className="flex items-center justify-between p-2 bg-gray-800 rounded-md">
+              <View className="flex-1">
+                <Text className="text-sm text-gray-100">{asset.name}</Text>
+                <Text className="text-xs text-gray-400">{asset.type} - <a href={asset.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">View</a></Text>
+              </View>
+              <TouchableOpacity onPress={() => handleRemoveDigitalAsset(asset.id)} disabled={disabled}>
+                <Trash2 size={18} className="text-red-500 hover:text-red-400" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Fieldset: Videos */}
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Videos (Links)</Text>
+        <VideoAssetForm 
+          assets={formData.videos || []}
+          onChange={(updatedVideos) => setFormData({ ...formData, videos: updatedVideos })}
+          disabled={disabled}
+        />
+        <View className="mt-4 space-y-2">
+          {(formData.videos || []).map((video: DigitalAsset) => (
+            <View key={video.id} className="flex items-center justify-between p-2 bg-gray-800 rounded-md">
+              <View className="flex-1">
+                <Text className="text-sm text-gray-100">{video.name || 'Video Link'}</Text>
+                <Text className="text-xs text-gray-400"><a href={video.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Watch Video</a></Text>
+              </View>
+              <TouchableOpacity onPress={() => handleRemoveVideoAsset(video.id)} disabled={disabled}>
+                <Trash2 size={18} className="text-red-500 hover:text-red-400" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Fieldset: Lifecycle Status & Location */}
+      <View className={fieldsetStyles}>
+        <Text className={legendStyles}>Lifecycle Status & Location</Text>
+        <View className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <View>
+            <RequiredLabel>Status</RequiredLabel>
+            <View className="relative">
+              <select
+                id="status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as PropLifecycleStatus })}
+                className={selectStyles}
+                required
+                disabled={disabled}
+              >
+                {propLifecycleStatuses.map((status) => ( 
+                  <option key={status} value={status}>
+                    {lifecycleStatusLabels[status]} {/* Use label for display */}
+                  </option> 
+                ))} 
+              </select>
+            </View>
+          </View>
+          <View>
+            <label htmlFor="location" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Storage Location</label>
+            <TextInput
+              value={formData.location || ''}
+              onChangeText={(text) => setFormData({ ...formData, location: text })}
+              className={`${inputStyles} w-full`}
+              placeholder="e.g., Prop Room Shelf A"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label htmlFor="currentLocation" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Current Location (if different)</label>
+            <TextInput
+              value={formData.currentLocation || ''}
+              onChangeText={(text) => setFormData({ ...formData, currentLocation: text })}
+              className={`${inputStyles} w-full`}
+              placeholder="e.g., Backstage Left, On Stage"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label htmlFor="condition" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Condition</label>
+            <TextInput
+              value={formData.condition || ''}
+              onChangeText={(text) => setFormData({ ...formData, condition: text })}
+              className={`${inputStyles} w-full`}
+              placeholder="e.g., New, Used, Needs Repair"
+              editable={!disabled}
+            />
+          </View>
+          <View>
+            <label htmlFor="statusNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Status Notes</label>
+            <WysiwygEditor
+              value={formData.statusNotes || ''}
+              onChange={(content) => setFormData({ ...formData, statusNotes: content })}
+              disabled={disabled}
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Additional Fields Here (e.g., custom fields, history) */}
+      <View className="mt-6 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
         {onCancel && (
-          <button 
-            type="button"
-            onClick={onCancel} 
-            className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+          <TouchableOpacity
+            onPress={onCancel}
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 flex items-center justify-center"
             disabled={disabled}
           >
             Cancel
-          </button>
+          </TouchableOpacity>
         )}
-        <button 
-          type="submit" 
-          className="bg-primary hover:bg-primary-dark text-white font-medium py-2 px-6 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+        <TouchableOpacity
+          onPress={handleSubmit}
+          className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 flex items-center justify-center"
           disabled={disabled}
         >
-          {disabled ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-          {mode === 'create' ? 'Create Prop' : 'Update Prop'}
-        </button>
-      </div>
-
-    </form>
+          <Save size={18} className="mr-2" />
+          {mode === 'create' ? 'Create Prop' : 'Save Changes'}
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // ... existing styles if any ... 
+  // Note: NativeWind typically replaces the need for StyleSheet for styled components
+});
+
+export default PropForm;

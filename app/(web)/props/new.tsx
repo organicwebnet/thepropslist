@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { useShows } from '@/contexts/ShowsContext';
-import type { PropFormData, Prop, Show as SharedShow } from '@/shared/types/props';
-import { PropForm } from '@/components/PropForm';
+import { useFirebase } from '@/contexts/FirebaseContext.tsx';
+import { useAuth } from '@/contexts/AuthContext.tsx';
+import { useShows } from '@/contexts/ShowsContext.tsx';
+import type { PropFormData, Prop, Show as SharedShow } from '@/shared/types/props.ts';
+import { PropForm } from '@/components/PropForm.tsx';
 
 export default function WebNewPropPage() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { PackingBox, PackedProp } from '../../types/packing';
-import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, LucideIcon } from 'lucide-react';
+import { PackingBox, PackedProp } from '../../types/packing.ts';
+import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, LucideIcon, QrCode, Printer, Palette } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { useRouter, Link } from 'expo-router';
@@ -66,7 +66,8 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
       }
   }
   
-  const totalWeightKg = box.props?.reduce((sum, p) => sum + (p.weight || 0), 0) ?? 0;
+  const totalWeightKg = box.props?.reduce((sum: number, p: PackedProp) => sum + (p.weight || 0), 0) ?? 0;
+  const hasFragileItem = box.props?.some(p => p.isFragile);
   const status = box.status ?? 'draft';
   const currentStatusStyle = statusStyles[status] || { bg: 'bg-yellow-700/30', text: 'text-yellow-300', icon: AlertTriangle };
   const StatusIcon = currentStatusStyle.icon;
@@ -145,7 +146,7 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
           <h4 className="text-sm font-medium text-gray-300 mb-2">Contents ({box.props?.length || 0} items)</h4>
           <div className="max-h-40 overflow-y-auto pr-2 space-y-1.5 custom-scrollbar">
             {box.props && box.props.length > 0 ? (
-              box.props.map((prop, index) => (
+              box.props.map((prop: PackedProp, index: number) => (
                 <div key={`${prop.propId}-${index}`} className="flex justify-between items-center text-xs text-gray-400">
                   <span className="truncate pr-2" title={prop.name}>{prop.name}</span>
                   <span className="flex-shrink-0">

@@ -38,4 +38,4 @@ module.exports = withNativeWind(config, {
 });
 
 // Remove the direct export used for testing
-// module.exports = config;
+// module.exports = config; 

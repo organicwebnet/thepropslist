@@ -2,31 +2,29 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, Pressable, Alert, Text } from 'react-native'; 
-import { useAuth } from '../../src/contexts/AuthContext';
-import { useTheme } from '../../src/contexts/ThemeContext';
+import { useAuth } from '../../src/contexts/AuthContext.tsx';
+import { useTheme } from '../../src/contexts/ThemeContext.tsx';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/theme.ts'; // Import theme objects
 
-// Define colors based on your tailwind config for clarity
-const darkThemeColors = {
-  cardBg: '#1F2937', 
-  textPrimary: '#F9FAFB', 
-  textSecondary: '#9CA3AF', 
-  primary: '#3B82F6', 
-  border: '#374151', 
-};
+// Removed local darkThemeColors definition
 
 export default function TabsLayout() {
   const { signOut } = useAuth();
-  const { theme } = useTheme();
+  const { theme: themeName } = useTheme(); // Get theme name from context
+  const currentThemeColors = themeName === 'light' ? appLightTheme.colors : appDarkTheme.colors;
 
-  const activeColor = darkThemeColors.primary;
-  const inactiveColor = darkThemeColors.textSecondary;
-  const tabBarStyleBackground = darkThemeColors.cardBg;
+  const activeColor = currentThemeColors.primary;
+  const inactiveColor = currentThemeColors.text; // Or a specific secondary text color if available in theme
+  const tabBarStyleBackground = currentThemeColors.card; // Using card color for tab bar background
+  const tabBorderColor = currentThemeColors.border;
 
   const handleSignOut = async () => {
     try {
       await signOut();
     } catch (error) {
       console.error("Error signing out:", error);
+      // It might be good to show an Alert here too, like in ProfileScreen
+      Alert.alert('Error', 'Failed to sign out.'); 
     }
   };
 
@@ -35,17 +33,21 @@ export default function TabsLayout() {
       screenOptions={{
         tabBarStyle: {
           backgroundColor: tabBarStyleBackground,
-          borderTopColor: darkThemeColors.border, 
+          borderTopColor: tabBorderColor, 
         },
         tabBarActiveTintColor: activeColor,
         tabBarInactiveTintColor: inactiveColor,
-        headerShown: false, 
+        headerShown: false, // Default, but individual screens can override
       }}
     >
       <Tabs.Screen
         name="shows"
         options={{
           title: 'Shows',
+          headerShown: true, // Show header for this specific screen to have headerRight
+          headerStyle: { backgroundColor: tabBarStyleBackground },
+          headerTitleStyle: { color: currentThemeColors.text },
+          headerTintColor: currentThemeColors.primary, // Color for back button if ever shown
           tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'list-circle' : 'list-circle-outline'}
@@ -55,12 +57,12 @@ export default function TabsLayout() {
           ),
           headerRight: () => (
             <Pressable onPress={handleSignOut} style={{ marginRight: 15 }}>
-              <Ionicons name="exit-outline" size={24} color={darkThemeColors.primary} />
+              <Ionicons name="exit-outline" size={24} color={currentThemeColors.primary} />
             </Pressable>
           ),
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="propsTab/index"
         options={{
           title: 'Props',
@@ -72,9 +74,9 @@ export default function TabsLayout() {
             />
           ),
         }}
-      />
+      /> */}
       <Tabs.Screen
-        name="index"
+        name="index" 
         options={{
           title: 'Home', 
           tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
@@ -90,6 +92,10 @@ export default function TabsLayout() {
         name="packing"
         options={{
           title: 'Packing',
+          headerShown: true, // Ensure header is shown for the QR scan button
+          headerStyle: { backgroundColor: tabBarStyleBackground },
+          headerTitleStyle: { color: currentThemeColors.text },
+          headerTintColor: currentThemeColors.primary, 
           tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'archive' : 'archive-outline'}
@@ -97,15 +103,33 @@ export default function TabsLayout() {
               color={color}
             />
           ),
+          // Note: headerRight for Packing screen (QR Scan button) is defined within PackingScreen.tsx itself using Stack.Screen
         }}
       />
-      <Tabs.Screen
+       <Tabs.Screen
         name="profile/index"
         options={{
           title: 'Profile',
+          headerShown: true, // Profile screen sets its own title via Stack.Screen
+          headerStyle: { backgroundColor: tabBarStyleBackground },
+          headerTitleStyle: { color: currentThemeColors.text },
+          headerTintColor: currentThemeColors.primary, 
           tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'person-circle' : 'person-circle-outline'}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="todos"
+        options={{
+          title: 'Task Boards',
+          tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
+            <Ionicons
+              name={focused ? 'grid' : 'grid-outline'}
               size={size}
               color={color}
             />

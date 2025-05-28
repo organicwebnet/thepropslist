@@ -1,6 +1,8 @@
 import { addDoc, collection } from 'firebase/firestore';
 // import { db } from './lib/firebase'; // Remove direct import
-import type { CustomFirestore } from '@/shared/services/firebase/types'; // Import correct type
+import type { CustomFirestore } from './shared/services/firebase/types.ts'; // Import correct type
+import { Show, Venue, Act, Scene, Prop, PropImage, DigitalAsset } from "./types/index.ts";
+import { Timestamp } from 'firebase/firestore';
 
 const testProducts = [
   {

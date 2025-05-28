@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, Button } from 'react-native';
 import { Stack, Link } from 'expo-router';
-import { PropList } from '../components/PropList';
-import type { Prop } from '@shared/types';
-import type { Show } from '../types';
-import type { Filters } from '../types';
+import { useNavigation } from '@react-navigation/native';
+import { PropList } from '../components/PropList.tsx';
+import type { Prop } from '../shared/types/index.ts';
+import type { Show } from '../types.ts';
+import type { Filters } from '../types.ts';
 
 export function PropsPage() {
   const [props, setProps] = useState<Prop[]>([]);
@@ -78,8 +79,8 @@ export function PropsPage() {
       <View style={styles.content}>
         <PropList
           props={filteredProps}
-          onEdit={(prop) => console.log('Edit prop', prop)}
-          onDelete={(id) => console.log('Delete prop', id)}
+          onEdit={(prop: Prop) => console.log('Edit prop', prop)}
+          onDelete={(id: string) => console.log('Delete prop', id)}
         />
       </View>
       <Link href={{ pathname: '/props/new' }} style={styles.addButton}>

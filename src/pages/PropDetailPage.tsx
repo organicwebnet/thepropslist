@@ -6,21 +6,25 @@ import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'fire
 import { Check as CheckNative, Edit as EditNative, Trash2 as Trash2Native, Plus as PlusNative, Upload as UploadNative, Calendar as CalendarIconNative, X as XNative, ChevronDown as ChevronDownNative, ChevronUp as ChevronUpNative, AlertTriangle as AlertTriangleNative, MessageSquare as MessageSquareNative, LifeBuoy as LifeBuoyNative, Image as ImageIconNative, Paperclip as PaperclipNative } from 'lucide-react-native';
 import { Check, Edit, Trash2, Plus, Upload, Calendar, X, ChevronDown, ChevronUp, AlertTriangle, MessageSquare, LifeBuoy, Image as ImageIconWeb, Paperclip, ArrowLeft, Package, Info as InfoIcon, Activity, Wrench, Clock } from 'lucide-react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { Prop, PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, DimensionUnit } from '@/shared/types/props';
-import { usePropLifecycle } from '../hooks/usePropLifecycle';
-import { Show } from '../types';
-import { MaintenanceRecordForm } from '@components/lifecycle/MaintenanceRecordForm';
-import { PropStatusUpdate } from '@components/lifecycle/PropStatusUpdate';
-import { lifecycleStatusLabels, lifecycleStatusPriority, MaintenanceRecord, PropLifecycleStatus } from '../types/lifecycle';
-import { VideoPlayer } from '@components/VideoPlayer';
-import { PropForm } from '@components/PropForm';
-import { DigitalAssetGrid } from '@components/DigitalAssetGrid';
-import { ImageCarousel } from '@components/ImageCarousel';
-import { StatusHistory } from '@components/lifecycle/StatusHistory';
-import { MaintenanceHistory } from '@components/lifecycle/MaintenanceHistory';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useAuth } from '../contexts/AuthContext';
+import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
+import { Prop, PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, DimensionUnit } from '../shared/types/props.ts';
+import { usePropLifecycle } from '../hooks/usePropLifecycle.ts';
+import { Show } from '../types/index.ts';
+import { MaintenanceRecordForm } from '../components/lifecycle/MaintenanceRecordForm.tsx';
+import { PropStatusUpdate } from '../components/lifecycle/PropStatusUpdate.tsx';
+import { lifecycleStatusLabels, lifecycleStatusPriority, MaintenanceRecord, PropLifecycleStatus } from '../types/lifecycle.ts';
+import { VideoPlayer } from '../components/VideoPlayer.tsx';
+import { PropForm } from '../components/PropForm.tsx';
+import { DigitalAssetGrid } from '../components/DigitalAssetGrid.tsx';
+import { ImageCarousel } from '../components/ImageCarousel.tsx';
+import { StatusHistory } from '../components/lifecycle/StatusHistory.tsx';
+import { MaintenanceHistory } from '../components/lifecycle/MaintenanceHistory.tsx';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
 import { User } from 'firebase/auth';
+import { lightTheme, darkTheme } from '../theme.ts';
+import { useTheme } from '../contexts/ThemeContext.tsx';
 
 export default function PropDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,7 +32,6 @@ export default function PropDetailPage() {
   const { service } = useFirebase();
   const { user } = useAuth();
   const [prop, setProp] = useState<Prop | null>(null);
-  const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -110,7 +113,7 @@ export default function PropDetailPage() {
               const showRef = doc(firestore, 'shows', propData.showId);
               const showSnap = await getDoc(showRef);
               if (showSnap.exists()) {
-                setShow({ ...(showSnap.data() as Show), id: showSnap.id });
+                // setShow({ ...(showSnap.data() as Show), id: showSnap.id });
               } else {
                 console.warn('Show document not found for showId:', propData.showId);
               }
@@ -518,8 +521,8 @@ export default function PropDetailPage() {
                       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                     
                     if (latestRepair) {
-                      const hasReturnDate = latestRepair.estimatedReturnDate !== undefined;
-                      const hasDeadline = latestRepair.repairDeadline !== undefined;
+                      const returnDateStr = latestRepair.estimatedReturnDate;
+                      const deadlineStr = latestRepair.repairDeadline;
                       
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
@@ -527,24 +530,24 @@ export default function PropDetailPage() {
                       let isReturnOverdue = false;
                       let isDeadlinePast = false;
                       
-                      if (hasReturnDate) {
-                        const estimatedDate = new Date(latestRepair.estimatedReturnDate!);
+                      if (returnDateStr) {
+                        const estimatedDate = new Date(returnDateStr);
                         isReturnOverdue = estimatedDate < today;
                       }
                       
-                      if (hasDeadline) {
-                        const deadlineDate = new Date(latestRepair.repairDeadline!);
+                      if (deadlineStr) {
+                        const deadlineDate = new Date(deadlineStr);
                         isDeadlinePast = deadlineDate < today;
                       }
                       
                       return (
                         <div className="space-y-2">
-                          {hasDeadline && (
+                          {deadlineStr && (
                             <div className={`flex items-start gap-2 ${isDeadlinePast ? "text-red-400" : ""}`}>
                               <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                               <div>
                                 <p className="font-medium">
-                                  Must be fixed by: {new Date(latestRepair.repairDeadline!).toLocaleDateString()}
+                                  Must be fixed by: {new Date(deadlineStr).toLocaleDateString()}
                                   {isDeadlinePast && " (Past due)"}
                                 </p>
                                 <p className="text-sm text-[var(--text-secondary)]">
@@ -554,11 +557,11 @@ export default function PropDetailPage() {
                             </div>
                           )}
                           
-                          {hasReturnDate && (
+                          {returnDateStr && (
                             <div>
                               <p className="text-[var(--text-primary)]">
                                 Expected to return from repair on <span className={isReturnOverdue ? "text-red-400 font-medium" : "font-medium"}>
-                                  {new Date(latestRepair.estimatedReturnDate!).toLocaleDateString()}
+                                  {new Date(returnDateStr).toLocaleDateString()}
                                 </span>
                                 {isReturnOverdue && " (Overdue)"}
                               </p>

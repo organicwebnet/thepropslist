@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { PackingLabel, PackListService } from '../../shared/services/inventory/packListService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { PackingLabel, PackListService } from '../../shared/services/inventory/packListService.ts';
+import { X, Tag, Save, Printer, PlusCircle, Trash2, AlertTriangle } from 'lucide-react';
 
 interface PackingLabelsProps {
   packListId: string;
@@ -65,14 +66,11 @@ export const PackingLabels: React.FC<PackingLabelsProps> = ({
                 <div>Status: {label.containerStatus}</div>
                 <div>Props: {label.propCount}</div>
                 {label.labels.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {label.labels.map((tag) => (
-                      <span
-                        key={tag}
-                        className="bg-gray-100 px-2 py-0.5 rounded text-xs"
-                      >
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {label.labels.map((tag: string) => (
+                      <div key={tag} className="flex items-center bg-gray-700 px-2.5 py-1 rounded-md text-xs text-gray-200">
                         {tag}
-                      </span>
+                      </div>
                     ))}
                   </div>
                 )}

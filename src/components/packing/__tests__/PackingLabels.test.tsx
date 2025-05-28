@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { PackingLabels } from '../PackingLabels';
-import { PackListService, PackingLabel } from '../../../shared/services/inventory/packListService';
+import { PackingLabels } from '../PackingLabels.tsx';
+import { PackListService, PackingLabel } from '../../../shared/services/inventory/packListService.ts';
+import { useTheme } from '../../../contexts/ThemeContext.tsx';
 
 const mockLabels: PackingLabel[] = [
   {

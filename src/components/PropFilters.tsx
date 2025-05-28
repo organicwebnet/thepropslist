@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Filter, X, HelpCircle } from 'lucide-react';
-import type { Filters } from '../types';
-import { lifecycleStatusLabels, PropLifecycleStatus, lifecycleStatusPriority } from '../types/lifecycle';
+import type { Filters } from '../types.ts';
+import { lifecycleStatusLabels, PropLifecycleStatus, lifecycleStatusPriority } from '../types/lifecycle.ts';
+import { View, Text, TextInput, Switch, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { XIcon, FilterIcon } from 'lucide-react-native';
 
 interface PropFiltersProps {
   filters: Filters;

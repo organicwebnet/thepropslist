@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, X, FileText, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import type { DigitalAsset } from '@/shared/types/props';
-import { useFirebase } from '../contexts/FirebaseContext';
+import type { DigitalAsset } from '../shared/types/props.ts';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
 
 interface DigitalAssetFormProps {
   assets: DigitalAsset[];

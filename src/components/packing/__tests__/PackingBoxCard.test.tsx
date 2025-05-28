@@ -1,10 +1,13 @@
 import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { Provider } from 'react-native-paper'; // Import Provider
+import { ThemeProvider } from '../../../contexts/ThemeContext.tsx'; // Import ThemeProvider
 import { Text } from 'react-native'; // Import Text
 // No need for jest-dom with react-native testing library
 // import '@testing-library/jest-dom';
-import { PackingBoxCard } from '../PackingBoxCard';
-import { PackingBox, PackedProp } from '../../../types/packing'; // Corrected path
+import { PackingBoxCard } from '../PackingBoxCard.tsx';
+import { PackingBox, PackedProp } from '../../../types/packing.ts'; // Corrected path
 import { Timestamp } from 'firebase/firestore';
 
 // Mock Lucide icons used in the component

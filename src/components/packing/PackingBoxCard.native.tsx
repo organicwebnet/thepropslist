@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PackingBox, PackedProp } from '../../types/packing';
+import { PackingBox, PackedProp } from '../../types/packing.ts';
 import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, LucideIcon } from 'lucide-react'; // Will change to lucide-react-native
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';

@@ -1,33 +1,34 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut, getRedirectResult, GoogleAuthProvider, linkWithCredential, User as FirebaseUserJs } from 'firebase/auth';
 import { arrayUnion, arrayRemove } from 'firebase/firestore';
-import { AuthForm } from './components/AuthForm';
-import { PropForm } from './components/PropForm';
-import { PropList } from './components/PropList';
-import { ShowList } from './components/ShowList';
-import { UserProfileModal } from './components/UserProfile';
-import { ShareModal } from './components/ShareModal';
-import { WebFirebaseService } from './platforms/web/services/firebase';
-import type { Prop, PropFormData } from './shared/types/props';
-import type { Filters } from './types';
-import type { Show, ShowFormData } from './types/index';
+import { AuthForm } from './components/AuthForm.tsx';
+import { PropForm } from './components/PropForm.tsx';
+import { PropList } from './components/PropList.tsx';
+import { ShowList } from './components/ShowList.tsx';
+import { UserProfileModal } from './components/UserProfile.tsx';
+import { ShareModal } from './components/ShareModal.tsx';
+import { WebFirebaseService } from './platforms/web/services/firebase.ts';
+import type { Prop, PropFormData } from './shared/types/props.ts';
+import type { Filters } from './types.ts';
+import type { Show, ShowCollaborator, FirebaseDocument } from './shared/services/firebase/types.ts';
+import type { ShowFormData } from './types/index.ts';
 import { LogOut, PlusCircle, Pencil, Trash2, Plus } from 'lucide-react';
-import ShowForm from './components/ShowForm';
-import { SearchBar } from './components/SearchBar';
-import { PropFilters } from './components/PropFilters';
-import { ExportToolbar } from './components/ExportToolbar';
-import { OnboardingGuide } from './components/OnboardingGuide';
-import Sidebar from './components/Sidebar';
+import ShowForm from './components/ShowForm.tsx';
+import { SearchBar } from './components/SearchBar.tsx';
+import { PropFilters } from './components/PropFilters.tsx';
+import { ExportToolbar } from './components/ExportToolbar.tsx';
+import { OnboardingGuide } from './components/OnboardingGuide.tsx';
+import Sidebar from './components/Sidebar.tsx';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ShowsProvider } from './contexts/ShowsContext';
-import { PropsProvider } from './contexts/PropsContext';
-import { FirebaseProvider, useFirebase } from './contexts/FirebaseContext';
-// import { OfflineSyncProvider } from './contexts/OfflineSyncContext'; // Commented out as file not found
-import { RootNavigator } from './navigation/RootNavigator';
-import { useFonts } from './hooks/useFonts';
+import { ThemeProvider } from './contexts/ThemeContext.tsx';
+import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
+import { ShowsProvider } from './contexts/ShowsContext.tsx';
+import { PropsProvider } from './contexts/PropsContext.tsx';
+import { FirebaseProvider, useFirebase } from './contexts/FirebaseContext.tsx';
+// import { OfflineSyncProvider } from './contexts/OfflineSyncContext.tsx'; // Commented out as file not found
+import { RootNavigator } from './navigation/RootNavigator.tsx';
+import { useFonts } from './hooks/useFonts.ts';
 // import SplashScreen from './screens/SplashScreen'; // Commented out as file not found
 
 const initialFilters: Filters = {
@@ -105,8 +106,8 @@ function App() {
     }
     const showsUnsubscribe = firebaseService.listenToCollection<Show>(
       'shows',
-      (docs) => {
-        const showsData = docs.map(doc => {
+      (docs: FirebaseDocument<Show>[]) => {
+        const showsData = docs.map((doc: FirebaseDocument<Show>) => {
           const data = { ...doc.data }; // Clone data to safely delete id if it exists
           if (!data) return null;
           if ('id' in data && typeof data.id === 'string') { // Ensure data.id is not doc.id
@@ -132,7 +133,7 @@ function App() {
           setSelectedShow(showsData[0]);
         }
       },
-      (error) => console.error('Error listening to shows:', error),
+      (error: Error) => console.error('Error listening to shows:', error),
       { where: [['userId', '==', user.uid]] }
     );
     return () => {
@@ -152,14 +153,14 @@ function App() {
     // Use firebaseService.listenToCollection for props
     const propsUnsubscribe = firebaseService.listenToCollection<Prop>(
       'props',
-      (docs) => {
+      (docs: FirebaseDocument<Prop>[]) => {
         console.log('Props snapshot received, document count:', docs.length);
-        const propsData = docs.map(doc => ({ id: doc.id, ...doc.data } as Prop));
+        const propsData = docs.map((doc: FirebaseDocument<Prop>) => ({ id: doc.id, ...doc.data } as Prop));
         console.log('Loaded props:', propsData.length);
         setProps(propsData);
         setLoading(false);
       },
-      (error) => {
+      (error: Error) => {
         console.error('Error in props snapshot listener:', error);
         setLoading(false);
       },
@@ -360,14 +361,15 @@ function App() {
   };
 
   const handleRemoveCollaborator = async (email: string) => {
-    if (!selectedShow || !firebaseService) return;
-    const collaboratorToRemove = selectedShow.collaborators?.find(c => c.email === email);
-    if (!collaboratorToRemove) return;
+    if (!selectedShow || !user) return;
     try {
-      await firebaseService.updateDocument('shows', selectedShow.id, { collaborators: arrayRemove(collaboratorToRemove) });
-      const updatedShowDoc = await firebaseService.getDocument<Show>('shows', selectedShow.id);
-      if (updatedShowDoc && updatedShowDoc.data) {
-        setSelectedShow({ ...updatedShowDoc.data, id: updatedShowDoc.id });
+      const collaboratorToRemove = selectedShow.collaborators?.find((c: ShowCollaborator) => c.email === email);
+      if (collaboratorToRemove) {
+        await firebaseService.updateDocument('shows', selectedShow.id, { collaborators: arrayRemove(collaboratorToRemove) });
+        const updatedShowDoc = await firebaseService.getDocument<Show>('shows', selectedShow.id);
+        if (updatedShowDoc && updatedShowDoc.data) {
+          setSelectedShow({ ...updatedShowDoc.data, id: updatedShowDoc.id });
+        }
       }
     } catch (e) {
       console.error("Error removing collaborator: ", e);
@@ -451,19 +453,16 @@ function App() {
   };
 
   const handleDeleteShow = async (showId: string) => {
-    if (!firebaseService) return; // Use firebaseService
+    if (!user || !firebaseService) return; // Added firebaseService check
     setLoading(true);
     try {
       // First, delete all props associated with the show
-      const propsSnapshot = await firebaseService.getDocuments<Prop>(
-        'props',
-        { where: [['showId', '==', showId]] }
-      );
-      const deletePromises = propsSnapshot.map(propDoc => firebaseService.deleteDocument('props', propDoc.id));
+      const propsSnapshot = await firebaseService.getDocuments<Prop>('props', { where: [['showId', '==', showId]] });
+      const deletePromises = propsSnapshot.map((propDoc: FirebaseDocument<Prop>) => firebaseService.deleteDocument('props', propDoc.id));
       await Promise.all(deletePromises);
 
       // Then, delete the show itself
-      await firebaseService.deleteDocument('shows', showId);
+      await firebaseService.deleteShow(showId);
 
       setShows(prevShows => prevShows.filter(s => s.id !== showId));
       if (selectedShow?.id === showId) {
@@ -604,7 +603,7 @@ function App() {
           ) : (
             <>
               <div className="mb-6 p-4 bg-white rounded shadow flex flex-wrap items-center justify-between gap-4">
-                <SearchBar value={filters.search} onChange={(value) => handleFilterChange({ ...filters, search: value })} />
+                <SearchBar value={filters.search} onChange={(value: string) => handleFilterChange({ ...filters, search: value })} />
                 <PropFilters filters={filters} onChange={handleFilterChange} onReset={handleFilterReset} />
                 <ExportToolbar props={filteredProps} show={selectedShow!} />
                  <button
@@ -630,35 +629,13 @@ function App() {
         </main>
       </div>
 
-      {showEditModal && (
-          <PropForm
-            initialData={selectedProp ? {
-                ...selectedProp,
-                status: selectedProp.status || 'confirmed',
-                // Convert Timestamp to string if it exists and is a Timestamp instance
-                lastModifiedAt: selectedProp.lastModifiedAt && typeof selectedProp.lastModifiedAt === 'object' && 'toDate' in selectedProp.lastModifiedAt
-                    ? (selectedProp.lastModifiedAt as any).toDate().toISOString() // Assuming it's a Firestore Timestamp-like object
-                    : undefined,
-             } : undefined}
-            onSubmit={async (formData) => {
-              if (selectedProp) {
-                await handleEdit(selectedProp.id, formData);
-              } else {
-                await handlePropSubmit(formData);
-              }
-              setShowEditModal(false);
-              setSelectedProp(null);
-            }}
-            onCancel={() => {
-              setShowEditModal(false);
-              setSelectedProp(null);
-            }}
-            mode={selectedProp ? 'edit' : 'create'}
-            show={selectedShow || undefined}
-          />
-        )}
-      {showProfile && <UserProfileModal onClose={() => setShowProfile(false)} />}
-      {showShareModal && selectedShow && user && (
+      {showAuth && <AuthForm onClose={() => setShowAuth(false)} />}
+      {showProfile && (
+        <UserProfileModal 
+          onClose={() => setShowProfile(false)} 
+        />
+      )}
+      {showShareModal && selectedShow && (
         <ShareModal
           show={selectedShow}
           onClose={() => setShowShareModal(false)}
@@ -667,34 +644,28 @@ function App() {
           currentUserEmail={user.email || ''}
         />
       )}
-      {showOnboarding && 
-        <OnboardingGuide 
-          show={showOnboarding} 
-          onComplete={() => {
-            console.log('Onboarding Complete callback fired in App.tsx');
-            setShowOnboarding(false);
-          }}
-        />
-      }
-      {editingShow !== null && showEditModal && (
-        <ShowForm
-          initialData={editingShow}
-          onSubmit={handleShowSubmit}
+      {showEditModal && selectedShow && (
+        <PropForm
+          initialData={selectedProp ? { ...selectedProp } as PropFormData : undefined}
+          mode={selectedProp ? 'edit' : 'create'}
+          show={selectedShow}
           onCancel={() => {
-              setEditingShow(null);
-              setShowEditModal(false);
+            setShowEditModal(false);
+            setSelectedProp(null);
           }}
-          mode="edit"
+          onSubmit={handlePropSubmit}
         />
       )}
-      {showFormMode === 'create' && !editingShow && showEditModal && (
-          <ShowForm
-            mode="create"
-            onSubmit={handleShowSubmit}
-            onCancel={() => {
-                setShowEditModal(false);
-            }}
-           />
+      {editingShow && (
+          <ShowForm 
+              mode={showFormMode}
+              initialData={editingShow} 
+              onSubmit={handleShowSubmit}
+              onCancel={() => setEditingShow(null)}
+          />
+      )}
+       {showOnboarding && (
+        <OnboardingGuide show={showOnboarding} onComplete={() => setShowOnboarding(false)} />
       )}
     </div>
   );

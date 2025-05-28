@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import type { Prop } from '@/shared/types/props';
-import type { PropLifecycleStatus } from '../types/lifecycle';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import type { Prop } from '../shared/types/props.ts';
+import type { PropLifecycleStatus } from '../types/lifecycle.ts';
 // import { getProp } from '../services/propService'; // Commented out: Cannot find module
 
 export default function PropDetails() {
@@ -165,7 +165,7 @@ export default function PropDetails() {
             Tags
           </Text>
           <View style={styles.tags}>
-            {prop.tags?.map((tag, index) => (
+            {prop.tags?.map((tag: string, index: number) => (
               <Text
                 key={index}
                 style={[

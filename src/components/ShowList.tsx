@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { Theater, User, Building, Pencil, Trash2 } from 'lucide-react-native';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
+import { Link, useRouter } from 'expo-router';
+import { PlusCircle, Edit, Trash, Search, ChevronDown, ChevronUp, Eye, Users, CalendarCheck2, Palette, Theater, User, Building, Pencil, Trash2 } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
-import type { Show } from '../types/index';
-import type { ShowFormData } from '../types/index';
-import ShowForm from './ShowForm';
-import { useAuth } from '../contexts/AuthContext';
-import { ShowsContext } from '../contexts/ShowsContext';
+import type { Show, Act } from '../shared/services/firebase/types.ts';
+import type { ShowFormData } from '../types/index.ts';
+import ShowForm from './ShowForm.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { ShowsContext } from '../contexts/ShowsContext.tsx';
+// import { ShowCard } from './ShowCard.tsx';
 
 interface ShowListProps {
   shows: Show[];
@@ -73,8 +75,8 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                         </Text>
                         <Text style={styles.detailsText}>•</Text>
                         <Text style={styles.detailsText}>
-                          {(show.acts || []).reduce((total, act) => total + (act.scenes?.length || 0), 0)} Scene
-                          {(show.acts || []).reduce((total, act) => total + (act.scenes?.length || 0), 0) !== 1 ? 's' : ''}
+                          {(show.acts || []).reduce((total: number, act: Act) => total + (act.scenes?.length || 0), 0)} Scene
+                          {(show.acts || []).reduce((total: number, act: Act) => total + (act.scenes?.length || 0), 0) !== 1 ? 's' : ''}
                         </Text>
                       </View>
                       {selectedShowId === show.id ? (

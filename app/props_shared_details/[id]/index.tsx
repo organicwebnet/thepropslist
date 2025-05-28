@@ -1,20 +1,24 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ActivityIndicator, Image, TouchableOpacity, ScrollView, StyleSheet, Alert, TextInput, Switch, Modal, Button, Platform, useWindowDimensions } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerDefault from '@react-native-community/datetimepicker';
+const DateTimePicker = (DateTimePickerDefault as any).default || DateTimePickerDefault;
 import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import type { Prop } from '@/shared/types/props';
+import { Stack, useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useFirebase } from '../../../src/contexts/FirebaseContext.tsx';
+import type { Prop } from '../../../src/shared/types/props.ts';
 import { 
   PropLifecycleStatus, 
   PropStatusUpdate as PropStatusUpdateType, 
   MaintenanceRecord as MaintenanceRecordType,
   lifecycleStatusLabels, 
   lifecycleStatusPriority, 
-} from '@/types/lifecycle';
-import { Pencil, Trash2, ArrowLeft, Wrench, History, ClipboardList, CheckCircle, XCircle, FileText, Video as VideoIcon, MoveRight, CalendarDays, Users, ImagePlus, X } from 'lucide-react-native';
-import RenderHTML from 'react-native-render-html';
+} from '../../../src/types/lifecycle.ts';
+import { Pencil, Trash2, ArrowLeft, Wrench, History, ClipboardList, CheckCircle, XCircle, FileText, Video as VideoIcon, MoveRight, CalendarDays, Users, ImagePlus, X, Info, Palette, Hammer, Clock, BookOpen, FileEdit } from 'lucide-react-native';
+import RenderHTMLDefault from 'react-native-render-html';
+const RenderHTML = (RenderHTMLDefault as any).default || RenderHTMLDefault;
 import * as ImagePicker from 'expo-image-picker';
+import { useTheme } from '../../../src/contexts/ThemeContext.tsx';
+import { lightTheme, darkTheme } from '../../../src/theme.ts';
 
 // Local type for Maintenance Form
 export type MaintenanceType = 'repair' | 'maintenance' | 'modification' | 'inspection';
@@ -44,14 +48,6 @@ function isValidImageSource(source: any): source is { uri: string } {
 interface PropWithHistory extends Prop {
   statusHistory?: PropStatusUpdateType[];
   maintenanceHistory?: MaintenanceRecordType[];
-  // Fields from web version that might be in prop.data
-  isModified?: boolean;
-  modificationDetails?: string;
-  modifiedAt?: string | null;
-  rentalSource?: string;
-  rentalReferenceNumber?: string;
-  travelsUnboxed?: boolean;
-  statusNotes?: string;
 }
 
 interface UserProfileInfo { // Simplified profile for display
@@ -632,15 +628,17 @@ const MobileMaintenanceHistoryList: React.FC<MobileMaintenanceHistoryListProps> 
 export default function NativePropDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { service: firebaseService } = useFirebase();
   const [prop, setProp] = useState<PropWithHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
   const [activeTab, setActiveTab] = useState('Details');
-  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfileInfo>>({}); // Cache for user profiles
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfileInfo>>({});
+  const { theme } = useTheme();
+  const currentThemeColors = theme === 'dark' ? darkTheme.colors : lightTheme.colors;
 
-  // Fetch prop data and associated user profiles
   const fetchPropData = useCallback(async () => {
     if (!id || !firebaseService?.getDocument) {
       setError('Required information missing to fetch prop.');
@@ -652,35 +650,33 @@ export default function NativePropDetailScreen() {
     try {
       const propDoc = await firebaseService.getDocument<Prop>('props', id);
       if (propDoc && propDoc.data) {
-        const { id: dataId, ...restOfData } = propDoc.data; // Destructure to remove dataId from spread
+        const { id: dataId, ...restOfData } = propDoc.data; 
         const fetchedProp: PropWithHistory = {
-          id: propDoc.id, // Explicitly use the document ID from snapshot
+          id: propDoc.id, 
           ...restOfData,
-          // Ensure history arrays are initialized if not present in restOfData (though they should be if Prop type includes them)
           statusHistory: restOfData.statusHistory || [], 
           maintenanceHistory: restOfData.maintenanceHistory || [],
         } as PropWithHistory;
+        console.log("NativePropDetailScreen: Prop data fetched and set:", fetchedProp.name);
         setProp(fetchedProp);
 
-        // Collect UIDs from history
         const uidsToFetch = new Set<string>();
         fetchedProp.statusHistory?.forEach(item => item.updatedBy && uidsToFetch.add(item.updatedBy));
         fetchedProp.maintenanceHistory?.forEach(record => record.createdBy && uidsToFetch.add(record.createdBy));
         
-        // Fetch profiles for these UIDs if not already cached
         const profilesToUpdate: Record<string, UserProfileInfo> = {};
         for (const uid of uidsToFetch) {
-          if (!userProfiles[uid] && firebaseService.getDocument) { // Check if service.getDocument exists
+          if (!userProfiles[uid] && firebaseService.getDocument) {
             try {
               const userDoc = await firebaseService.getDocument<{displayName: string}>('userProfiles', uid);
               if (userDoc && userDoc.data && userDoc.data.displayName) {
                 profilesToUpdate[uid] = { displayName: userDoc.data.displayName };
               } else {
-                profilesToUpdate[uid] = { displayName: uid.substring(0, 10) + '...' }; // Fallback if no name
+                profilesToUpdate[uid] = { displayName: uid.substring(0, 10) + '...' };
               }
             } catch (profileError) {
               console.warn(`Failed to fetch profile for UID ${uid}:`, profileError);
-              profilesToUpdate[uid] = { displayName: uid.substring(0, 10) + '...' }; // Fallback on error
+              profilesToUpdate[uid] = { displayName: uid.substring(0, 10) + '...' };
             }
           }
         }
@@ -696,11 +692,32 @@ export default function NativePropDetailScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id, firebaseService]); // REMOVED userProfiles from dependency array
+  }, [id, firebaseService]);
 
   useEffect(() => {
     fetchPropData();
   }, [fetchPropData]);
+
+  useEffect(() => {
+    if (prop && id && navigation) { 
+      console.log("NativePropDetailScreen: Setting headerRight. Prop:", prop?.name, "ID:", id, "Nav available:", !!navigation);
+      navigation.setOptions({
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => {
+              console.log("NativePropDetailScreen: Header Edit Tapped. Navigating to:", `/props/${id}/edit`);
+              router.push({ pathname: `/props/${id}/edit`, params: { propId: id } } as any);
+            }}
+            style={{ marginRight: 15 }}
+          >
+            <FileEdit size={24} color={currentThemeColors.headerTint || '#FFFFFF'} />
+          </TouchableOpacity>
+        ),
+      });
+    } else if (prop && id && !navigation) {
+      console.warn("NativePropDetailScreen: navigation object not yet available when trying to set headerRight.");
+    }
+  }, [prop, id, navigation, router, currentThemeColors]);
 
   // --- Handlers --- 
   const handleDelete = async () => {
@@ -727,7 +744,7 @@ export default function NativePropDetailScreen() {
               if (router.canGoBack()) {
                 router.back();
               } else {
-                router.replace('/propsTab'); // Or a suitable default route
+                router.replace('/propsTab');
               }
             } catch (err) {
               console.error('Error deleting prop:', err);
@@ -836,7 +853,7 @@ export default function NativePropDetailScreen() {
             source={imageSource} 
             style={styles.propImage}
             onError={() => setImageError(true)}
-            resizeMode="contain" // Ensure the image fits well
+            resizeMode="contain"
           />
         );
     } else {
@@ -860,18 +877,35 @@ export default function NativePropDetailScreen() {
     return <View style={styles.centered}><Text style={styles.text}>Prop data unavailable.</Text></View>;
   }
 
-  // DetailItem component (from web, adapted for native)
-  const DetailItem = ({ label, value }: { label: string; value: React.ReactNode | string | number | undefined | null }) => {
-    if (value === undefined || value === null || value === '') return null;
+  interface DetailItemProps {
+    label: string;
+    value: React.ReactNode | string | number | undefined | null;
+    icon?: React.ElementType;
+    isLongText?: boolean;
+  }
+
+  const DetailItem: React.FC<DetailItemProps> = ({ label, value, icon: IconComponent, isLongText }) => {
+    if (value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)) return null;
+    
     return (
-      <View style={styles.detailItemContainer}>
-        <Text style={styles.detailItemLabel}>{label}</Text>
-        <Text style={styles.detailItemValue}>{String(value)}</Text>
+      <View style={[styles.detailItemContainer, { borderBottomColor: currentThemeColors.border }]}>
+        {IconComponent && <IconComponent size={18} color={currentThemeColors.icon} style={styles.detailItemIcon} />}
+        <Text style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>{label}:</Text>
+        {typeof value === 'string' || typeof value === 'number' ? (
+          <Text style={[styles.detailValue, { color: currentThemeColors.text }, isLongText && styles.longDetailValue]}>{String(value)}</Text>
+        ) : (
+          value
+        )}
       </View>
     );
   };
 
-  // TabButton component (adapted for native)
+  const SectionHeader = ({ title }: { title: string }) => {
+    return (
+      <Text style={[styles.sectionTitle, { color: currentThemeColors.text, borderBottomColor: currentThemeColors.borderSecondary }]}>{title}</Text>
+    );
+  };
+
   const TabButton = ({ label, active, onPress, icon: Icon }: {
     label: string;
     active: boolean;
@@ -905,21 +939,12 @@ export default function NativePropDetailScreen() {
             )}
         </View>
         <View style={styles.headerActionsContainer}>
-            <TouchableOpacity 
-              onPress={() => router.push(`/props/${id}/edit`)} // Assuming edit route exists or will be created for mobile
-              style={styles.actionButton}
-            >
-                <View><Pencil size={20} color="#60A5FA" /></View>{/* blue-400 */}
-                {/* <Text>Edit</Text> */}{/* Placeholder for debugging */}
-            </TouchableOpacity>
             <TouchableOpacity onPress={handleDelete} style={styles.actionButton}>
-                <View><Trash2 size={20} color="#F87171" /></View>{/* red-400 */}
-                {/* <Text>Del</Text> */}{/* Placeholder for debugging */}
+                <View><Trash2 size={20} color="#F87171" /></View>
             </TouchableOpacity>
         </View>
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabContainer}>
         <TabButton 
           label="Details" 
@@ -941,23 +966,25 @@ export default function NativePropDetailScreen() {
         />
       </View>
 
-      {/* Tab Content */}
       {activeTab === 'Details' && (
         <View style={styles.tabContentContainer}>
-          <Text style={styles.sectionTitle}>Basic Details</Text>
-          <View style={styles.detailsSection}>
-            <DetailItem label="Description" value={prop.description} />
-            <DetailItem label="Category" value={prop.category} />
-            <DetailItem label="Subcategory" value={prop.subcategory} />
-            <DetailItem label="Quantity" value={prop.quantity} />
-            <DetailItem label="Condition" value={prop.condition} />
-            <DetailItem label="Materials" value={prop.materials?.join(', ')} />
-            <DetailItem label="Period" value={prop.period} />
-            <DetailItem label="Style" value={prop.style} />
-            <DetailItem label="Color" value={prop.color} />
-            <DetailItem label="Tags" value={prop.tags?.join(', ')} />
-            <DetailItem label="Barcode" value={prop.barcode} />
-          </View>
+          <SectionHeader title="Basic Details" />
+          <DetailItem icon={Info} label="Category" value={prop.category} />
+          <DetailItem icon={Palette} label="Color" value={prop.color || 'N/A'} />
+          <DetailItem icon={Hammer} label="Materials" value={prop.materials?.join(', ') || 'N/A'} />
+          <DetailItem icon={Clock} label="Historical Period" value={prop.period || 'N/A'} />
+          <DetailItem icon={BookOpen} label="Description" value={prop.description || 'N/A'} isLongText />
+          <DetailItem icon={FileEdit} label="Notes" value={prop.notes || 'N/A'} isLongText />
+          <DetailItem icon={Info} label="Subcategory" value={prop.subcategory || 'N/A'} />
+          <DetailItem icon={ClipboardList} label="Scene Name" value={prop.sceneName || 'N/A'} />
+          <DetailItem icon={CheckCircle} label="Quantity" value={prop.quantity?.toString() || 'N/A'} />
+          <DetailItem icon={Wrench} label="Condition" value={prop.condition || 'N/A'} />
+          <DetailItem icon={Info} label="Style" value={prop.style || 'N/A'} />
+          <DetailItem icon={Users} label="Manufacturer" value={prop.manufacturer || 'N/A'} /> 
+          <DetailItem icon={Info} label="Model" value={prop.model || 'N/A'} />
+          <DetailItem icon={Info} label="Serial Number" value={prop.serialNumber || 'N/A'} />
+          <DetailItem icon={FileText} label="Tags" value={prop.tags?.join(', ') || 'N/A'} />
+          <DetailItem icon={FileText} label="Barcode" value={prop.barcode || 'N/A'} />
 
           <Text style={styles.sectionTitle}>Source & Financials</Text>
           <View style={styles.detailsSection}>
@@ -978,6 +1005,8 @@ export default function NativePropDetailScreen() {
                     <DetailItem label="Warranty Details" value={prop.warranty.details} />
                 </>
             )}
+            <DetailItem label="Repair Estimate" value={prop.repairEstimate ? `$${prop.repairEstimate.toFixed(2)}` : undefined} />
+            <DetailItem label="Repair Priority" value={prop.repairPriority} />
           </View>
 
           <Text style={styles.sectionTitle}>Physical Attributes</Text>
@@ -994,6 +1023,7 @@ export default function NativePropDetailScreen() {
           <Text style={styles.sectionTitle}>Usage & Handling</Text>
           <View style={styles.detailsSection}>
             <DetailItem label="Consumable" value={prop.isConsumable ? 'Yes' : 'No'} />
+            <DetailItem label="Multi-Scene Prop" value={prop.isMultiScene ? 'Yes' : 'No'} />
             <DetailItem label="Handedness" value={prop.handedness} />
             <DetailItem label="Breakable" value={prop.isBreakable ? 'Yes' : 'No'} />
             <DetailItem label="Hazardous" value={prop.isHazardous ? 'Yes' : 'No'} />
@@ -1006,8 +1036,19 @@ export default function NativePropDetailScreen() {
             <DetailItem label="Scene Notes" value={prop.sceneNotes} />
             <DetailItem label="Usage Notes" value={prop.usageNotes} />
             <DetailItem label="Public Notes" value={prop.publicNotes} />
+          </View>
+          
+          <Text style={styles.sectionTitle}>Key Dates & Status Details</Text>
+          <View style={styles.detailsSection}>
+            <DetailItem label="Availability Status" value={prop.availabilityStatus} />
             <DetailItem label="Current Location" value={prop.currentLocation} />
             <DetailItem label="Storage Location (Primary)" value={prop.location} />
+            <DetailItem label="Last Used Date" value={formatDate(prop.lastUsedAt)} />
+            <DetailItem label="Last Inspection Date" value={formatDate(prop.lastInspectionDate)} />
+            <DetailItem label="Next Inspection Due" value={formatDate(prop.nextInspectionDue)} />
+            <DetailItem label="Last Maintenance Date" value={formatDate(prop.lastMaintenanceDate)} />
+            <DetailItem label="Next Maintenance Due" value={formatDate(prop.nextMaintenanceDue)} />
+            <DetailItem label="Expected Return Date" value={formatDate(prop.expectedReturnDate)} />
           </View>
 
           {(prop.hasBeenModified || prop.modificationDetails || prop.lastModifiedAt) && (
@@ -1047,7 +1088,7 @@ export default function NativePropDetailScreen() {
             </>
           )}
           
-          {prop.statusNotes && ( // Current status notes are often part of the status itself or a specific field
+          {prop.statusNotes && (
             <>
               <Text style={styles.sectionTitle}>Status Notes</Text>
               <View style={styles.detailsSection}>
@@ -1055,10 +1096,6 @@ export default function NativePropDetailScreen() {
               </View>
             </>
           )}
-          
-          {/* TODO: Display Digital Assets (images, videos, documents) - potentially in a gallery or list */}
-          {/* TODO: Display Custom Fields */}
-
         </View>
       )}
 
@@ -1098,7 +1135,7 @@ export default function NativePropDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111827', // gray-900 from web
+    backgroundColor: '#111827',
     padding: 16,
   },
   centered: {
@@ -1108,33 +1145,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#111827',
   },
   errorText: {
-    color: '#EF4444', // red-500
+    color: '#EF4444',
     fontSize: 18,
     textAlign: 'center',
   },
   text: {
-    color: '#F9FAFB', // gray-50
+    color: '#F9FAFB',
     fontSize: 16,
     marginBottom: 8,
   },
   propImage: {
     width: '100%',
-    height: 250, // Adjust as needed
+    height: 250,
     borderRadius: 8,
-    backgroundColor: '#374151', // gray-700 for background while loading
+    backgroundColor: '#374151',
     marginBottom: 16,
   },
   imagePlaceholder: {
     width: '100%',
-    height: 250, // Adjust as needed
-    backgroundColor: '#4B5563', // gray-600
+    height: 250,
+    backgroundColor: '#4B5563',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 8,
     marginBottom: 16,
   },
   imagePlaceholderText: {
-    color: '#D1D5DB', // gray-300
+    color: '#D1D5DB',
     fontSize: 50,
     fontWeight: 'bold',
   },
@@ -1150,12 +1187,12 @@ const styles = StyleSheet.create({
   propName: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#F9FAFB', // gray-50
+    color: '#F9FAFB',
     marginBottom: 4,
   },
   actSceneText: {
     fontSize: 14,
-    color: '#9CA3AF', // gray-400
+    color: '#9CA3AF',
   },
   headerActionsContainer: {
     flexDirection: 'row',
@@ -1164,14 +1201,12 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 8,
     marginLeft: 8,
-    // backgroundColor: '#374151', // gray-700 - optional background
-    // borderRadius: 20, 
   },
   tabContainer: {
     flexDirection: 'row',
     marginBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#374151', // gray-700
+    borderBottomColor: '#374151',
   },
   tabButton: {
     flex: 1,
@@ -1183,18 +1218,18 @@ const styles = StyleSheet.create({
   },
   activeTabButton: {
     borderBottomWidth: 2,
-    borderBottomColor: '#3B82F6', // blue-500
+    borderBottomColor: '#3B82F6',
   },
   tabIcon: {
     marginRight: 6,
   },
   tabButtonText: {
-    fontSize: 14, // Smaller for mobile tabs
-    color: '#9CA3AF', // gray-400
+    fontSize: 14,
+    color: '#9CA3AF',
     fontWeight: '500',
   },
   activeTabButtonText: {
-    color: '#3B82F6', // blue-500
+    color: '#3B82F6',
   },
   tabContentContainer: {
     paddingVertical: 8,
@@ -1202,60 +1237,65 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#E5E7EB', // gray-200
+    color: '#E5E7EB',
     marginTop: 16,
     marginBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#4B5563', // gray-600
+    borderBottomColor: '#4B5563',
     paddingBottom: 6,
   },
   detailsSection: {
-    backgroundColor: '#1F2937', // gray-800 from web
+    backgroundColor: '#1F2937',
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
   },
   detailItemContainer: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
   },
-  detailItemLabel: {
-    fontSize: 12,
-    color: '#9CA3AF', // gray-400
-    marginBottom: 2,
-    textTransform: 'uppercase', 
-    fontWeight: '600',
+  detailItemIcon: {
+    marginRight: 10,
   },
-  detailItemValue: {
-    fontSize: 16,
-    color: '#F3F4F6', // gray-100
+  detailLabel: {
+    fontWeight: 'bold',
+    marginRight: 5,
+    fontSize: 15,
+  },
+  detailValue: {
+    flexShrink: 1,
+    fontSize: 15,
+  },
+  longDetailValue: {
   },
   placeholderText: {
     fontSize: 16,
-    color: '#9CA3AF', // gray-400
+    color: '#9CA3AF',
     textAlign: 'center',
     paddingVertical: 20,
   },
-  // Styles for MobilePropStatusUpdateForm
   formContainer: {
     padding: 16,
-    backgroundColor: '#1F2937', // gray-800
+    backgroundColor: '#1F2937',
     borderRadius: 8,
     marginBottom: 20,
   },
   formLabel: {
     fontSize: 16,
-    color: '#E5E7EB', // gray-200
+    color: '#E5E7EB',
     marginBottom: 8,
   },
   pickerButton: {
-    backgroundColor: '#374151', // gray-700
+    backgroundColor: '#374151',
     padding: 12,
     borderRadius: 6,
     marginBottom: 16,
     alignItems: 'center',
   },
   pickerButtonText: {
-    color: '#F9FAFB', // gray-50
+    color: '#F9FAFB',
     fontSize: 16,
   },
   modalContainer: {
@@ -1264,7 +1304,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContent: {
-    backgroundColor: '#1F2937', // gray-800
+    backgroundColor: '#1F2937',
     padding: 20,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
@@ -1272,23 +1312,23 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#F9FAFB', // gray-50
+    color: '#F9FAFB',
     marginBottom: 15,
     textAlign: 'center',
   },
   modalItem: {
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#374151', // gray-700
+    borderBottomColor: '#374151',
   },
   modalItemText: {
-    color: '#F3F4F6', // gray-100
+    color: '#F3F4F6',
     fontSize: 16,
     textAlign: 'center',
   },
   textInput: {
-    backgroundColor: '#374151', // gray-700
-    color: '#F9FAFB', // gray-50
+    backgroundColor: '#374151',
+    color: '#F9FAFB',
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 6,
@@ -1297,7 +1337,7 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 80, 
-    textAlignVertical: 'top', // for Android
+    textAlignVertical: 'top',
   },
   switchContainer: {
     flexDirection: 'row',
@@ -1306,25 +1346,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   submitButton: {
-    backgroundColor: '#2563EB', // blue-600
+    backgroundColor: '#2563EB',
     padding: 12,
     borderRadius: 6,
     alignItems: 'center',
   },
   disabledButton: {
-    backgroundColor: '#4B5563', // gray-600
+    backgroundColor: '#4B5563',
   },
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  // Styles for MobileStatusHistoryList
   historyListContainer: {
     marginTop: 10,
   },
   historyItemContainer: {
-    backgroundColor: '#1F2937', // gray-800
+    backgroundColor: '#1F2937',
     borderRadius: 8,
     padding: 12,
     marginBottom: 10,
@@ -1337,12 +1376,12 @@ const styles = StyleSheet.create({
   },
   historyItemDate: {
     fontSize: 12,
-    color: '#9CA3AF', // gray-400
+    color: '#9CA3AF',
   },
   notifiedBadge: {
     fontSize: 10,
-    color: '#10B981', // emerald-500
-    backgroundColor: '#047857', // emerald-700 (darker for contrast)
+    color: '#10B981',
+    backgroundColor: '#047857',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
@@ -1356,45 +1395,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  statusCritical: { color: '#EF4444' }, // red-500
-  statusHigh: { color: '#F97316' }, // orange-500
-  statusMedium: { color: '#EAB308' }, // yellow-500
-  statusLow: { color: '#3B82F6' }, // blue-500
-  statusInfo: { color: '#6B7280' }, // gray-500
+  statusCritical: { color: '#EF4444' },
+  statusHigh: { color: '#F97316' },
+  statusMedium: { color: '#EAB308' },
+  statusLow: { color: '#3B82F6' },
+  statusInfo: { color: '#6B7280' },
   historyItemNotes: {
     fontSize: 14,
-    color: '#D1D5DB', // gray-300
+    color: '#D1D5DB',
     marginTop: 4,
     marginBottom: 4,
   },
   updatedByText: {
     fontSize: 10,
-    color: '#6B7280', // gray-500
+    color: '#6B7280',
     marginTop: 4,
     textAlign: 'right'
   },
-  // Styles for MobileMaintenanceRecordForm
   recordTypeLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#E5E7EB', // gray-200
+    color: '#E5E7EB',
     marginBottom: 2,
   },
   costText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#A5B4FC', // indigo-300
+    color: '#A5B4FC',
   },
   performedByText: {
     fontSize: 14,
-    color: '#D1D5DB', // gray-300
+    color: '#D1D5DB',
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
   },
   descriptionTextTitle: {
     fontSize: 12,
-    color: '#9CA3AF', // gray-400
+    color: '#9CA3AF',
     fontWeight: '600',
     marginTop: 6,
     marginBottom: 2,
@@ -1405,24 +1443,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     paddingLeft: 10,
     borderLeftWidth: 2,
-    borderLeftColor: '#4B5563', // gray-600
+    borderLeftColor: '#4B5563',
   },
   repairDateText: {
     fontSize: 13,
-    color: '#D1D5DB', // gray-300
+    color: '#D1D5DB',
     marginBottom: 4,
     flexDirection: 'row',
     alignItems: 'center',
   },
   datePickerButton: {
-    backgroundColor: '#374151', // gray-700
+    backgroundColor: '#374151',
     padding: 12,
     borderRadius: 6,
     marginBottom: 16,
     alignItems: 'center',
   },
   datePickerButtonText: {
-    color: '#F9FAFB', // gray-50
+    color: '#F9FAFB',
     fontSize: 16,
   },
   iosDatePickerModalContainer: {
@@ -1431,7 +1469,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
   iosDatePickerHeader: {
-    backgroundColor: '#27272a', // zinc-800 or similar dark theme color
+    backgroundColor: '#27272a',
     padding: 10,
     alignItems: 'flex-end',
     borderTopLeftRadius: 10,
@@ -1468,29 +1506,27 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -5,
     right: -5,
-    backgroundColor: '#EF4444',
-    borderRadius: 12,
-    padding: 4,
-    zIndex: 1,
+    borderRadius: 15,
+    padding: 3,
   },
-  damageImagesSectionContainer: { // Container for the title and image scrollview
+  damageImagesSectionContainer: {
     marginTop: 8,
   },
-  damageImagesTitle: { // Title for the damage images section
+  damageImagesTitle: {
     fontSize: 13,
-    color: '#9CA3AF', // gray-400
+    color: '#9CA3AF',
     marginBottom: 4,
     fontWeight: '500',
   },
-  damageImagesScrollContainer: { // Horizontal scroll view for images
+  damageImagesScrollContainer: {
     flexDirection: 'row',
   },
-  damageImageThumbnail: { // Style for each image thumbnail
+  damageImageThumbnail: {
     width: 70,
     height: 70,
     borderRadius: 4,
     marginRight: 8,
-    backgroundColor: '#374151', // gray-700 as placeholder background
+    backgroundColor: '#374151',
   },
   imageViewerBackdrop: {
     flex: 1,

@@ -1,50 +1,78 @@
-import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text, FlatList, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { View, ActivityIndicator, StyleSheet, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
 
-import { useShows } from '../../src/contexts/ShowsContext';
-import { usePacking } from '../../src/hooks/usePacking';
-import { PackingBox } from '../../src/types/packing';
-
-// Define colors based on your tailwind config for clarity (same as _layout.tsx)
-const darkThemeColors = {
-  background: '#111827', // gray-900
-  cardBg: '#1F2937',      // gray-800
-  textPrimary: '#F9FAFB',  // gray-50
-  textSecondary: '#9CA3AF',// gray-400
-  primary: '#3B82F6',     // blue-500
-  border: '#374151',      // gray-700
-  error: '#EF4444',       // red-500
-};
+import { useShows } from '../../src/contexts/ShowsContext.tsx';
+import { usePacking } from '../../src/hooks/usePacking.ts';
+import { PackingBox } from '../../src/types/packing.ts';
+import { useTheme } from '../../src/contexts/ThemeContext.tsx';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/theme.ts';
+import { QRScannerScreen } from '../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
 
 export default function PackingScreen() {
   const router = useRouter();
   const { selectedShow, loading: showsLoading, error: showsError } = useShows();
+  const { theme: themeName } = useTheme();
+  const currentThemeColors = themeName === 'light' ? appLightTheme.colors : appDarkTheme.colors;
   
-  // Get boxes using usePacking hook if a show is selected
   const { boxes, loading: boxesLoading, error: packingError } = usePacking(selectedShow?.id);
+  const [isQRScannerVisible, setIsQRScannerVisible] = useState(false);
 
-  const loading = showsLoading || (selectedShow && boxesLoading); // Only consider boxesLoading if a show is selected
+  const loading = showsLoading || (selectedShow && boxesLoading);
   const error = showsError || packingError;
+
+  useEffect(() => {
+    // This is a common pattern if Stack or other components need dynamic options based on hooks
+    // However, for Expo Router, headerRight is typically set in _layout.tsx or directly in Stack.Screen
+    // Let's try setting it directly in Stack.Screen for simplicity first.
+  }, [currentThemeColors]);
 
   const handleViewBoxDetails = (boxId: string) => {
     if (!selectedShow) return;
-    router.push(`/props_shared_details/${boxId}?entityType=box&showId=${selectedShow.id}`);
+    router.push(`/packing/box/${boxId}?showId=${selectedShow.id}`);
   };
 
   const handleCreateNewBox = () => {
     if (!selectedShow) return;
-    // Navigate to a new screen for creating a box (e.g., app/packing/createBox.tsx)
-    // This screen will need to be created.
     router.push(`/packing/createBox?showId=${selectedShow.id}`);
   };
+
+  const handleQRScanned = (data: Record<string, any>) => {
+    setIsQRScannerVisible(false);
+    console.log('Scanned QR Data:', data);
+    if (data && data.type) {
+      if (data.type === 'prop' && data.id) {
+        Alert.alert('Prop Scanned', `ID: ${data.id}. (Next: Choose action)`);
+      } else if (data.type === 'box' && data.id && selectedShow?.id) {
+        Alert.alert('Box Scanned', `ID: ${data.id}. Navigating to box details...`);
+        router.push(`/packing/box/${data.id}?showId=${selectedShow.id}`);
+      } else {
+        Alert.alert('Unknown QR Code', `Data: ${JSON.stringify(data)}`);
+      }
+    } else if (data && data.raw) {
+      Alert.alert('Raw QR Data Scanned', data.raw);
+    } else {
+      Alert.alert('Scan Unsuccessful', 'Could not parse QR code data.');
+    }
+  };
+
+  const styles = getStyles(currentThemeColors);
+
+  if (isQRScannerVisible) {
+    return (
+      <QRScannerScreen 
+        onScan={handleQRScanned} 
+        onClose={() => setIsQRScannerVisible(false)} 
+      />
+    );
+  }
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={darkThemeColors.primary} />
+        <ActivityIndicator size="large" color={currentThemeColors.primary} />
       </View>
     );
   }
@@ -75,11 +103,11 @@ export default function PackingScreen() {
         <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
           radius: 4,
           opacity: 0.3,
-          color: '#000',
+          color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
           offset: [0, 2],
         })]}>
           <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
-            <Ionicons name="add" size={30} color={darkThemeColors.textPrimary} />
+            <Ionicons name="add" size={30} color={currentThemeColors.textPrimary || currentThemeColors.text} />
           </TouchableOpacity>
         </ShadowedView>
       </View>
@@ -91,7 +119,7 @@ export default function PackingScreen() {
       style={styles.boxItem} 
       onPress={() => handleViewBoxDetails(item.id)}
     >
-      <Ionicons name="cube-outline" size={24} color={darkThemeColors.primary} style={styles.boxIcon} />
+      <Ionicons name="cube-outline" size={24} color={currentThemeColors.primary} style={styles.boxIcon} />
       <View style={styles.boxTextContainer}>
         <Text style={styles.boxName}>{item.name || 'Unnamed Box'}</Text>
         {item.description && <Text style={styles.boxDescription}>{item.description}</Text>}
@@ -100,12 +128,22 @@ export default function PackingScreen() {
           {item.props && item.props.length > 0 ? ` | Items: ${item.props.reduce((acc, p) => acc + (p.quantity || 0), 0)}` : ' | Empty'}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={22} color={darkThemeColors.textSecondary} />
+      <Ionicons name="chevron-forward" size={22} color={currentThemeColors.textSecondary || currentThemeColors.text} />
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
+      <Stack.Screen 
+        options={{
+          title: selectedShow ? `Packing: ${selectedShow.name}` : 'Packing',
+          headerRight: () => (
+            <TouchableOpacity onPress={() => setIsQRScannerVisible(true)} style={{ marginRight: 15 }}>
+              <Ionicons name="qr-code-outline" size={28} color={currentThemeColors.primary} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <FlatList
         data={boxes}
         renderItem={renderBoxItem}
@@ -115,37 +153,37 @@ export default function PackingScreen() {
       <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
         radius: 4,
         opacity: 0.3,
-        color: '#000',
+        color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
         offset: [0, 2],
       })]}>
         <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
-          <Ionicons name="add" size={30} color={darkThemeColors.textPrimary} />
+          <Ionicons name="add" size={30} color={currentThemeColors.textPrimary || currentThemeColors.text} />
         </TouchableOpacity>
       </ShadowedView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors: typeof appLightTheme.colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: darkThemeColors.background,
+    backgroundColor: themeColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: darkThemeColors.background,
+    backgroundColor: themeColors.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: darkThemeColors.background,
+    backgroundColor: themeColors.background,
     padding: 20,
   },
   errorText: {
-    color: darkThemeColors.error,
+    color: themeColors.error,
     fontSize: 16,
     textAlign: 'center',
   },
@@ -154,16 +192,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-     backgroundColor: darkThemeColors.background,
+     backgroundColor: themeColors.background,
   },
   messageText: {
-    color: darkThemeColors.textPrimary,
+    color: themeColors.text,
     fontSize: 18,
     textAlign: 'center',
     marginBottom: 10,
   },
    messageTextSm: {
-    color: darkThemeColors.textSecondary,
+    color: themeColors.text,
     fontSize: 14,
     textAlign: 'center',
   },
@@ -171,14 +209,14 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   boxItem: {
-    backgroundColor: darkThemeColors.cardBg,
+    backgroundColor: themeColors.card,
     padding: 15,
     borderRadius: 8,
     marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: darkThemeColors.border,
+    borderColor: themeColors.border,
   },
   boxIcon: {
     marginRight: 15,
@@ -189,37 +227,34 @@ const styles = StyleSheet.create({
   boxName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: darkThemeColors.textPrimary,
+    color: themeColors.text,
   },
   boxDescription: {
     fontSize: 14,
-    color: darkThemeColors.textSecondary,
+    color: themeColors.text,
+    opacity: 0.8,
     marginTop: 2,
   },
   boxInfo: {
     fontSize: 12,
-    color: darkThemeColors.textSecondary,
+    color: themeColors.text,
+    opacity: 0.7,
     marginTop: 5,
-  },
-  fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-    backgroundColor: darkThemeColors.primary,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   fabShadowContainer: {
     position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
+    bottom: 20,
+    right: 20,
+    width: 56, 
+    height: 56,
+    borderRadius: 28,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
+    backgroundColor: themeColors.primary, 
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

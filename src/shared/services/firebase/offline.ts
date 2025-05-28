@@ -1,4 +1,4 @@
-import { FirebaseService } from './types';
+import { FirebaseService } from './types.ts';
 import { 
   Firestore, 
   collection, 
@@ -14,7 +14,7 @@ import {
   DocumentData,
   QuerySnapshot
 } from 'firebase/firestore';
-import { FirebaseDocument } from './types';
+import { FirebaseDocument } from './types.ts';
 
 interface SyncMetadata {
   lastSyncTimestamp: number;

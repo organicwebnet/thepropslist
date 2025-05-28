@@ -1,4 +1,4 @@
-import { FirebaseError } from '../firebase/types';
+import { FirebaseError } from '../firebase/types.ts';
 
 export interface VisionAPIResponse {
   labels: string[];

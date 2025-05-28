@@ -8,7 +8,9 @@ export interface QRScanResult {
 export class QRScannerService {
   private static instance: QRScannerService;
 
-  private constructor() {}
+  private constructor() {
+    // Private constructor to prevent direct instantiation
+  }
 
   static getInstance(): QRScannerService {
     if (!QRScannerService.instance) {

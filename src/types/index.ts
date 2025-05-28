@@ -1,25 +1,27 @@
 import { Timestamp } from 'firebase/firestore';
-import type { CustomTimestamp } from '@/shared/services/firebase/types';
-import { Address } from '../shared/types/address';
+import type { CustomTimestamp } from '../shared/services/firebase/types.ts';
+import { Address } from '../shared/types/address.ts';
+export type { PropImage } from '../shared/types/props.ts';
 
 export interface Scene {
-  id: number;
+  id: string | number;
   name: string;
   description?: string;
   setting?: string;
 }
 
 export interface Act {
-  id: number;
+  id: string | number;
   name: string;
   description?: string;
   scenes: Scene[];
 }
 
 export interface Contact {
+  id?: string;
   name: string;
   role: string;
-  email: string;
+  email?: string;
   phone?: string;
 }
 
@@ -31,6 +33,7 @@ export interface ShowCollaborator {
 }
 
 export interface Venue {
+  id?: string;
   name: string;
   address?: Address;
   startDate?: string | CustomTimestamp | null;
@@ -170,4 +173,16 @@ export interface DigitalAsset {
   uploadedAt?: Timestamp | string;
 }
 
-export * from './packing'; 
+export interface TodoItem {
+  id: string;
+  userId: string; // To associate todo with a user
+  showId?: string; // Optional: to associate todo with a specific show
+  text: string;
+  completed: boolean;
+  createdAt: Timestamp | string;
+  updatedAt: Timestamp | string;
+  dueDate?: Timestamp | string | null;
+  priority?: 'low' | 'medium' | 'high';
+}
+
+export * from './packing.ts'; 

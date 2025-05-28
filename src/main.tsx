@@ -2,11 +2,11 @@ import React, { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import '../global.css';
 // import { BrowserRouter } from 'react-router-dom';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider } from './contexts/ThemeContext.tsx';
 // import { FontProvider } from './contexts/FontContext'; // Commented out
-import App from './App';
+import App from './App.tsx';
 import './index.css';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext.tsx';
 // Removed: import { GestureProvider } from './contexts/GestureContext';
 
 // Unregister any existing service workers first

@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, ActivityIndicator, Text } from 'react-native';
-import { ShowList } from '../../src/components/ShowList';
-import { useShows } from '../../src/contexts/ShowsContext';
-import ShowForm from '../../src/components/ShowForm';
+import { ShowList } from '../../src/components/ShowList.tsx';
+import { useShows } from '../../src/contexts/ShowsContext.tsx';
+import ShowForm from '../../src/components/ShowForm.tsx';
+import type { Show } from '../../src/shared/services/firebase/types.ts';
 
 // Basic structure mirroring app/(tabs)/shows.tsx web part, but simpler root
 export default function WebShowsScreen() {
@@ -26,8 +27,8 @@ export default function WebShowsScreen() {
   }
 
   // Placeholder handlers - replace with actual logic if needed
-  const handleCreateShowWeb = (formData: any) => console.log('Create Show (Web):', formData);
-  const handleUpdateShowWeb = (id: string, formData: any) => console.log('Update Show (Web):', id, formData);
+  const handleCreateShowWeb = (formData: Show) => console.log('Create Show (Web):', formData);
+  const handleUpdateShowWeb = (id: string, formData: Show) => console.log('Update Show (Web):', id, formData);
   const handleDeleteShowWeb = (id: string) => console.log('Delete Show (Web):', id);
 
   return (
@@ -38,7 +39,7 @@ export default function WebShowsScreen() {
           <ShowList
             shows={shows}
             selectedShowId={selectedShow?.id}
-            onSelect={(show) => setSelectedShow(show)}
+            onSelect={(show: Show) => setSelectedShow(show)}
           />
         </ScrollView>
       </View>
@@ -51,7 +52,7 @@ export default function WebShowsScreen() {
             mode={selectedShow ? 'edit' : 'create'}
             initialData={selectedShow ?? undefined}
             onSubmit={selectedShow
-              ? (formData) => handleUpdateShowWeb(selectedShow.id, formData)
+              ? (formData: Show) => handleUpdateShowWeb(selectedShow.id, formData)
               : handleCreateShowWeb
             }
             onCancel={selectedShow ? () => setSelectedShow(null) : undefined}

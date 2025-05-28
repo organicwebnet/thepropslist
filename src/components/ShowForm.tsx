@@ -1,10 +1,11 @@
-import React, { useState, useEffect, FormEvent, useRef } from 'react';
-import { PlusCircle, MinusCircle, Save, Upload } from 'lucide-react';
-import { VenueForm } from './VenueForm';
-import { WysiwygEditor } from './WysiwygEditor';
-import { HelpTooltip } from './HelpTooltip';
-import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index';
-import { Address } from '../shared/types/address';
+import React, { useState, useEffect, FormEvent, useRef, useCallback } from 'react';
+import { PlusCircle, MinusCircle, Save, Upload, Trash2, AlertTriangle, X, Check, ChevronUp, ChevronDown, MapPin, Users, CalendarDays, Info, Building, Phone, Mail, Palette } from 'lucide-react';
+import { VenueForm } from './VenueForm.tsx';
+import { WysiwygEditor } from './WysiwygEditor.tsx';
+import { HelpTooltip } from './HelpTooltip.tsx';
+import type { Show, Venue, Contact, Act, Scene, ShowCollaborator } from '../shared/services/firebase/types.ts';
+import { Address } from '../shared/types/address.ts';
+import { useAuth } from '../contexts/AuthContext.tsx';
 
 interface ShowFormProps {
   mode: 'create' | 'edit';
@@ -20,7 +21,8 @@ const initialFormState: Show = {
   acts: [{
     id: 1,
     name: '',
-    scenes: [{ id: 1, name: '' }]
+    description: '',
+    scenes: [{ id: 1, name: '', setting: '', description: '' }]
   }],
   userId: '',
   createdAt: new Date().toISOString(),
@@ -43,9 +45,11 @@ const initialFormState: Show = {
   logoImage: undefined,
   rehearsalAddresses: [],
   storageAddresses: [],
-  startDate: '',
-  endDate: '',
+  startDate: null,
+  endDate: null,
   status: 'planning',
+  defaultActId: undefined,
+  defaultSceneId: undefined,
 };
 
 const defaultAddress: Address = {
@@ -242,12 +246,12 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
   };
 
   const handleVenuesChange = (updatedVenues: Venue[]) => {
-    setFormData(prevData => ({ ...prevData, venues: updatedVenues }));
+    setFormData((prevData: Show) => ({ ...prevData, venues: updatedVenues }));
   };
 
   const handleAddAddress = (type: 'rehearsal' | 'storage') => {
     const field = type === 'rehearsal' ? 'rehearsalAddresses' : 'storageAddresses';
-    setFormData(prevData => ({
+    setFormData((prevData: Show) => ({
       ...prevData,
       [field]: [...(prevData[field] || []), { ...defaultAddress, id: `new-${Date.now()}` }]
     }));
@@ -255,16 +259,16 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
 
   const handleRemoveAddress = (type: 'rehearsal' | 'storage', index: number) => {
     const field = type === 'rehearsal' ? 'rehearsalAddresses' : 'storageAddresses';
-    setFormData(prevData => ({
+    setFormData((prevData: Show) => ({
       ...prevData,
-      [field]: (prevData[field] || []).filter((_, i) => i !== index)
+      [field]: (prevData[field] || []).filter((_: Address, i: number) => i !== index)
     }));
   };
 
   const handleAddressFieldChange = (type: 'rehearsal' | 'storage', index: number, field: keyof Address, value: string) => {
     const listField = type === 'rehearsal' ? 'rehearsalAddresses' : 'storageAddresses';
-    setFormData(prevData => {
-      const updatedList = (prevData[listField] || []).map((addr, i) => {
+    setFormData((prevData: Show) => {
+      const updatedList = (prevData[listField] || []).map((addr: Address, i: number) => {
         if (i === index) {
           return { ...addr, [field]: value };
         }
@@ -450,16 +454,16 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
   };
 
   const addContact = () => {
-    setFormData((prevData: Show) => ({ 
-      ...prevData, 
-      contacts: [...(prevData.contacts || []), { name: '', role: '', email: '' }] 
+    setFormData((prevData: Show) => ({
+      ...prevData,
+      contacts: [...(prevData.contacts || []), { id: `new-${Date.now()}`, name: '', email: '', phone: '', role: '' } as Contact]
     }));
   };
 
   const removeContact = (index: number) => {
-    setFormData((prevData: Show) => ({ 
-      ...prevData, 
-      contacts: (prevData.contacts || []).filter((contact: Contact, i: number) => i !== index) // Added Contact type
+    setFormData((prevData: Show) => ({
+      ...prevData,
+      contacts: (prevData.contacts || []).filter((_: Contact, i: number) => i !== index)
     }));
   };
 
@@ -707,7 +711,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 id="stageManager"
                 required
                 value={formData.stageManager || ''}
-                onChange={(e) => setFormData(prevData => ({
+                onChange={(e) => setFormData((prevData: Show) => ({
                   ...prevData,
                   stageManager: e.target.value
                 }))}
@@ -719,7 +723,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 id="stageManagerEmail"
                 required
                 value={formData.stageManagerEmail || ''}
-                onChange={(e) => setFormData(prevData => ({
+                onChange={(e) => setFormData((prevData: Show) => ({
                   ...prevData,
                   stageManagerEmail: e.target.value
                 }))}
@@ -730,7 +734,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 type="tel"
                 id="stageManagerPhone"
                 value={formData.stageManagerPhone || ''}
-                onChange={(e) => setFormData(prevData => ({
+                onChange={(e) => setFormData((prevData: Show) => ({
                   ...prevData,
                   stageManagerPhone: e.target.value
                 }))}
@@ -760,7 +764,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 id="propsSupervisor"
                 required
                 value={formData.propsSupervisor || ''}
-                onChange={(e) => setFormData({ ...formData, propsSupervisor: e.target.value })}
+                onChange={(e) => setFormData((prevData: Show) => ({ ...prevData, propsSupervisor: e.target.value }))}
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
                 placeholder="Enter props supervisor's name"
               />
@@ -769,7 +773,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 id="propsSupervisorEmail"
                 required
                 value={formData.propsSupervisorEmail || ''}
-                onChange={(e) => setFormData({ ...formData, propsSupervisorEmail: e.target.value })}
+                onChange={(e) => setFormData((prevData: Show) => ({ ...prevData, propsSupervisorEmail: e.target.value }))}
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
                 placeholder="Enter props supervisor's email"
               />
@@ -777,7 +781,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 type="tel"
                 id="propsSupervisorPhone"
                 value={formData.propsSupervisorPhone || ''}
-                onChange={(e) => setFormData({ ...formData, propsSupervisorPhone: e.target.value })}
+                onChange={(e) => setFormData((prevData: Show) => ({ ...prevData, propsSupervisorPhone: e.target.value }))}
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
                 placeholder="Enter props supervisor's phone number (optional)"
               />
@@ -804,7 +808,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 id="productionCompany"
                 required
                 value={formData.productionCompany || ''}
-                onChange={(e) => setFormData(prevData => ({
+                onChange={(e) => setFormData((prevData: Show) => ({
                   ...prevData,
                   productionCompany: e.target.value
                 }))}
@@ -816,7 +820,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 id="productionContactName"
                 required
                 value={formData.productionContactName || ''}
-                onChange={(e) => setFormData(prevData => ({
+                onChange={(e) => setFormData((prevData: Show) => ({
                   ...prevData,
                   productionContactName: e.target.value
                 }))}
@@ -828,7 +832,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 id="productionContactEmail"
                 required
                 value={formData.productionContactEmail || ''}
-                onChange={(e) => setFormData({ ...formData, productionContactEmail: e.target.value })}
+                onChange={(e) => setFormData((prevData: Show) => ({ ...prevData, productionContactEmail: e.target.value }))}
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
                 placeholder="Enter production contact email"
               />
@@ -836,7 +840,7 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 type="tel"
                 id="productionContactPhone"
                 value={formData.productionContactPhone || ''}
-                onChange={(e) => setFormData({ ...formData, productionContactPhone: e.target.value })}
+                onChange={(e) => setFormData((prevData: Show) => ({ ...prevData, productionContactPhone: e.target.value }))}
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
                 placeholder="Enter production contact phone number (optional)"
               />
@@ -866,8 +870,8 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                         <MinusCircle className="h-4 w-4" />
                     </button>
                     {(Object.keys(defaultAddress) as Array<keyof Address>)
-                        .filter(key => key !== 'id')
-                        .map(addressKey => (
+                        .filter((key: keyof Address) => key !== 'id')
+                        .map((addressKey: keyof Address) => (
                             <div key={addressKey}>
                                 <label className="block text-xs font-medium text-gray-300 mb-1">
                                     {addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}
@@ -911,8 +915,8 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                         <MinusCircle className="h-4 w-4" />
                     </button>
                     {(Object.keys(defaultAddress) as Array<keyof Address>)
-                        .filter(key => key !== 'id')
-                        .map(addressKey => (
+                        .filter((key: keyof Address) => key !== 'id')
+                        .map((addressKey: keyof Address) => (
                             <div key={addressKey}>
                                 <label className="block text-xs font-medium text-gray-300 mb-1">
                                     {addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { NativePropForm } from '@/components/NativePropForm'; // Import the form
-import { useFirebase } from '@/contexts/FirebaseContext'; // Import Firebase hook
-import { useAuth } from '@/contexts/AuthContext'; // Import Auth hook
-import { type Prop, type PropFormData } from '@/shared/types/props';
-import { FirebaseDocument } from '@/shared/services/firebase/types';
+import { NativePropForm } from '@/components/NativePropForm.tsx'; // Import the form
+import { useFirebase } from '@/contexts/FirebaseContext.tsx'; // Import Firebase hook
+import { useAuth } from '@/contexts/AuthContext.tsx'; // Import Auth hook
+import { type Prop, type PropFormData } from '@/shared/types/props.ts';
+import { FirebaseDocument } from '@/shared/services/firebase/types.ts';
 
 // TODO: Import and use NativePropForm, fetch prop data
 

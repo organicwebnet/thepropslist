@@ -1,12 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { updateProfile, GoogleAuthProvider, linkWithPopup, User } from 'firebase/auth';
-import { useAuth } from '../contexts/AuthContext';
-import { useFirebase } from '../contexts/FirebaseContext';
+import { 
+  updateProfile, 
+  GoogleAuthProvider, 
+  OAuthProvider,
+  linkWithPopup, 
+  unlink,
+  User as FirebaseWebUser,
+  type UserInfo as FirebaseWebUserInfo 
+} from 'firebase/auth';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import { User as UserIcon, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
-import type { UserProfile } from '../types';
-import { useTheme } from '../contexts/ThemeContext';
+import type { UserProfile } from '../types.ts';
+import { useTheme } from '../contexts/ThemeContext.tsx';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
 
 // Define available fonts
 const fontOptions = [
@@ -35,7 +44,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     role: '',
     bio: '',
     fontPreference: 'system',
-    googleLinked: user?.providerData.some(p => p.providerId === 'google.com') || false
+    googleLinked: (user as FirebaseAuthTypes.User)?.providerData.some((p: FirebaseAuthTypes.UserInfo) => p.providerId === GoogleAuthProvider.PROVIDER_ID) || false
   });
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [loading, setLoading] = useState(true);
@@ -43,56 +52,87 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   const [error, setError] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const providerData = useMemo(() => {
+    if (!(user as FirebaseAuthTypes.User)?.providerData) return [];
+    return (user as FirebaseAuthTypes.User).providerData.map((p: FirebaseAuthTypes.UserInfo) => ({
+      providerId: p.providerId,
+      uid: p.uid,
+      displayName: p.displayName,
+      email: p.email,
+      photoURL: p.photoURL,
+    }));
+  }, [user]);
+
+  const isGoogleLinked = useMemo(() =>
+    (user as FirebaseAuthTypes.User)?.providerData.some((p: FirebaseAuthTypes.UserInfo) => p.providerId === GoogleAuthProvider.PROVIDER_ID) || false,
+  [user]);
+
+  const isAppleLinked = useMemo(() =>
+    (user as FirebaseAuthTypes.User)?.providerData.some((p: FirebaseAuthTypes.UserInfo) => p.providerId === 'apple.com') || false,
+  [user]);
+
+  const fetchProfile = useCallback(async () => {
+    const rnUser = user as FirebaseAuthTypes.User | null;
+    if (!rnUser || !isInitialized || !firebaseService) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const db = firebaseService.getFirestoreJsInstance();
+      const profileDocRef = doc(db, 'userProfiles', rnUser.uid);
+      const profileDoc = await getDoc(profileDocRef);
+      const existingData: Partial<UserProfile> = profileDoc.exists() ? profileDoc.data() : {};
+
+      const googleData = rnUser.providerData.find((p: FirebaseAuthTypes.UserInfo) => p.providerId === GoogleAuthProvider.PROVIDER_ID);
+      const appleData = rnUser.providerData.find((p: FirebaseAuthTypes.UserInfo) => p.providerId === 'apple.com');
+      const hasGoogleProvider = !!googleData;
+
+      setProfile(prev => ({
+        ...prev,
+        ...existingData,
+        displayName: existingData.displayName || googleData?.displayName || rnUser.displayName || prev.displayName || '',
+        email: rnUser.email || prev.email || '',
+        photoURL: existingData.photoURL || googleData?.photoURL || rnUser.photoURL || prev.photoURL || '',
+        googleLinked: existingData.googleLinked !== undefined ? existingData.googleLinked : hasGoogleProvider,
+        fontPreference: existingData.fontPreference || prev.fontPreference || 'system',
+        phone: existingData.phone || prev.phone || '',
+        location: existingData.location || prev.location || '',
+        organization: existingData.organization || prev.organization || '',
+        role: existingData.role || prev.role || '',
+        bio: existingData.bio || prev.bio || '',
+      }));
+      
+      if (!profileDoc.exists() && googleData) {
+        await setDoc(profileDocRef, {
+          displayName: googleData.displayName || '',
+          email: googleData.email || '',
+          photoURL: googleData.photoURL || '',
+          provider: googleData.providerId,
+          googleLinked: true,
+          createdAt: new Date().toISOString(),
+          lastUpdated: new Date().toISOString()
+        }, { merge: true });
+      }
+
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setError('Failed to load profile data');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, isInitialized, firebaseService]);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user || !isInitialized || !firebaseService) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      try {
-        const db = firebaseService.getFirestoreJsInstance();
-        const profileDocRef = doc(db, 'userProfiles', user.uid);
-        const profileDoc = await getDoc(profileDocRef);
-        const existingData = profileDoc.exists() ? profileDoc.data() : {};
-
-        const googleData = user.providerData.find(p => p.providerId === 'google.com');
-        const appleData = user.providerData.find(p => p.providerId === 'apple.com');
-        const hasGoogleProvider = !!googleData;
-
-        setProfile(prev => ({
-          ...prev,
-          ...existingData,
-          displayName: existingData.displayName || googleData?.displayName || user.displayName || '',
-          email: user.email || '',
-          photoURL: existingData.photoURL || googleData?.photoURL || user.photoURL || '',
-          googleLinked: hasGoogleProvider || existingData.googleLinked || false,
-          fontPreference: existingData.fontPreference || 'system'
-        }));
-        
-        if (!profileDoc.exists() && googleData) {
-          await setDoc(profileDocRef, {
-            displayName: googleData.displayName || '',
-            email: googleData.email || '',
-            photoURL: googleData.photoURL || '',
-            provider: googleData.providerId,
-            googleLinked: true,
-            createdAt: new Date().toISOString(),
-            lastUpdated: new Date().toISOString()
-          }, { merge: true });
-        }
-
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        setError('Failed to load profile data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProfile();
-  }, [user, isInitialized, firebaseService]);
+  }, [fetchProfile]);
+
+  const refreshUserProfile = useCallback(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -105,7 +145,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
       const auth = firebaseService.auth();
       const db = firebaseService.getFirestoreJsInstance();
 
-      const firebaseJsUser = auth.currentUser as User;
+      const firebaseJsUser = auth.currentUser as FirebaseWebUser;
       await updateProfile(firebaseJsUser, {
         displayName: profile.displayName,
         photoURL: profile.photoURL
@@ -142,14 +182,14 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     try {
       setLoading(true);
       const tempURL = URL.createObjectURL(file);
-      setProfile(prev => ({ ...prev, photoURL: tempURL }));
+      setProfile((prev: UserProfile & { googleLinked?: boolean }) => ({ ...prev, photoURL: tempURL }));
       
       const storage = firebaseService.storage();
       const storageRef = ref(storage, `profile_images/${user.uid}`);
       
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
-      setProfile(prev => ({ ...prev, photoURL: downloadURL }));
+      setProfile((prev: UserProfile & { googleLinked?: boolean }) => ({ ...prev, photoURL: downloadURL }));
       URL.revokeObjectURL(tempURL);
       
     } catch (error) {
@@ -160,50 +200,99 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     }
   };
 
-  const handleGoogleLink = async () => {
-    if (!user || !isInitialized || !firebaseService) {
-      setError("User not logged in or Firebase not ready.");
-      return;
-    }
+  const handleLinkGoogle = async () => {
+    const rnUser = user as FirebaseAuthTypes.User | null;
+    if (!firebaseService || !rnUser) return;
     try {
-      setLoading(true);
-      setError('');
-      
       const auth = firebaseService.auth();
-      if (!auth.currentUser) {
-        throw new Error("Current user not found in auth instance.");
+      const webCurrentUser = auth.currentUser as FirebaseWebUser | null;
+      if (!webCurrentUser) {
+        setError("No current user to link.");
+        return;
       }
-
-      const provider = new GoogleAuthProvider();
-      const firebaseJsUser = auth.currentUser as User;
-      const result = await linkWithPopup(firebaseJsUser, provider);
-      
-      const linkedUser = result.user;
-      const googleProviderData = linkedUser.providerData.find(p => p.providerId === 'google.com');
-      
-      setProfile(prev => ({
-        ...prev,
-        displayName: googleProviderData?.displayName || prev.displayName,
-        photoURL: googleProviderData?.photoURL || prev.photoURL,
-        googleLinked: true
-      }));
-      const db = firebaseService.getFirestoreJsInstance();
-      await setDoc(doc(db, 'userProfiles', user.uid), {
-        googleLinked: true,
-        lastUpdated: new Date().toISOString(),
-        displayName: profile.displayName || googleProviderData?.displayName || '',
-        photoURL: profile.photoURL || googleProviderData?.photoURL || ''
-      }, { merge: true });
-
+      const googleAuthProvider = new GoogleAuthProvider();
+      await linkWithPopup(webCurrentUser, googleAuthProvider);
+      window.alert('Success, Account linked with Google successfully');
+      refreshUserProfile();
     } catch (error: any) {
-      console.error('Error linking Google account:', error);
-      if (error.code === 'auth/credential-already-in-use') {
-        setError('This Google account is already linked to another user.');
-      } else {
-        setError(error?.message || 'Failed to link Google account');
+      window.alert(`Error: ${error.message || 'Failed to link with Google'}`);
+    }
+  };
+
+  const handleUnlinkGoogle = async () => {
+    const rnUser = user as FirebaseAuthTypes.User | null;
+    if (!firebaseService || !rnUser) return;
+    try {
+      const auth = firebaseService.auth();
+      const webCurrentUser = auth.currentUser as FirebaseWebUser | null;
+      if (!webCurrentUser) {
+        setError("No current user to unlink.");
+        return;
       }
-    } finally {
-      setLoading(false);
+      const webGoogleProvider = webCurrentUser.providerData.find((p: FirebaseWebUserInfo) => p.providerId === GoogleAuthProvider.PROVIDER_ID);
+
+      if (webGoogleProvider) {
+        await unlink(webCurrentUser, GoogleAuthProvider.PROVIDER_ID);
+        window.alert('Success, Google account unlinked successfully');
+        refreshUserProfile();
+      } else {
+        const rnGoogleProvider = rnUser.providerData.find((p: FirebaseAuthTypes.UserInfo) => p.providerId === GoogleAuthProvider.PROVIDER_ID);
+        if (rnGoogleProvider) {
+             window.alert('Info: Google account appears linked via mobile. Please use the web flow to confirm or unlink.');
+        } else {
+            window.alert('Info, Google account not linked.');
+        }
+      }
+    } catch (error: any) {
+      window.alert(`Error: ${error.message || 'Failed to unlink Google account'}`);
+    }
+  };
+
+  const handleLinkApple = async () => {
+    const rnUser = user as FirebaseAuthTypes.User | null;
+    if (!firebaseService || !rnUser) return;
+    try {
+      const auth = firebaseService.auth();
+      const webCurrentUser = auth.currentUser as FirebaseWebUser | null;
+      if (!webCurrentUser) {
+        setError("No current user to link.");
+        return;
+      }
+      const appleAuthProvider = new OAuthProvider('apple.com');
+      await linkWithPopup(webCurrentUser, appleAuthProvider);
+      window.alert('Success, Account linked with Apple successfully');
+      refreshUserProfile();
+    } catch (error: any) {
+      window.alert(`Error: ${error.message || 'Failed to link with Apple'}`);
+    }
+  };
+
+  const handleUnlinkApple = async () => {
+    const rnUser = user as FirebaseAuthTypes.User | null;
+    if (!firebaseService || !rnUser) return;
+    try {
+      const auth = firebaseService.auth();
+      const webCurrentUser = auth.currentUser as FirebaseWebUser | null;
+      if (!webCurrentUser) {
+        setError("No current user to unlink.");
+        return;
+      }
+      const webAppleProvider = webCurrentUser.providerData.find(p => p.providerId === 'apple.com');
+
+      if (webAppleProvider) {
+        await unlink(webCurrentUser, 'apple.com');
+        window.alert('Success, Apple account unlinked successfully');
+        refreshUserProfile();
+      } else {
+        const rnAppleProvider = rnUser.providerData.find((p: FirebaseAuthTypes.UserInfo) => p.providerId === 'apple.com');
+        if (rnAppleProvider) {
+             window.alert('Info: Apple account appears linked via mobile. Please use the web flow to confirm or unlink.');
+        } else {
+            window.alert('Info, Apple account not linked.');
+        }
+      }
+    } catch (error: any) {
+      window.alert(`Error: ${error.message || 'Failed to unlink Apple account'}`);
     }
   };
 
@@ -300,7 +389,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                   <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Link Account</label>
                   <button 
                     type="button"
-                    onClick={handleGoogleLink}
+                    onClick={handleLinkGoogle}
                     disabled={loading}
                     className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                   >

@@ -1,9 +1,10 @@
-import React, { useRef, useState } from 'react';
-import { ImagePlus, Link, X, Loader2, Image as ImageIcon, Star } from 'lucide-react';
-import { uploadImage } from '../lib/cloudinary';
-import type { PropImage } from '@/shared/types/props';
+import React, { useRef, useState, useCallback } from 'react';
+import { ImagePlus, Link, X, Loader2, Image as ImageIcon, Star, Trash2, AlertTriangle } from 'lucide-react';
+import { uploadImage } from '../lib/cloudinary.ts';
+import type { PropImage } from '../shared/types/props.ts';
 import { v4 as uuidv4 } from 'uuid';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useDropzone } from 'react-dropzone';
 
 interface ImageUploadProps {
   onImagesChange: (images: PropImage[]) => void;

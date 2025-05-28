@@ -60,10 +60,10 @@ import type {
   CustomStorageReference,
   CustomUserCredential,
   SyncStatus
-} from '../../../shared/services/firebase/types';
-import { FirebaseError } from '../../../shared/services/firebase/types';
-import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle';
-import { Show } from '@/types/index';
+} from '../../../shared/services/firebase/types.ts';
+import { FirebaseError } from '../../../shared/services/firebase/types.ts';
+import { PropLifecycleStatus, lifecycleStatusLabels } from '../../../types/lifecycle.ts';
+import { Show } from '../../../types/index.ts';
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 type QueryOptions = {
@@ -80,6 +80,7 @@ export class WebFirebaseService implements FirebaseService {
   private isInitialized = false;
 
   constructor() {
+    // Constructor for WebFirebaseService
   }
 
   async initialize(): Promise<void> {

@@ -5,11 +5,11 @@ import {
   lifecycleStatusPriority, 
   StatusPriority,
   PropStatusUpdate as PropStatusUpdateType
-} from '../../types/lifecycle';
-import { WysiwygEditor } from '../WysiwygEditor';
+} from '../../types/lifecycle.ts';
+import { WysiwygEditor } from '../WysiwygEditor.tsx';
 import { AlertTriangle, Clock, RefreshCcw, Camera, Upload, X, Image } from 'lucide-react';
-import { HelpTooltip } from '../HelpTooltip';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { HelpTooltip } from '../HelpTooltip.tsx';
+import { useFirebase } from '../../contexts/FirebaseContext.tsx';
 
 interface PropStatusUpdateProps {
   currentStatus: PropLifecycleStatus;
@@ -182,10 +182,8 @@ export function PropStatusUpdate({
           disabled={isSubmitting || disabled}
         >
           <option value="">Select New Status</option>
-          {Object.entries(lifecycleStatusLabels).map(([statusValue, label]) => (
-            <option key={statusValue} value={statusValue}>
-              {label}
-            </option>
+          {Object.entries(lifecycleStatusLabels).map(([value, label]) => (
+            <option key={value} value={value}>{String(label)}</option>
           ))}
         </select>
         {/* Only render tooltip if newStatus is a valid key */}

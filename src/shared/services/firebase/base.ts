@@ -1,4 +1,4 @@
-import { FirebaseService, FirebaseError, FirebaseAuth, FirebaseFirestore, FirebaseStorage, OfflineSync, CustomTransaction, CustomWriteBatch, CustomDocumentData, FirebaseDocument, CustomDocumentReference, CustomStorageReference } from './types';
+import { FirebaseService, FirebaseError, FirebaseAuth, FirebaseFirestore, FirebaseStorage, OfflineSync, CustomTransaction, CustomWriteBatch, CustomDocumentData, FirebaseDocument, CustomDocumentReference, CustomStorageReference } from './types.ts';
 
 /**
  * Base Firebase service class that implements common functionality.
@@ -25,7 +25,7 @@ export abstract class BaseFirebaseService implements FirebaseService {
   abstract getStorageRef(path: string): CustomStorageReference;
 
   // Add abstract getDocuments method
-  abstract getDocuments<T extends CustomDocumentData>(collectionPath: string, options?: import('./types').QueryOptions): Promise<FirebaseDocument<T>[]>;
+  abstract getDocuments<T extends CustomDocumentData>(collectionPath: string, options?: import('./types.ts').QueryOptions): Promise<FirebaseDocument<T>[]>;
 
   abstract auth(): FirebaseAuth;
   abstract firestore(): FirebaseFirestore;

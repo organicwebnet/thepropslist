@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, ScrollView, SafeAreaView, Platform, Switch, Image, Alert, ActivityIndicator } from 'react-native';
-// import type { PropFormData, propCategories, PropSource, PropCategory } from '@/shared/types/props'; // Change this line
-import { type PropFormData, propCategories, type PropSource, type PropCategory } from '@/shared/types/props'; // Keep types as type-only, import propCategories as value
-import type { Show } from '@/types/index';
-import { type PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Keep PropLifecycleStatus as type-only, import labels as value
-import { Picker } from '@react-native-picker/picker'; // Import Picker
-import * as ImagePicker from 'expo-image-picker'; // Import expo-image-picker
-import storage from '@react-native-firebase/storage'; // Import Firebase Storage
-import 'react-native-get-random-values'; // Import for uuid
-import { v4 as uuidv4 } from 'uuid'; // Import uuid
-import { useRouter } from 'expo-router'; // Import useRouter
+import { type PropFormData, propCategories, type PropSource, type PropCategory } from '../shared/types/props.ts';
+import type { Show } from '../types/index.ts';
+import { type PropLifecycleStatus, lifecycleStatusLabels } from '../types/lifecycle.ts';
+import { Picker } from '@react-native-picker/picker';
+import * as ImagePicker from 'expo-image-picker';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
+import { useRouter } from 'expo-router';
+import { Timestamp } from 'firebase/firestore';
+import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
+
+// Utility function to strip HTML tags
+const stripHtmlTags = (str: string) => {
+  if (!str) return '';
+  return str.replace(/<[^>]*>?/gm, '');
+};
 
 // Define simplified props for screen usage
 interface NativePropFormProps {
@@ -36,6 +43,7 @@ export function NativePropForm({
   showAddAnotherButton = false, // New prop
 }: NativePropFormProps) {
   const router = useRouter(); // Get router instance
+  const { service: firebaseService } = useFirebase(); // Get Firebase service
   const [name, setName] = useState(initialData?.name || '');
   const [description, setDescription] = useState(initialData?.description || '');
   const [act, setAct] = useState(initialData?.act?.toString() || '');
@@ -48,7 +56,7 @@ export function NativePropForm({
   const [condition, setCondition] = useState(initialData?.condition || 'New');
   const [location, setLocation] = useState(initialData?.location || '');
   const [notes, setNotes] = useState(initialData?.notes || '');
-  const [tags, setTags] = useState(initialData?.tags?.join(', ') || '');
+  const [tags, setTags] = useState(initialData?.tags?.join(',') || '');
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(initialData?.imageUrl || null);
   const [isConsumable, setIsConsumable] = useState(initialData?.isConsumable || false);
   const [requiresPreShowSetup, setRequiresPreShowSetup] = useState(initialData?.requiresPreShowSetup || false);
@@ -70,6 +78,10 @@ export function NativePropForm({
   const [width, setWidth] = useState(initialData?.width?.toString() || '');
   const [height, setHeight] = useState(initialData?.height?.toString() || '');
   const [weight, setWeight] = useState(initialData?.weight?.toString() || '');
+  const [materialsInput, setMaterialsInput] = useState(initialData?.materials?.join(',') || '');
+  const [period, setPeriod] = useState(initialData?.period || '');
+
+  // const storage = firebaseService.storage(); // This line is removed, firebaseService.storage() will be used directly where needed
 
   // --- Clear Form Function --- 
   const clearForm = () => {
@@ -86,7 +98,7 @@ export function NativePropForm({
     setLocation(initialData?.location || '');
     setStatusNotes(initialData?.statusNotes || '');
     setCurrentLocation(initialData?.currentLocation || '');
-    setTags(initialData?.tags?.join(', ') || '');
+    setTags(initialData?.tags?.join(',') || '');
     setSelectedImageUri(initialData?.imageUrl || null);
     setIsConsumable(initialData?.isConsumable || false);
     setRequiresPreShowSetup(initialData?.requiresPreShowSetup || false);
@@ -102,24 +114,29 @@ export function NativePropForm({
     setSafetyNotes(initialData?.safetyNotes || '');
     setIsUploading(false); // Reset upload status
     setUploadProgress(0);
+    setMaterialsInput(initialData?.materials?.join(',') || '');
+    setPeriod(initialData?.period || '');
     // Reset any other state added later
   };
 
   // --- Upload Image Function --- 
   const uploadImage = async (uri: string): Promise<string | null> => {
+    if (!firebaseService) {
+      Alert.alert("Error", "Firebase service is not available.");
+      return null;
+    }
     const filename = `props_images/${uuidv4()}-${uri.substring(uri.lastIndexOf('/') + 1)}`;
-    const reference = storage().ref(filename);
+    const reference = firebaseService.storage().ref(filename);
     
     try {
       const task = reference.putFile(uri);
 
-      task.on('state_changed', taskSnapshot => {
-        const progress = Math.round(
-          (taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100
-        );
-        setUploadProgress(progress);
-        console.log(`Upload is ${progress}% done`);
-      });
+      task.on('state_changed',
+        (taskSnapshot: FirebaseStorageTypes.TaskSnapshot) => {
+          const progress = (taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100;
+          setUploadProgress(progress);
+          console.log(`Upload is ${progress}% done`);
+        });
 
       await task;
       
@@ -167,7 +184,7 @@ export function NativePropForm({
         location: location.trim(), 
         statusNotes: statusNotes.trim(),
         currentLocation: currentLocation.trim(),
-        tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag), 
+        tags: tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag),
         imageUrl: finalImageUrl || '', 
         isConsumable: isConsumable,
         requiresPreShowSetup: requiresPreShowSetup,
@@ -185,6 +202,8 @@ export function NativePropForm({
         width: parseFloat(width) || undefined,
         height: parseFloat(height) || undefined,
         weight: parseFloat(weight) || undefined,
+        materials: materialsInput.split(',').map((m: string) => stripHtmlTags(m.trim())).filter((m: string) => m),
+        period: stripHtmlTags(period.trim()) || undefined,
     };
     return formData;
   }
@@ -235,7 +254,7 @@ export function NativePropForm({
     }
 
     // Launch image library
-    let result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
@@ -487,6 +506,30 @@ export function NativePropForm({
         </View>
         */}
         {/* Insert Category Picker Here if re-enabled */}
+        <Text style={styles.label}>Category</Text>
+        <Picker
+          selectedValue={category}
+          onValueChange={(itemValue) => setCategory(itemValue as PropCategory)}
+          style={styles.picker}
+        >
+          {propCategories.map((cat: PropCategory) => <Picker.Item key={cat} label={cat} value={cat} />)}
+        </Picker>
+
+        <Text style={styles.label}>Materials (comma-separated)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Wood, Metal, Plastic"
+          value={materialsInput}
+          onChangeText={setMaterialsInput}
+        />
+
+        <Text style={styles.label}>Historical Period</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., Victorian, 1920s, Futuristic"
+          value={period}
+          onChangeText={setPeriod}
+        />
 
         {/* --- 11. Quantity --- */}
         <Text style={styles.label}>Quantity<Text style={styles.requiredAsterisk}> *</Text></Text>

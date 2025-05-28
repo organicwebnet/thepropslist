@@ -1,9 +1,9 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View, Alert } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import ShowFormNative from '../../src/components/ShowForm.native';
-import { useShows } from '../../src/contexts/ShowsContext';
-import type { Show } from '../../src/types';
+import ShowFormNative from '../../src/components/ShowForm.native.tsx';
+import { useShows } from '../../src/contexts/ShowsContext.tsx';
+import type { Show } from '../../src/shared/services/firebase/types.ts';
 
 export default function NewShowScreen() {
   const router = useRouter();

@@ -1,4 +1,4 @@
-import { FirebaseError } from '../firebase/types';
+import { FirebaseError } from '../firebase/types.ts';
 
 export interface QRCodeData {
   type: 'container' | 'prop' | 'location';

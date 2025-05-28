@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, Alert } from 'react-native'; // Keep basic RN elements
+import { View, Text, Alert, TouchableOpacity } from 'react-native'; // Keep basic RN elements, Added TouchableOpacity, Removed ActivityIndicator
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { useShows } from '@/contexts/ShowsContext'; // Added useShows
-import { type Prop, type PropFormData, type Show as SharedShow } from '@/shared/types/props'; // Added Show
+import { useFirebase } from '../../../../src/contexts/FirebaseContext.tsx';
+import { useAuth } from '../../../../src/contexts/AuthContext.tsx';
+import { useShows } from '../../../../src/contexts/ShowsContext.tsx'; // Added useShows
+import { type Prop, type PropFormData } from '../../../../src/shared/types/props.ts'; 
+import type { Show as SharedShow } from '../../../../src/shared/services/firebase/types.ts'; // Changed import for Show type
 // import { WebPropForm } from '@/platforms/web/components/WebPropForm'; // Removed WebPropForm
-import { PropForm } from '@/components/PropForm'; // Added PropForm
+import { PropForm } from '../../../../src/components/PropForm.tsx'; // Added PropForm
 
 export default function WebEditPropScreen() {
+  console.log("Currently rendering: WebEditPropScreen"); // DEBUG LOG
   const router = useRouter();
   const { id: propId } = useLocalSearchParams<{ id: string }>();
   const { service: firebaseService, isInitialized: firebaseInitialized } = useFirebase();
@@ -132,37 +134,39 @@ export default function WebEditPropScreen() {
   // Loading State
   if (loading || !firebaseInitialized) {
     return (
-      // Keep simple loading view, or adopt new.tsx style if preferred
-      <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100 flex justify-center items-center">
+      <View className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100 flex justify-center items-center">
         <Stack.Screen options={{ title: 'Loading...' }} />
-        <p>Loading Prop and Show Data...</p>
-      </div>
+        <Text>Loading Prop and Show Data...</Text>
+      </View>
     );
   }
 
   // Error State
   if (error || !propData || !selectedShow) {
     return (
-      <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
+      <View className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
         <Stack.Screen options={{ title: 'Error' }} />
-        <button onClick={handleCancel} className="mb-4 text-blue-400 hover:text-blue-300">
-          &larr; Back
-        </button>
-        <h1 className="text-2xl font-bold mb-6 text-red-500">Error</h1>
-        <p className="text-red-400">{error || 'Could not load the required prop or show data.'}</p>
-      </div>
+        <TouchableOpacity onPress={handleCancel} className="mb-4 text-blue-400 hover:text-blue-300">
+          <Text>&larr; Back</Text>
+        </TouchableOpacity>
+        <Text className="text-2xl font-bold mb-6 text-red-500">Error</Text>
+        <Text className="text-red-400">{error || 'Could not load the required prop or show data.'}</Text>
+      </View>
     );
   }
 
   // Main Render - Use structure from new.tsx
   return (
-    <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
+    <View className="p-4 md:p-6 bg-gray-900 min-h-screen text-gray-100">
+      <Text style={{ color: 'red', fontSize: 18, fontWeight: 'bold', textAlign: 'center', padding: 10 }}>
+        DEBUG: WEB EDIT SCREEN ACTIVE
+      </Text>
       <Stack.Screen options={{ title: `Edit: ${propData.name}` }} />
-      <div className="max-w-5xl mx-auto">
-        <button onClick={handleCancel} className="mb-4 text-blue-400 hover:text-blue-300">
-            &larr; Cancel
-        </button>
-        <h1 className="text-2xl font-bold mb-6">Edit Prop: {propData.name}</h1>
+      <View className="max-w-5xl mx-auto">
+        <TouchableOpacity onPress={handleCancel} className="mb-4 text-blue-400 hover:text-blue-300">
+            <Text>&larr; Cancel</Text>
+        </TouchableOpacity>
+        <Text className="text-2xl font-bold mb-6">Edit Prop: {propData.name}</Text>
         <PropForm 
           initialData={propData} // Pass fetched prop data
           show={selectedShow}      // Pass fetched show data
@@ -171,7 +175,7 @@ export default function WebEditPropScreen() {
           disabled={isSubmitting}   // Use isSubmitting state
           onCancel={handleCancel}
         />
-      </div>
-    </div>
+      </View>
+    </View>
   );
 } 

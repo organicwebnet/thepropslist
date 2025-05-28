@@ -1,5 +1,5 @@
 import React from 'react';
-import { RichTextEditor } from '../shared/components/RichTextEditor';
+import { RichTextEditor } from '../shared/components/RichTextEditor.tsx';
 
 interface WysiwygEditorProps {
   value: string;

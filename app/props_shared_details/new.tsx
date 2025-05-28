@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { PropForm } from '@/components/PropForm';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { useShows } from '@/contexts/ShowsContext';
-import type { Prop, PropFormData, Show } from '@/shared/types/props';
+import { PropForm } from '@/components/PropForm.tsx';
+import { useFirebase } from '@/contexts/FirebaseContext.tsx';
+import { useAuth } from '@/contexts/AuthContext.tsx';
+import { useShows } from '@/contexts/ShowsContext.tsx';
+import type { Prop, PropFormData, Show } from '@/shared/types/props.ts';
 
 export default function AddPropScreen() {
   const router = useRouter();

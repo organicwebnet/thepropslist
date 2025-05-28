@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Button } from 'react-native';
-import { AuthForm } from './AuthForm'; // Import the actual AuthForm
+import { AuthForm } from './AuthForm.tsx';
 
 interface NativeAuthScreenProps {
   // Add necessary props like onSignIn, onSignUp etc. later

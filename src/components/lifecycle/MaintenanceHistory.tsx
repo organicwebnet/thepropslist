@@ -1,5 +1,5 @@
 import React from 'react';
-import { MaintenanceRecord } from '../../types/lifecycle';
+import { MaintenanceRecord } from '../../types/lifecycle.ts';
 import { Wrench, ClipboardList, Calendar, Clock, AlertTriangle } from 'lucide-react';
 
 interface MaintenanceHistoryProps {
@@ -87,9 +87,9 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
                     <span className="font-medium text-[var(--text-primary)]">{record.performedBy}</span>
                   </div>
                 </div>
-                <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${typeDetails.color}`}>
-                  {typeDetails.icon}
-                  {typeDetails.label}
+                <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${typeDetails?.color}`}>
+                  {typeDetails?.icon}
+                  {typeDetails?.label}
                 </span>
               </div>
               

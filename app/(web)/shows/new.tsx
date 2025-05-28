@@ -1,9 +1,9 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View, ScrollView, Text, Alert } from 'react-native';
-import ShowForm from '@/components/ShowForm';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { Show } from '@/types/index';
+import ShowForm from '@/components/ShowForm.tsx';
+import { useFirebase } from '@/contexts/FirebaseContext.tsx';
+import { Show } from '@/shared/services/firebase/types.ts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NewShowPage() {

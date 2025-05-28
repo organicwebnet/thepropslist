@@ -4,7 +4,8 @@ import { StrictMode } from 'react';
 import { View } from 'react-native';
 import { ThemeProvider } from '@react-navigation/native';
 import { useColorScheme } from 'react-native';
-import { darkTheme, lightTheme } from '@/theme';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { darkTheme, lightTheme } from './theme.ts';
 // import { GestureProvider } from './contexts/GestureContext'; // Commented out: Cannot find module
 
 // This is the layout for the root /src folder routes

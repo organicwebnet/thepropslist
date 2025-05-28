@@ -12,7 +12,9 @@ import {
 import { Svg, Path } from 'react-native-svg';
 import type { AuthError } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useFirebase } from '../contexts/FirebaseContext';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { Eye, EyeOff } from 'lucide-react'; // Corrected icon name
 
 interface AuthFormProps {
   onClose: () => void;

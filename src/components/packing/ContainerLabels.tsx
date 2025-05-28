@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { PackingContainer } from '../../shared/services/inventory/packListService';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { PackingContainer } from '../../shared/services/inventory/packListService.ts';
+import { XCircle } from 'lucide-react-native'; // Using XCircle for remove icon
 
 interface ContainerLabelsProps {
   container: PackingContainer;
@@ -42,44 +44,96 @@ export const ContainerLabels: React.FC<ContainerLabelsProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-2">
-        <input
-          type="text"
+    <View style={styles.container}>
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
           value={newLabel}
-          onChange={(e) => setNewLabel(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onChangeText={(text) => setNewLabel(text)}
+          onSubmitEditing={handleAddLabel}
           placeholder="Add a label..."
-          className="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <button
-          onClick={handleAddLabel}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={handleAddLabel}
         >
-          Add
-        </button>
-      </div>
+          <Text style={styles.addButtonText}>Add</Text>
+        </TouchableOpacity>
+      </View>
 
       {error && (
-        <div className="text-red-500 text-sm">{error}</div>
+        <Text style={styles.errorText}>{error}</Text>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <View style={styles.labelsContainer}>
         {container.labels.map((label) => (
-          <div
+          <View
             key={label}
-            className="flex items-center bg-gray-100 px-3 py-1 rounded"
+            style={styles.labelContainer}
           >
-            <span className="mr-2">{label}</span>
-            <button
-              onClick={() => handleRemoveLabel(label)}
-              className="text-gray-500 hover:text-red-500 focus:outline-none"
+            <Text style={styles.labelText}>{label}</Text>
+            <TouchableOpacity
+              onPress={() => handleRemoveLabel(label)}
+              style={styles.removeButton}
             >
-              ×
-            </button>
-          </div>
+              <XCircle color="#9CA3AF" size={16} />
+            </TouchableOpacity>
+          </View>
         ))}
-      </div>
-    </div>
+      </View>
+    </View>
   );
-}; 
+};
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 16,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  input: {
+    flex: 1,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  addButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  labelsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  labelText: {
+    marginRight: 8,
+  },
+  removeButton: {
+    padding: 4,
+  },
+});

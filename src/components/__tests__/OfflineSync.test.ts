@@ -13,8 +13,8 @@
 
 import '@testing-library/jest-dom';
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { WebFirebaseService } from '../../platforms/web/services/firebase';
-import { OfflineSyncService } from '../../shared/services/firebase/offline';
+import { WebFirebaseService } from '../../platforms/web/services/firebase.ts';
+import { OfflineSyncService } from '../../shared/services/firebase/offline.ts';
 import { 
   FirebaseDocument,
   FirebaseService, 
@@ -36,7 +36,7 @@ import {
   CustomAuth, 
   CustomFirestore, 
   CustomStorage 
-} from '../../shared/services/firebase/types';
+} from '../../shared/services/firebase/types.ts';
 
 // Mock localStorage
 const localStorageMock = (() => {

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { MaintenanceRecord } from '../../types/lifecycle';
-import { WysiwygEditor } from '../WysiwygEditor';
-import { Wrench, RefreshCcw, Calendar, Clock, AlertTriangle, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MaintenanceRecord } from '../../types/lifecycle.ts';
+import { WysiwygEditor } from '../WysiwygEditor.tsx';
+import { Wrench, RefreshCcw, Calendar, Clock, AlertTriangle, HelpCircle, Edit2 } from 'lucide-react';
 
 interface MaintenanceRecordFormProps {
   onSubmit: (record: Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>) => Promise<void>;
@@ -116,8 +116,8 @@ export function MaintenanceRecordForm({ onSubmit, disabled = false }: Maintenanc
         </label>
         <WysiwygEditor
           value={formData.description}
-          onChange={(value) => setFormData({ ...formData, description: value })}
-          placeholder="Describe the maintenance/repair work..."
+          onChange={(value: string) => setFormData({ ...formData, description: value })}
+          placeholder="Describe the maintenance or repair performed..."
           minHeight={100}
           disabled={disabled || isSubmitting}
         />

@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { PropCard } from '../PropCard';
-import { Prop } from '@/shared/types/props';
-import { PropLifecycleStatus } from '@/types/lifecycle';
+import { PropCard } from '../PropCard.tsx';
+import { Prop } from '../../shared/types/props.ts';
+import { PropLifecycleStatus } from '../../types/lifecycle.ts';
 
 const mockProp: Prop = {
   id: 'prop1',

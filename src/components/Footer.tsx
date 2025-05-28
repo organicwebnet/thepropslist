@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'expo-router';
-import { MessageSquare, HelpCircle, Github, Twitter, Linkedin } from 'lucide-react';
-import { FeedbackForm } from './FeedbackForm';
-import { HelpCenter } from './HelpCenter';
-import { useAuth } from '../contexts/AuthContext';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { MessageSquare, HelpCircle, Github, Twitter, Linkedin, LogOut } from 'lucide-react';
+import { FeedbackForm } from './FeedbackForm.tsx';
+import { HelpCenter } from './HelpCenter.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
 
 export function Footer() {
   const { user } = useAuth();
@@ -59,6 +59,7 @@ export function Footer() {
         <FeedbackForm 
           onClose={() => setShowFeedbackForm(false)} 
           userEmail={user?.email || undefined}
+          onSubmit={() => {console.log("Feedback submitted")}}
         />
       )}
       

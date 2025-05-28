@@ -1,6 +1,7 @@
 import React from 'react';
-import { PropStatusUpdate, lifecycleStatusLabels, lifecycleStatusPriority, StatusPriority, PropLifecycleStatus } from '../../types/lifecycle';
+import { PropStatusUpdate, lifecycleStatusLabels, lifecycleStatusPriority, StatusPriority, PropLifecycleStatus } from '../../types/lifecycle.ts';
 import { History, MoveRight } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 
 interface StatusHistoryProps {
   history: PropStatusUpdate[];

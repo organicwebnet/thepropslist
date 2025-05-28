@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { v4 as uuidv4 } from 'uuid';
-import { OfflineSync, PendingOperation, QueueStatus, SyncStatus } from '../../../shared/services/firebase/types';
-import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import { OfflineSync, PendingOperation, QueueStatus, SyncStatus } from '../../../shared/services/firebase/types.ts';
+import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 const STORAGE_KEYS = {
   OFFLINE_SYNC: 'offlineSync',
@@ -47,9 +47,9 @@ export class MobileOfflineSync implements OfflineSync {
 
   async initialize(): Promise<void> {
     const [syncEnabled, operations, retryData] = await Promise.all([
-      AsyncStorage.getItem(STORAGE_KEYS.OFFLINE_SYNC),
-      AsyncStorage.getItem(STORAGE_KEYS.PENDING_OPERATIONS),
-      AsyncStorage.getItem(STORAGE_KEYS.RETRY_ATTEMPTS)
+      AsyncStorage.default.getItem(STORAGE_KEYS.OFFLINE_SYNC),
+      AsyncStorage.default.getItem(STORAGE_KEYS.PENDING_OPERATIONS),
+      AsyncStorage.default.getItem(STORAGE_KEYS.RETRY_ATTEMPTS)
     ]);
 
     this.isEnabled = syncEnabled === 'true';
@@ -80,7 +80,7 @@ export class MobileOfflineSync implements OfflineSync {
   }
 
   async getItem<T>(key: string): Promise<T | null> {
-    const value = await AsyncStorage.getItem(key);
+    const value = await AsyncStorage.default.getItem(key);
     if (value === null) return null;
     try {
       return JSON.parse(value) as T;
@@ -91,15 +91,15 @@ export class MobileOfflineSync implements OfflineSync {
 
   async setItem<T>(key: string, value: T): Promise<void> {
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-    await AsyncStorage.setItem(key, stringValue);
+    await AsyncStorage.default.setItem(key, stringValue);
   }
 
   async removeItem(key: string): Promise<void> {
-    await AsyncStorage.removeItem(key);
+    await AsyncStorage.default.removeItem(key);
   }
 
   async clear(): Promise<void> {
-    await AsyncStorage.multiRemove([
+    await AsyncStorage.default.multiRemove([
       STORAGE_KEYS.OFFLINE_SYNC,
       STORAGE_KEYS.PENDING_OPERATIONS,
       STORAGE_KEYS.SYNC_STATUS

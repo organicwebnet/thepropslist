@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, CollectionReference, Timestamp, addDoc } from 'firebase/firestore';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import { User } from 'firebase/auth';
-import type { PropStatusUpdate, MaintenanceRecord } from '@/types/lifecycle';
+import { Prop } from '../shared/types/props.ts'; // Assuming Prop type is needed
+import type { PropStatusUpdate, MaintenanceRecord } from '../types/lifecycle.ts';
 
 // Local interface matching Firestore data for status history
 interface PropStatusFirestoreData {

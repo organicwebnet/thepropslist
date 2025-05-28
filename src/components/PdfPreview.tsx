@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Button, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { X, Download, Loader2 } from 'lucide-react';
-import type { Prop } from '@/shared/types/props';
-import type { Show } from '@/types/index';
-import { generatePDF } from '../lib/pdf';
+import type { Prop } from '../shared/types/props.ts';
+import type { Show } from '../types/index.ts';
+import { generatePDF } from '../lib/pdf.ts';
 
 interface PdfPreviewProps {
   props: Prop[];

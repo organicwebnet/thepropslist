@@ -11,9 +11,9 @@ import {
   Firestore as WebFirestore // Import Web Firestore type
 } from 'firebase/firestore';
 import { Platform } from 'react-native'; // Import Platform
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { PackingBox, PackedProp } from '@/types/packing';
-import { FirebaseDocument, CustomFirestore } from '@/shared/services/firebase/types'; // Import CustomFirestore
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { PackingBox, PackedProp } from '../types/packing.ts';
+import { FirebaseDocument, CustomFirestore } from '../shared/services/firebase/types.ts'; // Import CustomFirestore
 // Import RN Firebase types if needed for explicit casting, though CustomFirestore should suffice
 import {
   FirebaseFirestoreTypes,
@@ -22,9 +22,11 @@ import {
   where as rnWhere,
   onSnapshot as rnOnSnapshot
 } from '@react-native-firebase/firestore';
+import { FirebaseError, FirebaseService, QueryOptions } from '../shared/services/firebase/types.ts';
+import type { Prop, WeightUnit } from '../shared/types/props.ts'; // Added WeightUnit
 
 interface PackingOperations {
-  createBox: (props: PackedProp[], boxName: string, actNumber?: number, sceneNumber?: number) => Promise<string | undefined>;
+  createBox: (props: PackedProp[], boxName: string, description?: string, actNumber?: number, sceneNumber?: number) => Promise<string | undefined>;
   updateBox: (boxId: string, updates: Partial<PackingBox>) => Promise<void>;
   deleteBox: (boxId: string) => Promise<void>;
   updateBoxLabelSettings: (boxId: string, settings: Pick<PackingBox, 'labelHandlingNote' | 'labelIncludeFragile' | 'labelIncludeThisWayUp' | 'labelIncludeKeepDry'>) => Promise<void>;
@@ -54,7 +56,9 @@ export function usePacking(showId?: string): {
     setLoading(true);
     setError(null);
 
-    let unsubscribe = () => {};
+    let unsubscribe = () => {
+      // No-op function
+    };
 
     if (Platform.OS === 'web') {
       // Use Web SDK
@@ -137,7 +141,7 @@ export function usePacking(showId?: string): {
   }, [showId, service]);
 
   const operations: PackingOperations = useMemo(() => ({
-    createBox: async (props: PackedProp[], boxName: string, actNumber = 0, sceneNumber = 0) => {
+    createBox: async (props: PackedProp[], boxName: string, description = '', actNumber = 0, sceneNumber = 0) => {
       if (!service?.addDocument || !showId) {
           console.error('Firebase service (addDocument) not available or showId missing');
           setError(new Error('Failed to create box: Service not ready.'));
@@ -148,18 +152,18 @@ export function usePacking(showId?: string): {
       const newBoxDataForFirestore = {
          name: boxName,
          showId: showId,
+         description: description,
          actNumber: actNumber,
          sceneNumber: sceneNumber,
          props: props,
          totalWeight: props.reduce((sum, p) => sum + (p.weight || 0), 0),
-         weightUnit: 'kg', 
+         weightUnit: 'kg', // Reverted: Removed 'as WeightUnit'
          isHeavy: props.reduce((sum, p) => sum + (p.weight || 0), 0) > 20, 
          notes: '',
          createdAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp(),
          updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp(),
-         description: '', 
          labels: [], 
-         status: 'draft', 
+         status: 'draft' as const, // Reverted: Added 'as const' back
        };
 
       try {
@@ -248,11 +252,7 @@ export function usePacking(showId?: string): {
   // The current return type of usePacking has it at the top level AND inside operations.
   // For clarity and to ensure stability if used from top level, let's memoize the top-level one too.
   const memoizedUpdateBoxLabelSettings = useCallback(async (boxId: string, settings: Pick<PackingBox, 'labelHandlingNote' | 'labelIncludeFragile' | 'labelIncludeThisWayUp' | 'labelIncludeKeepDry'>) => {
-    // This is the same implementation as in operations.updateBoxLabelSettings
-    // To avoid duplication, operations.updateBoxLabelSettings could be called here,
-    // or this function could become the single source of truth for that operation.
-    // For now, let's assume it is meant to be callable directly.
-    console.log('[usePacking hook direct] Updating label settings for box:', boxId, settings);
+    console.log('[usePacking] Updating label settings for box:', boxId, settings);
     if (!service?.updateDocument) {
       console.error('Firebase service (updateDocument) not available for label settings');
       setError(new Error('Failed to update box label settings: Service not ready.'));
@@ -270,12 +270,13 @@ export function usePacking(showId?: string): {
     }
   }, [service]);
 
+  // Ensure the hook returns what its type signature promises
   return {
     boxes,
     loading,
     error,
     operations,
-    updateBoxLabelSettings: memoizedUpdateBoxLabelSettings, // Return the memoized version
+    updateBoxLabelSettings: memoizedUpdateBoxLabelSettings, // Use the memoized version
     getDocument,
   };
 } 

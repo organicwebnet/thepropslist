@@ -1,9 +1,9 @@
-import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle';
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle.ts';
 import { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firestore';
-import { Address } from './address';
+import { Address } from './address.ts';
 
 // Re-export master types from src/types/index.ts
-export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../types/index';
+export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../types/index.ts';
 
 // Re-export the type needed by PropForm using 'export type'
 export type { PropLifecycleStatus };
@@ -247,7 +247,7 @@ export interface Prop {
   publicNotes?: string;
 }
 
-export interface PropUpdateFormData extends Partial<PropFormData> {}
+export type PropUpdateFormData = Partial<PropFormData>;
 
 // Show, Act, Scene definitions are now removed and re-exported from src/types/index.ts
 // Venue, Contact, ShowCollaborator were already removed. 

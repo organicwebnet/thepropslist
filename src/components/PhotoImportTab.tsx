@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Image, Loader2, X, Plus, Search, Filter } from 'lucide-react';
-// import type { GooglePhoto, PropFormData } from '../types'; // Commented out
-import type { PropFormData } from '@/shared/types/props'; // Import PropFormData from shared
-// import { initGoogleApi, getGoogleAuthToken, fetchGooglePhotos } from '../lib/google'; // fetchGooglePhotos commented out
-import { initGoogleApi, getGoogleAuthToken } from '../lib/google'; // Only import existing functions
+import type { PropFormData } from '../shared/types/props.ts';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { initGoogleApi, getGoogleAuthToken } from '../lib/google.ts';
+const APP_CONFIG = require('../../app.config.js')({ config: {} }); // Corrected APP_CONFIG import
 
 interface PhotoImportTabProps {
   onPhotosSelected: (photos: any[]) => void; // Changed type to any[]

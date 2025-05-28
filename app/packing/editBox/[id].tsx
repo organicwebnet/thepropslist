@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { usePacking } from '../../../src/hooks/usePacking'; // Adjusted path
-import { PackingBox } from '../../../src/types/packing'; // Adjusted path
+import { usePacking } from '../../../src/hooks/usePacking.ts'; // Adjusted path
+import { PackingBox } from '../../../src/types/packing.ts'; // Adjusted path
 
 // Consistent dark theme colors (same as createBox.tsx)
 const darkThemeColors = {

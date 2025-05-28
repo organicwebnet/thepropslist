@@ -1,6 +1,8 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { v4 as uuidv4 } from 'uuid';
-import type { FirebaseStorage } from '@/shared/services/firebase/types';
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } from '@env';
+import { v2 as cloudinary } from 'cloudinary';
+import type { FirebaseStorage } from '../shared/services/firebase/types.ts';
 
 export const uploadImage = async (file: File, storageService: FirebaseStorage): Promise<string> => {
   if (!storageService) {

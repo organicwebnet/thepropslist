@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, UserPlus, Trash2, Mail, Shield } from 'lucide-react';
-import type { Show, ShowCollaborator } from '../types';
+import type { Show, ShowCollaborator } from '../types.ts';
 
 interface ShareModalProps {
   show: Show;
@@ -31,7 +31,7 @@ export function ShareModal({ show, onClose, onAddCollaborator, onRemoveCollabora
     }
 
     // Check if user is already a collaborator
-    if (show.collaborators?.some(c => c.email === email)) {
+    if (show.collaborators?.some((c: ShowCollaborator) => c.email === email)) {
       setError('This user is already a collaborator');
       return;
     }
@@ -122,7 +122,7 @@ export function ShareModal({ show, onClose, onAddCollaborator, onRemoveCollabora
         <div className="mt-8">
           <h3 className="text-sm font-medium text-gray-300 mb-4">Current Collaborators</h3>
           <div className="space-y-3">
-            {show.collaborators?.map((collaborator) => (
+            {show.collaborators?.map((collaborator: ShowCollaborator) => (
               <div
                 key={collaborator.email}
                 className="flex items-center justify-between p-3 bg-[#0A0A0A] rounded-lg border border-gray-800"

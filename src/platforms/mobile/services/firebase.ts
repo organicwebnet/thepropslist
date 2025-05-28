@@ -12,7 +12,7 @@ import {
   SyncStatus,
   CustomDocumentData, 
   CustomDocumentReference
-} from '../../../shared/services/firebase/types';
+} from '../../../shared/services/firebase/types.ts';
 
 export class MobileFirebaseService implements FirebaseService {
   protected _auth: FirebaseAuthTypes.Module | undefined;
@@ -27,17 +27,17 @@ export class MobileFirebaseService implements FirebaseService {
         // Initialize offline queue
       },
       getItem: async <T>(key: string): Promise<T | null> => {
-        const value = await AsyncStorage.getItem(key);
+        const value = await AsyncStorage.default.getItem(key);
         return value ? JSON.parse(value) : null;
       },
       setItem: async <T>(key: string, value: T): Promise<void> => {
-        await AsyncStorage.setItem(key, JSON.stringify(value));
+        await AsyncStorage.default.setItem(key, JSON.stringify(value));
       },
       removeItem: async (key: string): Promise<void> => {
-        await AsyncStorage.removeItem(key);
+        await AsyncStorage.default.removeItem(key);
       },
       clear: async (): Promise<void> => {
-        await AsyncStorage.clear();
+        await AsyncStorage.default.clear();
       },
       enableSync: async (): Promise<void> => {
         // Enable sync
@@ -68,9 +68,9 @@ export class MobileFirebaseService implements FirebaseService {
   }
 
   async initializeService(): Promise<void> {
-    if (!this._auth) this._auth = auth();
-    if (!this._firestore) this._firestore = firestore();
-    if (!this._storage) this._storage = storage();
+    if (!this._auth) this._auth = (auth as any).default();
+    if (!this._firestore) this._firestore = (firestore as any).default();
+    if (!this._storage) this._storage = (storage as any).default();
     await this.offlineQueue.initialize();
     console.log("MobileFirebaseService modules initialized.");
   }

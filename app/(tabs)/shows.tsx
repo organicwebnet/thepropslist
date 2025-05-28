@@ -1,53 +1,43 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useShows } from '../../src/contexts/ShowsContext'; // Adjusted path
+import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import { useRouter } from 'expo-router';
-import type { Show } from '../../src/types'; // Assuming Show type is here
-import { Ionicons } from '@expo/vector-icons'; // Added Ionicons import
-import { ShadowedView, shadowStyle } from 'react-native-fast-shadow'; // Added import
-
-// Define colors based on your tailwind config for clarity (can be moved to a central theme/colors file)
-const darkThemeColors = {
-  bg: '#111827',          // dark-bg
-  cardBg: '#1F2937',      // dark-card-bg
-  textPrimary: '#F9FAFB', // dark-text-primary
-  textSecondary: '#9CA3AF',// dark-text-secondary
-  primary: '#3B82F6',     // dark-primary (blue accent)
-  border: '#374151',      // dark-border
-  // Add any other specific colors from your theme that might be used here
-};
+import type { Show } from '../../src/shared/services/firebase/types.ts';
+import { Ionicons } from '@expo/vector-icons';
+import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
+import { useTheme } from '../../src/contexts/ThemeContext.tsx';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/theme.ts';
+import { useAuth } from '../../src/contexts/AuthContext.tsx';
 
 export default function ShowsScreen() {
   const { shows, loading, error, setSelectedShow } = useShows();
   const router = useRouter();
+  const { theme: themeName } = useTheme();
+  const currentThemeColors = themeName === 'light' ? appLightTheme.colors : appDarkTheme.colors;
+  const styles = getStyles(currentThemeColors);
 
   const handleShowPress = (show: Show) => {
     setSelectedShow(show);
-    // For now, log or navigate to a generic detail placeholder if it exists
-    // Example: router.push(`/show-detail/${show.id}`);
-    console.log('Selected show:', show.name);
-    // Navigate to a detail screen, e.g., app/shows/[id].tsx if that's the pattern
-    // router.push(`/shows/${show.id}`); // This would be outside tabs
+    console.log('Selected show:', show.name, show.id);
+    router.push(`/shows/${show.id}` as any);
   };
 
   const handleAddNewShow = () => {
-    // Navigate to a screen for creating a new show
-    // Example: router.push('/(tabs)/shows/new'); or a modal
     console.log('Navigate to add new show screen');
-     router.push('/props_shared_details/newShowForm'); // Placeholder, actual route will depend on where the form is
+    router.push('/shows/create' as any);
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}> {/* Changed from styles.container to avoid conflict if styles.container has padding */}
-        <ActivityIndicator size="large" color={darkThemeColors.primary} />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={currentThemeColors.primary} />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.loadingContainer}> {/* Changed from styles.container */}
+      <View style={styles.loadingContainer}>
         <Text style={styles.errorText}>Error loading shows: {error.message}</Text>
       </View>
     );
@@ -62,19 +52,18 @@ export default function ShowsScreen() {
           <ShadowedView style={[styles.showItemShadowContainer, shadowStyle({
             radius: 2,
             opacity: 0.2,
-            color: '#000',
+            color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
             offset: [0, 1],
           })]}>
             <TouchableOpacity style={styles.showItem} onPress={() => handleShowPress(item)}>
               <Text style={styles.showName}>{item.name}</Text>
-              {/* Add more details like item.productionCompany or number of acts */}
-              <Text style={styles.showDetails}>{item.productionCompany || 'No company'}</Text>
+              <Text style={styles.showDetails}>{item.productionCompany || 'No production company'}</Text>
               <Text style={styles.showDetails}>{item.acts?.length || 0} Acts</Text>
             </TouchableOpacity>
           </ShadowedView>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyListContainer}> {/* Changed from styles.emptyContainer */}
+          <View style={styles.emptyListContainer}>
             <Text style={styles.emptyText}>No shows available.</Text>
             <Text style={styles.emptySubtext}>Tap "+" to create one.</Text>
           </View>
@@ -84,7 +73,7 @@ export default function ShowsScreen() {
       <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
         radius: 5,
         opacity: 0.3,
-        color: '#000',
+        color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
         offset: [0, 2],
       })]}>
         <TouchableOpacity
@@ -92,47 +81,36 @@ export default function ShowsScreen() {
           onPress={handleAddNewShow}
           activeOpacity={0.7}
         >
-          <Ionicons name="add" size={30} color="#FFFFFF" />
+          <Ionicons name="add" size={30} color={currentThemeColors.card} />
         </TouchableOpacity>
       </ShadowedView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (themeColors: typeof appLightTheme.colors) => StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: darkThemeColors.bg, // Use dark background
-    // padding: 10, // Padding applied to list container or individual items for more control
+    backgroundColor: themeColors.background,
   },
-  loadingContainer: { // For loading and error states, centered
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: darkThemeColors.bg,
+    backgroundColor: themeColors.background,
   },
   errorText: { 
     fontSize: 16, 
-    color: darkThemeColors.textSecondary, // Use secondary text color for errors
+    color: themeColors.error,
     textAlign: 'center', 
     paddingHorizontal: 20,
   },
   showItem: {
-    backgroundColor: darkThemeColors.cardBg, // Use card background
+    backgroundColor: themeColors.card,
     padding: 15,
-    marginVertical: 8,
-    marginHorizontal: 16, // Added horizontal margin for card-like appearance
-    borderRadius: 8,      // Rounded corners for cards
-    // width: '100%', // Removed, marginHorizontal will handle spacing
-    // minWidth: 300, 
-    // alignSelf: 'stretch',
-    // shadowColor: '#000', // Removed
-    
-    // shadowOpacity: 0.2, // Removed
-    // shadowRadius: 2, // Removed
-    // elevation: 3, // Removed
+    borderRadius: 8,
   },
-  showItemShadowContainer: { // New style for ShadowedView for showItem
+  showItemShadowContainer: {
     marginVertical: 8,
     marginHorizontal: 16,
     borderRadius: 8,
@@ -140,14 +118,14 @@ const styles = StyleSheet.create({
   showName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: darkThemeColors.textPrimary, // Use primary text color
-    marginBottom: 4, // Space between name and details
+    color: themeColors.text,
+    marginBottom: 4,
   },
   showDetails: {
     fontSize: 14,
-    color: darkThemeColors.textSecondary, // Use secondary text color
+    color: themeColors.textSecondary || themeColors.text,
   },
-  emptyListContainer: { // For the ListEmptyComponent
+  emptyListContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -155,41 +133,32 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: darkThemeColors.textSecondary,
+    color: themeColors.text,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: darkThemeColors.textSecondary, // Slightly less prominent than emptyText
+    color: themeColors.textSecondary || themeColors.text,
     opacity: 0.7,
   },
   listContent: {
-    paddingHorizontal: 8, // Give some padding if items don't have horizontal margin
+    paddingHorizontal: 0,
     paddingVertical: 10,
   },
-  listContentWhenEmpty: { // Ensures empty message is centered
+  listContentWhenEmpty: {
     flex: 1, 
     justifyContent: 'center',
     alignItems: 'center'
   },
   fab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-    backgroundColor: darkThemeColors.primary, // Use primary accent color
+    backgroundColor: themeColors.primary,
     width: 56,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    // elevation: 8, // Removed
-    // shadowColor: '#000', // Removed
-    // shadowRadius: 5, // Removed
-    // shadowOpacity: 0.3, // Removed
-    
   },
-  fabShadowContainer: { // New style for ShadowedView for fab
+  fabShadowContainer: {
     position: 'absolute',
     margin: 16,
     right: 0,

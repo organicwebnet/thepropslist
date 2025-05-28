@@ -1,21 +1,44 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { MobileOfflineSync } from '../MobileOfflineSync';
-import { PendingOperation } from '../../../../shared/services/firebase/types';
+import { MobileOfflineSync } from '../MobileOfflineSync.ts';
+import { PendingOperation } from '../../../../shared/services/firebase/types.ts';
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
-import firestore from '@react-native-firebase/firestore';
+import firestoreModule from '@react-native-firebase/firestore';
 
 jest.mock('@react-native-async-storage/async-storage');
 jest.mock('@react-native-community/netinfo');
 
+// Updated mock for @react-native-firebase/firestore
 jest.mock('@react-native-firebase/firestore', () => {
-  const mockEnableNetwork = jest.fn().mockResolvedValue(undefined);
-  const mockDisableNetwork = jest.fn().mockResolvedValue(undefined);
+  const mockFirestoreModuleInstance: Partial<FirebaseFirestoreTypes.Module> = {
+    enableNetwork: jest.fn().mockResolvedValue(undefined),
+    disableNetwork: jest.fn().mockResolvedValue(undefined),
+    settings: jest.fn(),
+    collection: jest.fn().mockReturnThis(),
+    doc: jest.fn().mockReturnThis(),
+    batch: jest.fn(() => ({
+      commit: jest.fn().mockResolvedValue(undefined),
+      delete: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+    })),
+    runTransaction: jest.fn(callback => callback({ get: jest.fn(), set: jest.fn(), update: jest.fn(), delete: jest.fn() })),
+  };
 
-  return jest.fn(() => ({
-    enableNetwork: mockEnableNetwork,
-    disableNetwork: mockDisableNetwork,
-  }));
+  const mockModuleCallable = () => mockFirestoreModuleInstance as FirebaseFirestoreTypes.Module;
+
+  (mockModuleCallable as any).Timestamp = {
+    now: jest.fn(() => ({ seconds: Date.now() / 1000, nanoseconds: 0 })),
+    fromDate: jest.fn((date: Date) => ({ seconds: date.getTime() / 1000, nanoseconds: 0 })),
+  };
+  (mockModuleCallable as any).FieldValue = {
+    serverTimestamp: jest.fn(() => 'SERVER_TIMESTAMP'),
+  };
+
+  return {
+    __esModule: true,
+    default: jest.fn(mockModuleCallable),
+  };
 });
 
 describe('MobileOfflineSync', () => {
@@ -27,17 +50,22 @@ describe('MobileOfflineSync', () => {
     jest.clearAllMocks();
     (NetInfo.addEventListener as jest.Mock).mockImplementation(callback => {
       netInfoCallback = callback;
-      return () => {};
+      return () => {
+        // No-op function for unsubscribe
+      };
     });
 
-    mockFirestoreInstance = firestore() as unknown as FirebaseFirestoreTypes.Module;
+    // Directly call the imported module, relying on Jest's mock for the default export.
+    // Cast to any to bypass TypeScript's strict type checking for the call itself,
+    // as Jest will resolve the default mock function at runtime.
+    mockFirestoreInstance = (firestoreModule as any)();
 
     offlineSync = new MobileOfflineSync(mockFirestoreInstance);
   });
 
   describe('initialization', () => {
     it('should initialize with default values', async () => {
-      (AsyncStorage.getItem as jest.Mock)
+      (AsyncStorage.default.getItem as jest.Mock)
         .mockResolvedValueOnce(null) // OFFLINE_SYNC
         .mockResolvedValueOnce(null) // PENDING_OPERATIONS
         .mockResolvedValueOnce(null); // RETRY_ATTEMPTS
@@ -60,7 +88,7 @@ describe('MobileOfflineSync', () => {
         }
       ];
 
-      (AsyncStorage.getItem as jest.Mock)
+      (AsyncStorage.default.getItem as jest.Mock)
         .mockResolvedValueOnce('true') // OFFLINE_SYNC
         .mockResolvedValueOnce(JSON.stringify(mockOperations)) // PENDING_OPERATIONS
         .mockResolvedValueOnce(null); // RETRY_ATTEMPTS

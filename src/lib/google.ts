@@ -1,4 +1,4 @@
-import type { UserProfile } from '../types';
+import type { UserProfile } from '../types.ts';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile',

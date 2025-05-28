@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { useLocalSearchParams, useRouter, Link } from 'expo-router';
-import { Show, Act, Scene, Venue, Contact } from '@/types/index';
-import { Prop } from '@/shared/types/props';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Edit, Trash2, Plus, Package } from 'lucide-react-native';
-import { Pencil, ArrowLeft, UserMinus } from 'lucide-react';
+import { View, Text, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, StyleSheet, Platform, FlatList, TextInput, Modal } from 'react-native';
+import { Link, useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index.ts';
+import { Prop } from '../shared/types/props.ts';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { Edit, Package } from 'lucide-react-native';
+import { Pencil, ArrowLeft, UserMinus, Plus, Trash2 } from 'lucide-react';
+import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { darkTheme, lightTheme } from '../theme.ts';
+import type { FirebaseDocument } from '../shared/services/firebase/types.ts';
+import { useTheme } from '../contexts/ThemeContext.tsx';
 
 export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => void }) {
   const { service: firebaseService } = useFirebase();
@@ -24,7 +28,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
 
     const unsubscribeShow = firebaseService.listenToDocument<Show>(
       `shows/${id}`,
-      (doc) => {
+      (doc: FirebaseDocument<Show> | null) => {
         if (doc && doc.data) {
           setShow({ ...doc.data, id: doc.id } as Show);
           setError(null);
@@ -33,7 +37,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           setError('Show not found.');
         }
       },
-      (err) => {
+      (err: Error) => {
         console.error('Error fetching show:', err);
         setError('Failed to load show details.');
         setShow(null);
@@ -43,10 +47,10 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
 
     const unsubscribeProps = firebaseService.listenToCollection<Prop>(
       'props',
-      (docs) => {
+      (docs: FirebaseDocument<Prop>[]) => {
         let totalValue = 0;
         let totalWeight = 0;
-        docs.forEach(doc => {
+        docs.forEach((doc: FirebaseDocument<Prop>) => {
           const propData = doc.data;
           if (propData) {
             totalValue += (propData.price || 0) * (propData.quantity || 1);
@@ -56,7 +60,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
         setPropStats({ totalProps: docs.length, totalValue, totalWeight });
         setLoading(false);
       },
-      (err) => {
+      (err: Error) => {
         console.error('Error fetching props for stats:', err);
         setLoading(false);
       },
@@ -374,7 +378,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Collaborators</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {show.collaborators.map((collaborator, index) => (
+              {show.collaborators.map((collaborator: ShowCollaborator, index: number) => (
                 <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
                   <p className="font-medium text-[var(--text-primary)]">{collaborator.email}</p>
                   <p className="text-sm text-[var(--text-secondary)]">Role: {collaborator.role}</p>
@@ -430,7 +434,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
               Collaborators
             </h2>
             <div className="space-y-4">
-              {show.collaborators.map((collaborator, index) => (
+              {show.collaborators.map((collaborator: ShowCollaborator, index: number) => (
                 <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg border-l-4 border-primary">
                   <div className="flex items-center justify-between">
                     <div>

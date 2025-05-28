@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 // import { authorize } from './auth'; // Commented out: Cannot find module
-import type { Prop } from '@shared/types';
+import type { Prop } from '../shared/types/props.ts';
 
 function convertToCSV(props: Prop[]): string {
   // Define headers
@@ -82,8 +82,8 @@ function convertToCSV(props: Prop[]): string {
   const escapeField = (field: string): string => {
     if (field === null || field === undefined) return ''; // Handle null/undefined
     const strField = String(field); // Ensure it's a string
-    if (strField.includes(',') || strField.includes('\"') || strField.includes('\n')) {
-      return `\"${strField.replace(/\"/g, '\"\"')}\"`;
+    if (strField.includes(',') || strField.includes('"') || strField.includes('\n')) {
+      return `"${strField.replace(/"/g, '""')}"`;
     }
     return strField;
   };

@@ -17,31 +17,36 @@ const Sidebar = () => {
   return (
     <div className="w-64 h-screen bg-white dark:bg-dark-card-bg text-gray-900 dark:text-dark-text-primary flex flex-col p-4 shadow-lg border-r border-gray-200 dark:border-dark-border">
       <div className="mb-8 flex items-center justify-center h-16 flex-shrink-0">
-        {/* Placeholder for Logo - replace with actual logo if available */}
-        {/* <img className="h-8 w-auto" src="/path/to/logo.svg" alt="Props Bible Logo" /> */}
-        <h2 className="text-xl font-semibold">Props Bible</h2>
+        {/* Logo removed, new link will be part of the nav */}
       </div>
       <nav className="flex-grow space-y-1">
-        <Link 
-          href="/props" 
+        <Link
+          href="/props"
           className={`${baseLinkClasses} ${isActive('/props') ? activeLinkClasses : inactiveLinkClasses}`}
         >
           <Box className={iconClasses} />
           Props
         </Link>
-        <Link 
-          href="/shows" 
+        <Link
+          href="/shows"
           className={`${baseLinkClasses} ${isActive('/shows') ? activeLinkClasses : inactiveLinkClasses}`}
         >
           <Calendar className={iconClasses} />
           Shows
         </Link>
-        <Link 
-          href="/packing" 
+        <Link
+          href="/packing"
           className={`${baseLinkClasses} ${isActive('/packing') ? activeLinkClasses : inactiveLinkClasses}`}
         >
           <Package className={iconClasses} />
           Packing
+        </Link>
+        <Link
+          href="/todos" // Points to the new Task Boards tab
+          className={`${baseLinkClasses} ${isActive('/todos') ? activeLinkClasses : inactiveLinkClasses}`}
+        >
+          <Package className={iconClasses} /> {/* Using Package icon for now */}
+          Task Boards
         </Link>
         {/* Add other navigation items here using the same pattern */}
       </nav>

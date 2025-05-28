@@ -1,4 +1,4 @@
-import { PackingContainer } from '../services/inventory/packListService';
+import { PackingContainer } from '../services/inventory/packListService.ts';
 
 export interface PackingBoxCardBaseProps {
   container: PackingContainer;

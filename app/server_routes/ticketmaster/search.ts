@@ -1,4 +1,4 @@
-import { type ExpoRequest } from 'expo-router/server';
+// import { type ExpoRequest } from 'expo-router/server'; // Using global Request type instead
 
 // Use the non-prefixed variable for server-side access
 const API_KEY = process.env.TICKETMASTER_API_KEY; 

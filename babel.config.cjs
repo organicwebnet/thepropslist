@@ -11,7 +11,7 @@ module.exports = function (api) {
       [
         'module-resolver',
         {
-          root: ['./src'],
+          root: ['.'],
           extensions: ['.ios.js', '.android.js', '.js', '.ts', '.tsx', '.json'],
           alias: {
             "@shared": "./src/shared",
@@ -21,10 +21,24 @@ module.exports = function (api) {
             "@assets": "./assets",
             "@platforms": "./src/platforms",
             // Add other aliases from tsconfig.json if needed
+            "@": "./src",
+            "@contexts": "./src/contexts",
+            "@hooks": "./src/hooks",
+            "@services": "./src/services",
+            "@config": "./src/config",
+            "@types": "./src/types"
           }
         }
       ],
       // "react-native-reanimated/plugin", // Temporarily commented out
+      ['module:react-native-dotenv', { // Added react-native-dotenv plugin
+        moduleName: '@env',
+        path: '.env',
+        blacklist: null,
+        whitelist: null,
+        safe: false,
+        allowUndefined: true
+      }]
     ],
     env: {
       production: {

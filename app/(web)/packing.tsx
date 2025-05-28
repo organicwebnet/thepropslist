@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { useShows } from '../../src/contexts/ShowsContext';
-import { useProps } from '../../src/contexts/PropsContext'; 
-import { PackingPage } from '../../src/pages/PackingPage';
+import { useShows } from '../../src/contexts/ShowsContext.tsx';
+import { useProps } from '../../src/contexts/PropsContext.tsx'; 
+import { PackingPage } from '../../src/pages/PackingPage.tsx';
 
 // Renders the PackingPage component directly for the web route
 export default function WebPackingScreen() {

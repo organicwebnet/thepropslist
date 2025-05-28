@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext'; // Adjust path if needed
-import { useTheme } from '@/contexts/ThemeContext'; // Import useTheme
+import { useAuth } from '../../../src/contexts/AuthContext.tsx'; // Adjust path if needed
+import { useTheme } from '../../../src/contexts/ThemeContext.tsx'; // Import useTheme
 
 // Renaming to WebProfileScreen for clarity
 export default function WebProfileScreen() {

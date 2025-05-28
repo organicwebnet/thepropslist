@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { WebFirebaseService } from '../../platforms/web/services/firebase';
-import { OfflineSyncService } from '../../shared/services/firebase/offline';
+import { WebFirebaseService } from '../../platforms/web/services/firebase.ts';
+import { OfflineSyncService } from '../../shared/services/firebase/offline.ts';
 
 interface SyncStatus {
   isEnabled: boolean;

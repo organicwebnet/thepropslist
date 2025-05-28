@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, GitPullRequest, Bug, Lightbulb, Send, Upload, X } from 'lucide-react';
-import { WysiwygEditor } from './WysiwygEditor';
+import { WysiwygEditor } from './WysiwygEditor.tsx';
+const appConfigFunction = require('../../app.config.js'); // Import the function using require
+import { useAuth } from '../contexts/AuthContext.tsx';
 
 // GitHub repository details - update these with your actual repo info
 const GITHUB_REPO_OWNER = 'organicweb';
@@ -14,21 +16,33 @@ const GITHUB_LABELS = {
 interface FeedbackFormProps {
   onClose: () => void;
   userEmail?: string;
+  onSubmit: (feedbackData: {
+    feedbackType: string;
+    description: string;
+    screenshot?: string; // Optional screenshot URL or base64 string
+    userId?: string; // Optional user ID
+    appVersion?: string; // Optional app version
+    platformInfo?: string; // Optional platform info (OS, device model)
+  }) => void;
+  initialFeedbackType?: string;
+  initialDescription?: string;
 }
 
 type FeedbackType = 'bug' | 'feature' | 'feedback';
 
-export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
-  const [type, setType] = useState<FeedbackType>('feedback');
+export function FeedbackForm({ onClose, userEmail, onSubmit, initialFeedbackType = 'general', initialDescription = '' }: FeedbackFormProps) {
+  const [type, setType] = useState<string>(initialFeedbackType);
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState<string>(initialDescription);
   const [email, setEmail] = useState(userEmail || '');
-  const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [screenshot, setScreenshot] = useState<string | undefined>(undefined);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [deviceInfo, setDeviceInfo] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const { user } = useAuth();
+  const APP_CONFIG = appConfigFunction({ config: {} }); // Call the function to get the config
 
   // Collect device information on component mount
   useEffect(() => {
@@ -77,7 +91,6 @@ export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
         return;
       }
       
-      setScreenshot(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setScreenshotPreview(e.target?.result as string);
@@ -87,7 +100,7 @@ export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
   };
 
   const removeScreenshot = () => {
-    setScreenshot(null);
+    setScreenshot(undefined);
     setScreenshotPreview(null);
   };
 
@@ -128,7 +141,7 @@ export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
       body += `## Details\n**Type:** ${type}\n**Email:** ${email || 'Not provided'}\n**Date:** ${new Date().toLocaleString()}\n\n_Submitted from Props Bible app_`;
       
       // Create GitHub issue URL with proper labels
-      const issueUrl = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent(GITHUB_LABELS[type])}`;
+      const issueUrl = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent(GITHUB_LABELS[type as FeedbackType])}`;
       
       // Open GitHub issue creation page in a new tab
       window.open(issueUrl, '_blank');
@@ -139,6 +152,16 @@ export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
       setTimeout(() => {
         onClose();
       }, 2000);
+      
+      // Call the onSubmit callback with the feedback data
+      onSubmit({
+        feedbackType: type,
+        description,
+        screenshot,
+        userId: user?.uid,
+        appVersion: APP_CONFIG.version,
+        platformInfo: deviceInfo
+      });
       
     } catch (error) {
       console.error('Error submitting feedback:', error);
@@ -241,8 +264,8 @@ export function FeedbackForm({ onClose, userEmail }: FeedbackFormProps) {
             </label>
             <WysiwygEditor
               value={description}
-              onChange={(value) => setDescription(value)}
-              placeholder={type === 'bug' ? 'Steps to reproduce, expected vs. actual behavior...' : 'Details about your idea...'}
+              onChange={setDescription}
+              placeholder="Describe the issue or your suggestion in detail..."
               minHeight={150}
             />
           </div>

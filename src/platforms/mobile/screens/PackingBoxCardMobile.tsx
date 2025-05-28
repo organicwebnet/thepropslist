@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Share } from 'react-native';
-import { PackingContainer } from '../../../shared/services/inventory/packListService';
-import { PrintLabelButton } from '../../../shared/components/PropCard/PrintLabelButton';
-import { PackingBoxCardBaseProps, PackingBoxState, generateContainerUrl, calculateIsHeavy } from '../../../shared/types/packing';
+import { PackingContainer } from '../../../shared/services/inventory/packListService.ts';
+import { PrintLabelButton } from '../../../shared/components/PropCard/PrintLabelButton.tsx';
+import { PackingBoxCardBaseProps, PackingBoxState, generateContainerUrl, calculateIsHeavy } from '../../../shared/types/packing.ts';
 
 export const PackingBoxCardMobile: React.FC<PackingBoxCardBaseProps> = ({
   container,
@@ -84,7 +84,7 @@ export const PackingBoxCardMobile: React.FC<PackingBoxCardBaseProps> = ({
 
       {container.labels.length > 0 && (
         <View style={styles.labelsContainer}>
-          {container.labels.map((label) => (
+          {container.labels.map((label: string) => (
             <View key={label} style={styles.label}>
               <Text style={styles.labelText}>{label}</Text>
             </View>

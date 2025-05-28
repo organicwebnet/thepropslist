@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { useRouter, usePathname, useFocusEffect } from 'expo-router';
 import { View, Text, FlatList, ActivityIndicator, Alert, Button, TextInput, TouchableOpacity, Platform } from 'react-native'; // Simplified imports, Added Platform
-import { ShowsContext } from '@/contexts/ShowsContext'; // Import ShowsContext
-import { useProps } from '@/contexts/PropsContext'; // Import useProps hook
-import type { Prop, PropCategory } from '@/shared/types/props';
-import { propCategories } from '@/shared/types/props';
-import type { Show, Act, Scene } from '@/types/index'; // Import Show, Act, Scene types
+import { ShowsContext } from '../../../src/contexts/ShowsContext.tsx'; // Import ShowsContext
+import { useProps } from '../../../src/contexts/PropsContext.tsx'; // Import useProps hook
+import type { Prop, PropCategory } from '../../../src/shared/types/props.ts';
+import { propCategories } from '../../../src/shared/types/props.ts';
+import type { Show, Act, Scene } from '../../../src/shared/services/firebase/types.ts'; // Import Show, Act, Scene types from firebase types
 import { PlusCircle, FileDown, FileText, CopyX } from 'lucide-react'; // Changed to lucide-react for web
-import type { Show as SharedShow } from '@/shared/types/props'; // For comparison or specific use if needed
-import { WebPropCard } from '../../../src/platforms/web/components/WebPropCard';
-import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Import lifecycle types/labels
+import type { Show as SharedShow } from '../../../src/shared/types/props.ts'; // For comparison or specific use if needed
+import { WebPropCard } from '../../../src/platforms/web/components/WebPropCard.tsx'; // Corrected path and filename, changed to named import
+import { PropLifecycleStatus, lifecycleStatusLabels } from '../../../src/types/lifecycle.ts'; // Import lifecycle types/labels
 
 // --- Helper Function for Date Formatting ---
 const formatDateTime = (isoString: string | undefined): string => {
@@ -80,11 +80,6 @@ export default function WebPropsListPage() {
       setComponentError('Failed to delete prop. Please try again.'); // Set local error
     }
   }, [contextDeleteProp]);
-
-  const handleEdit = (id: string) => {
-    // Navigation remains the same
-    router.push({ pathname: '/props/[id]/edit', params: { id } });
-  };
 
   const handleAddNew = () => {
     if (!selectedShow || !selectedShow.id) {
@@ -372,8 +367,7 @@ export default function WebPropsListPage() {
             <WebPropCard
               key={prop.id}
               prop={prop}
-              onEdit={() => handleEdit(prop.id)}
-              onDelete={() => handleDelete(prop.id)}
+              onDelete={handleDelete}
             />
           ))}
         </View>

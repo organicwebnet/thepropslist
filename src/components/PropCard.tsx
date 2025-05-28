@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TouchableOpacity, View, Text, Image, StyleSheet, Platform } from 'react-native';
-import { Prop } from '@/shared/types/props';
+import { Prop } from '../shared/types/props.ts';
 import { Clock, HandCoins, Edit, Trash } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 // Temporarily comment out unused import to suppress linter error
 // import defaultImage from '../assets/images/prop-placeholder.png'; 
-import { PropLifecycleStatus } from '../types/lifecycle';
+import { PropLifecycleStatus } from '../types/lifecycle.ts';
+import { Link } from 'expo-router';
+import { formatDistanceToNow } from 'date-fns';
+import { Edit3, Trash2, Link2, Tag, Calendar, Layers, Package, ImageIcon, DollarSign, Hash, MapPin, Info } from 'lucide-react-native';
+import { HelpTooltip } from './HelpTooltip.tsx';
 
 interface PropCardProps {
   prop: Prop;

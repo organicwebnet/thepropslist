@@ -12,7 +12,9 @@ export interface CameraPermissions {
 export class CameraService {
   private static instance: CameraService;
 
-  private constructor() {}
+  private constructor() {
+    // Private constructor to prevent direct instantiation
+  }
 
   static getInstance(): CameraService {
     if (!CameraService.instance) {

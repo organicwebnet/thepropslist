@@ -1,8 +1,10 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { PackListManager } from '../PackListManager';
-import { PackListService, PackList, PackingContainer } from '../../../shared/services/inventory/packListService';
-import { InventoryService } from '../../../shared/services/inventory/inventoryService';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { PackListManager } from '../PackListManager.tsx';
+import { PackListService, PackList, PackingContainer } from '../../../shared/services/inventory/packListService.ts';
+import { InventoryService } from '../../../shared/services/inventory/inventoryService.ts';
+import { Show } from '../../../types/index.ts';
+import { UserProfile } from '../../../shared/types/auth.ts';
 
 // Mock services
 const mockPackListService: jest.Mocked<PackListService> = {
@@ -122,7 +124,7 @@ describe('PackListManager', () => {
       expect(screen.getByText('Create Pack List')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Create Pack List'));
+    fireEvent.press(screen.getByText('Create Pack List'));
 
     await waitFor(() => {
       expect(mockPackListService.createPackList).toHaveBeenCalled();
@@ -159,10 +161,10 @@ describe('PackListManager', () => {
     });
 
     // Select the pack list
-    fireEvent.click(screen.getByText('Test Pack List'));
+    fireEvent.press(screen.getByText('Test Pack List'));
 
     // Add container
-    fireEvent.click(screen.getByText('Add Container'));
+    fireEvent.press(screen.getByText('Add Container'));
 
     await waitFor(() => {
       expect(mockPackListService.addContainer).toHaveBeenCalled();
@@ -226,11 +228,11 @@ describe('PackListManager', () => {
     });
 
     // Select the pack list
-    fireEvent.click(screen.getByText('Test Pack List'));
+    fireEvent.press(screen.getByText('Test Pack List'));
 
     // Add prop to container
     const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: '1' } });
+    fireEvent.changeText(select, '1');
 
     await waitFor(() => {
       expect(mockPackListService.addPropToContainer).toHaveBeenCalledWith(

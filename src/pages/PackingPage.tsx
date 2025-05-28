@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { PackingList } from '../components/packing/PackingList';
-import { usePacking } from '../hooks/usePacking';
-import type { Prop } from '@shared/types';
-import type { Show } from '../types';
-import type { PackedProp, PackingBox } from '../types/packing';
+import { View, ActivityIndicator, StyleSheet, Text, ScrollView, Alert } from 'react-native';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
+import { PackingList } from '../components/packing/PackingList.tsx';
+import { usePacking } from '../hooks/usePacking.ts';
+import type { Prop } from '../shared/types/props.ts';
+import type { Show } from '../shared/services/firebase/types.ts';
+import type { PackedProp, PackingBox } from '../types/packing.ts';
+import { useTheme } from '../contexts/ThemeContext.tsx';
+import { lightTheme, darkTheme } from '../theme.ts';
 
 interface PackingPageProps {
   props: Prop[];

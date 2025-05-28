@@ -1,4 +1,4 @@
-import { Address } from './address'; // Import the new Address type
+import { Address } from './address.ts'; // Import the new Address type
 
 export enum UserRole {
   ADMIN = 'admin',

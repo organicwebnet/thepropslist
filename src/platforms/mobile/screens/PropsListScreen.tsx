@@ -4,15 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useFirebase } from '../../../contexts/FirebaseContext';
-import { useProps } from '../../../hooks/useProps';
+import { useFirebase } from '../../../contexts/FirebaseContext.tsx';
+import { useProps } from '../../../hooks/useProps.ts';
 import { ActivityIndicator, IconButton } from 'react-native-paper';
 import { FAB } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
-import PropCard from '../../../shared/components/PropCard';
-import { Filters } from '../../../types';
-import { Prop } from '@/shared/types/props';
-import { FirebaseDocument } from '../../../shared/services/firebase/types';
+import PropCard from '../../../shared/components/PropCard/index.tsx';
+import { Filters } from '../../../types/props.ts';
+import { Prop } from '../../../shared/types/props.ts';
+import { FirebaseDocument } from '../../../shared/services/firebase/types.ts';
+import { Stack, useRouter } from 'expo-router';
 
 type RootStackParamList = {
   PropsList: undefined;
@@ -29,19 +30,22 @@ export function PropsListScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filteredProps, setFilteredProps] = useState<Prop[]>([]);
 
   useEffect(() => {
     const unsubscribe = service.listenToCollection<Prop>(
       'props',
-      (documents) => {
+      (documents: FirebaseDocument<Prop>[]) => {
+        const propsData = documents.map(doc => ({ ...doc.data, id: doc.id }) as Prop);
         setProps(documents);
+        setFilteredProps(propsData);
         setError(null);
         setIsLoading(false);
         setRefreshing(false);
       },
-      (error) => {
-        console.error('Firestore subscription error:', error);
-        setError('Failed to sync props. Please check your connection.');
+      (error: Error) => {
+        console.error("Error fetching props:", error);
+        setError(error.message);
         setIsLoading(false);
         setRefreshing(false);
       }

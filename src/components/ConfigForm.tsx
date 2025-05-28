@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, CheckCircle, XCircle, HelpCircle, Sun, Moon, Type } from 'lucide-react';
+import { Settings, CheckCircle, XCircle, HelpCircle as HelpCircleIcon, Sun, Moon, Type } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
-import type { ConfigFormData, Currency } from '../types';
-import { useTheme } from '../contexts/ThemeContext';
+import { HelpTooltip } from './HelpTooltip.tsx';
+import { useTheme } from '../contexts/ThemeContext.tsx';
+import type { ConfigFormData, Currency } from '../types.ts';
 // import { useFont, FontOption } from '../contexts/FontContext'; // Commented out missing import
 
 const currencies: Currency[] = [
@@ -321,7 +322,7 @@ export function ConfigForm(): JSX.Element {
                               onMouseLeave={() => setActiveTooltip(null)}
                               className="text-gray-400 hover:text-gray-300"
                             >
-                              <HelpCircle className="h-4 w-4" />
+                              <HelpCircleIcon className="h-4 w-4" />
                             </button>
                             {activeTooltip === 'SHOW_NAME' && (
                               <div className="absolute z-[200] w-64 p-2 mt-1 text-sm text-left text-white bg-[#2A2A2A] rounded-lg shadow-lg -left-32 top-6 border border-gray-800">
@@ -350,7 +351,7 @@ export function ConfigForm(): JSX.Element {
                               onMouseLeave={() => setActiveTooltip(null)}
                               className="text-gray-400 hover:text-gray-300"
                             >
-                              <HelpCircle className="h-4 w-4" />
+                              <HelpCircleIcon className="h-4 w-4" />
                             </button>
                             {activeTooltip === 'SHOW_ACTS' && (
                               <div className="absolute z-[200] w-64 p-2 mt-1 text-sm text-left text-white bg-[#2A2A2A] rounded-lg shadow-lg -left-32 top-6 border border-gray-800">
@@ -379,7 +380,7 @@ export function ConfigForm(): JSX.Element {
                               onMouseLeave={() => setActiveTooltip(null)}
                               className="text-gray-400 hover:text-gray-300"
                             >
-                              <HelpCircle className="h-4 w-4" />
+                              <HelpCircleIcon className="h-4 w-4" />
                             </button>
                             {activeTooltip === 'SHOW_SCENES' && (
                               <div className="absolute z-[200] w-64 p-2 mt-1 text-sm text-left text-white bg-[#2A2A2A] rounded-lg shadow-lg -left-32 top-6 border border-gray-800">
@@ -415,7 +416,7 @@ export function ConfigForm(): JSX.Element {
                             onMouseLeave={() => setActiveTooltip(null)}
                             className="text-gray-400 hover:text-gray-300"
                           >
-                            <HelpCircle className="h-4 w-4" />
+                            <HelpCircleIcon className="h-4 w-4" />
                           </button>
                           {activeTooltip === 'CURRENCY' && (
                             <div className="absolute z-[200] w-64 p-2 mt-1 text-sm text-left text-white bg-[#2A2A2A] rounded-lg shadow-lg -left-32 top-6 border border-gray-800">
@@ -463,37 +464,31 @@ export function ConfigForm(): JSX.Element {
                         <div key={key} className="relative">
                           <div className="flex items-center mb-1">
                             <label className="block text-sm font-medium text-gray-300">
-                              {key.replace('FIREBASE_', '')}
+                              {key.replace(/_/g, ' ')}
                             </label>
-                            <div className="relative ml-2">
-                              <button
-                                type="button"
-                                onMouseEnter={() => setActiveTooltip(key)}
-                                onMouseLeave={() => setActiveTooltip(null)}
-                                className="text-gray-400 hover:text-gray-300"
-                              >
-                                <HelpCircle className="h-4 w-4" />
-                              </button>
-                              {activeTooltip === key && (
-                                <div className="absolute z-[200] w-64 p-2 mt-1 text-sm text-left text-white bg-[#2A2A2A] rounded-lg shadow-lg -left-32 top-6 border border-gray-800">
-                                  <p>{helpInfo[key].description}</p>
-                                  {helpInfo[key].link && (
-                                    <a
-                                      href={helpInfo[key].link}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="block mt-1 text-blue-400 hover:text-blue-300 relative z-[201]"
-                                    >
-                                      View in Console →
-                                    </a>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                            {helpInfo[key] && (
+                              <HelpTooltip 
+                                content={
+                                  <>
+                                    <p>{helpInfo[key].description}</p>
+                                    {helpInfo[key].link && (
+                                      <a 
+                                        href={helpInfo[key].link} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="block mt-1 text-blue-400 hover:text-blue-300"
+                                      >
+                                        View in Console →
+                                      </a>
+                                    )}
+                                  </>
+                                }
+                              />
+                            )}
                           </div>
                           <input
                             type="text"
-                            value={value}
+                            value={String(value ?? '')}
                             onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
                             className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder={`Enter your ${key.toLowerCase().replace(/_/g, ' ')}`}
@@ -518,37 +513,31 @@ export function ConfigForm(): JSX.Element {
                         <div key={key} className="relative">
                           <div className="flex items-center mb-1">
                             <label className="block text-sm font-medium text-gray-300">
-                              {key.replace('GOOGLE_', '')}
+                              {key.replace(/_/g, ' ')}
                             </label>
-                            <div className="relative ml-2">
-                              <button
-                                type="button"
-                                onMouseEnter={() => setActiveTooltip(key)}
-                                onMouseLeave={() => setActiveTooltip(null)}
-                                className="text-gray-400 hover:text-gray-300"
-                              >
-                                <HelpCircle className="h-4 w-4" />
-                              </button>
-                              {activeTooltip === key && (
-                                <div className="absolute z-[200] w-64 p-2 mt-1 text-sm text-left text-white bg-[#2A2A2A] rounded-lg shadow-lg -left-32 top-6 border border-gray-800">
-                                  <p>{helpInfo[key].description}</p>
-                                  {helpInfo[key].link && (
-                                    <a
-                                      href={helpInfo[key].link}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="block mt-1 text-blue-400 hover:text-blue-300 relative z-[201]"
-                                    >
-                                      View in Console →
-                                    </a>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                            {helpInfo[key] && (
+                              <HelpTooltip 
+                                content={
+                                  <>
+                                    <p>{helpInfo[key].description}</p>
+                                    {helpInfo[key].link && (
+                                      <a 
+                                        href={helpInfo[key].link} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="block mt-1 text-blue-400 hover:text-blue-300"
+                                      >
+                                        View in Console →
+                                      </a>
+                                    )}
+                                  </>
+                                }
+                              />
+                            )}
                           </div>
                           <input
                             type="text"
-                            value={value}
+                            value={String(value ?? '')}
                             onChange={(e) => setConfig({ ...config, [key]: e.target.value })}
                             className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder={`Enter your ${key.toLowerCase().replace(/_/g, ' ')}`}

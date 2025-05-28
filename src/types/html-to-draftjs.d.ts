@@ -3,7 +3,7 @@ declare module 'html-to-draftjs' {
   
   interface ContentBlockResponse {
     contentBlocks: ContentBlock[];
-    entityMap: {};
+    entityMap: Record<string, any>;
   }
 
   export default function htmlToDraft(html: string): ContentBlockResponse;

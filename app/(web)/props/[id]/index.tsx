@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ActivityIndicator, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter, Link } from 'expo-router';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import type { Prop } from '@/shared/types/props';
-import { PropLifecycleStatus, PropStatusUpdate as PropStatusUpdateType, MaintenanceRecord as MaintenanceRecordType } from '@/types/lifecycle';
+import { useFirebase } from '../../../../src/contexts/FirebaseContext.tsx';
+import type { Prop } from '../../../../src/shared/types/props.ts';
+import { PropLifecycleStatus, PropStatusUpdate as PropStatusUpdateType, MaintenanceRecord as MaintenanceRecordType } from '../../../../src/types/lifecycle.ts';
 import { Pencil, Trash2, ArrowLeft, Wrench, History, ClipboardList, CheckCircle, XCircle, FileText, Video as VideoIcon } from 'lucide-react';
 
 // Import Lifecycle Components
-import { PropStatusUpdate } from '@/components/lifecycle/PropStatusUpdate';
-import { StatusHistory } from '@/components/lifecycle/StatusHistory';
-import { MaintenanceRecordForm } from '@/components/lifecycle/MaintenanceRecordForm';
-import { MaintenanceHistory } from '@/components/lifecycle/MaintenanceHistory';
+import { PropStatusUpdate } from '../../../../src/components/lifecycle/PropStatusUpdate.tsx';
+import { StatusHistory } from '../../../../src/components/lifecycle/StatusHistory.tsx';
+import { MaintenanceRecordForm } from '../../../../src/components/lifecycle/MaintenanceRecordForm.tsx';
+import { MaintenanceHistory } from '../../../../src/components/lifecycle/MaintenanceHistory.tsx';
 
 // Helper to format dates (Example)
 const formatDate = (dateString: string | undefined | null): string => {
@@ -27,17 +27,10 @@ function isValidImageSource(source: any): source is { uri: string } {
   return typeof source === 'object' && source !== null && typeof source.uri === 'string';
 }
 
-// Extend Prop type locally for state (adjust actual type definition later)
+// Extend Prop type locally for state
 interface PropWithHistory extends Prop {
   statusHistory?: PropStatusUpdateType[];
   maintenanceHistory?: MaintenanceRecordType[];
-  isModified?: boolean;
-  modificationDetails?: string;
-  modifiedAt?: string | null;
-  rentalSource?: string;
-  rentalReferenceNumber?: string;
-  travelsUnboxed?: boolean;
-  statusNotes?: string;
 }
 
 export default function WebPropDetailScreen() {

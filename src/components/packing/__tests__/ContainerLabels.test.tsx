@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ContainerLabels } from '../ContainerLabels';
-import { PackingContainer } from '../../../shared/services/inventory/packListService';
+import { render, screen, fireEvent } from '@testing-library/react-native';
+import { ContainerLabels } from '../ContainerLabels.tsx';
+import { PackingContainer } from '../../../shared/services/inventory/packListService.ts';
 
 describe('ContainerLabels', () => {
   const mockContainer: PackingContainer = {
@@ -47,8 +47,8 @@ describe('ContainerLabels', () => {
     const input = screen.getByPlaceholderText('Add a label...');
     const addButton = screen.getByText('Add');
 
-    fireEvent.change(input, { target: { value: 'New Label' } });
-    fireEvent.click(addButton);
+    fireEvent.changeText(input, 'New Label');
+    fireEvent.press(addButton);
 
     expect(mockOnUpdateLabels).toHaveBeenCalledWith([
       'Fragile',
@@ -67,8 +67,8 @@ describe('ContainerLabels', () => {
 
     const input = screen.getByPlaceholderText('Add a label...');
 
-    fireEvent.change(input, { target: { value: 'New Label' } });
-    fireEvent.keyPress(input, { key: 'Enter', code: 13, charCode: 13 });
+    fireEvent.changeText(input, 'New Label');
+    fireEvent(input, 'keyPress', { key: 'Enter', code: 13, charCode: 13 });
 
     expect(mockOnUpdateLabels).toHaveBeenCalledWith([
       'Fragile',
@@ -86,7 +86,7 @@ describe('ContainerLabels', () => {
     );
 
     const addButton = screen.getByText('Add');
-    fireEvent.click(addButton);
+    fireEvent.press(addButton);
 
     expect(screen.getByText('Label cannot be empty')).toBeInTheDocument();
     expect(mockOnUpdateLabels).not.toHaveBeenCalled();
@@ -103,8 +103,8 @@ describe('ContainerLabels', () => {
     const input = screen.getByPlaceholderText('Add a label...');
     const addButton = screen.getByText('Add');
 
-    fireEvent.change(input, { target: { value: 'Fragile' } });
-    fireEvent.click(addButton);
+    fireEvent.changeText(input, 'Fragile');
+    fireEvent.press(addButton);
 
     expect(screen.getByText('Label already exists')).toBeInTheDocument();
     expect(mockOnUpdateLabels).not.toHaveBeenCalled();
@@ -119,7 +119,7 @@ describe('ContainerLabels', () => {
     );
 
     const removeButtons = screen.getAllByText('×');
-    fireEvent.click(removeButtons[0]); // Remove 'Fragile'
+    fireEvent.press(removeButtons[0]);
 
     expect(mockOnUpdateLabels).toHaveBeenCalledWith(['Heavy']);
   });
@@ -135,10 +135,10 @@ describe('ContainerLabels', () => {
     const input = screen.getByPlaceholderText('Add a label...');
     const addButton = screen.getByText('Add');
 
-    fireEvent.change(input, { target: { value: 'New Label' } });
-    fireEvent.click(addButton);
+    fireEvent.changeText(input, 'New Label');
+    fireEvent.press(addButton);
 
-    expect(input).toHaveValue('');
+    expect(input.value).toBe('');
   });
 
   it('trims whitespace from labels', () => {
@@ -152,8 +152,8 @@ describe('ContainerLabels', () => {
     const input = screen.getByPlaceholderText('Add a label...');
     const addButton = screen.getByText('Add');
 
-    fireEvent.change(input, { target: { value: '  New Label  ' } });
-    fireEvent.click(addButton);
+    fireEvent.changeText(input, '  New Label  ');
+    fireEvent.press(addButton);
 
     expect(mockOnUpdateLabels).toHaveBeenCalledWith([
       'Fragile',

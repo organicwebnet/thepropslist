@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { NativePropForm } from '@/components/NativePropForm';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { type Prop, type PropFormData } from '@/shared/types/props';
+import { NativePropForm } from '@/components/NativePropForm.tsx';
+import { useFirebase } from '@/contexts/FirebaseContext.tsx';
+import { useAuth } from '@/contexts/AuthContext.tsx';
+import { type Prop, type PropFormData } from '@/shared/types/props.ts';
 
 export default function AddPropScreen() {
   const router = useRouter();

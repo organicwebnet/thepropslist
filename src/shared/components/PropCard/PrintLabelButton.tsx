@@ -1,7 +1,7 @@
 import React from 'react';
-import { Platform, TouchableOpacity, Text } from 'react-native';
-import { PackingLabel } from '../../services/inventory/packListService';
-import { LabelPrintService } from '../../services/pdf/labelPrintService';
+import { Platform, TouchableOpacity, Text, StyleSheet, ViewStyle, StyleProp, TextStyle } from 'react-native';
+import { PackingLabel } from '../../services/inventory/packListService.ts';
+import { LabelPrintService } from '../../services/pdf/labelPrintService.ts';
 
 interface PrintLabelButtonProps {
   label: PackingLabel;

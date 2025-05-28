@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { PropInstance } from './PackingList.native'; // Assuming PropInstance is defined here or adjust import
+import { PropInstance } from './PackingList.native.tsx';
 import { CheckSquare, Square } from 'lucide-react-native'; // For selection indication
 
 interface PropSelectorNativeProps {

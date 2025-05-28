@@ -1,10 +1,10 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Home } from '../pages/Home';
-import PropDetailPage from '../pages/PropDetailPage';
-import ShowDetailPage from '../pages/ShowDetailPage';
-import type { RootStackParamList } from './types';
+import { Home } from '../pages/Home.tsx';
+import PropDetailPage from '../pages/PropDetailPage.tsx';
+import ShowDetailPage from '../pages/ShowDetailPage.tsx';
+import type { RootStackParamList } from './types.ts';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';

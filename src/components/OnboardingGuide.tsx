@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, X, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useFirebase } from '../contexts/FirebaseContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import { UserRole } from '../shared/types/auth.ts';
 import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
+import { View, Text, Button, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 
 interface OnboardingGuideProps {
   show: boolean;

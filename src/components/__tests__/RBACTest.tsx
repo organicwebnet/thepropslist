@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { UserRole, UserPermissions } from '../../shared/types/auth';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import { UserRole, UserPermissions } from '../../shared/types/auth.ts';
 
 const RBACTest: React.FC = () => {
   const { user, userProfile, signOut, permissions, error, loading } = useAuth();
@@ -18,7 +18,7 @@ const RBACTest: React.FC = () => {
     ];
 
     for (const permissionKey of permissionsToTest) {
-      results[permissionKey] = !!permissions[permissionKey];
+      results[permissionKey as string] = !!permissions[permissionKey];
     }
 
     setTestResults(results);

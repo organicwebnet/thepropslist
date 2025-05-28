@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { ActivityIndicator, Text, View, Button } from 'react-native'; // Correct import for ActivityIndicator and Button
 // Import PackingBox/PackedProp from correct sub-directory
-import { PackingBox, PackedProp } from '../../types/packing'; 
-import { Show } from '../../types'; // Keep Show from main types
-import { Prop } from '@/shared/types/props'; // Import correct Prop type
-import { PackingBoxCard } from './PackingBoxCard';
-import { PropSelector } from './PropSelector';
-import { X, Clock, HandCoins, Package, PackageOpen } from 'lucide-react'; 
+import { PackingBox, PackedProp } from '../../types/packing.ts'; 
+import { Show } from '../../types/index.ts'; // Keep Show from main types
+import { Prop } from '../../shared/types/props.ts'; // Import correct Prop type
+import { PackingBoxCard } from './PackingBoxCard.tsx';
+import { PropSelector } from './PropSelector.tsx';
+import { X, Clock, HandCoins, Package, PackageOpen, AlertTriangle } from 'lucide-react'; 
 import { Timestamp } from 'firebase/firestore';
 // Add import for PackingContainer used in casting
-import { PackingContainer } from '../../shared/services/inventory/packListService';
+import { PackingContainer } from '../../shared/services/inventory/packListService.ts';
 
 // Define PropInstance based on the imported Prop type
 interface PropInstance extends Prop { // Extend the imported Prop type
@@ -64,8 +64,7 @@ export function PackingList({
     setPropInstances(prevInstances => {
       const packedPropIds = new Set<string>();
       boxes.forEach(box => {
-        box.props?.forEach(packedProp => {
-          // Assuming PackedProp has propId and quantity
+        box.props?.forEach((packedProp: PackedProp) => {
           for (let i = 0; i < (packedProp.quantity || 1); i++) {
             packedPropIds.add(`${packedProp.propId}-${i}`);
           }
@@ -186,7 +185,7 @@ export function PackingList({
 
     // Find the corresponding PropInstance objects for the props in the box
     const propsToSelect: PropInstance[] = [];
-    box.props?.forEach(packedProp => {
+    box.props?.forEach((packedProp: PackedProp) => {
       const matchingInstances = propInstances.filter(inst => inst.id === packedProp.propId);
       for (let i = 0; i < (packedProp.quantity || 1); i++) {
         const instanceId = `${packedProp.propId}-${i}`;

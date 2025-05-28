@@ -6,6 +6,9 @@ import { Auth as FirebaseAuthJs, User as FirebaseUserJs } from 'firebase/auth'; 
 import { Firestore as WebFirestore, DocumentReference as WebDocumentReference, CollectionReference as WebCollectionReference, Timestamp as WebTimestamp, DocumentData } from 'firebase/firestore'; // Corrected import for WebFirestore and added DocumentData
 import { FirebaseAuthTypes } from '@react-native-firebase/auth'; // For RN Firebase User type if needed for mobile-specific parts
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore'; // Import RN Firestore types
+import { Address } from '../../types/address.ts'; // Corrected import path for the detailed Address type
+import { WhereFilterOp } from 'firebase/firestore'; // Make sure this is imported
+import { Prop } from '../../types/props.ts'; // Import Prop type
 
 // Placeholder Types - Define the actual structure later based on usage
 // export type CustomAuth = any; // Placeholder - REPLACED BELOW
@@ -138,7 +141,6 @@ export class FirebaseError extends Error {
 
 // Define QueryOptions type here as well, mirroring the implementation
 // (Alternatively, define it once and import it here and in WebFirebaseService)
-import { WhereFilterOp } from 'firebase/firestore'; // Make sure this is imported
 /**
  * A type representing the options for querying Firestore collections.
  * Allows specifying filtering, ordering, and limiting of query results.
@@ -198,6 +200,7 @@ export interface FirebaseService {
   disableSync?(): Promise<void>;
   // Add Show specific methods
   deleteShow(showId: string): Promise<void>;
+  getPropsByShowId(showId: string): Promise<FirebaseDocument<Prop>[]>; // Added method
 }
 
 // Modify Show interface to use CustomTimestamp
@@ -271,11 +274,11 @@ export interface ShowCollaborator {
     addedBy: string; // User email or ID
 }
 
-export interface Address { // Basic structure
-    street1?: string;
-    street2?: string;
-    city?: string;
-    state?: string;
-    postalCode?: string;
-    country?: string;
-} 
+// export interface Address { // Basic structure -- REMOVE THIS OLD DEFINITION
+//     street1?: string;
+//     street2?: string;
+//     city?: string;
+//     state?: string;
+//     postalCode?: string;
+//     country?: string;
+// } 

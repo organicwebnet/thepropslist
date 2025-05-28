@@ -1,95 +1,99 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator, Alert, ScrollView, Button, FlatList, RefreshControl, TextInput } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { PropList } from '../components/PropList';
-import type { RootStackParamList, RootStackScreenProps } from '../navigation/types';
-import type { Filters } from '../types';
-import type { Prop } from '@shared/types';
-import { Plus } from 'phosphor-react-native';
+import { Link, useRouter, Stack } from 'expo-router';
+import { PropList } from '../components/PropList.tsx';
+import type { RootStackParamList, RootStackScreenProps } from '../navigation/types.ts';
+import type { Filters } from '../types/props.ts';
+import type { Prop } from '../shared/types/props.ts';
+import { Plus, PlusCircle } from 'phosphor-react-native';
 import { useLayoutEffect } from 'react';
-import { useProps } from '../hooks/useProps';
-import firestore from '@react-native-firebase/firestore';
-import { useAuth } from '../contexts/AuthContext';
-import type { Show } from '../types';
-import { useFirebase } from '@/contexts/FirebaseContext';
+import { useProps } from '../hooks/useProps.ts';
+import { useShows } from '../contexts/ShowsContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
+import type { Show } from '../types/index.ts';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 export function Home({ navigation }: RootStackScreenProps<'Home'>) {
-  const [filters, setFilters] = React.useState<Filters>({
-    search: '',
-  });
-  const [showId, setShowId] = React.useState<string | null>(null);
+  // const [filters, setFilters] = React.useState<Filters>({
+  //   search: '',
+  // });
+  const [showId, /* setShowId */] = React.useState<string | null>(null); // setShowId appears unused
   const [isLoadingShows, setIsLoadingShows] = React.useState(true);
   const [connectionError, setConnectionError] = React.useState<string | null>(null);
-  const [showData, setShowData] = useState<Show | null>(null);
-  const { service } = useFirebase();
+  // const [showData, setShowData] = useState<Show | null>(null); // showData appears unused
+  const { user, loading: authLoading } = useAuth();
+  const { service, isInitialized, error: firebaseError } = useFirebase();
+  const router = useRouter();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentShowId, setCurrentShowId] = useState<string | null>(null);
+  const { props, loading: propsLoading, error: propsError, /* addProp */ } = useProps(currentShowId || undefined); // addProp appears unused
 
-  // Test Firebase connection
-  React.useEffect(() => {
-    const testConnection = async () => {
+  const loadShowsAndSetFirst = useCallback(async () => {
+    if (user && service && isInitialized) {
+      setIsLoadingShows(true);
       try {
-        console.log('Testing Firebase connection...');
-        const testQuery = await firestore().collection('shows').limit(1).get();
-        console.log('Firebase connection successful, got response:', !testQuery.empty);
-        setConnectionError(null);
-      } catch (error) {
-        console.error('Firebase connection error:', error);
-        setConnectionError(error instanceof Error ? error.message : 'Unknown error');
-      }
-    };
-    testConnection();
-  }, []);
-
-  // Fetch the first available show
-  React.useEffect(() => {
-    const fetchFirstShow = async () => {
-      try {
-        const showsSnapshot = await firestore().collection('shows').get();
-        if (!showsSnapshot.empty) {
-          const firstShow = showsSnapshot.docs[0];
-          setShowId(firstShow.id);
+        const showDocuments = await service.getDocuments<{ name: string }>('shows', { limit: 1 });
+        if (showDocuments.length > 0) {
+          const firstShowDoc = showDocuments[0];
+          setCurrentShowId(firstShowDoc.id);
+        } else {
+          setCurrentShowId(null);
         }
-        setIsLoadingShows(false);
-      } catch (error) {
-        console.error('Error fetching shows:', error);
-        setIsLoadingShows(false);
+        setConnectionError(null);
+      } catch (err) {
+        console.error("Error fetching shows list:", err);
+        setConnectionError(err instanceof Error ? err.message : 'Failed to load shows');
+        setCurrentShowId(null);
       }
-    };
+      setIsLoadingShows(false);
+    }
+  }, [user, service, isInitialized, setCurrentShowId, setIsLoadingShows, setConnectionError]);
 
-    fetchFirstShow();
-  }, []);
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    setConnectionError(null);
+    if (!currentShowId && user && service && isInitialized) {
+      await loadShowsAndSetFirst();
+    }
+    setIsRefreshing(false);
+  }, [currentShowId, user, service, isInitialized, loadShowsAndSetFirst]);
 
-  // Use the useProps hook to fetch props
-  const { props, loading, error } = useProps(showId || undefined);
-
-  // Fetch Show data when showId changes
   useEffect(() => {
-    if (showId) {
+    loadShowsAndSetFirst();
+  }, [loadShowsAndSetFirst]);
+
+  // Fetch Show data when showId (for detailed display, not the props list) changes
+  useEffect(() => {
+    if (showId && service && isInitialized) { // Check service and isInitialized
       const fetchShow = async () => {
         try {
-          const docRef = firestore().collection('shows').doc(showId);
-          const docSnap = await docRef.get();
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setShowData({
-              id: docSnap.id,
-              ...data,
-              createdAt: data?.createdAt || new Date().toISOString(),
-              updatedAt: data?.updatedAt || new Date().toISOString(),
-            } as Show);
+          // Corrected: Use service.getDocument
+          const showDocument = await service.getDocument('shows', showId);
+          if (showDocument && showDocument.data) {
+            // const data = showDocument.data;
+            // setShowData({
+            //   id: showDocument.id,
+            //   ...data,
+            //   // Ensure createdAt and updatedAt are valid. Fallback to current date string if not present.
+            //   createdAt: data.createdAt || new Date().toISOString(), 
+            //   updatedAt: data.updatedAt || new Date().toISOString(),
+            // } as Show);
           } else {
-            console.log("No such document!");
-            setShowData(null); // Or handle error appropriately
+            console.log("No such document for showId:", showId);
+            // setShowData(null);
           }
         } catch (e) {
-          console.error("Error getting document:", e);
-          setShowData(null);
+          console.error("Error getting specific show document:", e);
+          // setShowData(null);
         }
       };
       fetchShow();
     } else {
-      setShowData(null);
+      // setShowData(null);
     }
-  }, [showId]);
+  }, [showId, service, isInitialized]); // Added showId and isInitialized to dependency array
 
   // Placeholder handlers for PropList (implement properly if needed)
   const handleNavigateToEditProp = (prop: Prop) => {
@@ -157,7 +161,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
         { text: 'Delete', style: 'destructive', onPress: async () => {
           try {
             await service.deleteShow(showId);
-            setShowData(null);
+            // setShowData(null);
             // Optionally navigate away or show a success message
           } catch (error) {
             console.error("Error deleting show:", error);
@@ -199,31 +203,83 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
     navigation.navigate('PackingDetail', { show: showWithDefaults });
   };
 
+  const deleteShow = async (showIdToDelete: string) => {
+    if (!user || !service || !isInitialized) return;
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to delete this show and all its props? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          onPress: async () => {
+            try {
+              await service.deleteDocument('shows', showIdToDelete);
+              if (currentShowId === showIdToDelete) {
+                setCurrentShowId(null);
+              }
+              Alert.alert("Show Deleted", "The show has been successfully deleted.");
+            } catch (error) {
+              console.error("Error deleting show:", error);
+              Alert.alert("Error", "Failed to delete show.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // The useEffect for re-fetching props when currentShowId changes is implicitly handled by useProps hook dependency array.
+  // No explicit fetchProps call needed here if currentShowId is a dependency of useProps.
+
+  // Fetch Show data (for a potentially different showId, for a different part of UI)
+  const [displayShowId, setDisplayShowId] = useState<string | null>(null); // Example: if another part of UI shows details of a show clicked from a list
+  const [displayShowData, setDisplayShowData] = useState<Show | null>(null);
+
+  useEffect(() => {
+    if (displayShowId && service && isInitialized) {
+      const fetchShowDetail = async () => {
+        try {
+          const showDoc = await service.getDocument('shows', displayShowId);
+          if (showDoc && showDoc.data) {
+            setDisplayShowData({ id: showDoc.id, ...showDoc.data } as Show); // Assuming Show type matches
+          } else {
+            setDisplayShowData(null);
+          }
+        } catch (e) {
+          console.error("Error getting specific show document:", e);
+          setDisplayShowData(null);
+        }
+      };
+      fetchShowDetail();
+    } else {
+      setDisplayShowData(null);
+    }
+  }, [displayShowId, service, isInitialized]);
+
+  if (authLoading || isLoadingShows) {
+    return <ActivityIndicator size="large" className="mt-20" />;
+  }
+
+  if (firebaseError) {
+    return <Text className="text-red-500 text-center mt-10">Error initializing Firebase: {firebaseError.message}</Text>;
+  }
   if (connectionError) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Firebase Error: {connectionError}</Text>
-      </View>
-    );
+    return <Text className="text-red-500 text-center mt-10">Connection Error: {connectionError}</Text>;
   }
 
-  if (isLoadingShows || loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#6366F1" />
-      </View>
-    );
+  if (!user) {
+    return <Text className="text-center mt-10">Please log in to view props.</Text>;
   }
 
-  if (error) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Error: {error.message}</Text>
-      </View>
-    );
+  if (propsError) {
+    return <Text className="text-red-500 text-center mt-10">Error loading props: {propsError.message}</Text>;
   }
 
-  if (!showId) {
+  if (!currentShowId) {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.messageText}>No shows found. Create a show to get started.</Text>
@@ -261,16 +317,43 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   }
 
   return (
-    <ScrollView>
-      <View style={styles.container}>
-        {showData && (
+    <ScrollView
+      className="flex-1 bg-gray-100 dark:bg-gray-900"
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
+    >
+      <Stack.Screen options={{ title: 'Props Home' }} />
+      <View className="p-4">
+        <Text className="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">
+          Props for Show ID: {currentShowId || 'No show selected'}
+        </Text>
+        
+        {propsLoading ? (
+          <ActivityIndicator size="large" />
+        ) : props && props.length > 0 ? (
           <PropList
             props={props}
-            onEdit={handleNavigateToEditProp}
-            onDelete={handleDeleteProp}
+            onEdit={(prop) => router.push(`/props/${prop.id}/edit`)}
+            onDelete={(id) => console.log('Delete prop', id)}
           />
+        ) : (
+          <Text className="text-center text-gray-600 dark:text-gray-400">
+            {currentShowId ? 'No props found for this show.' : 'Select a show to view props.'}
+          </Text>
         )}
       </View>
+
+      <TouchableOpacity
+        className="absolute bottom-6 right-6 bg-blue-500 p-4 rounded-full shadow-lg"
+        onPress={() => {
+          if (currentShowId) {
+            router.push('/props/create');
+          } else {
+            Alert.alert("No Show Selected", "Please select a show before adding a prop.");
+          }
+        }}
+      >
+        <PlusCircle size={24} color="white" />
+      </TouchableOpacity>
     </ScrollView>
   );
 }

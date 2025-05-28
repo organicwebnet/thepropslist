@@ -1,11 +1,13 @@
-import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './types/lifecycle';
-import { WeightUnit } from '@/shared/types/props';
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './types/lifecycle.ts';
+import { WeightUnit } from './shared/types/props.ts';
+import { Prop, PropCategory, PropFormData, PropImage, DigitalAsset, PropSource, DimensionUnit } from './shared/types/props.ts';
+import { Address } from './shared/types/address.ts';
 import authImport, { FirebaseAuthTypes, firebase as authFirebase } from '@react-native-firebase/auth';
 import firestoreImport, { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firestore';
-import { Address } from '@/shared/types/address';
 
-// Import the master types from src/types/index.ts
-export type { Show, Act, Scene, Venue, Contact, ShowCollaborator } from './types/index';
+// Re-export types from the more detailed new structure if they are intended to be public API
+export type { Show, Act, Scene, Venue, Contact, ShowCollaborator } from './types/index.ts';
+export type { PackingBox, PackedProp } from './types/packing.ts';
 
 // UserProfile remains unique to this file for now
 export interface UserProfile {
@@ -53,30 +55,6 @@ export interface ConfigFormData {
   SHOW_NAME: string;
   SHOW_ACTS: number;
   SHOW_SCENES: number;
-}
-
-export interface PackingBox {
-  id: string;
-  name: string;
-  showId: string;
-  actNumber: number;
-  sceneNumber: number;
-  props: PackedProp[];
-  totalWeight: number;
-  weightUnit: 'kg' | 'lb';
-  isHeavy: boolean;
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PackedProp {
-  propId: string;
-  name: string;
-  quantity: number;
-  weight: number;
-  weightUnit: WeightUnit;
-  isFragile: boolean;
 }
 
 export interface PackingListFilters {

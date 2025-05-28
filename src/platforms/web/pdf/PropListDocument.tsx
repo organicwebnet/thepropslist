@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Document, Page, View, Text, StyleSheet, Image } from '@react-pdf/renderer';
+import { Document, Page, View, Text, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
-import type { Prop } from '@/shared/types/props';
+import type { Prop } from '../../../shared/types/props.ts';
+import { Show } from '../../../types/index.ts'; // Corrected path for Show type
+
+// Define available fonts
+// ... existing code ...
 
 // --- QR Code Generation Hook (or Utility Function) ---
 // This generates the QR code data URL asynchronously

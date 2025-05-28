@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, onSnapshot, doc, serverTimestamp } from 'firebase/firestore';
-import { useFirebase } from '@/contexts/FirebaseContext';
-import type { Prop } from '@/shared/types/props';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import type { Prop } from '../shared/types/props.ts';
+import { useAuth } from '../contexts/AuthContext.tsx';
 
 export function useProps(showId: string | undefined) {
   const { service } = useFirebase();

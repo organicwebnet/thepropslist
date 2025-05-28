@@ -1,6 +1,6 @@
 import { User } from 'firebase/auth';
-import { FirebaseService, FirebaseDocument } from './types';
-import { UserRole, UserProfile, UserPermissions, DEFAULT_ROLE_PERMISSIONS } from '../../types/auth';
+import { FirebaseService, FirebaseDocument } from './types.ts';
+import { UserRole, UserProfile, UserPermissions, DEFAULT_ROLE_PERMISSIONS } from '../../types/auth.ts';
 
 export class AuthService {
   constructor(private firebase: FirebaseService) {}
@@ -48,8 +48,13 @@ export class AuthService {
     const now = new Date();
     // Use UserProfile directly, assuming uid is handled by the path/set logic
     // Ensure UserProfile allows optional fields like displayName, photoURL if needed
+
+    if (!user.email) {
+      throw new Error('User email is null, cannot create profile.');
+    }
+
     const profileData: Partial<UserProfile> = {
-      email: user.email!, 
+      email: user.email, 
       displayName: user.displayName ?? undefined, 
       photoURL: user.photoURL ?? undefined, // Keep photoURL
       role,

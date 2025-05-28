@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { WebFirebaseService } from '../../platforms/web/services/firebase';
+import { WebFirebaseService } from '../../platforms/web/services/firebase.ts';
 import { collection, addDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 interface TestStatus {

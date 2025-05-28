@@ -1,5 +1,5 @@
-import { Prop } from '@/shared/types/props';
-import { PropInstance } from './PackingList.native';
+import { Prop } from '../../shared/types/props.ts';
+import { PropInstance } from './PackingList.native.tsx';
 
 interface TemporaryPropInstance extends Prop { 
   instanceId: string; 

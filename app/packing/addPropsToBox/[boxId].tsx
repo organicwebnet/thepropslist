@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { usePacking } from '../../../src/hooks/usePacking';
-import { useProps } from '../../../src/contexts/PropsContext';
-import { Prop } from '../../../src/shared/types/props';
-import { PackingBox, PackedProp } from '../../../src/types/packing';
+import { usePacking } from '../../../src/hooks/usePacking.ts';
+import { useProps } from '../../../src/contexts/PropsContext.tsx';
+import { Prop } from '../../../src/shared/types/props.ts';
+import { PackingBox, PackedProp } from '../../../src/types/packing.ts';
 
 // Consistent dark theme colors
 const darkThemeColors = {
@@ -52,7 +52,7 @@ export default function AddPropsToBoxScreen() {
         } else {
           throw new Error('Box not found.');
         }
-      } catch (err) {
+      } catch (err: any) {
         Alert.alert('Error', `Failed to load box data: ${err instanceof Error ? err.message : 'Unknown error'}`);
         if(router.canGoBack()) router.back();
       } finally {
@@ -65,18 +65,18 @@ export default function AddPropsToBoxScreen() {
   useEffect(() => {
     if (propsCtxLoading || initialLoading) return; // Wait for both props and box to load
 
-    const existingPropIdsInBox = new Set(currentBox?.props.map(p => p.propId) || []);
+    const existingPropIdsInBox = new Set(currentBox?.props.map((p: PackedProp) => p.propId) || []);
     
     const availableProps = allShowProps
-      .filter(p => !existingPropIdsInBox.has(p.id)) // Filter out props already in the box
-      .map(p => ({ ...p, isSelected: false }));
+      .filter((p: Prop) => !existingPropIdsInBox.has(p.id))
+      .map((p: Prop): SelectableProp => ({ ...p, isSelected: false }));
     setSelectableProps(availableProps);
 
   }, [allShowProps, propsCtxLoading, currentBox, initialLoading]);
 
   const handleToggleSelectProp = (propId: string) => {
     setSelectableProps(prevProps =>
-      prevProps.map(p =>
+      prevProps.map((p: SelectableProp) =>
         p.id === propId ? { ...p, isSelected: !p.isSelected } : p
       )
     );
@@ -88,7 +88,7 @@ export default function AddPropsToBoxScreen() {
       return;
     }
 
-    const selectedToAdd = selectableProps.filter(p => p.isSelected);
+    const selectedToAdd = selectableProps.filter((p: SelectableProp) => p.isSelected);
     if (selectedToAdd.length === 0) {
       Alert.alert('No Props Selected', 'Please select at least one prop to add.');
       return;
@@ -96,7 +96,7 @@ export default function AddPropsToBoxScreen() {
 
     setIsSaving(true);
     try {
-      const newPackedProps: PackedProp[] = selectedToAdd.map(p => ({
+      const newPackedProps: PackedProp[] = selectedToAdd.map((p: SelectableProp): PackedProp => ({
         propId: p.id,
         name: p.name,
         quantity: 1, // Default to 1 for now
@@ -112,7 +112,7 @@ export default function AddPropsToBoxScreen() {
       if (router.canGoBack()) {
         router.back();
       }
-    } catch (err) {
+    } catch (err: any) {
       Alert.alert('Error', `Failed to add props: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsSaving(false);
@@ -170,7 +170,7 @@ export default function AddPropsToBoxScreen() {
       <FlatList
         data={selectableProps}
         renderItem={renderPropItem}
-        keyExtractor={item => item.id}
+        keyExtractor={(item: SelectableProp) => item.id}
         ListHeaderComponent={() => <Text style={styles.headerText}>Select props to add:</Text>}
       />
       <TouchableOpacity 

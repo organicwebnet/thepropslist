@@ -57,7 +57,9 @@ export function FontProvider({ children }: { children: ReactNode }) {
 
   console.log("--- FontProvider: Rendering children (SUPER MINIMAL) ---");
   // Temporarily use dummy static values and a no-op function
-  const dummySetFont = () => {};
+  const dummySetFont = () => {
+    // No-op function
+  };
   return (
     <FontContext.Provider value={{ font: 'default', setFont: dummySetFont, isLoadingFont: false }}>
       {children}

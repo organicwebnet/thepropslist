@@ -1,6 +1,6 @@
-import { FirebaseService, FirebaseError, FirebaseDocument, FirebaseCollection } from '../firebase/types';
-import { VisionAPIService } from '../ai/vision';
-import { QRCodeService, QRCodeData } from '../qr/qrService';
+import { FirebaseService, FirebaseError, FirebaseDocument, FirebaseCollection } from '../firebase/types.ts';
+import { VisionAPIService } from '../ai/vision.ts';
+import { QRCodeService, QRCodeData } from '../qr/qrService.ts';
 import { 
   Firestore as WebFirestore,
   collection as webCollection,

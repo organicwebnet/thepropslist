@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { PackingList } from '../PackingList';
-import { Prop, PropSource } from '@/shared/types/props';
-import { PropLifecycleStatus } from '@/types/lifecycle';
-import { Show } from '@/types/index';
+import { PackingList } from '../PackingList.tsx';
+import { Prop, PropSource } from '../../../shared/types/props.ts';
+import { PropLifecycleStatus } from '../../../types/lifecycle.ts';
+import { Show } from '../../../shared/services/firebase/types.ts';
 
 // Mock Props conforming to src/shared/types/props
 const mockProps: Prop[] = [

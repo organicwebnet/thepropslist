@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react-native';
 import '@testing-library/jest-dom';
-import { PropSelector } from '../PropSelector';
-import { Prop } from '@/shared/types/props';
+import { Text } from 'react-native';
+import { PropSelector } from '../PropSelector.tsx';
+import { Prop } from '../../../shared/types/props.ts';
 
 // Define TemporaryPropInstance for the test file, mirroring its structure
 interface TemporaryPropInstance extends Prop {
@@ -114,7 +115,7 @@ describe('PropSelector', () => {
       />
     );
     // Select the first instance of "Old Chair"
-    fireEvent.click(getByText('Old Chair'));
+    fireEvent.press(getByText('Old Chair'));
     expect(mockOnChange).toHaveBeenCalledWith([mockProps.find(p => p.id === '1' && p.instanceId === '1-0')]);
   });
 
@@ -128,7 +129,7 @@ describe('PropSelector', () => {
       />
     );
 
-    fireEvent.click(getByText('Old Chair'));
+    fireEvent.press(getByText('Old Chair'));
     expect(mockOnChange).toHaveBeenCalledWith([]);
   });
 

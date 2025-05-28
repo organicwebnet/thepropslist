@@ -1,18 +1,21 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, ScrollView, ActivityIndicator, Alert, TouchableOpacity, Image, Platform, Switch } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { WebView } from 'react-native-webview';
-import { usePacking } from '../../../../src/hooks/usePacking';
-import { useShow } from '../../../../src/hooks/useShow';
-import { PackingBox } from '../../../../src/types/packing';
-import { Show } from '../../../../src/types';
+import { usePacking } from '@/hooks/usePacking.ts';
+import { useShow } from '@/hooks/useShow.ts';
+import { PackingBox } from '@/types/packing.ts';
+import { Show } from '@/types/index.ts';
 import * as Print from 'expo-print';
 import QRCodeLib from 'qrcode';
-import { useAuth } from '../../../../src/contexts/AuthContext';
-import { Address } from '../../../../src/shared/types/address';
-import { AddressSelectionModal } from '../../../../src/shared/components/AddressSelectionModal';
+import { useAuth } from '@/contexts/AuthContext.tsx';
+import { Address } from '@/shared/types/address.ts';
+import { AddressSelectionModal } from '@/shared/components/AddressSelectionModal.tsx';
 
 // Import images using relative paths with .webp extension
+// NOTE: The @assets alias needs to be checked if it's configured for '../../../../assets'
+// For now, keeping them relative as they were working.
 import handleCareImage from '../../../../assets/packing-symbols/handle-care.webp';
 import fragileImage from '../../../../assets/packing-symbols/fragile.webp';
 import thisWayUpImage from '../../../../assets/packing-symbols/this-way-up.webp';

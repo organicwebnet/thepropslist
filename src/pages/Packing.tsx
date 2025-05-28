@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, FlatList, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import type { RootStackScreenProps } from '../navigation/types';
-import type { Show } from '../types';
+import type { RootStackScreenProps } from '../navigation/types.ts';
+import type { Show } from '../types/index.ts';
 import { Box } from 'lucide-react-native';
-import { useShows } from '../contexts/ShowsContext';
+import { useShows } from '../contexts/ShowsContext.tsx';
+import { usePacking } from '../hooks/usePacking.ts';
 
 export default function Packing() {
   const navigation = useNavigation<RootStackScreenProps<'MainTabs'>['navigation']>();

@@ -1,5 +1,5 @@
-import { WeightUnit } from '@/shared/types/props'; // Import WeightUnit
-import { Prop } from "./props";
+import { WeightUnit } from '../shared/types/props.ts'; // Corrected Alias
+import { Prop } from "./props.ts";
 // import { PackedProp } from './packing'; // Assuming PackedProp is here or adjust import
 
 export interface PackingBox {

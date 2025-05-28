@@ -1,14 +1,17 @@
-import React from 'react';
-import { View, FlatList, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useNavigation, useFocusEffect, NavigationProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../navigation/types';
-import type { Show } from '../types';
-import { useShows } from '../contexts/ShowsContext';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, FlatList, TouchableOpacity, Text, StyleSheet, ActivityIndicator, Alert, Platform, Image } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types.ts';
+import type { Show } from '../types/index.ts';
+import { useShows } from '../contexts/ShowsContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
 import firestore from '@react-native-firebase/firestore';
+import { Stack, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Shows() {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { shows, loading, setSelectedShow } = useShows();
 
   const handleShowPress = (show: Show) => {

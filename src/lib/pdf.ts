@@ -1,9 +1,10 @@
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import QRCode from 'qrcode';
 // import { fetchStorageImage } from './firebase'; // Commented out - Needs rework with context
-import type { Show } from '../types';
-import type { Prop } from '@shared/types';
+import { Show } from '../types.ts';
+import { Prop } from '../shared/types/props.ts';
+import { Platform } from 'react-native';
 
 // Font sizes
 const FONT_SIZES = {

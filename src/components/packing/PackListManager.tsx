@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { PackList, PackingContainer, PackListService } from '../../shared/services/inventory/packListService';
-import { InventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService';
-import { ContainerLabels } from './ContainerLabels';
+import React, { useState, useEffect, useCallback } from 'react';
+import { PackList, PackingContainer, PackListService } from '../../shared/services/inventory/packListService.ts';
+import { InventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService.ts';
+import { ContainerLabels } from './ContainerLabels.tsx';
+import { PackedProp } from '../../types/packing.ts';
+import { PlusCircle, Trash2, Edit3, Save, PackagePlus, ChevronDown, ChevronUp, AlertTriangle, Printer, Download } from 'lucide-react';
 
 interface PackListManagerProps {
   packListService: PackListService;
@@ -101,7 +103,7 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
   const handleAddPropToContainer = async (
     containerId: string,
     propId: string,
-    quantity: number = 1
+    quantity = 1
   ) => {
     if (!selectedPackList) return;
 
@@ -232,7 +234,7 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
             </div>
 
             <div className="space-y-4">
-              {selectedPackList.containers.map(container => (
+              {selectedPackList.containers.map((container: PackingContainer) => (
                 <div key={container.id} className="border rounded p-4">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="font-medium">{container.name}</h3>
@@ -246,13 +248,13 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
                     <h4 className="text-sm font-medium text-gray-700 mb-2">Labels</h4>
                     <ContainerLabels
                       container={container}
-                      onUpdateLabels={(labels) => handleUpdateContainerLabels(container.id, labels)}
+                      onUpdateLabels={(labels: string[]) => handleUpdateContainerLabels(container.id, labels)}
                     />
                   </div>
 
                   {/* Container Props */}
                   <div className="space-y-2">
-                    {container.props.map(prop => {
+                    {container.props.map((prop: PackingContainer['props'][number]) => {
                       const propDetails = availableProps.find(p => p.id === prop.propId);
                       return (
                         <div

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, FormEvent } from 'react';
-import type { Prop, PropFormData, PropSource, PropCategory, DimensionUnit, PropImage } from '@/shared/types/props'; // Adjust path if needed
-import { propCategories } from '@/shared/types/props';
-import { PropLifecycleStatus, lifecycleStatusLabels } from '@/types/lifecycle'; // Adjust path if needed
+import React, { useState, useEffect, useCallback, useMemo, FormEvent } from 'react';
+import type { Prop, PropFormData, PropSource, PropCategory, DimensionUnit, PropImage } from '../../../shared/types/props.ts'; // Adjust path if needed
+import { propCategories } from '../../../shared/types/props.ts';
+import { PropLifecycleStatus, lifecycleStatusLabels } from '../../../types/lifecycle.ts'; // Adjust path if needed
+import { Image as ImageIcon, UploadCloud, XCircle, PlusCircle, Trash2 } from 'lucide-react';
 
 interface WebPropFormProps {
   initialData?: Prop;

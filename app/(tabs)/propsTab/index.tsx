@@ -2,11 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, FlatList, TouchableOpacity, Platform, Alert } from 'react-native';
 import { Stack, useRouter, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useProps } from '@/contexts/PropsContext';
-import { useShows } from '@/contexts/ShowsContext';
-import type { Prop } from '@/shared/types/props';
+import { useProps } from '@/contexts/PropsContext.tsx';
+import { useShows } from '@/contexts/ShowsContext.tsx';
+import type { Prop } from '@/shared/types/props.ts';
 import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
-import PropCard from '@/shared/components/PropCard';
+import PropCard from '../../../src/shared/components/PropCard/index.tsx';
 
 // Native screen component for the Props tab
 export default function PropsTabScreen() {
@@ -16,16 +16,24 @@ export default function PropsTabScreen() {
 
   const handleAddProp = () => {
     if (!selectedShow?.id) {
-        Alert.alert("No Show Selected", "Please select a show first before adding a prop."); 
+        Alert.alert("Please select a show first."); 
         return;
     }
-    router.push({ pathname: '/props_shared_details/new', params: { showId: selectedShow.id, entityType: 'prop' } });
+    router.push({ pathname: '/props/create', params: { showId: selectedShow.id } } as any);
   };
 
   const handleViewPropDetails = (propId: string) => {
     router.push(`/propsTab/${propId}`);
   };
- 
+
+  const onEditPress = (propId: string) => {
+    if (!selectedShow?.id) {
+        Alert.alert("Error", "No show selected. Cannot determine context for editing prop.");
+        return;
+    }
+    router.push({ pathname: `/props_native/${propId}/edit`, params: { propId: propId } } as any);
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -75,7 +83,7 @@ export default function PropsTabScreen() {
           <PropCard 
             prop={item} 
             // Dummy handlers for now, connect them properly later if needed for this screen
-            onEditPress={() => router.push(`/props_shared_details/${item.id}?showId=${selectedShow?.id}&entityType=prop&formType=editPropForm`)} 
+            onEditPress={() => onEditPress(item.id)} 
             onDeletePress={() => Alert.alert("Delete", `Placeholder for deleting ${item.name}`)} 
           />
         )}

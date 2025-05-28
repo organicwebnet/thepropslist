@@ -54,7 +54,7 @@
     "noEmit": true,
     "allowJs": true,
     "skipLibCheck": true,
-    "types": ["jest", "node"],
+    "types": ["jest", "node", "nativewind/types"],
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

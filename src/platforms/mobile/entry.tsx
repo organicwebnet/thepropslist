@@ -1,10 +1,11 @@
 import 'expo-router/entry';
 import React from 'react';
 import { AppRegistry } from 'react-native';
-import App from '../../../App'; // Adjust path if needed
-import { AuthProvider } from '../../contexts/AuthContext';
+import App from '../../../App.tsx'; // Adjust path if needed
+import { AuthProvider } from '../../contexts/AuthContext.tsx';
 // import { FontProvider } from '../../contexts/FontContext'; // Commented out
-import { ThemeProvider } from '../../contexts/ThemeContext';
+import { ThemeProvider } from '../../contexts/ThemeContext.tsx';
+import { FirebaseProvider } from '../../contexts/FirebaseContext.tsx';
 // import { useFonts } from '../../shared/hooks/useFonts'; // Assuming font loading hook is separate
 
 // Main application component wrapper
@@ -25,9 +26,11 @@ const MainApp = () => {
   return (
     <AuthProvider>
       <ThemeProvider>
-        {/* <FontProvider> */}
-          <App />
-        {/* </FontProvider> */}
+        <FirebaseProvider>
+          {/* <FontProvider> */}
+            <App />
+          {/* </FontProvider> */}
+        </FirebaseProvider>
       </ThemeProvider>
     </AuthProvider>
   );

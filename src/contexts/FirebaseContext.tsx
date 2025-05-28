@@ -1,8 +1,8 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { View, Text, Platform } from 'react-native';
-import { FirebaseService } from '../shared/services/firebase/types';
-import { MobileFirebaseService } from '../platforms/mobile/services/MobileFirebaseService';
-import { WebFirebaseService } from '../platforms/web/services/firebase';
+import { FirebaseService } from '../shared/services/firebase/types.ts';
+import { MobileFirebaseService } from '../platforms/mobile/services/MobileFirebaseService.ts';
+import { WebFirebaseService } from '../platforms/web/services/firebase.ts';
 
 interface FirebaseContextType {
   service: FirebaseService;
@@ -64,11 +64,18 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
     initializeFirebase();
   }, [service]); // Dependency array ensures this runs once when service is created
 
-  const value = React.useMemo(() => ({
-    service: service!, // Using non-null assertion, ensure service exists if !error && isInitialized
-    isInitialized,
-    error
-  }), [service, isInitialized, error]);
+  const value = React.useMemo(() => {
+    if (!error && isInitialized && !service) {
+      // This case should ideally not happen if logic is correct,
+      // but it's a safeguard against the non-null assertion.
+      throw new Error("Firebase service is null after successful initialization without error.");
+    }
+    return {
+      service: service as FirebaseService, // Cast to FirebaseService, will be null if service is null
+      isInitialized,
+      error
+    };
+  }, [service, isInitialized, error]);
 
   if (error) {
     console.error("[FirebaseProvider] Rendering error state:", error.message);
