@@ -8,7 +8,7 @@ import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import { usePacking } from '../../src/hooks/usePacking.ts';
 import { PackingBox } from '../../src/types/packing.ts';
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/theme.ts';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts';
 import { QRScannerScreen } from '../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
 
 export default function PackingScreen() {
@@ -107,7 +107,7 @@ export default function PackingScreen() {
           offset: [0, 2],
         })]}>
           <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
-            <Ionicons name="add" size={30} color={currentThemeColors.textPrimary || currentThemeColors.text} />
+            <Ionicons name="add" size={30} color={currentThemeColors.text || currentThemeColors.text} />
           </TouchableOpacity>
         </ShadowedView>
       </View>
@@ -157,7 +157,7 @@ export default function PackingScreen() {
         offset: [0, 2],
       })]}>
         <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
-          <Ionicons name="add" size={30} color={currentThemeColors.textPrimary || currentThemeColors.text} />
+          <Ionicons name="add" size={30} color={currentThemeColors.text || currentThemeColors.text} />
         </TouchableOpacity>
       </ShadowedView>
     </View>

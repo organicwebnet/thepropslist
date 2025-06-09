@@ -245,6 +245,22 @@ export interface Prop {
   primaryImageUrl?: string;
   availabilityStatus?: string;
   publicNotes?: string;
+
+  // New field for prop assignment to a box or location
+  assignment?: {
+    type: 'box' | 'location';
+    id: string; // ID of the PackingBox or Location
+    name?: string; // Optional: name of the box or location for quick display
+    assignedAt?: string; // ISO date string for when it was assigned
+  };
+
+  // New field for details when prop is checked out
+  checkedOutDetails?: {
+    to?: string; // e.g., Actor name, Character name, Scene number
+    notes?: string;
+    checkedOutAt?: string; // ISO date string
+    expectedReturnAt?: string; // ISO date string (optional)
+  };
 }
 
 export type PropUpdateFormData = Partial<PropFormData>;

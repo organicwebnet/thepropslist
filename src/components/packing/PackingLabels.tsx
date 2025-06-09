@@ -27,7 +27,6 @@ export const PackingLabels: React.FC<PackingLabelsProps> = ({
       setLabels(generatedLabels);
     } catch (err) {
       onError?.('Failed to generate labels');
-      console.error(err);
     } finally {
       setLoading(false);
     }

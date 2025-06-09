@@ -62,7 +62,6 @@ export const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
         ...newAddress,
         id: newAddress.id || `new-${Date.now()}` // ensure an ID
     }
-    console.log('New address to be "saved" and selected:', addressToSave, 'Save to profile:', saveToProfile);
     handleSelectAndClose(addressToSave);
     setNewAddress(defaultNewAddress); // Reset form
     setSaveToProfile(false);

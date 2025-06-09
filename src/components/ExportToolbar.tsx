@@ -4,6 +4,7 @@ import type { Prop } from '../shared/types/props.ts';
 import type { Show } from '../types/index.ts';
 import { downloadCSV } from '../lib/sheets.ts';
 import { generatePDF } from '../lib/pdf.ts';
+import type { PdfGenerationOptions } from '../shared/types/pdf.ts';
 
 interface ExportToolbarProps {
   props: Prop[];
@@ -36,8 +37,120 @@ export function ExportToolbar({ props, show, onMergeProps, onDeleteProp, onEditP
   };
 
   const handlePDFExport = async () => {
+    // Initialize all Prop keys to false, then set desired ones to true
+    const allPropKeysFalse: Record<keyof Prop, boolean> = {
+      id: false,
+      userId: false,
+      showId: false,
+      name: true, // Keep true
+      description: true, // Keep true
+      category: true, // Keep true
+      price: false,
+      quantity: true, // Keep true
+      length: false,
+      width: false,
+      height: false,
+      depth: false,
+      unit: false,
+      weight: false,
+      weightUnit: false,
+      travelWeight: false,
+      source: false,
+      sourceDetails: false,
+      purchaseUrl: false,
+      rentalDueDate: false,
+      act: true, // Keep true
+      scene: true, // Keep true
+      sceneName: false,
+      isMultiScene: false,
+      isConsumable: false,
+      imageUrl: false,
+      usageInstructions: false,
+      maintenanceNotes: false,
+      safetyNotes: false,
+      handlingInstructions: false,
+      requiresPreShowSetup: false,
+      preShowSetupDuration: false,
+      preShowSetupNotes: false,
+      preShowSetupVideo: false,
+      setupTime: false,
+      hasOwnShippingCrate: false,
+      shippingCrateDetails: false,
+      requiresSpecialTransport: false,
+      transportMethod: false,
+      transportNotes: false,
+      status: true, // Keep true
+      location: false,
+      currentLocation: false,
+      notes: false,
+      tags: false,
+      images: false,
+      digitalAssets: false,
+      videos: false,
+      materials: false,
+      statusHistory: false,
+      maintenanceHistory: false,
+      nextMaintenanceDue: false,
+      hasBeenModified: false,
+      modificationDetails: false,
+      createdAt: false,
+      updatedAt: false,
+      lastUsedAt: false,
+      condition: false,
+      lastUpdated: false,
+      purchaseDate: false,
+      handedness: false,
+      isBreakable: false,
+      isHazardous: false,
+      storageRequirements: false,
+      returnDueDate: false,
+      lastModifiedAt: false,
+      isRented: false,
+      rentalSource: false,
+      rentalReferenceNumber: false,
+      travelsUnboxed: false,
+      statusNotes: false,
+      lastStatusUpdate: false,
+      lastInspectionDate: false,
+      nextInspectionDue: false,
+      lastMaintenanceDate: false,
+      expectedReturnDate: false,
+      replacementCost: false,
+      replacementLeadTime: false,
+      repairEstimate: false,
+      repairPriority: false,
+      subcategory: false,
+      customFields: false,
+      manufacturer: false,
+      model: false,
+      serialNumber: false,
+      barcode: false,
+      warranty: false,
+      color: false,
+      period: false,
+      style: false,
+      sceneNotes: false,
+      usageNotes: false,
+      primaryImageUrl: false,
+      availabilityStatus: false,
+      publicNotes: false,
+      assignment: false, 
+      checkedOutDetails: false,
+    };
+
+    const defaultPdfOptions: PdfGenerationOptions = {
+      title: `${show.name} - Props List`,
+      layout: 'portrait',
+      columns: 1,
+      selectedFields: allPropKeysFalse, // Use the comprehensive record
+      imageCount: 1, 
+      imageWidthOption: 'small',
+      showFilesQR: false,
+      showVideosQR: false,
+    };
+
     try {
-      await generatePDF(props, show, false);
+      await generatePDF(props, show, defaultPdfOptions, false);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');

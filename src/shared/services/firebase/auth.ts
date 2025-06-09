@@ -10,38 +10,32 @@ export class AuthService {
   }
 
   async getUserProfile(uid: string): Promise<UserProfile | null> {
-    try {
-      const userDoc = await this.firebase.getDocument<UserProfile>('users', uid);
-      
-      if (!userDoc || !userDoc.data) {
-        console.log(`User profile document not found for uid: ${uid}`);
-        return null;
-      }
-
-      const data = userDoc.data;
-      const convertTimestamp = (timestamp: any): Date | undefined => {
-          // Simplified timestamp conversion - assumes service returns something usable
-          if (!timestamp) return undefined;
-          if (timestamp instanceof Date) return timestamp;
-          try { return new Date(timestamp); } catch { return undefined; }
-          // Add more specific checks if needed (e.g., Firebase Timestamp toDate())
-      };
-      
-      // Assume UserProfile includes these fields, potentially optional
-      return {
-        id: uid,
-        email: data.email,
-        displayName: data.displayName,
-        photoURL: data.photoURL, // Keep photoURL, assume it exists (possibly optional)
-        role: data.role,
-        permissions: data.permissions, 
-        createdAt: convertTimestamp(data.createdAt) || new Date(), 
-        updatedAt: convertTimestamp(data.updatedAt) || new Date(),
-      } as UserProfile; // Cast might still be needed if types aren't perfectly aligned
-    } catch (error) {
-      console.error(`Error fetching user profile for uid ${uid}:`, error);
+    const userDoc = await this.firebase.getDocument<UserProfile>('users', uid);
+    
+    if (!userDoc || !userDoc.data) {
       return null;
     }
+
+    const data = userDoc.data;
+    const convertTimestamp = (timestamp: any): Date | undefined => {
+        // Simplified timestamp conversion - assumes service returns something usable
+        if (!timestamp) return undefined;
+        if (timestamp instanceof Date) return timestamp;
+        try { return new Date(timestamp); } catch { return undefined; }
+        // Add more specific checks if needed (e.g., Firebase Timestamp toDate())
+    };
+    
+    // Assume UserProfile includes these fields, potentially optional
+    return {
+      id: uid,
+      email: data.email,
+      displayName: data.displayName,
+      photoURL: data.photoURL, // Keep photoURL, assume it exists (possibly optional)
+      role: data.role,
+      permissions: data.permissions, 
+      createdAt: convertTimestamp(data.createdAt) || new Date(), 
+      updatedAt: convertTimestamp(data.updatedAt) || new Date(),
+    } as UserProfile; // Cast might still be needed if types aren't perfectly aligned
   }
 
   async createUserProfile(user: User, role: UserRole = UserRole.VIEWER): Promise<void> {
@@ -63,16 +57,7 @@ export class AuthService {
       updatedAt: now
     };
 
-    try {
-       // This assumes addDocument uses the second arg as the document ID if path includes it
-       // Or preferably, use a setDocument method if available in FirebaseService
-       // await this.firebase.setDocument<Partial<UserProfile>>('users', user.uid, profileData);
-       await this.firebase.addDocument<Partial<UserProfile>>(`users/${user.uid}`, profileData);
-       console.log(`Created user profile for ${user.uid}`);
-    } catch (error) {
-       console.error(`Error creating user profile for ${user.uid}:`, error);
-       throw error;
-    }
+    await this.firebase.addDocument<Partial<UserProfile>>(`users/${user.uid}`, profileData);
   }
 
   async updateUserRole(uid: string, newRole: UserRole): Promise<void> {
@@ -81,13 +66,7 @@ export class AuthService {
       permissions: DEFAULT_ROLE_PERMISSIONS[newRole],
       updatedAt: new Date() 
     };
-    try {
-        await this.firebase.updateDocument<UserProfile>('users', uid, updateData);
-        console.log(`Updated role for user ${uid} to ${newRole}`);
-    } catch (error) {
-        console.error(`Error updating role for user ${uid}:`, error);
-        throw error;
-    }
+    await this.firebase.updateDocument<UserProfile>('users', uid, updateData);
   }
 
   async updateUserPermissions(uid: string, permissionsInput: Partial<UserPermissions>): Promise<void> {
@@ -96,14 +75,7 @@ export class AuthService {
         permissions: permissionsInput, 
         updatedAt: new Date() 
     };
-     try {
-        // Service's updateDocument should handle merging Partial<UserProfile>
-        await this.firebase.updateDocument<UserProfile>('users', uid, updateData);
-        console.log(`Updated permissions for user ${uid}`);
-    } catch (error) {
-        console.error(`Error updating permissions for user ${uid}:`, error);
-        throw error;
-    }
+    await this.firebase.updateDocument<UserProfile>('users', uid, updateData);
   }
 
   async hasPermission(uid: string, permission: keyof UserPermissions): Promise<boolean> {
@@ -121,7 +93,6 @@ export class AuthService {
     
     let profile = await this.getUserProfile(user.uid);
     if (!profile) {
-      console.log(`Profile missing for ${user.uid}, creating default.`);
       await this.createUserProfile(user as User);
       profile = await this.getUserProfile(user.uid);
       if (!profile) throw new Error('Failed to create or retrieve profile after sign-in');

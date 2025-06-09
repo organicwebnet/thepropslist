@@ -53,7 +53,6 @@ export class OfflineSyncManager {
       }
 
       this.isInitialized = true;
-      console.log('Offline sync initialized successfully');
     } catch (error) {
       console.error('Failed to initialize offline sync:', error);
       throw error;
@@ -62,7 +61,7 @@ export class OfflineSyncManager {
 
   private async getSyncMetadata(): Promise<SyncMetadata | null> {
     try {
-      const stored = await AsyncStorage.default.getItem(this.syncMetadataKey);
+      const stored = await AsyncStorage.getItem(this.syncMetadataKey);
       return stored ? JSON.parse(stored) : null;
     } catch (error) {
       console.error('Error getting sync metadata:', error);
@@ -72,7 +71,7 @@ export class OfflineSyncManager {
 
   private async updateSyncMetadata(metadata: SyncMetadata): Promise<void> {
     try {
-      await AsyncStorage.default.setItem(this.syncMetadataKey, JSON.stringify(metadata));
+      await AsyncStorage.setItem(this.syncMetadataKey, JSON.stringify(metadata));
     } catch (error) {
       console.error('Error updating sync metadata:', error);
       throw error;
@@ -81,7 +80,7 @@ export class OfflineSyncManager {
 
   private async getPendingOperations(): Promise<PendingOperation[]> {
     try {
-      const stored = await AsyncStorage.default.getItem(this.pendingOperationsKey);
+      const stored = await AsyncStorage.getItem(this.pendingOperationsKey);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       console.error('Error getting pending operations:', error);
@@ -93,7 +92,7 @@ export class OfflineSyncManager {
     try {
       const operations = await this.getPendingOperations();
       operations.push(operation);
-      await AsyncStorage.default.setItem(this.pendingOperationsKey, JSON.stringify(operations));
+      await AsyncStorage.setItem(this.pendingOperationsKey, JSON.stringify(operations));
     } catch (error) {
       console.error('Error adding pending operation:', error);
       throw error;
@@ -104,7 +103,7 @@ export class OfflineSyncManager {
     try {
       const operations = await this.getPendingOperations();
       const filtered = operations.filter(op => op.id !== operationId);
-      await AsyncStorage.default.setItem(this.pendingOperationsKey, JSON.stringify(filtered));
+      await AsyncStorage.setItem(this.pendingOperationsKey, JSON.stringify(filtered));
     } catch (error) {
       console.error('Error removing pending operation:', error);
       throw error;
@@ -114,7 +113,7 @@ export class OfflineSyncManager {
   async cacheDocument(collection: string, id: string, data: any): Promise<void> {
     try {
       const key = `${collection}_${id}`;
-      await AsyncStorage.default.setItem(key, JSON.stringify({
+      await AsyncStorage.setItem(key, JSON.stringify({
         data,
         timestamp: Date.now(),
       }));
@@ -127,7 +126,7 @@ export class OfflineSyncManager {
   async getCachedDocument(collection: string, id: string): Promise<any | null> {
     try {
       const key = `${collection}_${id}`;
-      const stored = await AsyncStorage.default.getItem(key);
+      const stored = await AsyncStorage.getItem(key);
       if (stored) {
         const { data, timestamp } = JSON.parse(stored);
         // Check if cache is still valid (24 hours)
@@ -241,11 +240,10 @@ export class OfflineSyncManager {
       // or use a more specific prefix if AsyncStorage supports it.
       // For now, we'll just clear the main metadata and pending ops keys
       // as a full prefix clear isn't standard in AsyncStorage.
-      await AsyncStorage.default.removeItem(this.syncMetadataKey);
-      await AsyncStorage.default.removeItem(this.pendingOperationsKey);
+      await AsyncStorage.removeItem(this.syncMetadataKey);
+      await AsyncStorage.removeItem(this.pendingOperationsKey);
       // Potentially loop and remove individual cached document keys if needed,
       // or use a library that wraps AsyncStorage with prefix deletion.
-      console.log('Cache cleared (metadata and pending operations)');
     } catch (error) {
       console.error('Error clearing cache:', error);
       throw error;

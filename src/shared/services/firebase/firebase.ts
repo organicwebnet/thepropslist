@@ -62,7 +62,6 @@ export async function uploadImages(files: File[], path: string): Promise<{
         type: file.type
       });
     } catch (error) {
-      console.error('Error uploading file:', file.name, error);
       failed.push({
         file: file.name,
         error: error instanceof Error ? error.message : 'Unknown error occurred during upload'

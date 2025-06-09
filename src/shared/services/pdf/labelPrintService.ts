@@ -137,7 +137,6 @@ export class LabelPrintService {
           });
         }
       } catch (error) {
-        console.error('Error printing labels:', error);
         throw new Error('Failed to print labels');
       }
     }

@@ -23,7 +23,7 @@ import { MaintenanceHistory } from '../components/lifecycle/MaintenanceHistory.t
 import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { User } from 'firebase/auth';
-import { lightTheme, darkTheme } from '../theme.ts';
+import { lightTheme, darkTheme } from '../styles/theme.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
 
 export default function PropDetailPage() {
@@ -44,7 +44,6 @@ export default function PropDetailPage() {
   const [activeTab, setActiveTab] = useState<'details' | 'statusUpdates' | 'maintenanceRecords'>('details');
 
   const handleStatusUpdate = async (status: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[]) => {
-    console.log('Handle Status Update:', { status, notes, notifyTeam, imageCount: damageImages?.length });
     if (!id || !lifecycle?.updatePropStatus) return;
     try {
       await lifecycle.updatePropStatus(status, notes);
@@ -55,7 +54,6 @@ export default function PropDetailPage() {
       }
       setIsAddingStatus(false);
     } catch (err: any) {
-      console.error('Error updating prop status:', err);
       setError(`Failed to update prop status: ${err.message}`);
     }
   };
@@ -114,8 +112,6 @@ export default function PropDetailPage() {
               const showSnap = await getDoc(showRef);
               if (showSnap.exists()) {
                 // setShow({ ...(showSnap.data() as Show), id: showSnap.id });
-              } else {
-                console.warn('Show document not found for showId:', propData.showId);
               }
             }
           } else {

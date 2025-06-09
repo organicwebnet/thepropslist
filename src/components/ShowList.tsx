@@ -114,7 +114,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                       accessibilityLabel="Edit show"
                       activeOpacity={0.7}
                     >
-                       
+                      <Pencil size={20} color="#F59E0B" />
                     </TouchableOpacity>
                     {isShowOwner(show) && onEdit && onDelete ? (
                       <TouchableOpacity
@@ -126,7 +126,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                         accessibilityLabel="Delete show"
                         activeOpacity={0.7}
                       >
-                         
+                        <Trash2 size={20} color="#EF4444" />
                       </TouchableOpacity>
                     ) : null}
                   </View>

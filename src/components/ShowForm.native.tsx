@@ -500,8 +500,6 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
     onSubmit(dataToSubmit);
   };
 
-  console.log(`Rendering ShowFormNative: showStartDatePicker=${showStartDatePicker}, showEndDatePicker=${showEndDatePicker}`); // Log state on render
-
   return (
     <View style={styles.formContainer}>
        {/* Basic Show Info */}

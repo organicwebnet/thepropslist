@@ -45,7 +45,6 @@ export function MaintenanceRecordForm({ onSubmit, disabled = false }: Maintenanc
         repairDeadline: undefined
       });
     } catch (error) {
-      console.error('Error adding maintenance record:', error);
       alert('Failed to add maintenance record. Please try again.');
     } finally {
       setIsSubmitting(false);

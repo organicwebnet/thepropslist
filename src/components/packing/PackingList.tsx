@@ -105,25 +105,19 @@ export function PackingList({
 
     if (editingBoxId) {
       // --- Update Existing Box ---
-      console.log(`Updating box: ${editingBoxId}`);
       try {
         await onUpdateBox(editingBoxId, { name: currentBoxName, props: packedProps });
-        console.log(`Box ${editingBoxId} updated successfully.`);
       } catch (error) {
-        console.error(`Error updating box ${editingBoxId}:`, error);
         // TODO: Add user feedback for error
         return; // Don't clear form on error
       }
     } else {
       // --- Create New Box ---
-      console.log(`Creating new box: ${currentBoxName}`);
       // Use act/scene from the first prop instance if available (as before)
       const firstProp = selectedProps[0];
       try {
         await onCreateBox(packedProps, firstProp?.act ?? 0, firstProp?.scene ?? 0);
-        console.log(`Box ${currentBoxName} created successfully.`);
       } catch (error) {
-        console.error(`Error creating box ${currentBoxName}:`, error);
          // TODO: Add user feedback for error
         return; // Don't clear form on error
       }

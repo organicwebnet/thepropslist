@@ -48,7 +48,6 @@ validateFirebaseConfig();
 // Helper function for Google Sign In - Needs Auth instance passed in
 export const signInWithGoogle = async (authInstance: Auth) => {
   if (!authInstance) {
-    console.error("Auth instance not provided to signInWithGoogle");
     return;
   } 
   try {
@@ -56,15 +55,13 @@ export const signInWithGoogle = async (authInstance: Auth) => {
     provider.addScope('https://www.googleapis.com/auth/userinfo.email');
     provider.addScope('https://www.googleapis.com/auth/userinfo.profile');
     
-    await signInWithRedirect(authInstance, provider); // Use passed instance
+    await signInWithRedirect(authInstance, provider);
     
-    const result = await getRedirectResult(authInstance); // Use passed instance
+    const result = await getRedirectResult(authInstance);
     if (result) {
       return result;
     }
   } catch (error: any) {
-    console.error('Error in Google sign in:', error);
-    
     if (error.code === 'auth/unauthorized-domain') {
       throw new Error(`This domain (${window.location.hostname}) is not authorized for Google Sign-In. Please verify domain configuration in Firebase Console.`);
     } else {

@@ -40,7 +40,6 @@ export function PropFormScreen() {
 
   useEffect(() => {
     if (params.photoUri) {
-      console.log('Received photoUri param:', params.photoUri);
       handlePhotoTaken(params.photoUri);
     }
   }, [params.photoUri]);

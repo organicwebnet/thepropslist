@@ -15,24 +15,19 @@ import { FontProvider, useFont, FontChoice } from '../src/contexts/FontContext.t
 import { NativeAuthScreen } from '../src/components/NativeAuthScreen.tsx';
 import { View, ActivityIndicator, Platform, StyleSheet, Text } from 'react-native';
 import { useFonts } from 'expo-font';
+import { FirebaseProvider } from '@/contexts/FirebaseContext.tsx';
 // import * as SplashScreen from 'expo-splash-screen'; // Commented out
 
 // SplashScreen.preventAutoHideAsync(); // Commented out
 
 // Original RootLayoutNav (slightly simplified for now)
 function RootLayoutNav() {
-  console.log("--- Rendering: RootLayoutNav (Mobile) ---");
+  console.log("--- Rendering: RootLayoutNav (Mobile) with Stack & Slot ---");
   return (
-    <Stack
-      screenOptions={{
-        headerShown: true 
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }}/> 
-      {/* Add other stack screens as needed, but keep minimal for now */}
-      {/* <Stack.Screen name="props/add" options={{ title: 'Add New Prop' }}/> */}
-      {/* <Stack.Screen name="props/[id]/edit" options={{ title: 'Edit Prop' }}/> */}
-      <Stack.Screen name="+not-found" options={{ title: 'Oops!', presentation: 'modal' }} />
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/* Other screens that should be part of this stack can be added here */}
+      {/* For now, Stack will implicitly handle child routes like taskBoard/[boardId] via its Slot */}
     </Stack>
   );
 }
@@ -141,7 +136,12 @@ function MainApp() {
   }, [expoFontsLoaded, isLoadingFont, expoFontError]);
 
   if (!expoFontsLoaded || isLoadingFont) {
-    return null;
+    return (
+      <View style={{flex:1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black'}}>
+        <ActivityIndicator size="large" color="#ffd33d" />
+        <Text style={{color: '#ffd33d', marginTop: 16}}>Loading custom fonts...</Text>
+      </View>
+    );
   }
 
   if (expoFontError) {
@@ -163,21 +163,23 @@ function MainApp() {
 // SplashScreen.preventAutoHideAsync(); // Also comment out this one if it was duplicated, ensure only one instance if re-enabled
 
 export default function RootLayout() {
-  console.log("--- Rendering: RootLayout (ALL PROVIDERS + MainApp) ---");
+  console.log("--- Rendering: RootLayout (Restoring Full App) ---");
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <ThemeProvider>
-          <ShowsProvider>
-            <PropsProvider>
-              <FontProvider>
-                <ErrorBoundary>
-                  <MainApp />
-                </ErrorBoundary>
-              </FontProvider>
-            </PropsProvider>
-          </ShowsProvider>
-        </ThemeProvider>
+        <FirebaseProvider>
+          <ThemeProvider>
+            <ShowsProvider>
+              <PropsProvider>
+                <FontProvider>
+                  <ErrorBoundary>
+                    <MainApp />
+                  </ErrorBoundary>
+                </FontProvider>
+              </PropsProvider>
+            </ShowsProvider>
+          </ThemeProvider>
+        </FirebaseProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

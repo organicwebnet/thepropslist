@@ -153,8 +153,6 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
           className="w-full text-center py-2 text-sm text-[var(--highlight-color)] hover:text-[var(--highlight-color)]/80"
           onClick={() => {
             // This would be connected to a state handler for viewing full history
-            // For now, it's just a placeholder
-            console.log('View all maintenance records clicked');
           }}
         >
           View all {records.length} records

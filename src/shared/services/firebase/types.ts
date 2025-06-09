@@ -1,7 +1,3 @@
-// import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
-// import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
-// import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
-
 import { Auth as FirebaseAuthJs, User as FirebaseUserJs } from 'firebase/auth'; // For JS SDK Auth and User types
 import { Firestore as WebFirestore, DocumentReference as WebDocumentReference, CollectionReference as WebCollectionReference, Timestamp as WebTimestamp, DocumentData } from 'firebase/firestore'; // Corrected import for WebFirestore and added DocumentData
 import { FirebaseAuthTypes } from '@react-native-firebase/auth'; // For RN Firebase User type if needed for mobile-specific parts
@@ -9,16 +5,15 @@ import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore'; // Im
 import { Address } from '../../types/address.ts'; // Corrected import path for the detailed Address type
 import { WhereFilterOp } from 'firebase/firestore'; // Make sure this is imported
 import { Prop } from '../../types/props.ts'; // Import Prop type
+export type { Prop }; // Explicitly re-export Prop
+import type { BoardData, ListData, CardData, MemberData } from '../../types/taskManager.ts'; // Added import for TaskManager types
 
-// Placeholder Types - Define the actual structure later based on usage
-// export type CustomAuth = any; // Placeholder - REPLACED BELOW
 export type CustomFirestore = FirebaseFirestoreTypes.Module | WebFirestore; // Union type
 export type CustomStorage = any; // Placeholder
 export type CustomTransaction = any; // Placeholder for FirebaseFirestoreTypes.Transaction | import('firebase/firestore').Transaction
 export type CustomWriteBatch = any;  // Placeholder for FirebaseFirestoreTypes.WriteBatch | import('firebase/firestore').WriteBatch
 export type CustomDocumentData = Record<string, any>; // This is compatible with Firebase DocumentData
 
-// Use specific SDK types where possible, T must extend CustomDocumentData for Web types
 export type CustomDocumentReference<T extends CustomDocumentData = CustomDocumentData> = 
   FirebaseFirestoreTypes.DocumentReference<T> | 
   WebDocumentReference<T>; // WebDocumentReference<T extends DocumentData>
@@ -32,17 +27,11 @@ export type CustomTimestamp = FirebaseFirestoreTypes.Timestamp | WebTimestamp;
 export type CustomStorageReference = any; // Placeholder
 export type CustomUser = FirebaseUserJs | FirebaseAuthTypes.User; // Union type for user
 export type CustomUserCredential = any; // Placeholder for UserCredential
-
-// CustomAuth: Represents the core authentication state and state change notifications.
-// Specific auth operations (signIn, signOut, etc.) are on the FirebaseService interface.
 export interface CustomAuth {
   onAuthStateChanged(callback: (user: CustomUser | null) => void): () => void;
   currentUser: CustomUser | null;
-  // readonly app: FirebaseApp; // Example property from base Auth, if needed by services
-  // readonly name: string; // Example property from base Auth
 }
 
-// Add exports for core service types using placeholders
 export type FirebaseAuth = CustomAuth;
 export type FirebaseFirestore = CustomFirestore;
 export type FirebaseStorage = CustomStorage;
@@ -124,7 +113,6 @@ export interface FirebaseCollection<T extends CustomDocumentData = CustomDocumen
   get(): Promise<FirebaseDocument<T>[]>;
 }
 
-// Change FirebaseError from an interface to a class
 export class FirebaseError extends Error {
   code: string;
   originalError?: unknown;
@@ -139,12 +127,6 @@ export class FirebaseError extends Error {
   }
 }
 
-// Define QueryOptions type here as well, mirroring the implementation
-// (Alternatively, define it once and import it here and in WebFirebaseService)
-/**
- * A type representing the options for querying Firestore collections.
- * Allows specifying filtering, ordering, and limiting of query results.
- */
 export type QueryOptions = {
   where?: [string, WhereFilterOp, any][];
   orderBy?: [string, 'asc' | 'desc'][];
@@ -161,14 +143,10 @@ export interface FirebaseService {
   storage(): FirebaseStorage | CustomStorage;
   offline(): OfflineSync;
 
-  // Add Email/Password Auth Methods
   signInWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential>;
   createUserWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential>;
   sendPasswordResetEmail(email: string): Promise<void>;
   signOut(): Promise<void>;
-  // Google Sign-in placeholder - needs specific implementation
-  // signInWithGoogle(): Promise<CustomUserCredential>; 
-  // signOut(): Promise<void>; // Add if needed
 
   runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T>;
   batch(): CustomWriteBatch;
@@ -198,12 +176,21 @@ export interface FirebaseService {
   getSyncStatus?(): boolean;
   enableSync?(): Promise<void>;
   disableSync?(): Promise<void>;
-  // Add Show specific methods
   deleteShow(showId: string): Promise<void>;
   getPropsByShowId(showId: string): Promise<FirebaseDocument<Prop>[]>; // Added method
+
+  getBoard(boardId: string): Promise<BoardData | null>;
+  getListsForBoard(boardId: string): Promise<ListData[]>;
+  getCardsForList(boardId: string, listId: string): Promise<CardData[]>;
+  getBoardMembers(boardId: string): Promise<MemberData[]>;
+  addList(boardId: string, listData: Omit<ListData, 'id' | 'boardId'>): Promise<ListData>;
+  addCard(boardId: string, listId: string, cardData: Omit<CardData, 'id' | 'boardId' | 'listId'>): Promise<CardData>;
+  updateCard(boardId: string, listId: string, cardId: string, updates: Partial<CardData>): Promise<void>;
+  deleteCard(boardId: string, listId: string, cardId: string): Promise<void>;
+  moveCardToList(boardId: string, cardId: string, originalListId: string, targetListId: string, newOrder: number): Promise<void>;
+  reorderCardsInList(boardId: string, listId: string, orderedCards: CardData[]): Promise<void>;
 }
 
-// Modify Show interface to use CustomTimestamp
 export interface Show {
   id: string;
   userId: string;
@@ -237,7 +224,6 @@ export interface Show {
   defaultSceneId?: string | number; // Or just number
 }
 
-// Define other related interfaces if they are not present
 export interface Act {
     id: string | number;
     name: string;
@@ -273,12 +259,3 @@ export interface ShowCollaborator {
     addedAt: string | CustomTimestamp; // Or Date string
     addedBy: string; // User email or ID
 }
-
-// export interface Address { // Basic structure -- REMOVE THIS OLD DEFINITION
-//     street1?: string;
-//     street2?: string;
-//     city?: string;
-//     state?: string;
-//     postalCode?: string;
-//     country?: string;
-// } 

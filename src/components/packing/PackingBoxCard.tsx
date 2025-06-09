@@ -31,7 +31,6 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
     try {
         await onDelete(box.id);
     } catch (error) {
-        console.error("Error during delete operation:", error);
         // Optionally set an error state to display to the user
     } finally {
         setIsDeleting(false);
@@ -44,14 +43,12 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
     try {
       timeAgo = formatDistanceToNow(updatedAt.toDate(), { addSuffix: true });
     } catch (e) {
-      console.error("Error formatting date:", e);
       timeAgo = "Invalid date";
     }
   } else if (updatedAt && updatedAt instanceof Date) {
       try {
         timeAgo = formatDistanceToNow(updatedAt, { addSuffix: true });
       } catch (e) {
-        console.error("Error formatting date:", e);
         timeAgo = "Invalid date";
       }
   } else if (typeof updatedAt === 'string') {
@@ -64,7 +61,6 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
               timeAgo = "Invalid date string";
           }
       } catch(e) {
-          console.error("Error parsing date string:", e);
           timeAgo = "Invalid date format";
       }
   }
@@ -77,9 +73,6 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
   const statusText = currentStatusStyle.text;
 
   const handleNavigateToLabel = () => {
-    console.log(`[PackingBoxCard] Navigating to label for Document ID: ${box.id}, Show ID: ${box.showId}`);
-    console.log('[PackingBoxCard] Full box object:', box);
-
     router.push({
       pathname: '/(web)/packing/label/[id]' as any,
       params: { id: box.id, showId: box.showId }

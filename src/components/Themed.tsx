@@ -13,6 +13,7 @@ import { Text as DefaultText, View as DefaultView } from 'react-native';
 // This component needs to be refactored to properly use your app's ThemeContext and theme structure.
 
 import { useTheme } from '../contexts/ThemeContext.tsx'; // Assuming this is your app's theme context
+import { lightTheme, darkTheme } from '../styles/theme.ts';
 
 type ThemeProps = {
   lightColor?: string;
@@ -22,48 +23,51 @@ type ThemeProps = {
 export type TextProps = ThemeProps & DefaultText['props'];
 export type ViewProps = ThemeProps & DefaultView['props'];
 
-// This function needs to be adapted or removed if your ThemeContext provides colors directly.
-// For now, it won't work as expected because `Colors` and `useColorScheme` are from the other project.
+// Define a type for all valid color keys in the theme
+export type ThemeColorKey =
+  | 'bg'
+  | 'cardBg'
+  | 'inputBg'
+  | 'text'
+  | 'textPrimary'
+  | 'textSecondary'
+  | 'primary'
+  | 'border'
+  | 'iconDefault'
+  | 'iconDanger'
+  | 'iconWarning'
+  | 'disabledButtonBg'
+  | 'buttonText'
+  | 'highlight'
+  | 'highlightBg'
+  | 'error'
+  | 'card'
+  | 'background';
+
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: string // Simplified colorName, as `keyof typeof Colors.light` won't work here
+  colorName: ThemeColorKey
 ) {
-  const { theme } = useTheme(); // Your app's theme object or theme name
-  
-  // This logic is highly dependent on how your `theme` object is structured
-  // and whether it differentiates light/dark internally or if `theme` itself is 'light' or 'dark'.
-  // Placeholder logic:
-  const currentScheme = typeof theme === 'string' ? theme : (theme as any)?.mode || 'light'; // Guessing theme structure
+  const { theme } = useTheme();
+  const themeColors = theme === 'dark' ? darkTheme.colors : lightTheme.colors;
 
-  const colorFromProps = props[currentScheme as 'light' | 'dark'];
-
+  // Prefer explicit prop override
+  const colorFromProps = props[theme as 'light' | 'dark'];
   if (colorFromProps) {
     return colorFromProps;
   }
-  // This part is problematic as `Colors` is not defined in this project context.
-  // You need to access colors from your `theme` object from `useTheme()`.
-  // Example: return (theme as any).colors[colorName] || '#000000'; 
-  // This needs to be replaced with actual access to your theme colors.
-  console.warn("useThemeColor in Themed.tsx needs to be adapted to the host project's theme system.");
-  if (colorName === 'text') return (theme as any)?.colors?.text || '#000000';
-  if (colorName === 'background') return (theme as any)?.colors?.background || '#ffffff';
-  return '#000000'; // Default fallback
+  // Use centralized theme colors
+  return themeColors[colorName] || '#000000';
 }
 
 export function Text(props: TextProps) {
   const { style, lightColor, darkColor, ...otherProps } = props;
-  // const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text'); // Original
-  const { theme: appTheme } = useTheme();
-  const color = (appTheme as any)?.colors?.text || '#000'; // Directly use your app's theme
-
+  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
   return <DefaultText style={[{ color }, style]} {...otherProps} />;
 }
 
 export function View(props: ViewProps) {
   const { style, lightColor, darkColor, ...otherProps } = props;
-  // const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background'); // Original
-  const { theme: appTheme } = useTheme();
-  const backgroundColor = (appTheme as any)?.colors?.background || '#fff'; // Directly use your app's theme
-
+  const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background');
   return <DefaultView style={[{ backgroundColor }, style]} {...otherProps} />;
 } 

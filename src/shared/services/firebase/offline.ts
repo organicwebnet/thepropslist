@@ -33,9 +33,7 @@ export class OfflineSyncService {
     try {
       await this.firebase.offline().enableSync();
       this.isInitialized = true;
-      console.log('Offline sync initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize offline sync:', error);
       throw error;
     }
   }
@@ -64,7 +62,6 @@ export class OfflineSyncService {
       const documents = await this.firebase.getDocuments<any>(collectionName, options);
       return documents;
     } catch (error) {
-      console.error(`Error in getCollectionDocs for ${collectionName}:`, error);
       throw error;
     }
   }
@@ -79,7 +76,6 @@ export class OfflineSyncService {
     try {
       // Get documents updated since last sync
       const docs = await this.getCollectionDocs(collectionName, metadata.lastSyncTimestamp);
-      console.log(`Syncing ${docs.length} documents from ${collectionName}`);
 
       // Cache documents locally
       for (const doc of docs) {
@@ -90,7 +86,6 @@ export class OfflineSyncService {
       }
 
     } catch (error) {
-      console.error(`Failed to sync collection ${collectionName}:`, error);
       throw error;
     }
   }
@@ -135,9 +130,7 @@ export class OfflineSyncService {
         lastSyncTimestamp: Date.now()
       });
 
-      console.log('All collections synced successfully');
     } catch (error) {
-      console.error('Failed to sync all collections:', error);
       throw error;
     }
   }
@@ -158,8 +151,6 @@ export class OfflineSyncService {
       lastSyncTimestamp: 0,
       collections: metadata.collections
     });
-
-    console.log('Cache cleared successfully');
   }
 
   async getSyncStatus(): Promise<{

@@ -65,7 +65,7 @@ describe('MobileOfflineSync', () => {
 
   describe('initialization', () => {
     it('should initialize with default values', async () => {
-      (AsyncStorage.default.getItem as jest.Mock)
+      (AsyncStorage.getItem as jest.Mock)
         .mockResolvedValueOnce(null) // OFFLINE_SYNC
         .mockResolvedValueOnce(null) // PENDING_OPERATIONS
         .mockResolvedValueOnce(null); // RETRY_ATTEMPTS
@@ -88,7 +88,7 @@ describe('MobileOfflineSync', () => {
         }
       ];
 
-      (AsyncStorage.default.getItem as jest.Mock)
+      (AsyncStorage.getItem as jest.Mock)
         .mockResolvedValueOnce('true') // OFFLINE_SYNC
         .mockResolvedValueOnce(JSON.stringify(mockOperations)) // PENDING_OPERATIONS
         .mockResolvedValueOnce(null); // RETRY_ATTEMPTS

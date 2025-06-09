@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import { useRouter } from 'expo-router';
 import type { Show } from '../../src/shared/services/firebase/types.ts';
 import { Ionicons } from '@expo/vector-icons';
 import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/theme.ts';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts';
 import { useAuth } from '../../src/contexts/AuthContext.tsx';
 
 export default function ShowsScreen() {

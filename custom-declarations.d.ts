@@ -1,4 +1,8 @@
-declare module '*.png';
+declare module '*.png' {
+  const value: any;
+  export default value;
+}
+
 declare module '*.webp';
 
 declare module '@react-native-community/datetimepicker' {
@@ -64,4 +68,6 @@ declare module '@react-native-community/datetimepicker' {
 
 // It's good practice to ensure other custom declarations are not overwritten
 // If there was existing content, it should be preserved.
-// For now, assuming this is the only declaration needed in this file or the file is new. 
+// For now, assuming this is the only declaration needed in this file or the file is new.
+
+declare module 'react-native-mentions-editor'; 

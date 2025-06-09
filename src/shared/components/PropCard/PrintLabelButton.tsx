@@ -22,7 +22,6 @@ export const PrintLabelButton: React.FC<PrintLabelButtonProps> = ({
     try {
       await labelPrintService.printLabels([label]);
     } catch (error) {
-      console.error('Error printing label:', error);
       onError?.('Failed to print label');
     }
   };

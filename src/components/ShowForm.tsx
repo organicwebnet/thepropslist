@@ -92,9 +92,6 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
   
   // Update form data when initialData changes
   useEffect(() => {
-    console.log('ShowForm initialData changed:', initialData);
-    console.log('Current mode:', mode);
-    
     if (initialData) {
       // Always merge with initialFormState to ensure all properties exist
       const mergedData = {
@@ -108,7 +105,6 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
         storageAddresses: Array.isArray(initialData.storageAddresses) ? initialData.storageAddresses : [],
       };
       
-      console.log('Setting form data to:', mergedData);
       setFormData(mergedData);
     }
   }, [initialData, mode]);
@@ -118,7 +114,6 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
   const sceneInputRefs = useRef<Record<string, HTMLInputElement>>({});
 
   const validateForm = (): boolean => {
-    console.log('Running form validation with data:', formData);
     const newErrors: Record<string, string> = {};
 
     // Required field validation with null/undefined checks
@@ -172,26 +167,20 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
       });
     }
 
-    console.log('Validation errors:', newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: FormEvent) => {
-    console.log('Form submission started');
     e.preventDefault();
     
     try {
       const isValid = validateForm();
-      console.log('Form validation result:', isValid);
-      console.log('Form validation errors:', errors);
       
       if (!isValid) {
-        console.log('Form validation failed, aborting submission');
         return;
       }
 
-      console.log('Form is valid, proceeding with submission');
       setIsSubmitting(true);
       
       // Prepare submission data with proper defaults for any potentially undefined fields
@@ -225,23 +214,18 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
         storageAddresses: formData.storageAddresses || [],
       };
 
-      console.log('Submitting data:', submissionData);
       await onSubmit(submissionData);
-      console.log('Form submission completed successfully');
 
       if (mode === 'create') {
         // Reset form after successful creation
         setFormData(initialFormState);
-        console.log('Form reset to initial state after creation');
       }
     } catch (error) {
-      console.error('Error submitting form:', error);
       setErrors({
         submit: `Failed to submit the form: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     } finally {
       setIsSubmitting(false);
-      console.log('Form submission process completed, isSubmitting set to false');
     }
   };
 
@@ -279,8 +263,6 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
   };
 
   const handleActChange = (actIndex: number, value: string) => {
-    console.log(`Changing act ${actIndex} name to:`, value);
-    
     // Store the reference to the input element for focus management
     const inputKey = `act-${actIndex}`;
     if (actInputRefs.current[inputKey]) {
@@ -311,8 +293,6 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
   };
 
   const handleSceneChange = (actIndex: number, sceneIndex: number, value: string) => {
-    console.log(`Changing act ${actIndex} scene ${sceneIndex} name to:`, value);
-    
     // Store the reference to the input element for focus management
     const inputKey = `scene-${actIndex}-${sceneIndex}`;
     if (sceneInputRefs.current[inputKey]) {
@@ -497,7 +477,6 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
               required
               value={formData.name || ''}
               onChange={(e) => {
-                console.log('Changing show name to:', e.target.value);
                 setFormData(prevData => ({
                   ...prevData,
                   name: e.target.value
@@ -676,20 +655,6 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
               <span className="text-[var(--text-secondary)]">This is a touring show</span>
             </label>
           </div>
-
-          {/* Venue input - temporarily commented out, needs to become Venue[] management
-          <div className="form-group">
-            <label htmlFor="venue">Venue</label>
-            <input
-              type="text"
-              name="venue"
-              id="venue"
-              placeholder="Main Venue"
-              value={formData.venue} // This would need to change to handle Venue[]
-              onChange={handleChange}
-            />
-          </div>
-          */}
 
           <div>
             <label htmlFor="stageManager" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">

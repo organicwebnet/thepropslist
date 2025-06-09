@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, serverTimestamp, CollectionReference, Timestamp, addDoc } from 'firebase/firestore';
+import { serverTimestamp, Timestamp as FirebaseTimestamp } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import { User } from 'firebase/auth';
-import { Prop } from '../shared/types/props.ts'; // Assuming Prop type is needed
+import { Prop } from '../shared/types/props.ts';
 import type { PropStatusUpdate, MaintenanceRecord } from '../types/lifecycle.ts';
+import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types.ts';
 
 // Local interface matching Firestore data for status history
 interface PropStatusFirestoreData {
   status: string;
-  timestamp: Timestamp; // Expect Firestore Timestamp
+  timestamp: FirebaseTimestamp; // Expect Firestore Timestamp
   notes?: string;
   images?: string[];
   updatedBy: string;
@@ -16,12 +17,17 @@ interface PropStatusFirestoreData {
 
 // Local interface matching state for status history
 interface PropStatusState {
+  id: string; // Add id for React keys
   status: string;
   timestamp: Date; // State uses Date object
   notes?: string;
   images?: string[];
   updatedBy: string;
 }
+
+// MaintenanceRecord in '../types/lifecycle.ts' expects dates as strings.
+// If Firestore stores Timestamps for MaintenanceRecord, we need a Firestore-specific type or careful mapping.
+// For now, assume MaintenanceRecord's date fields (date, createdAt) are stored as Timestamps in Firestore.
 
 interface UsePropLifecycleProps {
   propId?: string;
@@ -30,140 +36,178 @@ interface UsePropLifecycleProps {
 
 export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps) {
   const { service } = useFirebase();
-  const [statusHistory, setStatusHistory] = useState<PropStatusState[]>([]); // Use state type
+  const [statusHistory, setStatusHistory] = useState<PropStatusState[]>([]);
   const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!propId || !service?.getFirestoreJsInstance) {
+    if (!propId || !service?.listenToCollection) {
       setLoading(false);
+      setStatusHistory([]);
+      setMaintenanceHistory([]);
       return;
     }
-    const firestore = service.getFirestoreJsInstance();
 
-    // Cast reference to expect Firestore data structure
-    const statusRef = collection(firestore, 'props', propId, 'statusHistory') as CollectionReference<PropStatusFirestoreData>; 
-    const maintenanceRef = collection(firestore, 'props', propId, 'maintenanceHistory'); // Assuming MaintenanceRecord matches Firestore structure for dates (Timestamps)
+    setLoading(true);
+    setError(null);
 
-    const unsubStatus = onSnapshot(
-      statusRef,
-      (snapshot) => {
-        const statuses = snapshot.docs.map(doc => {
-          const data = doc.data();
-          // Map Firestore data to State structure
-          return {
-            status: data.status,
-            notes: data.notes,
-            images: data.images,
-            updatedBy: data.updatedBy,
-            timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(), // Convert Timestamp to Date
-          };
-        });
-        setStatusHistory(statuses); // Set state with correct type
-        setLoading(false);
+    const statusPath = `props/${propId}/statusHistory`;
+    const maintenancePath = `props/${propId}/maintenanceHistory`;
+
+    // Listener for status history
+    const unsubscribeStatus = service.listenToCollection<PropStatusFirestoreData>(
+      statusPath,
+      (docs: FirebaseDocument<PropStatusFirestoreData>[]) => {
+        const statuses = docs
+          .map(docSnapshot => {
+            const data = docSnapshot.data;
+            if (!data) {
+              return null; // Return null for invalid data
+            }
+            return {
+              id: docSnapshot.id,
+              status: data.status,
+              notes: data.notes,
+              images: data.images,
+              updatedBy: data.updatedBy,
+              timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(),
+            } as PropStatusState;
+          })
+          .filter(Boolean as any as (value: PropStatusState | null) => value is PropStatusState); // Filter out nulls
+        setStatusHistory(statuses);
       },
-      (err) => {
-        setError(err);
+      (err: Error) => {
+        setError(err); // Or accumulate errors
         setLoading(false);
       }
     );
 
-    const unsubMaintenance = onSnapshot(
-      maintenanceRef,
-      (snapshot) => {
-        const records = snapshot.docs.map(doc => {
-          const data = doc.data();
-           // Map Firestore data (Timestamps) to MaintenanceRecord structure (strings)
-          return {
-            id: doc.id, // Add id from doc
-            type: data.type,
-            description: data.description,
-            performedBy: data.performedBy,
-            cost: data.cost,
-            notes: data.notes,
-            createdBy: data.createdBy,
-            // Convert Timestamps to ISO strings
-            date: data.date?.toDate ? data.date.toDate().toISOString() : new Date().toISOString(), 
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
-            estimatedReturnDate: data.estimatedReturnDate?.toDate ? data.estimatedReturnDate.toDate().toISOString() : undefined,
-            repairDeadline: data.repairDeadline?.toDate ? data.repairDeadline.toDate().toISOString() : undefined,
-          } as MaintenanceRecord; // Assert type
-        });
+    // Listener for maintenance history
+    const unsubscribeMaintenance = service.listenToCollection<MaintenanceRecord>(
+      maintenancePath,
+      (docs: FirebaseDocument<MaintenanceRecord>[]) => {
+        const records = docs
+          .map(docSnapshot => {
+            const data = docSnapshot.data;
+            if (!data) {
+              return null; // Return null for invalid data
+            }
+            // Ensure all required fields of MaintenanceRecord are present after spread
+            return {
+              id: docSnapshot.id,
+              ...(data as Partial<MaintenanceRecord>), // Spread data
+              type: data.type || 'inspection', // Default to a valid type if missing
+              description: data.description || '',
+              performedBy: data.performedBy || 'Unknown',
+              createdBy: data.createdBy || 'Unknown',
+              // cost and notes can be undefined if optional, handle type conversion if present
+              cost: data.cost !== undefined ? Number(data.cost) : undefined,
+              notes: data.notes !== undefined ? String(data.notes) : undefined,
+
+              // Timestamp conversions
+              date: data.date && typeof (data.date as any).toDate === 'function' 
+                      ? (data.date as any).toDate().toISOString() 
+                      : (typeof data.date === 'string' ? data.date : new Date().toISOString()),
+              createdAt: data.createdAt && typeof (data.createdAt as any).toDate === 'function' 
+                           ? (data.createdAt as any).toDate().toISOString() 
+                           : (typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString()),
+              estimatedReturnDate: data.estimatedReturnDate && typeof (data.estimatedReturnDate as any).toDate === 'function' 
+                                     ? (data.estimatedReturnDate as any).toDate().toISOString() 
+                                     : (typeof data.estimatedReturnDate === 'string' ? data.estimatedReturnDate : undefined),
+              repairDeadline: data.repairDeadline && typeof (data.repairDeadline as any).toDate === 'function' 
+                                  ? (data.repairDeadline as any).toDate().toISOString() 
+                                  : (typeof data.repairDeadline === 'string' ? data.repairDeadline : undefined),
+            } as MaintenanceRecord;
+          })
+          .filter(Boolean as any as (value: MaintenanceRecord | null) => value is MaintenanceRecord); // Filter out nulls
         setMaintenanceHistory(records);
+        setLoading(false);
       },
-      (err) => {
-        setError(err);
+      (err: Error) => {
+        setError(err); // Or accumulate errors
+        setLoading(false);
       }
     );
 
     return () => {
-      unsubStatus();
-      unsubMaintenance();
+      if (typeof unsubscribeStatus === 'function') unsubscribeStatus();
+      if (typeof unsubscribeMaintenance === 'function') unsubscribeMaintenance();
     };
   }, [propId, service]);
 
   const updatePropStatus = async (
     status: string,
     notes?: string,
-    images?: File[]
+    images?: File[] // Assuming File type for web, adjust for native if needed
   ): Promise<void> => {
-    if (!propId || !currentUser || !service?.getFirestoreJsInstance) {
-      throw new Error('PropId, currentUser, and Firebase service are required to update status');
+    if (!propId || !currentUser || !service?.addDocument) {
+      throw new Error('PropId, currentUser, and Firebase service (addDocument) are required.');
     }
-    const firestore = service.getFirestoreJsInstance();
 
     try {
-      const statusRef = collection(firestore, 'props', propId, 'statusHistory');
-      const imageUrls = images?.length 
+      // Image upload logic (simplified, assuming web API)
+      const imageUrls = images?.length
         ? await Promise.all(images.map(async (image) => {
+            // This upload logic is web-specific and needs abstraction or platform-specific implementation
+            // For now, keeping it as a placeholder.
             const formData = new FormData();
             formData.append('file', image);
             const response = await fetch(`/api/upload?path=props/${propId}/status`, {
               method: 'POST',
               body: formData,
             });
-            if (!response.ok) throw new Error('Failed to upload image');
+            if (!response.ok) throw new Error('Failed to upload image: ' + response.statusText);
             const { url } = await response.json();
-            return url;
+            return url as string;
           }))
         : undefined;
 
-      await addDoc(statusRef, {
+      const statusData = {
         status,
         notes,
         images: imageUrls,
-        timestamp: serverTimestamp(),
+        timestamp: serverTimestamp(), // FieldValue
         updatedBy: currentUser.uid,
-      });
+      };
+      // Type for addDocument will be Omit<PropStatusFirestoreData, 'id'>, which expects 'timestamp: FirebaseTimestamp'
+      // serverTimestamp() is FieldValue. This will require casting.
+      await service.addDocument<PropStatusFirestoreData>(`props/${propId}/statusHistory`, statusData as any as Omit<PropStatusFirestoreData, 'id'>);
+
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to update status'));
-      throw err;
+      const error = err instanceof Error ? err : new Error('Failed to update status');
+      setError(error);
+      throw error;
     }
   };
 
   const addMaintenanceRecord = async (
-    record: Omit<MaintenanceRecord, 'id' | 'date' | 'createdAt' | 'performedBy' | 'createdBy'>, // Adjust Omit based on what's passed vs generated
-    images?: File[]
-  ): Promise<void> => {
-    if (!propId || !currentUser || !service?.getFirestoreJsInstance || !service.addDocument) {
-      throw new Error('PropId, currentUser, and Firebase service are required to add maintenance record');
+    recordData: Omit<MaintenanceRecord, 'id' | 'date' | 'createdAt' | 'performedBy' | 'createdBy'>,
+  ): Promise<string | null> => {
+    if (!propId || !currentUser || !service?.addDocument) {
+      throw new Error('PropId, currentUser, and Firebase service (addDocument) are required.');
     }
-
     try {
-      // Assuming service.addDocument takes path and data
-      await service.addDocument(`props/${propId}/maintenanceHistory`, { 
-        ...record,
-        // images: imageUrls, // Add if image upload implemented
-        date: serverTimestamp(), 
+      const dataToSave = {
+        ...recordData,
+        propId: propId, // Ensure propId is part of the record if it's not in recordData
+        date: serverTimestamp(),
         performedBy: currentUser.uid,
-        // Assuming createdBy and createdAt are handled by service/Firestore or need serverTimestamp
-        // createdBy: currentUser.uid, 
-        // createdAt: serverTimestamp(),
-      });
+        createdBy: currentUser.uid,
+        createdAt: serverTimestamp(),
+      };
+      // The data being passed to addDocument does not and should not have an 'id'.
+      // The type argument for addDocument should reflect the data being passed in.
+      // The service.addDocument method will return a DocumentReference which contains the id.
+      const newDoc = await service.addDocument<Omit<MaintenanceRecord, 'id'>>(
+        `props/${propId}/maintenanceHistory`,
+        dataToSave as any // Keep 'as any' for now if serverTimestamp causes issues with strict type matching, or refine to Omit<MaintenanceRecord, 'id'>
+      );
+      return newDoc.id;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to add maintenance record'));
-      throw err;
+      const error = err instanceof Error ? err : new Error('Failed to add maintenance record');
+      setError(error);
+      throw error;
     }
   };
 

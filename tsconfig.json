@@ -1,84 +1,26 @@
 {
-  "extends": "@tsconfig/react-native/tsconfig.json",
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
+    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "@/*": [
         "src/*"
-      ],
-      "@components/*": [
-        "src/components/*"
-      ],
-      "@screens/*": [
-        "src/screens/*"
-      ],
-      "@utils/*": [
-        "src/utils/*"
-      ],
-      "@assets/*": [
-        "assets/*"
-      ],
-      "@shared/*": [
-        "src/shared/*"
-      ],
-      "@platforms/*": [
-        "src/platforms/*"
-      ],
-      "@hooks/*": [
-        "src/hooks/*"
-      ],
-      "@contexts/*": [
-        "src/contexts/*"
-      ],
-      "@services/*": [
-        "src/services/*"
-      ],
-      "@config/*": [
-        "src/config/*"
-      ],
-      "@types/*": [
-        "src/types/*"
       ]
     },
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "jsx": "react-jsx",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "allowJs": true,
-    "skipLibCheck": true,
-    "types": ["jest", "node", "nativewind/types"],
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
-    "plugins": [
-      {
-        "name": "nativewind/typescript/css-module-types"
-      }
-    ]
+    "module": "esnext",
+    "noEmit": true
   },
+  "exclude": [
+    "node_modules"
+  ],
   "include": [
-    "src/**/*",
-    "app/**/*",
-    "*.ts",
-    "*.tsx",
-    "index.js",
+    "**/*.ts",
+    "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "babel.config.js",
-    "metro.config.js",
-    "jest.config.js"
   ]
 }

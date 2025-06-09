@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler'; // THIS MUST BE AT THE VERY TOP
 import 'buffer';
 import 'text-encoding-polyfill';
 import { registerRootComponent } from 'expo';

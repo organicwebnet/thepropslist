@@ -24,7 +24,11 @@ export type PropLifecycleStatus =
   | 'backup'              // Backup/alternate prop
   | 'temporarily_retired' // Stored for future use
   | 'ready_for_disposal'  // Ready for recycling/disposal
-  | 'repaired_back_in_show'; // Repaired and returned to the show
+  | 'repaired_back_in_show' // Repaired and returned to the show
+  // New statuses for check-in/out and active use
+  | 'available_in_storage' // In its assigned box/location, ready for use
+  | 'checked_out'          // Checked out to actor/scene, not in storage loc
+  | 'in_use_on_set';       // Actively on set/stage
 
 /**
  * Status labels for UI display
@@ -45,13 +49,17 @@ export const lifecycleStatusLabels: Record<PropLifecycleStatus, string> = {
   backup: 'Backup/Alternate',
   temporarily_retired: 'Temporarily Retired',
   ready_for_disposal: 'Ready for Disposal',
-  repaired_back_in_show: 'Repaired - Back in Show'
+  repaired_back_in_show: 'Repaired - Back in Show',
+  // New labels
+  available_in_storage: 'Available in Storage',
+  checked_out: 'Checked Out',
+  in_use_on_set: 'In Use on Set'
 };
 
 /**
  * The severity/priority of a status for UI display and filtering
  */
-export type StatusPriority = 'critical' | 'high' | 'medium' | 'low' | 'info';
+export type StatusPriority = 'critical' | 'high' | 'medium' | 'low' | 'info' | 'active'; // Added 'active' for in_use type statuses
 
 /**
  * Map lifecycle statuses to their severity for UI treatment
@@ -72,7 +80,11 @@ export const lifecycleStatusPriority: Record<PropLifecycleStatus, StatusPriority
   ready_for_disposal: 'low',
   confirmed: 'info',
   cut: 'info',
-  repaired_back_in_show: 'info'
+  repaired_back_in_show: 'info',
+  // New priorities
+  available_in_storage: 'info',
+  checked_out: 'active',
+  in_use_on_set: 'active'
 };
 
 /**

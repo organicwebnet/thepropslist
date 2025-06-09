@@ -63,7 +63,6 @@ const FirebaseTest: React.FC = () => {
           setStatus(prev => ({ ...prev, firestore: 'Firestore: ✅ Working' }));
         } catch (err) {
           setStatus(prev => ({ ...prev, firestore: 'Firestore: ❌ Failed' }));
-          console.error('Firestore test failed:', err);
         }
 
         // Test Auth
@@ -76,7 +75,6 @@ const FirebaseTest: React.FC = () => {
           }
         } catch (err) {
           setStatus(prev => ({ ...prev, auth: 'Auth: ❌ Failed' }));
-          console.error('Auth test failed:', err);
         }
 
         // Test Storage
@@ -91,7 +89,6 @@ const FirebaseTest: React.FC = () => {
           setStatus(prev => ({ ...prev, storage: 'Storage: ✅ Working' }));
         } catch (err) {
           setStatus(prev => ({ ...prev, storage: 'Storage: ❌ Failed' }));
-          console.error('Storage test failed:', err);
         }
 
         // Test Offline Sync
@@ -106,14 +103,12 @@ const FirebaseTest: React.FC = () => {
           }));
         } catch (err) {
           setStatus(prev => ({ ...prev, offline: 'Offline Sync: ❌ Failed' }));
-          console.error('Offline sync test failed:', err);
         }
 
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
         setError(errorMessage);
         setConfigStatus(`Configuration error: ${errorMessage}`);
-        console.error('Firebase initialization error:', err);
       }
     };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, where, onSnapshot, doc, getDoc, DocumentData, Unsubscribe } from 'firebase/firestore';
+// import { collection, query, where, onSnapshot, doc, getDoc, DocumentData, Unsubscribe } from 'firebase/firestore';
 // import { db } from '../lib/firebase';
 import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import type { Show } from '../types/index.ts'; // Corrected import path
@@ -25,33 +25,23 @@ export function useShow(showId: string | undefined) {
       setLoading(true);
       setError(null);
       try {
-        // Option 1: Fetch once using service.getDocument
-        // const showData = await service.getDocument<Show>('shows', showId);
-        // Need to handle the returned FirebaseDocument<T> type
-        // setShow(showData?.data ?? null);
-        // setLoading(false);
-
-        // Option 2: Listen for real-time updates using service.listenToDocument
+       
         unsubscribe = service.listenToDocument<Show>(
           `shows/${showId}`, // Combined path
           (docWrapper) => {
             // Assuming onNext provides FirebaseDocument<T>
-            console.log(`[useShow Listener] Received data for ${showId}:`, docWrapper?.data);
             setShow(docWrapper?.data ?? null);
             setLoading(false);
           },
           (err) => {
-            console.error(`[useShow Listener] Error listening to show ${showId}:`, err);
             setError(err);
             setLoading(false);
-            // console.error(`Error listening to show ${showId}:`, err);
           }
         );
 
       } catch (err) {
         setError(err as Error);
         setLoading(false);
-        console.error(`Error fetching show ${showId}:`, err);
       }
     };
 

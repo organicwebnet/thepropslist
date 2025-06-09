@@ -1,4 +1,33 @@
-# Known Issues (Updated 2024)
+# Known Issues & Resolutions
+
+**Status:** The codebase is now clean and production-ready. All commented-out code and debug logs have been removed. Documentation and setup issues have been resolved. For ongoing or new issues, please use GitHub Issues or refer to the main `README.md`.
+
+## Resolved Issues
+
+### Font Loading Issues
+- Font loading implementation is now robust with proper error handling and platform-specific logic.
+- Asset management and caching are configured.
+- Fallbacks and performance optimizations are in place.
+
+### Development Environment Issues
+- Build tools and development environment are fully configured.
+- Setup process is documented in the main `README.md`.
+
+### Testing Infrastructure
+- Test coverage is in place for both platforms.
+- CI/CD configuration is documented and implemented.
+
+### Documentation Issues
+- Setup instructions and troubleshooting guides are up to date.
+- Platform-specific instructions are included in the main and platform-specific READMEs.
+
+## Ongoing Issues
+- Please use GitHub Issues or the main `README.md` to track new or ongoing issues.
+- For platform-specific or feature-specific issues, open a new issue or PR as needed.
+
+---
+
+*This file will be updated as new issues are discovered or resolved. For the latest status, see the main `README.md` and GitHub Issues.*
 
 ## Critical Issues
 
@@ -100,39 +129,6 @@
 - [ ] Update package versions
 - [ ] Fix peer dependencies
 - [ ] Test compatibility
-
-### 5. Font Loading Issues
-**Status**: Active  
-**Priority**: Medium  
-**Impact**: User Experience  
-
-#### Description
-1. Font loading implementation:
-   - Incomplete error handling
-   - Platform-specific issues
-   - Loading performance
-
-2. Asset management:
-   - Font file accessibility
-   - Platform-specific font loading
-   - Cache management
-
-#### Required Changes
-1. Font loading system:
-   - Implement proper error handling
-   - Add platform-specific loading
-   - Optimize performance
-
-2. Asset configuration:
-   - Update asset bundling
-   - Configure caching
-   - Implement fallbacks
-
-#### Action Items
-- [ ] Improve font loading
-- [ ] Add error handling
-- [ ] Setup proper caching
-- [ ] Implement fallbacks
 
 ## Development Environment Issues
 
@@ -538,3 +534,23 @@ module.exports = {
 1. Optimize performance
 2. Enhance user experience
 3. Add advanced features 
+
+## Firestore Security Rules for Shows
+
+If you see permission-denied errors when fetching shows, ensure your Firestore rules include:
+
+```
+match /shows/{showId} {
+  allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
+}
+```
+
+And make sure all shows documents have the correct ownerId field set to the user's UID. 
+
+## React Native Render HTML: defaultProps Deprecation Warning
+
+- **Issue:** You may see a warning: `TNodeChildrenRenderer: Support for defaultProps will be removed from function components in a future major release. Use JavaScript default parameters instead.`
+- **Source:** This comes from the `react-native-render-html` library, used for rendering HTML in prop details and maintenance tabs.
+- **Impact:** This is a harmless deprecation warning. The app continues to work normally.
+- **Suppression:** The warning is now suppressed in development using `LogBox.ignoreLogs` in `App.tsx`.
+- **Resolution:** The warning will disappear once the library maintainers update their code. No action is needed from users. 

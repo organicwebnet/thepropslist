@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePacking } from '../../../src/hooks/usePacking.ts';
 import { PackingBox, PackedProp } from '../../../src/types/packing.ts';
 import { useTheme } from '../../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../../src/theme.ts';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../../src/styles/theme.ts';
 import { QRScannerScreen } from '../../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
 import { useFirebase } from '../../../src/contexts/FirebaseContext.tsx';
 import { Prop } from '../../../src/shared/types/props.ts';

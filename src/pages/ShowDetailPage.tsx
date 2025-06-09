@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext.tsx';
 import { Edit, Package } from 'lucide-react-native';
 import { Pencil, ArrowLeft, UserMinus, Plus, Trash2 } from 'lucide-react';
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
-import { darkTheme, lightTheme } from '../theme.ts';
+import { darkTheme, lightTheme } from '../styles/theme.ts';
 import type { FirebaseDocument } from '../shared/services/firebase/types.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
 
@@ -38,7 +38,6 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
         }
       },
       (err: Error) => {
-        console.error('Error fetching show:', err);
         setError('Failed to load show details.');
         setShow(null);
         setLoading(false);
@@ -61,7 +60,6 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
         setLoading(false);
       },
       (err: Error) => {
-        console.error('Error fetching props for stats:', err);
         setLoading(false);
       },
       { where: [['showId', '==', id]] }
@@ -78,11 +76,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
       if (onEdit && show) {
           onEdit(show)
       } else {
-          console.error("Show edit page route /shows/[id]/edit is not yet implemented or defined. Edit cannot proceed via navigation.");
           if (id) {
             Alert.alert("Edit Show", "This feature (editing show details via a separate page) is not yet implemented.");
-          } else {
-            console.error("Show ID is undefined, cannot navigate to edit page.");
           }
       }
     } else {
@@ -98,8 +93,11 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           await firebaseService.deleteShow(id); 
           router.push('/shows');
         } catch (err) {
-          console.error('Error deleting show:', err);
-          Alert.alert('Error', 'Failed to delete show.');
+          if (onEdit && show) {
+            onEdit(show);
+          } else {
+            Alert.alert('Error', 'Failed to delete show.');
+          }
         }
     };
 

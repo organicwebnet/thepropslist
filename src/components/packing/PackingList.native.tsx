@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import {
     ActivityIndicator, Text, View, Button, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform
 } from 'react-native';
@@ -10,6 +9,7 @@ import { PropSelector } from './PropSelector.tsx';
 // For icons, we need to use lucide-react-native
 import { X, Clock, HandCoins, Package, PackageOpen, AlertTriangle } from 'lucide-react-native'; 
 import { Timestamp } from 'firebase/firestore';
+import { theme } from '../../styles/theme';
 
 export interface PropInstance extends Prop { 
   instanceId: string; 
@@ -97,7 +97,6 @@ export function PackingList({
       try {
         await onUpdateBox(editingBoxId, { name: currentBoxName, props: packedProps });
       } catch (error) {
-        console.error(`Error updating box ${editingBoxId}:`, error);
         return; 
       }
     } else {
@@ -105,7 +104,6 @@ export function PackingList({
       try {
         await onCreateBox(packedProps, currentBoxName, firstProp?.act ?? 0, firstProp?.scene ?? 0);
       } catch (error) {
-        console.error(`Error creating box ${currentBoxName}:`, error);
         return; 
       }
     }
@@ -135,7 +133,7 @@ export function PackingList({
   const renderSourceIcon = (prop: PropInstance) => {
     // This will need native styling and lucide-react-native icons
     const iconSize = 16;
-    const iconColor = prop?.source === 'rented' ? "#F59E0B" : "#3B82F6"; // yellow-500, blue-500
+    const iconColor = prop?.source === 'rented' ? theme.colors.yellow[500] : theme.colors.blue[500]; // yellow-500, blue-500
 
     if (prop?.source === 'rented') {
       return (
@@ -191,7 +189,7 @@ export function PackingList({
             value={currentBoxName}
             onChangeText={setCurrentBoxName}
             placeholder="Enter Box Name"
-            placeholderTextColor={darkThemeColors.textSecondary} 
+            placeholderTextColor={theme.colors.textSecondary} 
             style={styles.textInput}
             autoCorrect={false}
           />
@@ -231,7 +229,7 @@ export function PackingList({
                   </View>
                 </View>
                 <TouchableOpacity onPress={() => handleRemoveProp(prop.instanceId)}>
-                  <X size={18} color={darkThemeColors.iconDanger} />
+                  <X size={18} color={theme.colors.iconDanger} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -241,7 +239,7 @@ export function PackingList({
             <Text style={styles.summaryText}>Total Weight: {totalWeight.toFixed(1)} kg</Text>
             {isBoxHeavy && (
                 <View style={styles.heavyBadge}>
-                    <AlertTriangle size={14} color={darkThemeColors.iconWarning} /> 
+                    <AlertTriangle size={14} color={theme.colors.iconWarning} /> 
                     <Text style={styles.heavyBadgeText}>Heavy</Text>
                 </View>
             )}
@@ -258,7 +256,7 @@ export function PackingList({
               ]}
             >
               {isLoading && editingBoxId === null ? (
-                <ActivityIndicator size="small" color={darkThemeColors.textPrimary} />
+                <ActivityIndicator size="small" color={theme.colors.textPrimary} />
               ) : (
                 <Text style={styles.buttonText}>{editingBoxId ? 'Update Box' : 'Create Box'}</Text>
               )}
@@ -283,7 +281,7 @@ export function PackingList({
            <Text style={styles.emptyStateText}>No boxes packed yet for this show.</Text>
         )}
         {isLoading && boxes.length === 0 && (
-            <ActivityIndicator size="large" color={darkThemeColors.primary} style={{ marginTop: 20}} />
+            <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 20}} />
         )}
         {boxes.map((box) => (
           <PackingBoxCard 
@@ -299,45 +297,29 @@ export function PackingList({
   );
 }
 
-// Define colors based on your tailwind config for clarity (can be moved to a central theme/colors file)
-const darkThemeColors = {
-  bg: '#111827',          // dark-bg
-  cardBg: '#1F2937',      // dark-card-bg
-  inputBg: '#374151',     // dark-border (or a bit lighter like gray-700 for inputs)
-  textPrimary: '#F9FAFB', // dark-text-primary
-  textSecondary: '#9CA3AF',// dark-text-secondary
-  primary: '#3B82F6',     // dark-primary (blue accent)
-  border: '#374151',      // dark-border
-  iconDefault: '#9CA3AF', // dark-text-secondary for general icons
-  iconDanger: '#F87171',  // Tailwind red-400 for delete icons
-  iconWarning: '#FBBF24', // Tailwind amber-400 for warning icons (like heavy badge)
-  disabledButtonBg: '#4B5563', // gray-600
-  buttonText: '#FFFFFF', // white
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: darkThemeColors.bg,
+    backgroundColor: theme.colors.bg,
     paddingHorizontal: Platform.OS === 'web' ? 20 : 10, // More padding on web
   },
   column: {
     marginBottom: 24,
     padding: Platform.OS === 'web' ? 16 : 8,
-    backgroundColor: Platform.OS === 'web' ? darkThemeColors.cardBg : 'transparent', // Card bg for web columns
+    backgroundColor: Platform.OS === 'web' ? theme.colors.cardBg : 'transparent', // Card bg for web columns
     borderRadius: Platform.OS === 'web' ? 8 : 0,
   },
   columnHeader: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: darkThemeColors.textPrimary,
+    color: theme.colors.textPrimary,
     marginBottom: 16,
     borderBottomWidth: Platform.OS === 'web' ? 1 : 0, // Only border on web
-    borderBottomColor: darkThemeColors.border,
+    borderBottomColor: theme.colors.border,
     paddingBottom: Platform.OS === 'web' ? 8 : 0,
   },
   boxCreationForm: {
-    backgroundColor: darkThemeColors.cardBg,
+    backgroundColor: theme.colors.cardBg,
     padding: 16,
     borderRadius: 8,
     marginBottom: 20,
@@ -348,20 +330,20 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   textInput: {
-    backgroundColor: darkThemeColors.inputBg,
-    color: darkThemeColors.textPrimary,
+    backgroundColor: theme.colors.inputBg,
+    color: theme.colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 6,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: darkThemeColors.border, // Subtle border for input
+    borderColor: theme.colors.border, // Subtle border for input
   },
   subHeader: {
     fontSize: 16,
     fontWeight: '600',
-    color: darkThemeColors.textSecondary,
+    color: theme.colors.textSecondary,
     marginTop: 12,
     marginBottom: 8,
   },
@@ -369,7 +351,7 @@ const styles = StyleSheet.create({
     maxHeight: 150, // Limit height to make it scrollable within the form
     marginBottom: 16,
     padding: 8,
-    backgroundColor: darkThemeColors.inputBg, // Use a slightly different bg for this scroll area
+    backgroundColor: theme.colors.inputBg, // Use a slightly different bg for this scroll area
     borderRadius: 6,
   },
   selectedPropItem: {
@@ -378,7 +360,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 10,
-    backgroundColor: darkThemeColors.cardBg, // Match card background
+    backgroundColor: theme.colors.cardBg, // Match card background
     borderRadius: 4,
     marginBottom: 6,
   },
@@ -392,36 +374,36 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 4,
     marginRight: 10,
-    backgroundColor: darkThemeColors.border, // Fallback bg
+    backgroundColor: theme.colors.border, // Fallback bg
   },
   selectedPropImagePlaceholder: {
     width: 32,
     height: 32,
     borderRadius: 4,
     marginRight: 10,
-    backgroundColor: darkThemeColors.border,
+    backgroundColor: theme.colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectedPropImagePlaceholderText: {
-    color: darkThemeColors.textPrimary,
+    color: theme.colors.textPrimary,
     fontWeight: 'bold',
     fontSize: 14,
   },
   selectedPropName: {
-    color: darkThemeColors.textPrimary,
+    color: theme.colors.textPrimary,
     fontSize: 15,
     flexShrink: 1, // Allow text to shrink if too long
   },
   selectedPropNotes: {
-    color: darkThemeColors.textSecondary,
+    color: theme.colors.textSecondary,
     fontSize: 12,
     flexShrink: 1,
     marginTop: 2,
   },
   emptyStateText: {
     textAlign: 'center',
-    color: darkThemeColors.textSecondary,
+    color: theme.colors.textSecondary,
     paddingVertical: 12,
     fontSize: 14,
   },
@@ -430,26 +412,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: darkThemeColors.inputBg,
+    backgroundColor: theme.colors.inputBg,
     borderRadius: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   summaryText: {
-    color: darkThemeColors.textPrimary,
+    color: theme.colors.textPrimary,
     fontSize: 15,
   },
   heavyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: darkThemeColors.cardBg, // Use card bg for badge
+    backgroundColor: theme.colors.cardBg, // Use card bg for badge
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   heavyBadgeText: {
-    color: darkThemeColors.iconWarning, // Warning color for text
+    color: theme.colors.iconWarning, // Warning color for text
     marginLeft: 4,
     fontSize: 12,
     fontWeight: '500',
@@ -467,28 +449,28 @@ const styles = StyleSheet.create({
     flex: 1, // Make buttons take equal width if multiple
   },
   saveButton: {
-    backgroundColor: darkThemeColors.primary,
+    backgroundColor: theme.colors.primary,
     marginRight: 8, // Add margin if there's a cancel button
   },
   cancelButton: {
-    backgroundColor: darkThemeColors.inputBg, // A less prominent color for cancel
+    backgroundColor: theme.colors.inputBg, // A less prominent color for cancel
     marginLeft: 8,
   },
   buttonText: {
-    color: darkThemeColors.buttonText,
+    color: theme.colors.buttonText,
     fontSize: 16,
     fontWeight: '600',
   },
   buttonDisabled: {
-    backgroundColor: darkThemeColors.disabledButtonBg,
+    backgroundColor: theme.colors.disabledButtonBg,
     opacity: 0.7,
   },
   // Styles for PackingBoxCard section - these should ideally be in PackingBoxCard itself if it's themed
   // For demonstration, if PackingBoxCard is not themed:
   // packedBoxesHeader: { ...styles.columnHeader }, 
-  // packedBoxItem: { backgroundColor: darkThemeColors.cardBg, padding: 12, borderRadius: 6, marginBottom: 10 },
-  // packedBoxName: { color: darkThemeColors.textPrimary, fontSize: 17, fontWeight: '600' },
-  // packedBoxDetails: { color: darkThemeColors.textSecondary, fontSize: 13, marginTop: 4 },
+  // packedBoxItem: { backgroundColor: theme.colors.cardBg, padding: 12, borderRadius: 6, marginBottom: 10 },
+  // packedBoxName: { color: theme.colors.textPrimary, fontSize: 17, fontWeight: '600' },
+  // packedBoxDetails: { color: theme.colors.textSecondary, fontSize: 13, marginTop: 4 },
   
   // Source icon (if needed, from previous context, ensure styling matches theme)
   sourceIconContainer: {

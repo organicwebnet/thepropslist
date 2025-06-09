@@ -9,8 +9,8 @@ import { useProps } from '../../src/contexts/PropsContext.tsx'; // Corrected pat
 import type { PropFormData } from '../../src/shared/types/props.ts'; // Corrected path to include src
 // import { ThemeContext } from '@/src/contexts/ThemeContext'; 
 import { useTheme } from '../../src/contexts/ThemeContext.tsx'; // Corrected path to include src
-// import { lightTheme, darkTheme } from '@/src/theme'; 
-import { lightTheme, darkTheme } from '../../src/theme.ts'; // Corrected path to include src
+// import { lightTheme, darkTheme } from '@/src/styles/theme';
+import { lightTheme, darkTheme } from '../../src/styles/theme.ts'; // Corrected path to include src
 
 export default function CreatePropScreen() {
   const router = useRouter();

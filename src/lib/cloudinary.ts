@@ -42,9 +42,8 @@ export const uploadImage = async (file: File, storageService: FirebaseStorage): 
     
     return downloadURL;
   } catch (error) {
-    console.error('Error uploading to Firebase Storage:', error);
     if (error instanceof Error) {
-      throw new Error(`Upload failed: ${error.message}`);
+      throw new Error('Upload failed: ' + error.message);
     }
     throw new Error('Upload failed. Please try again.');
   }

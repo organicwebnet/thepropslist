@@ -38,25 +38,11 @@ export function PropStatusUpdate({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('=== STATUS UPDATE DEBUG ===');
-    console.log('1. Current Status:', currentStatus);
-    console.log('2. New Status:', newStatus);
-    console.log('3. Notes:', notes);
-    console.log('4. Notify Team:', notifyTeam);
-    console.log('5. Damage Images:', damageImages);
-    
     if (!newStatus || newStatus === currentStatus) return;
 
     setIsSubmitting(true);
     
     try {
-      console.log('6. Calling onStatusUpdate with params:', {
-        newStatus,
-        notes: notes.trim() || '',
-        notifyTeam,
-        damageImages: damageImages.length > 0 ? damageImages : undefined
-      });
-
       await onStatusUpdate(
         newStatus,
         notes.trim() || '',
@@ -64,15 +50,12 @@ export function PropStatusUpdate({
         damageImages.length > 0 ? damageImages : undefined
       );
 
-      console.log('7. Status update completed successfully');
-
       // Reset form state after successful update
       setNotes('');
       setDamageImages([]);
       setImagePreviews([]);
       // Don't reset status as we want to show the new current status
     } catch (error) {
-      console.error('8. Error updating prop status:', error);
       alert('Failed to update prop status. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -116,13 +99,6 @@ export function PropStatusUpdate({
 
   // Determine priority and color safely - Use simple check for existence
   const statusPriority = newStatus ? lifecycleStatusPriority[newStatus] : 'info';
-  // const statusColor = newStatus ? {
-  //   critical: 'border-red-500 bg-red-900/50',
-  //   high: 'border-orange-500 bg-orange-900/50',
-  //   medium: 'border-yellow-500 bg-yellow-900/50',
-  //   low: 'border-blue-500 bg-blue-900/50',
-  //   info: 'border-gray-700 bg-gray-800/50',
-  // }[statusPriority] || 'border-gray-700 bg-gray-800/50'; // Fallback
 
   // Refactored statusColor logic
   let statusColor: string;
@@ -133,6 +109,7 @@ export function PropStatusUpdate({
       high: 'border-orange-500 bg-orange-900/50',
       medium: 'border-yellow-500 bg-yellow-900/50',
       low: 'border-blue-500 bg-blue-900/50',
+      active: 'border-cyan-500 bg-cyan-900/50',
       info: defaultColor,
     };
     statusColor = colorMap[statusPriority] || defaultColor;

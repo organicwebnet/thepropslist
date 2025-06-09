@@ -26,7 +26,6 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
   const router = useRouter();
 
   // Log the prop object to check its contents, especially name and description - REMOVE THIS
-  // console.log(`PropCard received prop: ID=${prop.id}, Name=${prop.name}, Description=${prop.description}`);
 
   const renderImage = () => {
     // Use prop.primaryImageUrl first, then fallback to prop.imageUrl
@@ -52,15 +51,12 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
         source={imageSource} 
         style={styles.image}
         resizeMode="cover"
-        onError={(error) => {
-          console.warn(`PropCard: Image loading error for ${prop.name}, URI: ${imageUrl}:`, error.nativeEvent?.error || error.nativeEvent);
+        onError={() => {
           setImageError(true);
         }}
       />
     );
      } else {
-    //   // This path should ideally not be reached if imageUrl is a valid string.
-    //   console.error('PropCard: Invalid imageSource structure unexpectedly for ', imageUrl);
        setImageError(true); 
        return (
         <View style={styles.placeholderImage}>

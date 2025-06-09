@@ -1,15 +1,15 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { useRouter, usePathname, useFocusEffect } from 'expo-router';
-import { View, Text, FlatList, ActivityIndicator, Alert, Button, TextInput, TouchableOpacity, Platform } from 'react-native'; // Simplified imports, Added Platform
-import { ShowsContext } from '../../../src/contexts/ShowsContext.tsx'; // Import ShowsContext
-import { useProps } from '../../../src/contexts/PropsContext.tsx'; // Import useProps hook
+import { Platform, FlatList, Alert } from 'react-native';
+import { ShowsContext } from '../../../src/contexts/ShowsContext.tsx';
+import { useProps } from '../../../src/contexts/PropsContext.tsx';
 import type { Prop, PropCategory } from '../../../src/shared/types/props.ts';
 import { propCategories } from '../../../src/shared/types/props.ts';
-import type { Show, Act, Scene } from '../../../src/shared/services/firebase/types.ts'; // Import Show, Act, Scene types from firebase types
-import { PlusCircle, FileDown, FileText, CopyX } from 'lucide-react'; // Changed to lucide-react for web
-import type { Show as SharedShow } from '../../../src/shared/types/props.ts'; // For comparison or specific use if needed
-import { WebPropCard } from '../../../src/platforms/web/components/WebPropCard.tsx'; // Corrected path and filename, changed to named import
-import { PropLifecycleStatus, lifecycleStatusLabels } from '../../../src/types/lifecycle.ts'; // Import lifecycle types/labels
+import type { Show, Act, Scene } from '../../../src/shared/services/firebase/types.ts';
+import { PlusCircle, FileDown, FileText, CopyX } from 'lucide-react';
+import type { Show as SharedShow } from '../../../src/shared/types/props.ts';
+import { WebPropCard } from '../../../src/platforms/web/components/WebPropCard.tsx';
+import { PropLifecycleStatus, lifecycleStatusLabels } from '../../../src/types/lifecycle.ts';
 
 // --- Helper Function for Date Formatting ---
 const formatDateTime = (isoString: string | undefined): string => {
@@ -36,27 +36,27 @@ export default function WebPropsListPage() {
   if (Platform.OS !== 'web') {
     console.error("[app/(web)/props/index.tsx] This WEB-ONLY page was reached on NATIVE. This should not happen. Check navigation.");
     return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <Text style={{color: 'red', textAlign: 'center', padding: 20}}>
+      <div style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <p style={{color: 'red', textAlign: 'center', padding: 20}}>
           Critical Error: Web page (WebPropsListPage) rendered on native platform. Please report this bug.
-        </Text>
-      </View>
+        </p>
+      </div>
     );
   }
 
-  const pathname = usePathname(); // Get current pathname
+  const pathname = usePathname();
   console.log(`--- Rendering: app/(web)/props/index.tsx (Pathname: ${pathname}) ---`);
 
   // Get state and functions from context
   const { props: contextProps, loading, error: contextError, deleteProp: contextDeleteProp } = useProps();
-  const { selectedShow } = useContext(ShowsContext) ?? {}; // Add default empty object and nullish coalescing for safety
+  const { selectedShow } = useContext(ShowsContext) ?? {};
   
   console.log(`[WebPropsListPage Render] selectedShow ID: ${selectedShow?.id}, Context loading: ${loading}, Context error: ${contextError?.message}, Context props count: ${contextProps.length}`);
   
   const router = useRouter();
   
   // Local state for filters ONLY
-  const [componentError, setComponentError] = useState<string | null>(null); // Local error state for component-specific errors (e.g., delete)
+  const [componentError, setComponentError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<PropLifecycleStatus | 'All'>('All');
@@ -71,13 +71,13 @@ export default function WebPropsListPage() {
 
   const handleDelete = useCallback(async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this prop?')) return;
-    setComponentError(null); // Clear local error
+    setComponentError(null);
     try {
-      await contextDeleteProp(id); // Use delete function from context
+      await contextDeleteProp(id);
       console.log(`Prop ${id} deleted via context`);
     } catch (err) {
       console.error('Failed to delete prop via context:', err);
-      setComponentError('Failed to delete prop. Please try again.'); // Set local error
+      setComponentError('Failed to delete prop. Please try again.');
     }
   }, [contextDeleteProp]);
 
@@ -97,7 +97,7 @@ export default function WebPropsListPage() {
   };
 
   const handleExportCSV = () => {
-    if (!selectedShow || propsForFiltering.length === 0) { // Use direct props
+    if (!selectedShow || propsForFiltering.length === 0) {
       alert('No props to export.');
       return;
     }
@@ -114,8 +114,8 @@ export default function WebPropsListPage() {
       return stringValue;
     };
     const headerRow = headers.map(formatCsvCell).join(',');
-    const dataRows = propsForFiltering.map(data => { // Map directly from Prop
-        if (!data) return ''; // Should not happen if contextProps is filtered properly upstream, but safe check
+    const dataRows = propsForFiltering.map(data => {
+        if (!data) return '';
         const row = [
             data.id,
             data.name,
@@ -176,9 +176,8 @@ export default function WebPropsListPage() {
       : availableActs.find((act: Act) => act.id === selectedAct)?.scenes || [];
 
   // Combined filtering logic
-  const filteredProps = propsForFiltering.filter((data, index) => { // Filter directly on Prop data
+  const filteredProps = propsForFiltering.filter((data, index) => {
     
-    // Log the first prop document being filtered
     if (index === 0) {
       console.log("Filtering data:", JSON.stringify(data, null, 2));
       console.log("Current Filters:", {
@@ -215,7 +214,7 @@ export default function WebPropsListPage() {
       return false;
     }
 
-    return true; // Include prop if all filters pass
+    return true;
   });
   // Log the result of filtering
   console.log(`WebPropsListPage Render: Filtered props count: ${filteredProps.length} (Raw count: ${propsForFiltering.length})`);
@@ -225,153 +224,164 @@ export default function WebPropsListPage() {
 
   // Restore the original return statement
   return (
-    <View className="flex-1 bg-gray-900 text-white p-4">
+    <div className="flex-1 bg-gray-900 text-white p-4">
       {/* Header Section */}
-      <View className="mb-6 flex-row justify-between items-center flex-wrap gap-y-4">
-        <Text className="text-2xl font-bold text-gray-100">
+      <div className="mb-6 flex-row justify-between items-center flex-wrap gap-y-4">
+        <h2 className="text-2xl font-bold text-gray-100">
           Props for: {selectedShow?.name || 'Loading...'}
-        </Text>
-        {/* Action Buttons - Restored styled buttons with icons */}
-        <View className="flex-row flex-wrap gap-2">
-           <TouchableOpacity
-             onPress={handleGoToPDFPreview}
+        </h2>
+        {/* Action Buttons */}
+        <div className="flex-row flex-wrap gap-2">
+           <button
+             onClick={handleGoToPDFPreview}
              disabled={!selectedShow}
-             className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+             className="appearance-none border-none bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
            >
              <FileText size={18} />
              <span>Export PDF</span>
-           </TouchableOpacity>
-           <TouchableOpacity
-             onPress={handleExportCSV}
+           </button>
+           <button
+             onClick={handleExportCSV}
              disabled={!selectedShow || filteredProps.length === 0}
              className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
            >
               <FileDown size={18} />
              <span>Export CSV</span>
-           </TouchableOpacity>
-            <TouchableOpacity
-             onPress={handleDuplicates}
-             disabled={!selectedShow}
-             className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-           >
-              <CopyX size={18} />
-             <span>Duplicates</span>
-           </TouchableOpacity>
-           <TouchableOpacity
-             onPress={handleAddNew}
-             disabled={!selectedShow}
-             className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <PlusCircle size={18} />
-             <span>Add New Prop</span>
-           </TouchableOpacity>
-        </View>
-      </View>
+           </button>
+          {/* Add New Prop Button */}
+          <button
+            onClick={handleAddNew}
+            disabled={!selectedShow}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 flex flex-row items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <PlusCircle size={18} />
+            <span>Add New Prop</span>
+          </button>
+           {/* Additional Action Buttons (Placeholder) */}
+           <button
+            onClick={handleDuplicates}
+            className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-opacity-50 flex flex-row items-center gap-1"
+          >
+            <CopyX size={18} />
+            <span>Find Duplicates</span>
+          </button>
+        </div>
+      </div>
 
-      {/* Filter Section */}
-      <View className="mb-4 p-4 bg-gray-800 rounded-lg grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
-         {/* Search Input */}
-        <View>
-            <Text className="block text-sm font-medium text-gray-300 mb-1">Search</Text>
-            <TextInput
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                placeholder="Search by name, description..."
-                value={searchTerm}
-                onChangeText={setSearchTerm}
+      {/* Filter Section - ADDED */}
+      <div className="mb-6 p-4 bg-gray-800 rounded-lg shadow-md">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
+          {/* Search Input */}
+          <div className="flex-1 min-w-[150px]">
+            <label htmlFor="searchInput" className="block text-sm font-medium text-gray-300 mb-1">Search</label>
+            <input
+              id="searchInput"
+              type="text"
+              className="block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="Search by name or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-        </View>
+          </div>
 
-        {/* Category Dropdown */}
-        <View>
-            <Text className="block text-sm font-medium text-gray-300 mb-1">Category</Text>
+          {/* Category Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-300 mb-1">Category</label>
             <select
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+              id="categoryFilter"
+              className="block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value as PropCategory | 'All')}
             >
-                <option value="All">All Categories</option>
-                {propCategories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                ))}
+              <option value="All">All Categories</option>
+              {propCategories.map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
             </select>
-        </View>
-         {/* Status Dropdown */}
-        <View>
-            <Text className="block text-sm font-medium text-gray-300 mb-1">Status</Text>
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-300 mb-1">Status</label>
             <select
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as PropLifecycleStatus | 'All')}
+              id="statusFilter"
+              className="block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value as PropLifecycleStatus | 'All')}
             >
-                {Object.entries(statusDisplayMap).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
+              {Object.entries(statusDisplayMap).map(([value, label]) => (
+                 <option key={value} value={value}>{label}</option>
+              ))}
             </select>
-        </View>
-        {/* Act Dropdown */}
-        <View>
-            <Text className="block text-sm font-medium text-gray-300 mb-1">Act</Text>
-            <select
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
-                value={String(selectedAct)}
+          </div>
+
+          {/* Act Filter */}
+          {selectedShow && availableActs.length > 0 && (
+            <div className="flex-1 min-w-[150px]">
+              <label htmlFor="actFilter" className="block text-sm font-medium text-gray-300 mb-1">Act</label>
+              <select
+                id="actFilter"
+                className="block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                value={selectedAct === 'All' ? 'All' : String(selectedAct)}
                 onChange={(e) => setSelectedAct(e.target.value === 'All' ? 'All' : Number(e.target.value))}
-                disabled={availableActs.length === 0}
-            >
+              >
                 <option value="All">All Acts</option>
                 {availableActs.map((act: Act) => (
-                    <option key={act.id} value={act.id}>{act.name || `Act ${act.id}`}</option>
+                  <option key={act.id} value={String(act.id)}>{act.name || `Act ${act.id}`}</option>
                 ))}
-            </select>
-        </View>
-        {/* Scene Dropdown */}
-        <View>
-            <Text className="block text-sm font-medium text-gray-300 mb-1">Scene</Text>
-            <select
-                className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600"
-                value={String(selectedScene)}
+              </select>
+            </div>
+          )}
+
+          {/* Scene Filter */}
+          {selectedShow && selectedAct !== 'All' && availableScenes.length > 0 && (
+            <div className="flex-1 min-w-[150px]">
+              <label htmlFor="sceneFilter" className="block text-sm font-medium text-gray-300 mb-1">Scene</label>
+              <select
+                id="sceneFilter"
+                className="block w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                value={selectedScene === 'All' ? 'All' : String(selectedScene)}
                 onChange={(e) => setSelectedScene(e.target.value === 'All' ? 'All' : Number(e.target.value))}
-                disabled={selectedAct === 'All' || availableScenes.length === 0}
-            >
+              >
                 <option value="All">All Scenes</option>
                 {availableScenes.map((scene: Scene) => (
-                    <option key={scene.id} value={scene.id}>{scene.name || `Scene ${scene.id}`}</option>
+                  <option key={scene.id} value={String(scene.id)}>{scene.name || `Scene ${scene.id}`}</option>
                 ))}
-            </select>
-        </View>
-      </View>
+              </select>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* End Filter Section */}
 
-      {/* Display component-specific errors (e.g., from delete) */}
-      {componentError && (
-          <View className="mb-4 p-3 bg-red-900 border border-red-700 rounded">
-              <Text className="text-red-400">{componentError}</Text>
-          </View>
+      {/* Loading and Error States */}
+      {loading && <p className="text-center my-6 text-lg">Loading props...</p>}
+      {contextError && <p className="text-red-400 text-center my-4">Error loading props: {contextError.message}</p>}
+      {componentError && <p className="text-red-400 text-center my-4">{componentError}</p>}
+
+      {/* Props List or Empty State */}
+      {!loading && filteredProps.length === 0 && (
+        <div className="text-center py-10">
+          <p className="text-xl text-gray-400">No props found matching your criteria.</p>
+          {selectedShow && (
+            <p className="text-gray-500 mt-2">Try adjusting filters or adding a new prop to "{selectedShow.name}".</p>
+          )}
+        </div>
       )}
-      
-      {/* Loading / Error / Content Section - Uses context state */}
-      {loading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#FBBF24" />
-          <Text className="text-gray-400 mt-2">Loading props...</Text>
-        </View>
-      ) : contextError ? ( // Use contextError
-        <View className="flex-1 justify-center items-center">
-          <Text className="text-red-500">Error loading props: {contextError.message}</Text>
-        </View>
-      ) : filteredProps.length === 0 ? (
-        <View className="flex-1 justify-center items-center">
-          <Text className="text-gray-400">No props found matching the current filters.</Text>
-        </View>
-      ) : (
-        <View className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProps.map((prop) => (
-            <WebPropCard
-              key={prop.id}
-              prop={prop}
-              onDelete={handleDelete}
+
+      {!loading && filteredProps.length > 0 && (
+        <FlatList
+          data={filteredProps}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <WebPropCard 
+              prop={item} 
+              onDelete={() => handleDelete(item.id)}
             />
-          ))}
-        </View>
+          )}
+          className="space-y-4"
+        />
       )}
-    </View>
+    </div>
   );
 } 

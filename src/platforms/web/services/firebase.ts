@@ -65,6 +65,8 @@ import { FirebaseError } from '../../../shared/services/firebase/types.ts';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '../../../types/lifecycle.ts';
 import { Show } from '../../../types/index.ts';
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+import type { Prop } from '../../../shared/types/props.ts';
+import type { BoardData, ListData, CardData, MemberData } from '../../../shared/types/taskManager.ts';
 
 type QueryOptions = {
   where?: [string, WhereFilterOp, any][];
@@ -547,5 +549,62 @@ export class WebFirebaseService implements FirebaseService {
       console.error(`Error setting document ${collectionPath}/${documentId}:`, error);
       throw this.createError(error); // Re-throw custom error
     }
+  }
+
+  // Add getPropsByShowId to the class
+  async getPropsByShowId(showId: string): Promise<FirebaseDocument<Prop>[]> {
+    console.warn(`getPropsByShowId(${showId}) not implemented for WebFirebaseService`);
+    throw new FirebaseError('getPropsByShowId method not implemented', 'unimplemented');
+  }
+
+  // --- TaskManager Specific Methods (Placeholders) ---
+  async getBoard(boardId: string): Promise<BoardData | null> {
+    console.warn(`WebFirebaseService.getBoard(${boardId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async getListsForBoard(boardId: string): Promise<ListData[]> {
+    console.warn(`WebFirebaseService.getListsForBoard(${boardId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async getCardsForList(boardId: string, listId: string): Promise<CardData[]> {
+    console.warn(`WebFirebaseService.getCardsForList(${boardId}, ${listId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async getBoardMembers(boardId: string): Promise<MemberData[]> {
+    console.warn(`WebFirebaseService.getBoardMembers(${boardId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async addList(boardId: string, listData: Omit<ListData, 'id' | 'boardId'>): Promise<ListData> {
+    console.warn(`WebFirebaseService.addList(${boardId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async addCard(boardId: string, listId: string, cardData: Omit<CardData, 'id' | 'boardId' | 'listId'>): Promise<CardData> {
+    console.warn(`WebFirebaseService.addCard(${boardId}, ${listId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async updateCard(boardId: string, listId: string, cardId: string, updates: Partial<CardData>): Promise<void> {
+    console.warn(`WebFirebaseService.updateCard(${boardId}, ${listId}, ${cardId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async deleteCard(boardId: string, listId: string, cardId: string): Promise<void> {
+    console.warn(`WebFirebaseService.deleteCard(${boardId}, ${listId}, ${cardId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async moveCardToList(boardId: string, cardId: string, originalListId: string, targetListId: string, newOrder: number): Promise<void> {
+    console.warn(`WebFirebaseService.moveCardToList(${boardId}, ${cardId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
+  }
+
+  async reorderCardsInList(boardId: string, listId: string, orderedCards: CardData[]): Promise<void> {
+    console.warn(`WebFirebaseService.reorderCardsInList(${boardId}, ${listId}) is not implemented.`);
+    throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 } 

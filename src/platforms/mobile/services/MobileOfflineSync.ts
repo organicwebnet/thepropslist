@@ -47,9 +47,9 @@ export class MobileOfflineSync implements OfflineSync {
 
   async initialize(): Promise<void> {
     const [syncEnabled, operations, retryData] = await Promise.all([
-      AsyncStorage.default.getItem(STORAGE_KEYS.OFFLINE_SYNC),
-      AsyncStorage.default.getItem(STORAGE_KEYS.PENDING_OPERATIONS),
-      AsyncStorage.default.getItem(STORAGE_KEYS.RETRY_ATTEMPTS)
+      AsyncStorage.getItem(STORAGE_KEYS.OFFLINE_SYNC),
+      AsyncStorage.getItem(STORAGE_KEYS.PENDING_OPERATIONS),
+      AsyncStorage.getItem(STORAGE_KEYS.RETRY_ATTEMPTS)
     ]);
 
     this.isEnabled = syncEnabled === 'true';
@@ -80,7 +80,7 @@ export class MobileOfflineSync implements OfflineSync {
   }
 
   async getItem<T>(key: string): Promise<T | null> {
-    const value = await AsyncStorage.default.getItem(key);
+    const value = await AsyncStorage.getItem(key);
     if (value === null) return null;
     try {
       return JSON.parse(value) as T;
@@ -91,15 +91,15 @@ export class MobileOfflineSync implements OfflineSync {
 
   async setItem<T>(key: string, value: T): Promise<void> {
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-    await AsyncStorage.default.setItem(key, stringValue);
+    await AsyncStorage.setItem(key, stringValue);
   }
 
   async removeItem(key: string): Promise<void> {
-    await AsyncStorage.default.removeItem(key);
+    await AsyncStorage.removeItem(key);
   }
 
   async clear(): Promise<void> {
-    await AsyncStorage.default.multiRemove([
+    await AsyncStorage.multiRemove([
       STORAGE_KEYS.OFFLINE_SYNC,
       STORAGE_KEYS.PENDING_OPERATIONS,
       STORAGE_KEYS.SYNC_STATUS
@@ -232,9 +232,6 @@ export class MobileOfflineSync implements OfflineSync {
     } catch (error) {
       operation.isProcessing = false;
       operation.error = error instanceof Error ? error.message : String(error);
-      
-      // Log the error for debugging
-      console.error(`Operation ${operation.id} failed:`, operation.error);
       
       // If this was the last retry attempt, mark it as failed
       if (retryMeta.attempts >= MAX_RETRY_ATTEMPTS) {

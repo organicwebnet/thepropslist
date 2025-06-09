@@ -34,7 +34,6 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
       setError(null);
     } catch (err) {
       setError('Failed to load pack lists');
-      console.error(err);
     }
   };
 
@@ -42,10 +41,6 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
     try {
       const props = await inventoryService.listProps({ status: ['available'] });
       setAvailableProps(props);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load available props');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -68,10 +63,8 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
       if (created) {
         setSelectedPackList(created);
       }
-      setError(null);
     } catch (err) {
       setError('Failed to create pack list');
-      console.error(err);
     }
   };
 
@@ -93,10 +86,8 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
       if (updated) {
         setSelectedPackList(updated);
       }
-      setError(null);
     } catch (err) {
       setError('Failed to add container');
-      console.error(err);
     }
   };
 
@@ -119,10 +110,8 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
       if (updated) {
         setSelectedPackList(updated);
       }
-      setError(null);
     } catch (err) {
       setError('Failed to add prop to container');
-      console.error(err);
     }
   };
 
@@ -143,10 +132,8 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
       if (updated) {
         setSelectedPackList(updated);
       }
-      setError(null);
     } catch (err) {
       setError('Failed to remove prop from container');
-      console.error(err);
     }
   };
 
@@ -167,10 +154,8 @@ export const PackListManager: React.FC<PackListManagerProps> = ({
       if (updated) {
         setSelectedPackList(updated);
       }
-      setError(null);
     } catch (err) {
       setError('Failed to update container labels');
-      console.error(err);
     }
   };
 

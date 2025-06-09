@@ -28,7 +28,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         setWebEditorComponent(module.default as unknown as React.ComponentType<any>);
         setIsLoadingWebEditor(false);
       }).catch(err => {
-        console.error("Failed to load web editor:", err);
         setIsLoadingWebEditor(false);
         // Handle error state if needed
       });

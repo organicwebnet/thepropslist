@@ -1,4 +1,14 @@
-import { FirebaseService, FirebaseError, FirebaseAuth, FirebaseFirestore, FirebaseStorage, OfflineSync, CustomTransaction, CustomWriteBatch, CustomDocumentData, FirebaseDocument, CustomDocumentReference, CustomStorageReference } from './types.ts';
+import type { FirebaseService, FirebaseAuth, FirebaseFirestore, FirebaseStorage, OfflineSync, CustomTransaction, CustomWriteBatch, CustomDocumentData, FirebaseDocument, CustomDocumentReference, CustomStorageReference } from './types.ts';
+import { FirebaseError } from './types.ts';
+
+// Corrected paths for application-specific types using tsconfig aliases
+import type { UserProfile } from '@/shared/types/auth.ts';
+import type { Prop } from '@/shared/types/props.ts';
+import type { Show, Act, Scene } from './types.ts';
+import type { PackingBox, PackedProp } from '@/types/packing.ts';
+import type { Location } from '@/types/locations.ts';
+import type { MaintenanceRecord } from '@/types/lifecycle.ts';
+import type { BoardData, ListData, CardData, MemberData } from '@/shared/types/taskManager.ts';
 
 /**
  * Base Firebase service class that implements common functionality.
@@ -6,6 +16,18 @@ import { FirebaseService, FirebaseError, FirebaseAuth, FirebaseFirestore, Fireba
  * the abstract methods.
  */
 export abstract class BaseFirebaseService implements FirebaseService {
+  protected readonly appName: string;
+  protected readonly firestoreInstance: FirebaseFirestore;
+  protected readonly authInstance: FirebaseAuth;
+  protected readonly storageInstance: FirebaseStorage;
+
+  constructor(appName: string, firestore: FirebaseFirestore, auth: FirebaseAuth, storage: FirebaseStorage) {
+    this.appName = appName;
+    this.firestoreInstance = firestore;
+    this.authInstance = auth;
+    this.storageInstance = storage;
+  }
+
   abstract initialize(): Promise<void>;
   abstract runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T>;
   abstract batch(): CustomWriteBatch;
@@ -37,79 +59,61 @@ export abstract class BaseFirebaseService implements FirebaseService {
   // Add placeholder implementation for deleteShow
   async deleteShow(showId: string): Promise<void> {
     // TODO: Implement actual delete logic for shows
-    console.warn(`deleteShow(${showId}) is not implemented in BaseFirebaseService.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
   // Add placeholder implementations for other missing FirebaseService methods
   async deleteDocument(collectionPath: string, documentId: string): Promise<void> {
-    console.warn(`deleteDocument(${collectionPath}, ${documentId}) is not implemented.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
   async getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null> {
-    console.warn(`getDocument(${collectionPath}, ${documentId}) is not implemented.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
   async updateDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void> {
-    console.warn(`updateDocument(${collectionPath}, ${documentId}) is not implemented.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
   async addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
-    console.warn(`addDocument(${collectionPath}) is not implemented.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
-  async uploadFile(path: string, file: File): Promise<string> {
-    console.warn(`uploadFile(${path}) is not implemented.`);
+  async uploadFile(path: string, file: string | File, metadata?: any): Promise<string> {
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
   async deleteFile(path: string): Promise<void> {
-    console.warn(`deleteFile(${path}) is not implemented.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
   // --- Add Missing Auth Method Stubs ---
   async signInWithEmailAndPassword(email: string, password: string): Promise<any> { // Return type 'any' for stub
-    console.warn(`signInWithEmailAndPassword(${email}) is not implemented in BaseFirebaseService.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
   async createUserWithEmailAndPassword(email: string, password: string): Promise<any> { // Return type 'any' for stub
-    console.warn(`createUserWithEmailAndPassword(${email}) is not implemented in BaseFirebaseService.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
   async sendPasswordResetEmail(email: string): Promise<void> {
-    console.warn(`sendPasswordResetEmail(${email}) is not implemented in BaseFirebaseService.`);
     throw new FirebaseError('Method not implemented', 'unimplemented');
   }
 
-  async signOut(): Promise<void> {
-    console.warn('signOut() is not implemented in BaseFirebaseService.');
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
+  // Added missing abstract methods
+  abstract signOut(): Promise<void>;
+  abstract setDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: T, options?: { merge?: boolean }): Promise<void>;
+  abstract getPropsByShowId(showId: string): Promise<FirebaseDocument<Prop>[]>;
 
-  async setDocument<T extends CustomDocumentData>(
-    collectionPath: string,
-    documentId: string,
-    data: T,
-    options?: { merge?: boolean }
-  ): Promise<void> {
-    console.warn(`setDocument(${collectionPath}, ${documentId}) is not implemented in BaseFirebaseService.`);
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-  // --- End Missing Auth Method Stubs ---
-
-  protected createError(error: unknown): FirebaseError {
-    const err = error as { code?: string; message?: string };
-    return new FirebaseError(
-      err.message || 'An unknown Firebase error occurred',
-      err.code || 'unknown',
-      error
-    );
-  }
-} 
+  // Abstract TaskManager methods
+  abstract getBoard(boardId: string): Promise<BoardData | null>;
+  abstract getListsForBoard(boardId: string): Promise<ListData[]>;
+  abstract getCardsForList(boardId: string, listId: string): Promise<CardData[]>;
+  abstract getBoardMembers(boardId: string): Promise<MemberData[]>;
+  abstract addList(boardId: string, listData: Omit<ListData, 'id' | 'boardId'>): Promise<ListData>;
+  abstract addCard(boardId: string, listId: string, cardData: Omit<CardData, 'id' | 'boardId' | 'listId'>): Promise<CardData>;
+  abstract updateCard(boardId: string, listId: string, cardId: string, updates: Partial<CardData>): Promise<void>;
+  abstract deleteCard(boardId: string, listId: string, cardId: string): Promise<void>;
+  abstract moveCardToList(boardId: string, cardId: string, originalListId: string, targetListId: string, newOrder: number): Promise<void>;
+  abstract reorderCardsInList(boardId: string, listId: string, orderedCards: CardData[]): Promise<void>;
+}

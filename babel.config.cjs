@@ -20,7 +20,6 @@ module.exports = function (api) {
             "@utils": "./src/utils",
             "@assets": "./assets",
             "@platforms": "./src/platforms",
-            // Add other aliases from tsconfig.json if needed
             "@": "./src",
             "@contexts": "./src/contexts",
             "@hooks": "./src/hooks",
@@ -30,7 +29,6 @@ module.exports = function (api) {
           }
         }
       ],
-      // "react-native-reanimated/plugin", // Temporarily commented out
       ['module:react-native-dotenv', { // Added react-native-dotenv plugin
         moduleName: '@env',
         path: '.env',
@@ -38,7 +36,8 @@ module.exports = function (api) {
         whitelist: null,
         safe: false,
         allowUndefined: true
-      }]
+      }],
+      "react-native-reanimated/plugin"
     ],
     env: {
       production: {

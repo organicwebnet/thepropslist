@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext.tsx'; // Adjust path as needed
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../theme.ts'; // Adjust path as needed
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../styles/theme.ts'; // Adjust path as needed
 
 interface QuantityInputModalProps {
   isVisible: boolean;

@@ -20,19 +20,15 @@ export const validateUkPostcode = async (postcode: string): Promise<boolean> => 
   try {
     const response = await fetch(`${API_BASE_URL}/postcodes/${encodeURIComponent(postcode)}/validate`);
     if (!response.ok) {
-      // If the API returns a 404, it means the postcode is not valid or not found.
-      // For other errors, it might be a server issue.
       if (response.status === 404) {
         return false; 
       }
-      console.error('Error validating postcode:', response.status, await response.text());
-      return false; // Or throw new Error('Failed to validate postcode');
+      return false;
     }
     const data: ValidatePostcodeResponse = await response.json();
     return data.result;
   } catch (error) {
-    console.error('Network or other error validating postcode:', error);
-    return false; // Or throw error;
+    return false;
   }
 };
 
@@ -96,25 +92,18 @@ export const lookupUkPostcode = async (postcode: string): Promise<PostcodeLookup
   try {
     const response = await fetch(`${API_BASE_URL}/postcodes/${encodeURIComponent(postcode)}`);
     if (!response.ok) {
-      // 404 means postcode not found
       if (response.status === 404) {
-        console.log(`Postcode ${postcode} not found.`);
         return null;
       }
-      console.error('Error looking up postcode:', response.status, await response.text());
-      return null; // Or throw new Error('Failed to lookup postcode');
+      return null;
     }
     const data: PostcodeLookupResponse = await response.json();
     if (data.status === 200 && data.result) {
       return data.result;
     }
-    if (data.error) {
-      console.log(`API error looking up postcode ${postcode}: ${data.error}`);
-    }
     return null;
   } catch (error) {
-    console.error('Network or other error looking up postcode:', error);
-    return null; // Or throw error;
+    return null;
   }
 };
 

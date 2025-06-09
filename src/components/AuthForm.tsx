@@ -123,7 +123,6 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
           message = 'Too many attempts. Please try again later.';
           break;
         default:
-          console.error('Password reset error:', error);
           if (error.message) message = error.message;
       }
       
@@ -190,7 +189,6 @@ export function AuthForm({ onClose }: AuthFormProps): JSX.Element {
           message = 'This account has been disabled.';
           break;
         default:
-          console.error('Auth error:', error);
           if (error.message) message = error.message;
       }
       

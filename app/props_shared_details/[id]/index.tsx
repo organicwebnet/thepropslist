@@ -13,12 +13,12 @@ import {
   lifecycleStatusLabels, 
   lifecycleStatusPriority, 
 } from '../../../src/types/lifecycle.ts';
-import { Pencil, Trash2, ArrowLeft, Wrench, History, ClipboardList, CheckCircle, XCircle, FileText, Video as VideoIcon, MoveRight, CalendarDays, Users, ImagePlus, X, Info, Palette, Hammer, Clock, BookOpen, FileEdit } from 'lucide-react-native';
+import { Pencil, Trash2, ArrowLeft, Wrench, History, ClipboardList, CheckCircle, XCircle, FileText, Video as VideoIcon, MoveRight, CalendarDays, Users, ImagePlus, X, Info, Palette, Hammer, Clock, BookOpen, FileEdit, QrCode } from 'lucide-react-native';
 import RenderHTMLDefault from 'react-native-render-html';
 const RenderHTML = (RenderHTMLDefault as any).default || RenderHTMLDefault;
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../../src/contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../../../src/theme.ts';
+import { lightTheme, darkTheme } from '../../../src/styles/theme.ts';
 
 // Local type for Maintenance Form
 export type MaintenanceType = 'repair' | 'maintenance' | 'modification' | 'inspection';
@@ -381,18 +381,24 @@ const MobileMaintenanceRecordForm: React.FC<MobileMaintenanceRecordFormProps> = 
 
     setIsSubmitting(true);
     try {
-      await onSubmit({
+      const recordToSubmit: Omit<MaintenanceRecordType, 'id' | 'createdAt' | 'createdBy'> = {
         ...formData,
         date: new Date().toISOString(), // Set current date on submission
-        cost: formData.cost ? Number(formData.cost) : undefined, // Ensure cost is a number
-      });
+      };
+
+      if (formData.cost && !isNaN(Number(formData.cost)) && Number(formData.cost) > 0) {
+        recordToSubmit.cost = Number(formData.cost);
+      } else {
+        delete recordToSubmit.cost; // Omit cost if not valid or not provided
+      }
+      
+      await onSubmit(recordToSubmit);
       // Reset form
       setFormData({
         date: new Date().toISOString().split('T')[0],
         type: 'maintenance',
         description: '',
         performedBy: '',
-        cost: undefined,
         notes: '',
         estimatedReturnDate: undefined,
         repairDeadline: undefined,
@@ -703,15 +709,26 @@ export default function NativePropDetailScreen() {
       console.log("NativePropDetailScreen: Setting headerRight. Prop:", prop?.name, "ID:", id, "Nav available:", !!navigation);
       navigation.setOptions({
         headerRight: () => (
-          <TouchableOpacity
-            onPress={() => {
-              console.log("NativePropDetailScreen: Header Edit Tapped. Navigating to:", `/props/${id}/edit`);
-              router.push({ pathname: `/props/${id}/edit`, params: { propId: id } } as any);
-            }}
-            style={{ marginRight: 15 }}
-          >
-            <FileEdit size={24} color={currentThemeColors.headerTint || '#FFFFFF'} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity
+              onPress={() => {
+                console.log("NativePropDetailScreen: Show QR Tapped. Navigating to:", `/props_native/${id}/qr`);
+                router.push({ pathname: `/props_native/${id}/qr`, params: { propId: id } } as any);
+              }}
+              style={{ marginRight: 15 }}
+            >
+              <QrCode size={24} color={currentThemeColors.headerText || '#FFFFFF'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                console.log("NativePropDetailScreen: Header Edit Tapped. Navigating to:", `/props/${id}/edit`);
+                router.push({ pathname: `/props/${id}/edit`, params: { propId: id } } as any);
+              }}
+              style={{ marginRight: 15 }}
+            >
+              <FileEdit size={24} color={currentThemeColors.headerText || '#FFFFFF'} />
+            </TouchableOpacity>
+          </View>
         ),
       });
     } else if (prop && id && !navigation) {
@@ -813,8 +830,14 @@ export default function NativePropDetailScreen() {
     if (!prop || !id || !firebaseService?.updateDocument || !firebaseService.addDocument) return;
     console.log("Adding maintenance record (Native):", recordData);
 
+    // Defensive check: Ensure cost is not undefined before spreading
+    const cleanRecordData = { ...recordData };
+    if (cleanRecordData.cost === undefined) {
+      delete cleanRecordData.cost;
+    }
+
     const newRecord: MaintenanceRecordType = {
-      ...recordData,
+      ...cleanRecordData, // Use the cleaned data
       id: `maint_${Date.now()}`,
       createdAt: new Date().toISOString(),
       createdBy: firebaseService.auth().currentUser?.uid || 'native-user-placeholder',
@@ -902,7 +925,7 @@ export default function NativePropDetailScreen() {
 
   const SectionHeader = ({ title }: { title: string }) => {
     return (
-      <Text style={[styles.sectionTitle, { color: currentThemeColors.text, borderBottomColor: currentThemeColors.borderSecondary }]}>{title}</Text>
+      <Text style={[styles.sectionTitle, { color: currentThemeColors.text, borderBottomColor: currentThemeColors.border }]}>{title}</Text>
     );
   };
 
@@ -1078,16 +1101,33 @@ export default function NativePropDetailScreen() {
             <>
               <Text style={styles.sectionTitle}>Shipping & Transport</Text>
               <View style={styles.detailsSection}>
-                <DetailItem label="Travels Unboxed" value={prop.travelsUnboxed ? 'Yes' : 'No'} />
-                <DetailItem label="Has Own Shipping Crate" value={prop.hasOwnShippingCrate ? 'Yes' : 'No'} />
+                <DetailItem label="Travels Unboxed" value={prop.travelsUnboxed === undefined ? 'N/A' : prop.travelsUnboxed ? 'Yes' : 'No'} />
+                <DetailItem label="Has Own Shipping Crate" value={prop.hasOwnShippingCrate === undefined ? 'N/A' : prop.hasOwnShippingCrate ? 'Yes' : 'No'} />
                 <DetailItem label="Shipping Crate Details" value={prop.shippingCrateDetails} />
-                <DetailItem label="Requires Special Transport" value={prop.requiresSpecialTransport ? 'Yes' : 'No'} />
+                <DetailItem label="Requires Special Transport" value={prop.requiresSpecialTransport === undefined ? 'N/A' : prop.requiresSpecialTransport ? 'Yes' : 'No'} />
                 <DetailItem label="Transport Method" value={prop.transportMethod} />
-                <DetailItem label="Transport Notes" value={prop.transportNotes} />
+                <DetailItem label="Transport Notes" value={prop.transportNotes} isLongText />
               </View>
             </>
           )}
           
+          {/* Section for Custom Fields */}
+          {prop.customFields && Object.keys(prop.customFields).length > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Custom Fields</Text>
+              <View style={styles.detailsSection}>
+                {Object.entries(prop.customFields).map(([key, value]) => (
+                  <DetailItem 
+                    key={key} 
+                    label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')} // Format key for display
+                    value={String(value)} // Ensure value is a string
+                    isLongText={typeof value === 'string' && value.length > 50} // Heuristic for long text
+                  />
+                ))}
+              </View>
+            </>
+          )}
+
           {prop.statusNotes && (
             <>
               <Text style={styles.sectionTitle}>Status Notes</Text>

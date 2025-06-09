@@ -135,17 +135,14 @@ export function NativePropForm({
         (taskSnapshot: FirebaseStorageTypes.TaskSnapshot) => {
           const progress = (taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100;
           setUploadProgress(progress);
-          console.log(`Upload is ${progress}% done`);
         });
 
       await task;
       
       const url = await reference.getDownloadURL();
-      console.log('File available at', url);
       setUploadProgress(0); // Reset progress
       return url;
     } catch (error) {
-      console.error("Image Upload Error:", error);
       Alert.alert("Upload Failed", "Could not upload the image. Please try again.");
       setUploadProgress(0); // Reset progress
       return null;
@@ -212,7 +209,6 @@ export function NativePropForm({
   const handleSubmitPress = async () => {
     const formData = await prepareFormData();
     if (formData) {
-        // await onSubmit(formData); 
         const success = await onFormSubmit(formData); // Call the passed submit handler
         if (success) {
             router.back(); // Go back to the list on successful submit
@@ -224,7 +220,6 @@ export function NativePropForm({
     const formData = await prepareFormData();
     if (formData) {
       try {
-        // await onSubmit(formData); 
         const success = await onFormSubmit(formData); // Call the passed submit handler
         if (success) {
             clearForm(); // Clear form after successful submission
@@ -238,8 +233,6 @@ export function NativePropForm({
   };
 
   const handleCancelPress = () => {
-    // clearForm(); // Clearing might not be desired on simple cancel/back
-    // onCancel(); 
     router.back(); // Use router to navigate back
   };
 
@@ -261,8 +254,6 @@ export function NativePropForm({
       quality: 1,
     });
 
-    console.log(result);
-
     if (!result.canceled) {
       setSelectedImageUri(result.assets[0].uri);
     }
@@ -275,7 +266,6 @@ export function NativePropForm({
         
         {/* --- 1. Name --- */}
         <Text style={styles.label}>Name<Text style={styles.requiredAsterisk}> *</Text></Text>
-        {/* TODO: Add Help Icon */}
         <TextInput
           style={styles.input}
           value={name}
@@ -286,7 +276,6 @@ export function NativePropForm({
 
         {/* --- 2. Image --- */}
         <Text style={styles.label}>Image</Text>
-        {/* TODO: Add Help Icon */}
         <View style={styles.imagePickerContainer}>
           {selectedImageUri ? (
             <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
@@ -304,7 +293,6 @@ export function NativePropForm({
 
         {/* --- 3. Description --- */}
         <Text style={styles.label}>Description</Text>
-        {/* TODO: Add Help Icon */}
         <TextInput
           style={[styles.input, styles.textArea]} 
           value={description}
@@ -319,7 +307,6 @@ export function NativePropForm({
         <View style={styles.dimensionRow}> 
           <View style={styles.dimensionInputContainer}>
             <Text style={styles.label}>Act (Optional)</Text>
-            {/* TODO: Add Help Icon */}
             <TextInput
               style={styles.input}
               value={act}
@@ -331,7 +318,6 @@ export function NativePropForm({
           </View>
           <View style={styles.dimensionInputContainer}>
             <Text style={styles.label}>Scene (Optional)</Text>
-             {/* TODO: Add Help Icon */}
             <TextInput
               style={styles.input}
               value={scene}
@@ -345,7 +331,6 @@ export function NativePropForm({
 
         {/* --- 5. Dimensions & Weight --- */}
         <Text style={styles.sectionTitle}>Dimensions & Weight (Optional)</Text>
-         {/* TODO: Add Help Icon for section */}
         <View style={styles.dimensionRow}>
           <View style={styles.dimensionInputContainer}>
             <Text style={styles.label}>Length</Text>
@@ -394,11 +379,9 @@ export function NativePropForm({
             />
           </View>
         </View>
-        {/* TODO: Add Unit Pickers for Dimensions and Weight */} 
 
         {/* --- 6. Condition --- */}
         <Text style={styles.label}>Condition<Text style={styles.requiredAsterisk}> *</Text></Text>
-         {/* TODO: Add Help Icon */}
         <TextInput
           style={styles.input}
           value={condition}
@@ -409,38 +392,10 @@ export function NativePropForm({
 
         {/* --- 7. Lifecycle Status --- */}
         <Text style={styles.sectionTitle}>Lifecycle Status</Text>
-        {/* Temporarily comment out Status Picker and Notes */}
-        {/* 
-        <Text style={styles.label}>Status<Text style={styles.requiredAsterisk}> *</Text></Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={status}
-            style={styles.picker}
-            onValueChange={(itemValue) => setStatus(itemValue as PropLifecycleStatus)}
-            dropdownIconColor="#FFFFFF"
-          >
-            {(Object.keys(lifecycleStatusLabels) as PropLifecycleStatus[]).map((stat) => (
-              <Picker.Item key={stat} label={lifecycleStatusLabels[stat]} value={stat} color={Platform.OS === 'android' ? '#FFFFFF' : undefined}/>
-            ))}
-          </Picker>
-        </View>
-        <Text style={styles.label}>Status Notes</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={statusNotes}
-          onChangeText={setStatusNotes}
-          placeholder="Add notes about the current status (optional)"
-          placeholderTextColor="#9CA3AF"
-          multiline={true}
-          numberOfLines={3}
-        />
-         */}
 
         {/* --- 8. Location --- */}
         <Text style={styles.sectionTitle}>Location</Text>
-        {/* Current Location Input */}
         <Text style={styles.label}>Current Location (if different)</Text>
-         {/* TODO: Add Help Icon */}
         <TextInput
           style={styles.input}
           value={currentLocation}
@@ -448,38 +403,19 @@ export function NativePropForm({
           placeholder="e.g., On stage, Rehearsal Room B"
           placeholderTextColor="#9CA3AF"
         />
-        {/* Storage Location Input */}
         <Text style={styles.label}>Storage Location<Text style={styles.requiredAsterisk}> *</Text></Text>
-         {/* TODO: Add Help Icon */}
         <TextInput
           style={styles.input}
-          value={location} // This is the primary 'location' field
+          value={location}
           onChangeText={setLocation}
           placeholder="e.g., Prop Room Shelf A, Backstage Left"
           placeholderTextColor="#9CA3AF"
         />
 
         {/* --- 9. Source --- */}
-        {/* Temporarily comment out Source Picker */}
-        {/* 
-        <Text style={styles.label}>Source<Text style={styles.requiredAsterisk}> *</Text></Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={source}
-            style={styles.picker}
-            onValueChange={(itemValue) => setSource(itemValue as PropSource)}
-            dropdownIconColor="#FFFFFF"
-          >
-            {(['bought', 'made', 'rented', 'borrowed', 'owned', 'created'] as PropSource[]).map((src) => (
-              <Picker.Item key={src} label={src.charAt(0).toUpperCase() + src.slice(1)} value={src} color={Platform.OS === 'android' ? '#FFFFFF' : undefined}/>
-            ))}
-          </Picker>
-        </View>
-        */}
 
         {/* --- 10. Price --- */}
         <Text style={styles.label}>Price</Text>
-         {/* TODO: Add Help Icon */}
         <TextInput
           style={styles.input}
           value={price}
@@ -489,23 +425,6 @@ export function NativePropForm({
           keyboardType="numeric"
         />
 
-        {/* --- Category Picker Commented Out --- */}
-        {/* 
-        <Text style={styles.label}>Category<Text style={styles.requiredAsterisk}> *</Text></Text>
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={category}
-            style={styles.picker}
-            onValueChange={(itemValue) => setCategory(itemValue as PropCategory)}
-            dropdownIconColor="#FFFFFF" 
-          >
-            {propCategories.map((cat) => (
-              <Picker.Item key={cat} label={cat} value={cat} color={Platform.OS === 'android' ? '#FFFFFF' : undefined}/>
-            ))}
-          </Picker>
-        </View>
-        */}
-        {/* Insert Category Picker Here if re-enabled */}
         <Text style={styles.label}>Category</Text>
         <Picker
           selectedValue={category}
@@ -533,7 +452,6 @@ export function NativePropForm({
 
         {/* --- 11. Quantity --- */}
         <Text style={styles.label}>Quantity<Text style={styles.requiredAsterisk}> *</Text></Text>
-         {/* TODO: Add Help Icon */}
         <TextInput
           style={styles.input}
           value={quantity}
@@ -545,7 +463,6 @@ export function NativePropForm({
         
         {/* --- 12. Tags --- */}
         <Text style={styles.label}>Tags (comma-separated)</Text>
-         {/* TODO: Add Help Icon */}
         <TextInput
           style={styles.input}
           value={tags}
@@ -556,8 +473,6 @@ export function NativePropForm({
 
         {/* --- 13. Details & Flags --- */}
         <Text style={styles.sectionTitle}>Details & Flags</Text>
-         {/* TODO: Add Help Icon for section */}
-        {/* Switches and conditional text inputs */}
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Add Usage Instructions?</Text>
           <Switch
@@ -579,8 +494,7 @@ export function NativePropForm({
             numberOfLines={4}
           />
         )}
-        {/* ... (Repeat for Maintenance Notes, Safety Notes switches and conditional inputs) ... */}
-         <View style={styles.switchContainer}>
+        <View style={styles.switchContainer}>
           <Text style={styles.label}>Add Maintenance Notes?</Text>
           <Switch
             trackColor={{ false: "#767577", true: "#81b0ff" }}
@@ -623,7 +537,6 @@ export function NativePropForm({
           />
         )}
 
-        {/* Other standalone switches */}
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Consumable?</Text>
           <Switch
@@ -687,10 +600,9 @@ export function NativePropForm({
 
         {/* --- 14. General Notes --- */}
         <Text style={styles.sectionTitle}>General Notes</Text>
-         {/* TODO: Add Help Icon */}
         <TextInput
           style={[styles.input, styles.textArea]}
-          value={notes} // This is the general 'notes' field
+          value={notes}
           onChangeText={setNotes}
           placeholder="Enter any other relevant notes (optional)"
           placeholderTextColor="#9CA3AF"
@@ -711,7 +623,6 @@ export function NativePropForm({
           />
         </View>
       </ScrollView>
-      {/* TODO: Add Modal for Help Popups */}
     </SafeAreaView>
   );
 }

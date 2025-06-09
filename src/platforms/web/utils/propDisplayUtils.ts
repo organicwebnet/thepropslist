@@ -18,6 +18,9 @@ export const statusColorMap: Record<PropLifecycleStatus, { bg: string; text: str
   backup: { bg: 'bg-lime-600/20', text: 'text-lime-400', border: 'border-lime-500/50' },
   temporarily_retired: { bg: 'bg-gray-700/30', text: 'text-gray-300', border: 'border-gray-400/50' },
   ready_for_disposal: { bg: 'bg-slate-700/30', text: 'text-slate-300', border: 'border-slate-400/50' },
+  available_in_storage: { bg: 'bg-slate-600/20', text: 'text-slate-400', border: 'border-slate-500/50' },
+  checked_out: { bg: 'bg-cyan-600/20', text: 'text-cyan-400', border: 'border-cyan-500/50' },
+  in_use_on_set: { bg: 'bg-cyan-600/20', text: 'text-cyan-400', border: 'border-cyan-500/50' },
 };
 
 // Helper to get status label

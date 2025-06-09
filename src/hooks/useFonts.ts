@@ -27,7 +27,6 @@ export function useFonts(): FontLoadingState {
 
       setFontsLoaded(true);
     } catch (e) {
-      console.error('Font loading error:', e);
       setError(e instanceof Error ? e : new Error('Failed to load fonts'));
       setFontsLoaded(false);
     }

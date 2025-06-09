@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform, Pressable, Alert, Text } from 'react-native'; 
 import { useAuth } from '../../src/contexts/AuthContext.tsx';
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/theme.ts'; // Import theme objects
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts'; // Import theme objects
 
 // Removed local darkThemeColors definition
 
@@ -62,10 +62,14 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* <Tabs.Screen
+      <Tabs.Screen
         name="propsTab/index"
         options={{
           title: 'Props',
+          headerShown: true,
+          headerStyle: { backgroundColor: tabBarStyleBackground },
+          headerTitleStyle: { color: currentThemeColors.text },
+          headerTintColor: currentThemeColors.primary,
           tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
               name={focused ? 'briefcase' : 'briefcase-outline'}
@@ -74,7 +78,7 @@ export default function TabsLayout() {
             />
           ),
         }}
-      /> */}
+      />
       <Tabs.Screen
         name="index" 
         options={{
@@ -136,6 +140,9 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* Screens to hide from tab bar */}
+      <Tabs.Screen name="profile/edit" options={{ href: null }} />
+      <Tabs.Screen name="propsTab/[id]" options={{ href: null }} />
     </Tabs>
   );
 } 

@@ -19,6 +19,8 @@ interface AuthContextProps {
   updateSavedAddress: (type: 'sender' | 'delivery', address: Address) => Promise<void>;
   deleteSavedAddress: (type: 'sender' | 'delivery', addressId: string) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUserProfile: (updatedData: Partial<UserProfile>) => Promise<void>;
+  isGoogleSignIn: boolean;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -30,6 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   const [permissions, setPermissions] = useState<Partial<UserPermissions>>(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
+  const [isGoogleSignIn, setIsGoogleSignIn] = useState<boolean>(false);
 
   useEffect(() => {
     if (firebaseInitError) {
@@ -46,7 +49,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      console.log(`--- AuthProvider: Fetching profile for user: ${userId} ---`);
       // Assuming user profiles are stored in a 'users' collection
       // And firebaseService has a method like getDocument(collectionPath, documentId)
       // Adjust collectionPath and how you get data based on your FirebaseService implementation
@@ -54,21 +56,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (profileDoc && profileDoc.data) {
         const profileData = profileDoc.data;
-        console.log("--- AuthProvider: Profile fetched ---", profileData);
         setUserProfile(profileData);
         // Derive permissions from role, or use stored permissions if available
         const role = profileData.role || UserRole.VIEWER; // Ensure role is valid
         setPermissions(profileData.permissions || DEFAULT_ROLE_PERMISSIONS[role] || {});
       } else {
-        console.warn(`--- AuthProvider: No profile found for user: ${userId}, creating default. ---`);
         // Optionally, create a default profile here if one doesn't exist
         // For now, set to null and default viewer permissions
         setUserProfile(null); 
         setPermissions(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
-        // setError(new Error(\`User profile not found for ${userId}\`));
       }
     } catch (e: any) {
-      console.error("--- AuthProvider: Error fetching user profile ---", e);
       setError(new Error("Failed to fetch user profile: " + e.message));
       setUserProfile(null);
       setPermissions(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
@@ -88,23 +86,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setLoading(true);
-    console.log("--- AuthProvider: Subscribing to onAuthStateChanged ---");
     const unsubscribe = firebaseService.auth().onAuthStateChanged(async (firebaseUser: CustomUser | null) => {
-      console.log("--- AuthProvider: onAuthStateChanged triggered ---", firebaseUser ? firebaseUser.uid : 'No user');
       if (firebaseUser) {
         setUser(firebaseUser);
+        // Check for Google Sign-In provider
+        const googleProvider = firebaseUser.providerData.find(p => p.providerId === 'google.com');
+        setIsGoogleSignIn(!!googleProvider);
         await fetchUserProfile(firebaseUser.uid);
         setError(null);
       } else {
         setUser(null);
         setUserProfile(null);
         setPermissions(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
+        setIsGoogleSignIn(false); // Reset on sign out
       }
       setLoading(false);
     });
 
     return () => {
-      console.log("--- AuthProvider: Unsubscribing from onAuthStateChanged ---");
       if (unsubscribe) unsubscribe();
     };
   }, [firebaseService, firebaseInitialized, firebaseInitError, fetchUserProfile]);
@@ -115,7 +114,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await fetchUserProfile(user.uid);
       setLoading(false);
     } else {
-      console.warn("--- AuthProvider: refreshUserProfile called but no user is logged in. ---");
       // setError(new Error("No user is logged in to refresh profile."));
     }
   }, [user, fetchUserProfile]);
@@ -125,15 +123,80 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setError(new Error("Firebase service not available for sign out."));
       return;
     }
-    console.log("--- AuthProvider: Signing out ---");
     try {
       await firebaseService.signOut();
       // Auth state change will clear user and profile via onAuthStateChanged listener
     } catch (e: any) {
-      console.error("--- AuthProvider: Sign out error ---", e);
       setError(new Error("Sign out failed: " + e.message));
     }
   }, [firebaseService]);
+
+  const updateUserProfile = useCallback(async (updatedData: Partial<UserProfile>) => {
+    if (!user || !firebaseService?.updateDocument) {
+      throw new Error("User not logged in or Firebase service unavailable.");
+    }
+
+    // Data for Firebase Auth update (only displayName and photoURL)
+    const authUpdateData: { displayName?: string | null; photoURL?: string | null; email?: string | null } = {};
+    if (updatedData.displayName !== undefined) {
+      authUpdateData.displayName = updatedData.displayName;
+    }
+    if (updatedData.photoURL !== undefined) {
+      authUpdateData.photoURL = updatedData.photoURL;
+    }
+    // Email update is handled separately due to sensitivity and different method call
+
+    try {
+      // Step 1a: Update Firebase Auth email if changed and not Google Sign-In
+      if (updatedData.email && updatedData.email !== user.email && !isGoogleSignIn) {
+        if (user && typeof (user as any).updateEmail === 'function') {
+          await (user as any).updateEmail(updatedData.email);
+          // Note: Firebase Auth usually requires re-authentication for email changes.
+          // The .updateEmail() method itself might throw an error if re-auth is needed.
+        } else {
+          // console.warn("--- AuthProvider: user.updateEmail is not available. Skipping Auth email update.");
+        }
+      }
+
+      // Step 1b: Update Firebase Auth profile (displayName, photoURL)
+      const profileAuthUpdates: { displayName?: string | null; photoURL?: string | null } = {};
+      if (updatedData.displayName !== undefined) profileAuthUpdates.displayName = updatedData.displayName;
+      if (updatedData.photoURL !== undefined) profileAuthUpdates.photoURL = updatedData.photoURL;
+
+      if (Object.keys(profileAuthUpdates).length > 0) {
+        if (user && typeof (user as any).updateProfile === 'function') {
+          await (user as any).updateProfile(profileAuthUpdates);
+        } else {
+          // console.warn("--- AuthProvider: user.updateProfile is not available. Skipping Auth profile update.");
+        }
+      }
+
+      // Step 2: Update Firestore 'users' document
+      const firestoreUpdateData: Partial<UserProfile> = { ...updatedData };
+      if (updatedData.email && isGoogleSignIn) {
+        // Prevent accidental update of email in Firestore if it's a Google account and somehow email was passed
+        // Firebase Auth is the source of truth for email for federated providers.
+        delete firestoreUpdateData.email;
+        // console.warn("--- AuthProvider: Attempted to update email for Google Sign-In user in Firestore. Ignoring email field for Firestore update.");
+      }
+      firestoreUpdateData.updatedAt = new Date();
+
+      await firebaseService.updateDocument('users', user.uid, firestoreUpdateData);
+
+      // Step 3: Refresh the local userProfile state from Firestore (and potentially user state for new email)
+      await fetchUserProfile(user.uid); // This fetches Firestore data
+      // If email was changed in Auth, the user object might need explicit refresh or onAuthStateChanged will handle it.
+      // Forcing a refresh of the user object from auth is tricky without re-triggering onAuthStateChanged manually.
+      // Assuming for now that if updateEmail succeeded, the user object in state will reflect it or soon will.
+
+    } catch (e: any) {
+      // More specific error handling could be added here
+      if (e.message.includes("requires a recent login")) {
+        throw new Error("Updating sensitive profile data requires a recent login. Please sign out and sign back in.");
+      }
+      throw new Error("Failed to update user profile: " + e.message);
+    }
+  }, [user, firebaseService, fetchUserProfile, isGoogleSignIn]);
 
   return (
     <AuthContext.Provider
@@ -144,10 +207,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         error,
         permissions,
         refreshUserProfile,
-        addSavedAddress: async () => { console.log("Dummy addSavedAddress called"); return "dummy-addr-id"; },
-        updateSavedAddress: async () => { console.log("Dummy updateSavedAddress called"); },
-        deleteSavedAddress: async () => { console.log("Dummy deleteSavedAddress called"); },
-        signOut: internalSignOut
+        addSavedAddress: (_type, _address) => Promise.resolve("dummy-addr-id"),
+        updateSavedAddress: (_type, _address) => Promise.resolve(),
+        deleteSavedAddress: (_type, _addressId) => Promise.resolve(),
+        signOut: internalSignOut,
+        updateUserProfile,
+        isGoogleSignIn,
       }}
     >
       {children}

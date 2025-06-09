@@ -7,7 +7,7 @@ import type { Prop } from '../shared/types/props.ts';
 import type { Show } from '../shared/services/firebase/types.ts';
 import type { PackedProp, PackingBox } from '../types/packing.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../theme.ts';
+import { lightTheme, darkTheme } from '../styles/theme.ts';
 
 interface PackingPageProps {
   props: Prop[];
@@ -20,32 +20,24 @@ export function PackingPage({ props: allProps, show }: PackingPageProps) {
   const { createBox, updateBox, deleteBox } = operations;
 
   const handleCreateBox = (packedProps: PackedProp[], act: number, scene: number): void => {
-    console.log(`Creating box for Act ${act}, Scene ${scene} with ${packedProps.length} items`);
-
     const selectedFullProps = packedProps.map(packedProp => {
       const fullProp = allProps.find(p => p.id === packedProp.propId);
       if (!fullProp) {
-        console.warn(`Could not find full prop data for packed prop ID: ${packedProp.propId}`);
         return null;
       }
       return fullProp;
     }).filter((p): p is Prop => p !== null);
 
     if (selectedFullProps.length !== packedProps.length) {
-      console.error('Mismatch finding full props for packing list items.');
       return;
     }
 
     createBox(packedProps, `Box for Act ${act}, Scene ${scene}`)
       .then((newBoxId: string | undefined) => {
-        if (newBoxId) {
-          console.log('Box created successfully:', newBoxId);
-        } else {
-          console.warn('createBox function returned undefined ID');
-        }
+        // Optionally handle success (e.g., navigate or show a message)
       })
       .catch((error: Error) => {
-        console.error('Error creating box:', error);
+        // Optionally handle error (e.g., show a toast)
       });
   };
 

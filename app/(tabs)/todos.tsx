@@ -25,7 +25,7 @@ import { useFirebase } from '../../src/contexts/FirebaseContext.tsx'; // CORRECT
 import { useTheme } from '../../src/contexts/ThemeContext.tsx'; // CORRECTED PATH
 import { LoadingScreen } from '../../src/components/LoadingScreen.tsx'; // CORRECTED PATH and component name
 import { Ionicons } from '@expo/vector-icons'; // For icons if needed
-import { lightTheme, darkTheme } from '../../src/theme.ts'; // Import theme objects
+import { lightTheme, darkTheme } from '../../src/styles/theme.ts'; // Import theme objects
 
 // Define a type for our board data (can be moved to a shared types file later)
 interface Board {
@@ -142,11 +142,11 @@ export default function TodoBoardsScreen() { // Renamed from BoardsTabScreen
     const userId = user.uid;
     console.log(`Setting up Firestore listener for boards owned by ${userId}`);
 
-    // const boardsRef = firestore.collection('todo boards'); // OLD
+    // const boardsRef = firestore.collection('todo_boards'); // OLD
     // const q = boardsRef.where("ownerId", "==", userId).orderBy("createdAt", "desc"); // OLD
 
     const unsubscribe = service.listenToCollection<Board>(
-      'todo boards',
+      'todo_boards',
       (fetchedDocs) => {
         // The service.listenToCollection likely returns documents with id and data separate
         // Adapt based on how your FirebaseDocument type is structured by the service
@@ -188,7 +188,7 @@ export default function TodoBoardsScreen() { // Renamed from BoardsTabScreen
     setIsCreating(true);
     // const firestore = service.firestore(); // No longer need direct instance
     try {
-      await service.addDocument('todo boards', {
+      await service.addDocument('todo_boards', {
         name: newBoardName.trim(),
         ownerId: user.uid,
         // createdAt: new Date(), // Your service.addDocument might handle timestamps or expect a specific format
@@ -209,9 +209,9 @@ export default function TodoBoardsScreen() { // Renamed from BoardsTabScreen
   };
 
   const handleNavigateToBoard = (boardId: string) => {
-    console.log(`Navigating to board: ${boardId}`);
-    // Adjust path if you place board detail screen elsewhere, e.g., /taskManager/board/${boardId}
-    router.push(encodeURI(`/taskBoard/${boardId}`) as any); // Corrected path for router, cast to any to bypass strict typing for now
+    // Alert.alert("Navigation Test", `Board ID: ${boardId}. Reached handleNavigateToBoard.`); // Ensure this is removed or commented out
+    console.log(`TEST: Navigating to board: ${boardId}`); // Keep this for now
+    router.push(`/taskBoard/${boardId}`); // Ensure this is uncommented
   };
 
   const openDeleteModal = (board: Board) => {
@@ -234,7 +234,7 @@ export default function TodoBoardsScreen() { // Renamed from BoardsTabScreen
     // const firestore = service.firestore(); // No longer need direct instance
     try {
       console.log(`Attempting to delete board via service: ${boardId}`);
-      await service.deleteDocument('todo boards', boardId);
+      await service.deleteDocument('todo_boards', boardId);
       console.log(`Board ${boardId} deleted (document only) via service.`);
       // The onSnapshot listener (now service.listenToCollection) should update the UI.
     } catch (error) {

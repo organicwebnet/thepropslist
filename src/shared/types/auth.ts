@@ -26,6 +26,7 @@ export interface UserProfile {
   displayName: string | null;
   photoURL?: string; // Optional photo URL from provider or custom upload
   role?: UserRole; // User role (optional, might use permissions instead)
+  jobTitle?: string; // Add jobTitle
   permissions?: Partial<UserPermissions>; // Granular permissions
   createdAt?: Date;
   updatedAt?: Date;

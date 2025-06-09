@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, Linking, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Image, Linking, TouchableOpacity, Alert } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import { Show, Venue, Act, Scene, Contact } from '../../src/shared/services/firebase/types.ts'; // Changed import path
 import type { Address } from '../../src/shared/types/address.ts'; // Added direct import for Address
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/theme.ts';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts';
 import { CustomTimestamp } from '../../src/shared/services/firebase/types.ts';
+import { useAuth } from '../../src/contexts/AuthContext.tsx';
 
 // Helper to format dates (Timestamp or string)
 const formatDate = (date: string | CustomTimestamp | null | undefined): string => {
@@ -50,6 +51,7 @@ export default function ShowDetailScreen() {
   const { theme: themeName } = useTheme();
   const currentThemeColors = themeName === 'light' ? appLightTheme.colors : appDarkTheme.colors;
   const styles = getDetailStyles(currentThemeColors);
+  const { user } = useAuth();
 
   const showToDisplay = selectedShow?.id === id ? selectedShow : shows.find((s: Show) => s.id === id);
 
@@ -104,6 +106,46 @@ export default function ShowDetailScreen() {
       )}
       
       <View style={styles.contentContainer}>
+        {/* Highlight if this is the currently selected show */}
+        {selectedShow?.id === showToDisplay.id && (
+          <View style={{
+            borderWidth: 2,
+            borderColor: currentThemeColors.primary,
+            borderRadius: 8,
+            marginBottom: 12,
+            padding: 6,
+            alignSelf: 'flex-start',
+            backgroundColor: currentThemeColors.background,
+          }}>
+            <Text style={{ color: currentThemeColors.primary, fontWeight: 'bold' }}>Currently Selected Show</Text>
+          </View>
+        )}
+        {/* Edit/Delete buttons for owner */}
+        {user && showToDisplay.userId === user.uid && (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <TouchableOpacity onPress={() => router.push(`/shows/${showToDisplay.id}/edit` as any)} style={{ marginRight: 16 }}>
+              <Ionicons name="pencil" size={22} color={currentThemeColors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => {
+              Alert.alert(
+                'Delete Show',
+                `Are you sure you want to delete "${showToDisplay.name}"? This cannot be undone.`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: async () => {
+                      // You may want to call a deleteShow function from context here
+                      // For now, just navigate back
+                      // TODO: Implement actual delete logic
+                      router.back();
+                    }
+                  },
+                ]
+              );
+            }}>
+              <Ionicons name="trash" size={22} color={currentThemeColors.error || 'red'} />
+            </TouchableOpacity>
+          </View>
+        )}
         <Text style={styles.title}>{name}</Text>
         {description && <Text style={styles.description}>{description}</Text>}
 

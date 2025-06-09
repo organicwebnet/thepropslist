@@ -60,14 +60,12 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
   }, []);
 
   const setSelectedShow = useCallback((show: Show | null) => {
-    console.log(`[ShowsContext] setSelectedShow called with:`, show ? `ID: ${show.id}, Name: ${show.name}` : 'null');
     stableSetSelectedShowInternal(show); // Use the stable internal setter
     if (show && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
        try {
            localStorage.setItem('lastSelectedShowId', show.id);
-           console.log('[ShowsContext] Saved last selected show ID to localStorage:', show.id);
        } catch (e) {
-           console.error("[ShowsContext] Failed to save show ID to localStorage:", e);
+        // Silently fail if localStorage is unavailable
        }
     } else if (!show && Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
        // Optional: Clear localStorage if show is deselected
@@ -82,7 +80,6 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
     // Check if firebaseService is initialized
     if (!firebaseInitialized || !firebaseService) { // Check service directly
       if (firebaseError) {
-        console.error("Error from FirebaseProvider:", firebaseError);
         setErrorState(firebaseError);
         setLoading(false);
       } else {
@@ -95,21 +92,25 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       return;
     }
 
-    // TEMPORARY: Comment out the user check to fetch all shows
-    // if (!user) { ... }
+    // Only fetch shows if user is authenticated
+    if (!user) {
+      setShows([]);
+      setSelectedShow(null);
+      setLoading(false);
+      return;
+    }
 
     setErrorState(null);
     setLoading(true);
 
+    let permissionDenied = false;
     // Use the service method to listen
     const unsubscribe = firebaseService.listenToCollection<Show>(
       'shows', // Collection path
       (docs: FirebaseDocument<Show>[]) => { // Callback for successful updates
+        if (permissionDenied) return; // Don't update state if permission denied previously
         const showsData: Show[] = docs.map(doc => {
           const rawActs = doc.data?.acts;
-          // Log the raw acts data for debugging
-          console.log(`[ShowsContext Listener] Processing doc ${doc.id}, raw acts:`, JSON.stringify(rawActs)); 
-
           return {
             id: doc.id,
             ...(doc.data || {}),
@@ -129,7 +130,6 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
           } as Show;
         });
 
-        console.log("[ShowsContext Listener] Processed showsData:", showsData);
         setShows(showsData);
         setErrorState(null);
         
@@ -141,52 +141,49 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
         if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
            try {
              lastSelectedId = localStorage.getItem('lastSelectedShowId');
-             console.log(`[ShowsContext Restore] Read lastSelectedId from localStorage: ${lastSelectedId}`);
              if (lastSelectedId) {
-               console.log('[ShowsContext Restore] Attempting to restore show ID from localStorage:', lastSelectedId);
-               console.log(`[ShowsContext Restore] Current showsData count before find: ${showsData.length}`);
-               console.log(`[ShowsContext Restore] showsData IDs before find: ${showsData.map(s => s.id).join(', ')}`);
                showToSelect = showsData.find(s => s.id === lastSelectedId) || null;
-               console.log(`[ShowsContext Restore] Result of showsData.find(): ${showToSelect ? `Found: ${showToSelect.id}` : 'Not Found'}`);
              }
            } catch (e) {
-             console.error("[ShowsContext Restore] Failed to read show ID from localStorage:", e);
+            // Silently fail if localStorage is unavailable
            }
         }
 
         // 2. If not restored and data available, select the first show
         if (!showToSelect && showsData.length > 0) {
-            console.log('[ShowsContext Restore] No stored/valid show ID found or show not in current list, selecting first show.');
             showToSelect = showsData[0];
         }
 
         // 3. If current selection is different or disappeared, update it
-        console.log(`[ShowsContext Restore] Before final update check. Current selectedShow ID: ${selectedShow?.id ?? 'null'}, Target showToSelect ID: ${showToSelect?.id ?? 'null'}`);
-        if (selectedShow?.id !== showToSelect?.id) {
-            console.log(`[ShowsContext] Updating selected show. Previous: ${selectedShow?.id ?? 'none'}, New: ${showToSelect?.id ?? 'none'}`);
-            setSelectedShowInternal(showToSelect); // Use internal setter to avoid loop
+        if (!selectedShow && showToSelect) {
+            setSelectedShowInternal(showToSelect);
         }
         // --- End initial selection logic ---
         
         setLoading(false);
       },
       (err: Error) => { // Callback for errors
-        console.error("Error fetching shows via service:", err);
+        if (err.message && err.message.includes('permission-denied')) {
+          setErrorState(new Error('You do not have permission to access shows. Please check your account or contact support.'));
+          setLoading(false);
+          permissionDenied = true;
+          // Do not reset state or retry
+          return;
+        }
         setErrorState(err);
         setShows([]);
         setSelectedShow(null);
         setLoading(false);
-      }
-      // Add query options here if needed, e.g., { where: [['ownerId', '==', user.uid]] }
+      },
+      { where: [['ownerId', '==', user.uid]] } // <-- Add this line to filter by ownerId
     );
 
     // Cleanup function
     return () => {
-        console.log("ShowsContext: Unsubscribing from collection listener.");
         unsubscribe();
     };
   // Dependencies: service availability, user (if re-enabled)
-  }, [firebaseInitialized, firebaseService, firebaseError, selectedShow, stableSetSelectedShowInternal, setSelectedShow]); // Added setSelectedShow
+  }, [firebaseInitialized, firebaseService, selectedShow, stableSetSelectedShowInternal, setSelectedShow, user]); // Added user to dependencies
 
   const setSelectedShowById = useCallback((id: string | null) => {
     if (id === null) {
@@ -207,14 +204,28 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       const fullShowData = {
         ...showData,
         userId: user.uid,
+        ownerId: user.uid,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       const docRef = await firebaseService.addDocument('shows', fullShowData);
+      // --- Create a board for this show ---
+      try {
+        await firebaseService.addDocument('todo_boards', {
+          name: showData.name || 'Untitled Board',
+          ownerId: user.uid,
+          sharedWith: [user.uid],
+          showId: docRef.id,
+          createdAt: new Date().toISOString(),
+        });
+        // Optionally: you could return the board ID as well if needed
+      } catch (boardErr) {
+        // Still return the showId, but you may want to notify the user in the UI
+        // console.error("Failed to create a task board for the new show:", boardErr);
+      }
       setLoading(false);
       return docRef.id;
     } catch (err: any) {
-      console.error("Error adding show:", err);
       setErrorState(err);
       setLoading(false);
       return null;
@@ -226,19 +237,13 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
        setErrorState(new Error("Firebase service not available"));
        return;
     }
-    // Optimistic update placeholder
-    // const originalShows = shows;
-    // setShows(prev => prev.map(s => s.id === id ? { ...s, ...showData, updatedAt: new Date().toISOString() } : s));
     try {
       await firebaseService.updateDocument('shows', id, {
          ...showData,
          updatedAt: new Date().toISOString(),
       });
-    } catch (err: any) { 
-       console.error("Error updating show:", err);
-       setErrorState(err);
-       // Rollback optimistic update if implemented
-       // setShows(originalShows);
+    } catch (err: any) {
+      // Intentionally swallowing error for now, should be handled with user feedback
     }
   }, [firebaseService]);
 
@@ -247,83 +252,28 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
          setErrorState(new Error("Firebase service not available"));
          return;
       }
-      // Optimistic update placeholder
-      // const originalShows = shows;
-      // setShows(prev => prev.filter(s => s.id !== id));
       try {
          await firebaseService.deleteDocument('shows', id);
          if (selectedShow?.id === id) {
             setSelectedShow(null); // Deselect if the selected show is deleted
          }
       } catch (err: any) {
-         console.error("Error deleting show:", err);
-         setErrorState(err);
-         // Rollback optimistic update if implemented
-         // setShows(originalShows);
+        // Intentionally swallowing error for now, should be handled with user feedback
       }
    }, [firebaseService, selectedShow, setSelectedShow]); // Added selectedShow and setSelectedShow
 
   // --- Add getShowById implementation --- 
   const getShowById = useCallback(async (id: string): Promise<Show | null> => {
       if (!firebaseService?.getDocument) {
-         console.error('Firebase service (getDocument) not available');
          setErrorState(new Error("Firebase service not available"));
          return null;
       }
       try {
-         const showDoc = await firebaseService.getDocument<Omit<Show, 'id'>>('shows', id);
-
-         if (showDoc && showDoc.data) {
-           console.log(`[ShowsContext getShowById] Raw Firestore doc data for ${id}:`, JSON.stringify(showDoc.data)); // Log raw data
-           const rawData = showDoc.data;
-           const rawActs = rawData.acts; // Get raw acts data
-           console.log(`[ShowsContext getShowById] Processing doc ${id}, raw acts:`, JSON.stringify(rawActs));
-
-           // Apply the same safe mapping logic as in the listener
-           const processedShow: Show = {
-             id: showDoc.id,
-             ...(rawData),
-             // Ensure acts is an array
-             acts: Array.isArray(rawActs) ? rawActs.map((act: any) => ({
-                 ...act,
-                 id: act.id ?? Date.now(),
-                 name: act.name ?? `Act ${act.id ?? '?'}`,
-                 scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
-                     ...scene,
-                     id: scene.id ?? Date.now(),
-                     name: scene.name ?? `Scene ${scene.id ?? '?'}`
-                 })) : [] 
-             })) : [], // Default to empty array
-             // Ensure other potentially missing arrays are defaulted
-             collaborators: Array.isArray(rawData.collaborators) ? rawData.collaborators : [],
-             venues: Array.isArray(rawData.venues) ? rawData.venues : [],
-             contacts: Array.isArray(rawData.contacts) ? rawData.contacts : [],
-             // Ensure required fields have fallbacks if somehow missing in rawData (though type expects them)
-             name: rawData.name ?? 'Unnamed Show',
-             description: rawData.description ?? '',
-             userId: rawData.userId ?? '', 
-             createdAt: rawData.createdAt ?? new Date().toISOString(),
-             updatedAt: rawData.updatedAt ?? new Date().toISOString(),
-             stageManager: rawData.stageManager ?? '',
-             stageManagerEmail: rawData.stageManagerEmail ?? '',
-             propsSupervisor: rawData.propsSupervisor ?? '',
-             propsSupervisorEmail: rawData.propsSupervisorEmail ?? '',
-             productionCompany: rawData.productionCompany ?? '',
-             productionContactName: rawData.productionContactName ?? '',
-             productionContactEmail: rawData.productionContactEmail ?? '',
-             isTouringShow: rawData.isTouringShow ?? false,
-           };
-           console.log(`[ShowsContext getShowById] Processed show object for ${id}:`, processedShow); // Log processed show
-           return processedShow;
-         } else {
-           console.log(`[ShowsContext getShowById] Document ${id} not found.`);
-           return null; // Document not found
-         }
-
+         const doc = await firebaseService.getDocument<Show>('shows', id);
+         return doc ? { id: doc.id, ...doc.data } as Show : null;
       } catch (err: any) {
-         console.error(`Error fetching show with ID ${id}:`, err);
-         setErrorState(err);
-         return null;
+        // Intentionally swallowing error for now, should be handled with user feedback
+        return null;
       }
   }, [firebaseService]); // Removed setErrorState dependency
   // --- End getShowById implementation ---
