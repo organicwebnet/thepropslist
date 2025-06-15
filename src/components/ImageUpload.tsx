@@ -32,7 +32,7 @@ export function ImageUpload({ onImagesChange, currentImages = [], disabled = fal
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const storageService = service?.storage();
+        const storageService = service?.storage;
         if (!storageService) {
           throw new Error('Firebase Storage service is not available.');
         }

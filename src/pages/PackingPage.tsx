@@ -8,6 +8,7 @@ import type { Show } from '../shared/services/firebase/types.ts';
 import type { PackedProp, PackingBox } from '../types/packing.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
 import { lightTheme, darkTheme } from '../styles/theme.ts';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface PackingPageProps {
   props: Prop[];
@@ -54,18 +55,28 @@ export function PackingPage({ props: allProps, show }: PackingPageProps) {
   }
 
   return (
-    <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-      <View className="pt-6 px-4 md:px-6">
-        <PackingList
-          show={show}
-          props={allProps}
-          boxes={boxes}
-          onCreateBox={handleCreateBox}
-          onUpdateBox={updateBox}
-          onDeleteBox={deleteBox}
-        />
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
+          <View className="pt-6 px-4 md:px-6">
+            <PackingList
+              show={show}
+              props={allProps}
+              boxes={boxes}
+              onCreateBox={handleCreateBox}
+              onUpdateBox={updateBox}
+              onDeleteBox={deleteBox}
+            />
+          </View>
+        </ScrollView>
       </View>
-    </ScrollView>
+    </LinearGradient>
   );
 }
 
@@ -82,7 +93,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F2937',
     justifyContent: 'center',
     alignItems: 'center'
-  }
+  },
+  container: {
+    flex: 1,
+    backgroundColor: 'rgba(30,30,30,0.7)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
 });
 
 export default PackingPage; 

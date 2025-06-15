@@ -1,4 +1,4 @@
-import { FirebaseService, FirebaseError, FirebaseDocument, FirebaseCollection } from '../firebase/types.ts';
+import { FirebaseService, FirebaseError, FirebaseDocument } from '../firebase/types.ts';
 import { VisionAPIService } from '../ai/vision.ts';
 import { QRCodeService, QRCodeData } from '../qr/qrService.ts';
 import { 
@@ -123,10 +123,10 @@ export class DigitalInventoryService implements InventoryService {
       const metadata = {
         createdAt: new Date(),
         updatedAt: new Date(),
-        createdBy: this.firebase.auth().currentUser?.uid || 'system',
-        updatedBy: this.firebase.auth().currentUser?.uid || 'system'
+        createdBy: this.firebase.auth.currentUser?.uid || 'system',
+        updatedBy: this.firebase.auth.currentUser?.uid || 'system'
       };
-      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const firestoreInstance = this.firebase.getFirestoreJsInstance() as WebFirestore;
       const collRef = webCollection(firestoreInstance, this.collection);
       const docRef = await webAddDoc(collRef, { ...prop, metadata });
 
@@ -148,9 +148,9 @@ export class DigitalInventoryService implements InventoryService {
     try {
       const metadata = {
         updatedAt: new Date(),
-        updatedBy: this.firebase.auth().currentUser?.uid || 'system'
+        updatedBy: this.firebase.auth.currentUser?.uid || 'system'
       };
-      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const firestoreInstance = this.firebase.getFirestoreJsInstance() as WebFirestore;
       const docRef = webDoc(firestoreInstance, this.collection, id);
       await webUpdateDoc(docRef, {
           ...updates,
@@ -168,7 +168,7 @@ export class DigitalInventoryService implements InventoryService {
 
   async getProp(id: string): Promise<InventoryProp> {
     try {
-      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const firestoreInstance = this.firebase.getFirestoreJsInstance() as WebFirestore;
       const docRef = webDoc(firestoreInstance, this.collection, id);
       const docSnap = await webGetDoc(docRef);
 
@@ -196,7 +196,7 @@ export class DigitalInventoryService implements InventoryService {
 
   async listProps(filters?: PropFilters): Promise<InventoryProp[]> {
     try {
-      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const firestoreInstance = this.firebase.getFirestoreJsInstance() as WebFirestore;
       let q = webQuery(webCollection(firestoreInstance, this.collection));
 
       if (filters) {
@@ -246,7 +246,7 @@ export class DigitalInventoryService implements InventoryService {
 
   async deleteProp(id: string): Promise<void> {
     try {
-      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const firestoreInstance = this.firebase.getFirestoreJsInstance() as WebFirestore;
       const docRef = webDoc(firestoreInstance, this.collection, id);
       await webDeleteDoc(docRef);
     } catch (error) {
@@ -313,12 +313,12 @@ export class DigitalInventoryService implements InventoryService {
 
   async recordMaintenance(propId: string, maintenance: PropMaintenance): Promise<void> {
     try {
-      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const firestoreInstance = this.firebase.getFirestoreJsInstance() as WebFirestore;
       const docRef = webDoc(firestoreInstance, this.collection, propId);
       await webUpdateDoc(docRef, {
           lastMaintenance: maintenance,
           'metadata.updatedAt': new Date(),
-          'metadata.updatedBy': this.firebase.auth().currentUser?.uid || 'system',
+          'metadata.updatedBy': this.firebase.auth.currentUser?.uid || 'system',
         });
     } catch (error) {
       throw new FirebaseError(
@@ -331,7 +331,7 @@ export class DigitalInventoryService implements InventoryService {
 
   async searchProps(query: string): Promise<InventoryProp[]> {
     try {
-      const firestoreInstance = this.firebase.firestore() as WebFirestore;
+      const firestoreInstance = this.firebase.getFirestoreJsInstance() as WebFirestore;
       const propsColl = webCollection(firestoreInstance, this.collection);
 
       const nameQuery = webQuery(propsColl,

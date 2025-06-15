@@ -24,10 +24,20 @@ import { FirebaseProvider } from '@/contexts/FirebaseContext.tsx';
 function RootLayoutNav() {
   console.log("--- Rendering: RootLayoutNav (Mobile) with Stack & Slot ---");
   return (
-    <Stack>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: 'transparent' },
+        headerTransparent: true,
+      }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      {/* Other screens that should be part of this stack can be added here */}
-      {/* For now, Stack will implicitly handle child routes like taskBoard/[boardId] via its Slot */}
+      <Stack.Screen
+        name="taskBoard/[boardId]"
+        options={{
+          headerShown: true,
+          headerTintColor: '#FFFFFF',
+        }}
+      />
     </Stack>
   );
 }
@@ -87,7 +97,7 @@ function AppContent({ currentFont }: { currentFont: FontChoice }) {
   if (authLoading) {
     console.log("--- AppContent: Showing loading indicator --- ");
     return (
-      <View style={appContentStyles.loadingContainer}>
+      <View style={[appContentStyles.loadingContainer, { backgroundColor: 'transparent' }]}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -97,7 +107,7 @@ function AppContent({ currentFont }: { currentFont: FontChoice }) {
   // Note: This ErrorBoundary will only catch errors from its children (AppContent's return values here)
   // For a more global error boundary, it would need to be higher up.
   if (authError) {
-      return <ErrorBoundary error={authError}><View /></ErrorBoundary>; // Render error via ErrorBoundary
+      return <ErrorBoundary error={authError}><View style={{ backgroundColor: 'transparent' }} /></ErrorBoundary>; // Render error via ErrorBoundary
   }
 
   if (user) {
@@ -105,11 +115,11 @@ function AppContent({ currentFont }: { currentFont: FontChoice }) {
       if (Platform.OS === 'web') {
         // For web, you might apply to a root element or rely on CSS
         // Removed baseTextStyle from here
-        return <View style={{flex: 1}}><Slot /></View>;
+        return <View style={{flex: 1, backgroundColor: 'transparent'}}><Slot /></View>;
       } else {
         // For mobile, wrap RootLayoutNav, hoping Text children inherit, or use defaultProps if possible (less standard)
         // Removed baseTextStyle from here
-        return <View style={{flex: 1}}><RootLayoutNav /></View>;
+        return <View style={{flex: 1, backgroundColor: 'transparent'}}><RootLayoutNav /></View>;
       }
   } else {
     // No user, show NativeAuthScreen for mobile. For web, you might have a different auth form.
@@ -137,7 +147,7 @@ function MainApp() {
 
   if (!expoFontsLoaded || isLoadingFont) {
     return (
-      <View style={{flex:1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black'}}>
+      <View style={{flex:1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent'}}>
         <ActivityIndicator size="large" color="#ffd33d" />
         <Text style={{color: '#ffd33d', marginTop: 16}}>Loading custom fonts...</Text>
       </View>
@@ -148,7 +158,7 @@ function MainApp() {
       console.error("Expo Font loading error in MainApp:", expoFontError);
       // SplashScreen.hideAsync().catch(e => console.warn("SplashScreen.hideAsync failed in error path:", e)); // Commented out
       return (
-        <View style={{flex:1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black'}}>
+        <View style={{flex:1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent'}}>
             <Text style={{color: 'orange', padding: 10, textAlign: 'center'}}>
                 There was an error loading custom fonts. The application will use default fonts.
             </Text>

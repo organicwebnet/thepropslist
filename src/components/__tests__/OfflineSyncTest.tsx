@@ -14,7 +14,7 @@ const OfflineSyncTest: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const firebase = new WebFirebaseService();
-  const offlineSync = new OfflineSyncService(firebase);
+  const offlineSync = new OfflineSyncService(firebase as any);
 
   useEffect(() => {
     const initializeSync = async () => {

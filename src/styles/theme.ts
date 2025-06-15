@@ -20,6 +20,12 @@ export const darkTheme = {
     error: '#EF4444',
     card: '#1F2937',
     background: '#111827',
+    dueDateOk: '#22C55E',
+    dueDateSoon: '#FBBF24',
+    dueDateOverdue: '#EF4444',
+    listBackground: '#181F2A',
+    inputBackground: '#232B3A',
+    placeholder: '#6B7280',
   },
 };
 
@@ -43,5 +49,11 @@ export const lightTheme = {
     error: '#EF4444',
     card: '#F3F4F6',
     background: '#FFFFFF',
+    dueDateOk: '#22C55E',
+    dueDateSoon: '#FBBF24',
+    dueDateOverdue: '#EF4444',
+    listBackground: '#F0F0F0',
+    inputBackground: '#E5E7EB',
+    placeholder: '#9CA3AF',
   },
 }; 

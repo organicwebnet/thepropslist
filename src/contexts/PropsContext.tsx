@@ -42,10 +42,7 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const queryOptions: QueryOptions = {
-          where: [
-            ['showId', '==', selectedShow.id],
-            ['userId', '==', user.uid],
-          ],
+          where: [['showId', '==', selectedShow.id]],
         };
         unsubscribe = firebaseService.listenToCollection<Prop>(
           'props',
@@ -66,8 +63,7 @@ export function PropsProvider({ children }: { children: React.ReactNode }) {
               }
 
               return {
-                id: docSnapshot.id,
-                ...data, // Spread existing data
+                ...data,
                 primaryImageUrl: determinedImageUrl, // Explicitly set/override primaryImageUrl
               } as Prop;
             });

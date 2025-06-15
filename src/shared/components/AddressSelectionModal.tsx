@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: '#282c34', 
+    backgroundColor: 'transparent', 
     borderRadius: 15,
     padding: 20, // Reduced padding
     alignItems: 'center', 
@@ -343,6 +343,9 @@ const styles = StyleSheet.create({
     marginVertical: 5, 
     lineHeight: 20, 
   },
+  modal: { backgroundColor: 'rgba(0,0,0,0.5)' },
+  content: { backgroundColor: 'transparent' },
+  button: { backgroundColor: 'transparent' },
 });
 
 export default AddressSelectionModal; 

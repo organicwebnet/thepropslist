@@ -177,7 +177,7 @@ export class DigitalPackListService implements PackListService {
     this.qrService = qrService;
     this.inventoryService = inventoryService;
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-    this.packListsCollection = getTypedCollection<PackListDocument>(this.firebase.firestore() as Firestore, this.collectionName);
+    this.packListsCollection = getTypedCollection<PackListDocument>(this.firebase.getFirestoreJsInstance(), this.collectionName);
   }
 
   private getCollection(): CollectionReference<PackListDocument> {
@@ -296,7 +296,7 @@ export class DigitalPackListService implements PackListService {
         throw new Error(`Pack list with id ${packListId} not found`);
       }
 
-      const tempRef = doc(collection(this.firebase.firestore() as Firestore, 'temp'));
+      const tempRef = doc(collection(this.firebase.getFirestoreJsInstance(), 'temp'));
       const containerId = tempRef.id;
 
       const newContainer: PackingContainer = {

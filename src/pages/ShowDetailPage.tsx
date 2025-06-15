@@ -271,8 +271,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                 <div>
                   <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-2">Touring Venues</h3>
                   <div className="space-y-3">
-                    {venues.map((venue: Venue, index: number) => (
-                      <div key={index} className="p-3 bg-[var(--bg-secondary)] rounded-lg">
+                    {venues.map((venue: Venue) => (
+                      <div key={venue.id || venue.name} className="p-3 bg-[var(--bg-secondary)] rounded-lg">
                         <p className="font-medium text-[var(--text-primary)]">{venue.name}</p>
                         {venue.address && (
                           <p className="text-sm text-[var(--text-secondary)]">
@@ -341,7 +341,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           <div className="space-y-6">
             {acts.length > 0 ? (
               acts.map((act: Act) => (
-                <div key={act.id as string | number} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <div key={act.id} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
                   <h3 className="text-lg font-medium text-[var(--text-primary)] mb-3">
                     Act {act.id as string | number}
                     {act.name && <span className="text-[var(--text-secondary)] ml-2">- {act.name}</span>}
@@ -351,7 +351,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {Array.isArray(act.scenes) && act.scenes.map((scene: Scene) => (
-                      <div key={scene.id as string | number} className="p-3 bg-[var(--input-bg)] rounded-lg">
+                      <div key={scene.id} className="p-3 bg-[var(--input-bg)] rounded-lg">
                         <p className="font-medium text-[var(--text-primary)]">
                           Scene {scene.id as string | number}: {scene.name || 'Untitled Scene'}
                         </p>
@@ -376,8 +376,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Collaborators</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {show.collaborators.map((collaborator: ShowCollaborator, index: number) => (
-                <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+              {show.collaborators.map((collaborator: ShowCollaborator) => (
+                <div key={collaborator.email} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
                   <p className="font-medium text-[var(--text-primary)]">{collaborator.email}</p>
                   <p className="text-sm text-[var(--text-secondary)]">Role: {collaborator.role}</p>
                   <p className="text-xs text-gray-400 mt-1">Added by: {collaborator.addedBy} on {typeof collaborator.addedAt === 'string' ? collaborator.addedAt : collaborator.addedAt?.toDate().toLocaleDateString()}</p>
@@ -398,8 +398,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           <div className="mt-8">
             <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Key Contacts</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {contacts.map((contact: Contact, index: number) => (
-                <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+              {contacts.map((contact: Contact) => (
+                <div key={contact.id || contact.email} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
                   <p className="font-medium text-[var(--text-primary)]">{contact.name} <span className="text-sm text-[var(--text-secondary)]">({contact.role})</span></p>
                   {contact.email && <p className="text-sm text-[var(--text-secondary)]"><a href={`mailto:${contact.email}`} className="hover:text-primary">{contact.email}</a></p>}
                   {contact.phone && <p className="text-sm text-[var(--text-secondary)]"><a href={`tel:${contact.phone}`} className="hover:text-primary">{contact.phone}</a></p>}
@@ -432,8 +432,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
               Collaborators
             </h2>
             <div className="space-y-4">
-              {show.collaborators.map((collaborator: ShowCollaborator, index: number) => (
-                <div key={index} className="p-4 bg-[var(--bg-secondary)] rounded-lg border-l-4 border-primary">
+              {show.collaborators.map((collaborator: ShowCollaborator) => (
+                <div key={collaborator.email} className="p-4 bg-[var(--bg-secondary)] rounded-lg border-l-4 border-primary">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-medium text-[var(--text-primary)]">{collaborator.email}</h3>

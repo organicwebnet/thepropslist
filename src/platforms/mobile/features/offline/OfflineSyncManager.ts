@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 // import firestore from '@react-native-firebase/firestore'; // Keep this commented, use the passed instance
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore'; // Import the specific type
-import { FirebaseFirestore, FirebaseDocument } from '../../../../shared/services/firebase/types.ts';
+import { FirebaseDocument } from '../../../../shared/services/firebase/types.ts';
 // import { OfflineOperation } from './OfflineOperationStore'; // Commented out: Cannot find module
 
 // Define a placeholder type if OfflineOperation is used elsewhere in the file
@@ -26,13 +26,13 @@ export class OfflineSyncManager {
   private syncMetadataKey = 'propsBible_syncMetadata';
   private pendingOperationsKey = 'propsBible_pendingOperations';
   private isInitialized = false;
-  private firestore: FirebaseFirestore;
+  private firestore: any;
 
-  private constructor(firestore: FirebaseFirestore) {
+  private constructor(firestore: any) {
     this.firestore = firestore;
   }
 
-  static getInstance(firestore: FirebaseFirestore): OfflineSyncManager {
+  static getInstance(firestore: any): OfflineSyncManager {
     if (!OfflineSyncManager.instance) {
       OfflineSyncManager.instance = new OfflineSyncManager(firestore);
     }

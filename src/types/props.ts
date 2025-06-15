@@ -1,4 +1,5 @@
 import { PropLifecycleStatus } from './lifecycle.ts';
+import { Prop } from './index.ts';
 
 export interface PropImage {
   url: string;
@@ -63,28 +64,6 @@ export interface Filters {
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface Prop {
-  id: string;
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  quantity?: number;
-  category?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  ownerId: string;
-  isAvailable?: boolean;
-  location?: {
-    name: string;
-    coordinates?: {
-      latitude: number;
-      longitude: number;
-    };
-  };
-  tags?: string[];
-  condition?: 'new' | 'good' | 'fair' | 'poor';
-}
-
-export interface PropFormData extends Omit<Prop, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'> {
+export interface PropFormData extends Omit<Prop, 'id' | 'createdAt' | 'updatedAt' | 'userId'> {
   id?: string;
 } 

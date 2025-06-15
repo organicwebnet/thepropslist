@@ -4,6 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext.tsx'; // Assuming ThemeCon
 import { lightTheme, darkTheme } from '../../styles/theme.ts'; // Assuming theme is two levels up
 import { Ionicons } from '@expo/vector-icons'; // For icons
 import type { CardLabel } from '../../shared/types/taskManager.ts'; // ADD THIS IMPORT
+import LinearGradient from 'react-native-linear-gradient';
 
 // Assuming CardLabel type is defined elsewhere and can be imported
 // For now, let's define it here if not readily available for import
@@ -24,6 +25,27 @@ interface LabelPickerProps {
   onLabelUpdated: (updatedLabel: CardLabel) => void; // For informing parent about definition update
   onLabelDeleted: (deletedLabelId: string) => void; // For informing parent about definition deletion
   // TODO: Add onCreateNewLabel if we allow creating labels from here
+}
+
+const COLOR_PALETTE = [
+  '#61bd4f', '#f2d600', '#ff9f1a', '#eb5a46', '#c377e0', '#0079bf',
+  '#00c2e0', '#51e898', '#ff78cb', '#344563', '#b3bac5', '#dfe1e6',
+  '#ffab4a', '#b04632', '#89609e', '#cd5a91', '#4bbf6b', '#e2b203',
+  '#f87462', '#9f8fef', '#579dff', '#60c6d2', '#5aac44', '#f4f5f7'
+];
+
+function getContrastYIQ(hexcolor: string) {
+  // Remove # if present
+  hexcolor = hexcolor.replace('#', '');
+  // Convert 3-digit hex to 6-digit
+  if (hexcolor.length === 3) {
+    hexcolor = hexcolor.split('').map(x => x + x).join('');
+  }
+  const r = parseInt(hexcolor.substr(0,2),16);
+  const g = parseInt(hexcolor.substr(2,2),16);
+  const b = parseInt(hexcolor.substr(4,2),16);
+  const yiq = ((r*299)+(g*587)+(b*114))/1000;
+  return yiq >= 128 ? '#222' : '#fff';
 }
 
 const LabelPicker: React.FC<LabelPickerProps> = ({
@@ -178,197 +200,219 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
       alignItems: 'center',
     },
     panel: {
-      width: '90%',
-      maxHeight: '85%', // Adjusted for more content
-      backgroundColor: currentThemeColors.cardBg,
-      borderRadius: 10,
-      padding: 15, // Adjusted padding
+      width: '94%',
+      maxWidth: 420,
+      maxHeight: '88%',
+      backgroundColor: 'rgba(20,22,30,0.98)',
+      borderRadius: 22,
+      padding: 28,
+      margin: 10,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 3.84,
-      elevation: 5,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.22,
+      shadowRadius: 28,
+      elevation: 16,
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 10, // Adjusted
-      paddingBottom: 8, // Adjusted
-      borderBottomWidth: 1,
-      borderBottomColor: currentThemeColors.border,
-    },
-    title: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: currentThemeColors.text,
-    },
-    closeButton: {
-      padding: 5,
-    },
-    // Create/Edit Label Section
-    upsertLabelSection: { // Renamed from createLabelSection
-      marginBottom: 10,
+      marginBottom: 20,
       paddingBottom: 10,
       borderBottomWidth: 1,
-      borderBottomColor: currentThemeColors.border,
+      borderBottomColor: 'rgba(255,255,255,0.10)',
     },
-    upsertLabelTitle: { // Renamed
+    title: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: currentThemeColors.text,
+      letterSpacing: 0.1,
+    },
+    closeButton: {
+      padding: 6,
+    },
+    upsertLabelSection: {
+      marginBottom: 20,
+      paddingBottom: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255,255,255,0.10)',
+    },
+    upsertLabelTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
         color: currentThemeColors.text,
-        marginBottom: 8,
+        marginBottom: 10,
+        letterSpacing: 0.1,
     },
     input: {
-      height: 40,
-      borderColor: currentThemeColors.border,
+      height: 42,
+      borderColor: 'rgba(255,255,255,0.16)',
       borderWidth: 1,
-      borderRadius: 5,
-      paddingHorizontal: 10,
-      marginBottom: 8,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      marginBottom: 14,
       color: currentThemeColors.text,
-      backgroundColor: currentThemeColors.inputBg,
+      backgroundColor: 'rgba(255,255,255,0.06)',
+      fontSize: 15,
     },
     formButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginTop: 10,
     },
-    upsertButton: { // Renamed
+    upsertButton: {
       backgroundColor: currentThemeColors.primary,
-      paddingVertical: 10,
-      paddingHorizontal: 15,
-      borderRadius: 5,
+      paddingVertical: 13,
+      borderRadius: 10,
       alignItems: 'center',
-      flex: 1, // Make buttons take available space
-      marginRight: 5, // Add some space if cancel button is next to it
+      flex: 1,
+      marginRight: 6,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.12,
+      shadowRadius: 5,
+      elevation: 3,
     },
-    upsertButtonText: { // Renamed
-      color: currentThemeColors.card || '#FFFFFF',
+    upsertButtonText: {
+      color: '#fff',
       fontWeight: 'bold',
       fontSize: 16,
+      letterSpacing: 0.2,
     },
     cancelEditButton: {
-        backgroundColor: currentThemeColors.card,
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 5,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        paddingVertical: 13,
+        borderRadius: 10,
         alignItems: 'center',
-        flex: 1, // Make buttons take available space
-        marginLeft: 5,
+        flex: 1,
+        marginLeft: 6,
         borderWidth: 1,
-        borderColor: currentThemeColors.border,
+        borderColor: 'rgba(255,255,255,0.16)',
     },
     cancelEditButtonText: {
         color: currentThemeColors.text,
-        fontWeight: 'bold'
+        fontWeight: 'bold',
+        letterSpacing: 0.2,
     },
-    // Label List Item
     labelItemContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: currentThemeColors.border,
-        borderRadius: 5,
-        marginBottom: 8,
-        // paddingHorizontal: 5, // Moved to touchable part
+        borderRadius: 8,
+        marginBottom: 7,
+        paddingHorizontal: 0,
+        minHeight: 38,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 2,
+        elevation: 1,
     },
     labelTouchableArea: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
-        paddingLeft: 10, // Added padding left
-        flex: 1, // Takes available space pushing icons to the right
+        paddingVertical: 0,
+        paddingLeft: 0,
+        flex: 1,
     },
     labelColorPreview: {
       width: 20,
       height: 20,
-      borderRadius: 4,
-      marginRight: 10,
-      borderWidth: 1,
-      borderColor: currentThemeColors.border,
+      borderRadius: 10,
+      marginRight: 8,
+      borderWidth: 2,
+      borderColor: 'rgba(255,255,255,0.18)',
     },
     labelText: {
-      fontSize: 16,
+      fontSize: 15,
       color: currentThemeColors.text,
-      // flex: 1, // Removed, let container manage space
+      fontWeight: '600',
+      letterSpacing: 0.1,
     },
     labelActions: {
         flexDirection: 'row',
-        paddingHorizontal: 5, // Add some padding for icon touch areas
+        paddingHorizontal: 0,
+        marginLeft: 6,
     },
     iconButton: {
-        padding: 8, // Increased touch area for icons
+        padding: 5,
     },
-    selectedIcon: { // No change needed here, for the checkmark
-      // marginLeft: 10, // This was if it was inside labelText area
-    },
-    // Footer (Apply/Cancel for the whole modal)
     footer: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginTop: 15, // Adjusted
-      paddingTop: 10, // Adjusted
+      marginTop: 20,
+      paddingTop: 14,
       borderTopWidth: 1,
-      borderTopColor: currentThemeColors.border,
+      borderTopColor: 'rgba(255,255,255,0.10)',
     },
     applyButton: {
       backgroundColor: currentThemeColors.primary,
-      paddingVertical: 10,
-      paddingHorizontal: 20,
-      borderRadius: 5,
+      paddingVertical: 13,
+      paddingHorizontal: 36,
+      borderRadius: 10,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.12,
+      shadowRadius: 5,
+      elevation: 3,
     },
     applyButtonText: {
-      color: currentThemeColors.card || '#FFFFFF',
+      color: '#fff',
       fontWeight: 'bold',
       fontSize: 16,
+      letterSpacing: 0.2,
     },
-    cancelModalButton: { // Renamed from cancelButton
-        backgroundColor: currentThemeColors.card,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 5,
+    cancelModalButton: {
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        paddingVertical: 13,
+        paddingHorizontal: 36,
+        borderRadius: 10,
         borderWidth: 1,
-        borderColor: currentThemeColors.border,
+        borderColor: 'rgba(255,255,255,0.16)',
     },
-    cancelModalButtonText: { // Renamed from cancelButtonText
+    cancelModalButtonText: {
         color: currentThemeColors.text,
         fontWeight: 'bold',
         fontSize: 16,
+        letterSpacing: 0.2,
     },
     emptyListText: {
       textAlign: 'center',
       color: currentThemeColors.textSecondary,
-      marginVertical: 20, // Adjusted margin
+      marginVertical: 18,
+      fontSize: 15,
     },
     listHeader: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: 15,
+        fontWeight: '700',
         color: currentThemeColors.text,
-        marginBottom: 8,
-        marginTop: 10,
+        marginBottom: 7,
+        marginTop: 8,
+        letterSpacing: 0.1,
     }
   });
 
   const renderLabelItem = ({ item }: { item: CardLabel }) => {
     const isSelected = !!currentSelected.find(l => l.id === item.id);
     return (
-      <View style={[styles.labelItemContainer, isSelected && { backgroundColor: currentThemeColors.primary }]}>
-          <TouchableOpacity onPress={() => toggleLabelSelection(item)} style={styles.labelTouchableArea}>
-            <View style={[styles.labelColorPreview, { backgroundColor: item.color }]} />
-            <Text style={styles.labelText}>{item.name}</Text>
-            {isSelected && (
-              <Ionicons name="checkmark-circle" size={24} color={currentThemeColors.primary} style={styles.selectedIcon} />
-            )}
+      <View style={[styles.labelItemContainer, { backgroundColor: item.color }]}> 
+        <TouchableOpacity onPress={() => toggleLabelSelection(item)} style={[styles.labelTouchableArea, { flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 0, paddingLeft: 0 }]}> 
+          {/* Checkmark for selected state */}
+          {isSelected ? (
+            <Ionicons name="checkmark" size={22} color={getContrastYIQ(item.color)} style={{ marginLeft: 12, marginRight: 8 }} />
+          ) : (
+            <View style={{ width: 22, marginLeft: 12, marginRight: 8 }} />
+          )}
+          <Text style={[styles.labelText, { color: getContrastYIQ(item.color), flex: 1 }]} numberOfLines={1}>{item.name}</Text>
+        </TouchableOpacity>
+        <View style={styles.labelActions}>
+          <TouchableOpacity onPress={() => handleStartEditLabel(item)} style={styles.iconButton}>
+            <Ionicons name="pencil-outline" size={20} color={getContrastYIQ(item.color)} />
           </TouchableOpacity>
-          <View style={styles.labelActions}>
-            <TouchableOpacity onPress={() => handleStartEditLabel(item)} style={styles.iconButton}>
-              <Ionicons name="pencil-outline" size={20} color={currentThemeColors.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDeleteLabel(item)} style={styles.iconButton}>
-              <Ionicons name="trash-bin-outline" size={20} color={currentThemeColors.error} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={() => handleDeleteLabel(item)} style={styles.iconButton}>
+            <Ionicons name="trash-bin-outline" size={20} color={getContrastYIQ(item.color)} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -378,71 +422,107 @@ const LabelPicker: React.FC<LabelPickerProps> = ({
       transparent={true}
       visible={isVisible}
       animationType="fade"
-      onRequestClose={onClose} // Use onClose from props for hardware back button, etc.
+      onRequestClose={onClose}
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Manage Labels</Text>
-            <Pressable onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close-circle-outline" size={28} color={currentThemeColors.textSecondary} />
-            </Pressable>
-          </View>
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <Pressable style={[styles.overlay, { backgroundColor: 'transparent' }]} onPress={onClose}>
+          <View style={styles.panel}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Manage Labels</Text>
+              <Pressable onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close-circle-outline" size={28} color={currentThemeColors.textSecondary} />
+              </Pressable>
+            </View>
 
-          {/* <ScrollView keyboardShouldPersistTaps="handled"> Comment out or remove ScrollView */}
-            <FlatList
-              ListHeaderComponent={
-                <>
-                  <View style={styles.upsertLabelSection}>
-                    <Text style={styles.upsertLabelTitle}>{editingLabel ? 'Edit Label' : 'Create New Label'}</Text>
-                    <TextInput
-                      placeholder="Label Name"
-                      value={labelNameInput}
-                      onChangeText={setLabelNameInput}
-                      style={styles.input}
-                      placeholderTextColor={currentThemeColors.textSecondary}
-                    />
-                    <TextInput
-                      placeholder="Color (e.g., #FF5733 or 'blue')"
-                      value={labelColorInput}
-                      onChangeText={setLabelColorInput}
-                      style={styles.input}
-                      placeholderTextColor={currentThemeColors.textSecondary}
-                      autoCapitalize="none"
-                    />
-                    <View style={styles.formButtonsContainer}>
-                      <TouchableOpacity onPress={handleUpsertLabel} style={styles.upsertButton}>
-                        <Text style={styles.upsertButtonText}>{editingLabel ? 'Update Label' : 'Create and Add'}</Text>
-                      </TouchableOpacity>
-                      {editingLabel && (
-                          <TouchableOpacity onPress={cancelEdit} style={styles.cancelEditButton}>
-                              <Text style={styles.cancelEditButtonText}>Cancel Edit</Text>
-                          </TouchableOpacity>
-                      )}
+            {/* <ScrollView keyboardShouldPersistTaps="handled"> Comment out or remove ScrollView */}
+              <FlatList
+                ListHeaderComponent={
+                  <>
+                    <View style={styles.upsertLabelSection}>
+                      <Text style={styles.upsertLabelTitle}>{editingLabel ? 'Edit Label' : 'Create New Label'}</Text>
+                      <TextInput
+                        placeholder="Label Name"
+                        value={labelNameInput}
+                        onChangeText={setLabelNameInput}
+                        style={styles.input}
+                        placeholderTextColor={currentThemeColors.textSecondary}
+                      />
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, justifyContent: 'flex-start' }}>
+                        {COLOR_PALETTE.map(color => (
+                          <Pressable
+                            key={color}
+                            onPress={() => setLabelColorInput(color)}
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              backgroundColor: color,
+                              margin: 5,
+                              borderWidth: labelColorInput === color ? 3 : 1,
+                              borderColor: labelColorInput === color ? currentThemeColors.primary : '#fff',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              shadowColor: labelColorInput === color ? currentThemeColors.primary : 'transparent',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: labelColorInput === color ? 0.18 : 0,
+                              shadowRadius: labelColorInput === color ? 6 : 0,
+                              elevation: labelColorInput === color ? 2 : 0,
+                            }}
+                          >
+                            {labelColorInput === color && (
+                              <Ionicons name="checkmark" size={20} color="#fff" />
+                            )}
+                          </Pressable>
+                        ))}
+                      </View>
+                      <TextInput
+                        placeholder="Color (e.g., #FF5733 or 'blue')"
+                        value={labelColorInput}
+                        onChangeText={setLabelColorInput}
+                        style={styles.input}
+                        placeholderTextColor={currentThemeColors.textSecondary}
+                        autoCapitalize="none"
+                      />
+                      <View style={styles.formButtonsContainer}>
+                        <TouchableOpacity onPress={handleUpsertLabel} style={styles.upsertButton}>
+                          <Text style={styles.upsertButtonText}>{editingLabel ? 'Update Label' : 'Create and Add'}</Text>
+                        </TouchableOpacity>
+                        {editingLabel && (
+                            <TouchableOpacity onPress={cancelEdit} style={styles.cancelEditButton}>
+                                <Text style={styles.cancelEditButtonText}>Cancel Edit</Text>
+                            </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                  <Text style={styles.listHeader}>Available Labels</Text>
-                </>
-              }
-              data={displayableLabels}
-              renderItem={renderLabelItem}
-              keyExtractor={item => item.id}
-              ListEmptyComponent={<Text style={styles.emptyListText}>No labels defined. Create one above!</Text>}
-              // nestedScrollEnabled={true} // No longer needed as it's not nested in a ScrollView of the same orientation
-              keyboardShouldPersistTaps="handled" // Move this prop to FlatList
-            />
-          {/* </ScrollView> Comment out or remove ScrollView */}
-          
-          <View style={styles.footer}>
-            <TouchableOpacity onPress={onClose} style={styles.cancelModalButton}>
-              <Text style={styles.cancelModalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { handleSave(); onClose(); }} style={styles.applyButton}>
-              <Text style={styles.applyButtonText}>Apply</Text>
-            </TouchableOpacity>
+                    <Text style={styles.listHeader}>Available Labels</Text>
+                  </>
+                }
+                data={displayableLabels}
+                renderItem={renderLabelItem}
+                keyExtractor={item => item.id}
+                ListEmptyComponent={<Text style={styles.emptyListText}>No labels defined. Create one above!</Text>}
+                // nestedScrollEnabled={true} // No longer needed as it's not nested in a ScrollView of the same orientation
+                keyboardShouldPersistTaps="handled" // Move this prop to FlatList
+              />
+            {/* </ScrollView> Comment out or remove ScrollView */}
+            
+            <View style={styles.footer}>
+              <TouchableOpacity onPress={onClose} style={styles.cancelModalButton}>
+                <Text style={styles.cancelModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { handleSave(); onClose(); }} style={styles.applyButton}>
+                <Text style={styles.applyButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </Pressable>
-      </Pressable>
+      </LinearGradient>
     </Modal>
   );
 };

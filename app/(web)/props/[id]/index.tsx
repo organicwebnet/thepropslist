@@ -57,7 +57,6 @@ export default function WebPropDetailScreen() {
         if (propDoc) { 
           // TODO: Fetch history data separately or ensure it's part of the propDoc
           const fetchedProp: PropWithHistory = {
-             id: propDoc.id, 
              ...propDoc.data,
              // Placeholder - replace with actual fetched history
              statusHistory: [], 

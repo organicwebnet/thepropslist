@@ -6,7 +6,7 @@ export class AuthService {
   constructor(private firebase: FirebaseService) {}
 
   async getCurrentUser(): Promise<User | null> {
-    return this.firebase.auth().currentUser as User | null;
+    return this.firebase.auth.currentUser as User | null;
   }
 
   async getUserProfile(uid: string): Promise<UserProfile | null> {

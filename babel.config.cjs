@@ -37,6 +37,7 @@ module.exports = function (api) {
         safe: false,
         allowUndefined: true
       }],
+      // This must be last!
       "react-native-reanimated/plugin"
     ],
     env: {

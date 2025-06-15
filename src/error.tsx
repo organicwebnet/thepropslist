@@ -6,16 +6,16 @@ export default function ErrorBoundary(props: ErrorBoundaryProps) {
   const isDark = colorScheme === 'dark';
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
+    <View style={[styles.container, { backgroundColor: 'transparent' }]}>
       <Text style={[styles.title, { color: isDark ? '#fff' : '#000' }]}>Oops!</Text>
       <Text style={[styles.subtitle, { color: isDark ? '#aaa' : '#666' }]}>
         Something went wrong. Please try again.
       </Text>
       <Pressable
-        style={[styles.button, { backgroundColor: isDark ? '#fff' : '#000' }]}
+        style={[styles.button, { backgroundColor: 'transparent' }]}
         onPress={() => props.retry()}
       >
-        <Text style={[styles.buttonText, { color: isDark ? '#000' : '#fff' }]}>
+        <Text style={[styles.buttonText, { color: isDark ? '#fff' : '#000' }]}>
           Try Again
         </Text>
       </Pressable>

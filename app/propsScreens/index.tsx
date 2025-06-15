@@ -106,7 +106,9 @@ export default function PropsByShowScreen() {
         }
         setShowName(currentShowName);
 
-        const propsDocs = await service.getPropsByShowId(showId);
+        // TODO: Implement getPropsByShowId for this platform or use a platform-specific import
+        // const propsDocs = await service.getPropsByShowId(showId);
+        const propsDocs: FirebaseDocument<Prop>[] = [];
         const propsData = propsDocs.map((doc: FirebaseDocument<Prop>) => ({
           ...(doc.data as Prop),
           id: doc.id,

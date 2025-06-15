@@ -20,15 +20,16 @@ export function RootNavigator() {
             initialRouteName="Home"
             screenOptions={{
               headerStyle: {
-                backgroundColor: '#000000',
+                backgroundColor: 'transparent',
               },
               headerTintColor: '#FFFFFF',
               headerTitleStyle: {
                 fontWeight: '600',
               },
               contentStyle: {
-                backgroundColor: '#000000',
+                backgroundColor: 'transparent',
               },
+              headerTransparent: true,
             }}
           >
             <Stack.Screen 

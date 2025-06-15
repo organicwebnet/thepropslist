@@ -33,6 +33,7 @@ module.exports = ({ config }) => {
       bundler: "metro",
       favicon: "./public/icon.png"
     },
+    jsEngine: "jsc",
     hooks: {
       postPublish: [
         {

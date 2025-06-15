@@ -73,9 +73,9 @@ describe('MobileOfflineSync', () => {
       await offlineSync.initialize();
       const status = await offlineSync.getSyncStatus();
 
-      expect(status.isEnabled).toBe(false);
+      expect((status as any).isEnabled).toBe(false);
       expect(status.pendingOperations).toBe(0);
-      expect(status.isOnline).toBe(true);
+      expect((status as any).isOnline).toBe(true);
     });
 
     it('should restore state from AsyncStorage', async () => {
@@ -96,7 +96,7 @@ describe('MobileOfflineSync', () => {
       await offlineSync.initialize();
       const status = await offlineSync.getSyncStatus();
 
-      expect(status.isEnabled).toBe(true);
+      expect((status as any).isEnabled).toBe(true);
       expect(status.pendingOperations).toBe(1);
     });
   });
@@ -168,7 +168,7 @@ describe('MobileOfflineSync', () => {
           .mockRejectedValueOnce(new Error('Network error'))
           .mockResolvedValueOnce(undefined),
         priority: 'high'
-      };
+      } as any;
 
       await offlineSync.enableSync();
       await offlineSync.queueOperation(mockOperation);
@@ -179,7 +179,7 @@ describe('MobileOfflineSync', () => {
       // Wait for retries
       await new Promise(resolve => setTimeout(resolve, 6000));
 
-      expect(mockOperation.execute).toHaveBeenCalledTimes(3);
+      expect((mockOperation as any).execute).toHaveBeenCalledTimes(3);
     });
 
     it('should mark operation as failed after max retries', async () => {
@@ -187,7 +187,7 @@ describe('MobileOfflineSync', () => {
         id: '1',
         execute: jest.fn().mockRejectedValue(new Error('Persistent error')),
         priority: 'high'
-      };
+      } as any;
 
       await offlineSync.enableSync();
       await offlineSync.queueOperation(mockOperation);
@@ -199,7 +199,7 @@ describe('MobileOfflineSync', () => {
       await new Promise(resolve => setTimeout(resolve, 20000));
 
       const status = await offlineSync.getQueueStatus();
-      expect(status.failedOperations).toBe(1);
+      expect((status as any).failedOperations).toBe(1);
     });
   });
 
@@ -209,7 +209,7 @@ describe('MobileOfflineSync', () => {
         id: '1',
         execute: jest.fn().mockResolvedValue(undefined),
         priority: 'normal'
-      };
+      } as any;
 
       await offlineSync.enableSync();
       await offlineSync.queueOperation(mockOperation);
@@ -218,7 +218,7 @@ describe('MobileOfflineSync', () => {
       netInfoCallback({ isConnected: false });
       
       // Verify no execution
-      expect(mockOperation.execute).not.toHaveBeenCalled();
+      expect((mockOperation as any).execute).not.toHaveBeenCalled();
 
       // Simulate online state
       netInfoCallback({ isConnected: true });
@@ -226,7 +226,7 @@ describe('MobileOfflineSync', () => {
       // Wait for processing
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      expect(mockOperation.execute).toHaveBeenCalled();
+      expect((mockOperation as any).execute).toHaveBeenCalled();
     });
   });
 

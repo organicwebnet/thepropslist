@@ -5,8 +5,9 @@
 html,
 body,
 #root { /* Target root elements */
-  height: 100%; /* Ensure they cover full height */
-  background-color: #111827; /* Tailwind gray-900 */
+  min-height: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #2B2E8C 0%, #6C3A8C 25%, #FF6A88 55%, #FFD36E 80%, #6EE7B7 100%);
   color: #f9fafb; /* Tailwind gray-50 - default text color */
 }
 
@@ -15,10 +16,10 @@ body,
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #374151; /* gray-700 */
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #6b7280; /* gray-500 */
+  background: rgba(107, 114, 128, 0.7); /* semi-transparent gray */
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {

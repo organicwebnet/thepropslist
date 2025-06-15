@@ -11,7 +11,8 @@
     },
     "allowImportingTsExtensions": true,
     "module": "esnext",
-    "noEmit": true
+    "noEmit": true,
+    "jsx": "react-native"
   },
   "exclude": [
     "node_modules"
@@ -19,8 +20,8 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    "nativewind-env.d.ts",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-    "nativewind-env.d.ts"
+    "expo-env.d.ts"
   ]
 }

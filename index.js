@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler'; // THIS MUST BE AT THE VERY TOP
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'buffer';
 import 'text-encoding-polyfill';
 import { registerRootComponent } from 'expo';
@@ -21,9 +22,11 @@ function App() {
   // Adjust the path './app' if your routes directory is different
   const ctx = require.context('./app'); 
   return (
-    <FirebaseProvider>
-      <ExpoRoot context={ctx} />
-    </FirebaseProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <FirebaseProvider>
+        <ExpoRoot context={ctx} />
+      </FirebaseProvider>
+    </GestureHandlerRootView>
   );
 }
 

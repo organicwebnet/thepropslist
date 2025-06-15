@@ -14,6 +14,8 @@ import { Filters } from '../../../types/props.ts';
 import { Prop } from '../../../shared/types/props.ts';
 import { FirebaseDocument } from '../../../shared/services/firebase/types.ts';
 import { Stack, useRouter } from 'expo-router';
+import { useShows } from '../../../contexts/ShowsContext';
+import LinearGradient from 'react-native-linear-gradient';
 
 type RootStackParamList = {
   PropsList: undefined;
@@ -26,17 +28,49 @@ type PropsListScreenNavigationProp = NativeStackNavigationProp<RootStackParamLis
 export function PropsListScreen() {
   const navigation = useNavigation<PropsListScreenNavigationProp>();
   const { service } = useFirebase();
+  const { selectedShow } = useShows();
   const [props, setProps] = useState<FirebaseDocument<Prop>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filteredProps, setFilteredProps] = useState<Prop[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
+    if (!service || !selectedShow?.id || typeof selectedShow.id !== 'string' || !selectedShow.id.trim()) {
+      setProps([]);
+      setFilteredProps([]);
+      setIsLoading(false);
+      setError('Please select a show to view props.');
+      return;
+    }
+    setIsLoading(true);
+    // Helper to normalize Firebase data to the expected Prop shape
+    function normalizeProp(doc: FirebaseDocument<any>) {
+      const data = doc.data || {};
+      return {
+        id: doc.id,
+        userId: data.userId || '',
+        showId: data.showId || (selectedShow ? selectedShow.id : ''),
+        name: data.name || 'Unnamed Prop',
+        description: data.description || '',
+        category: data.category || 'Uncategorized',
+        price: typeof data.price === 'number' ? data.price : 0,
+        quantity: typeof data.quantity === 'number' ? data.quantity : 1,
+        status: data.status || 'unknown',
+        images: Array.isArray(data.images) ? data.images : [],
+        imageUrl: data.imageUrl || '',
+        source: data.source || 'owned',
+        createdAt: data.createdAt || '',
+        updatedAt: data.updatedAt || '',
+        // Add any other fields from src/shared/types/props.ts as needed, with sensible defaults
+        ...data,
+      };
+    }
     const unsubscribe = service.listenToCollection<Prop>(
       'props',
       (documents: FirebaseDocument<Prop>[]) => {
-        const propsData = documents.map(doc => ({ ...doc.data, id: doc.id }) as Prop);
+        const propsData = documents.map(normalizeProp);
         setProps(documents);
         setFilteredProps(propsData);
         setError(null);
@@ -48,11 +82,11 @@ export function PropsListScreen() {
         setError(error.message);
         setIsLoading(false);
         setRefreshing(false);
-      }
+      },
+      { where: [['showId', '==', selectedShow.id]] }
     );
-
     return () => unsubscribe();
-  }, [service]);
+  }, [service, selectedShow?.id]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -64,7 +98,7 @@ export function PropsListScreen() {
   };
 
   const handlePropPress = (propId: string) => {
-    navigation.navigate('PropDetails', { propId });
+    router.push(`/props/${propId}`);
   };
 
   const handleDeleteProp = useCallback(async (propId: string) => {
@@ -120,55 +154,64 @@ export function PropsListScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={props}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }: { item: FirebaseDocument<Prop> }) => {
-          const propData = item.data;
-          if (!propData) {
-            console.warn(`Prop data missing for document ID: ${item.id}`);
-            return null;
-          }
-          return (
-            <PropCard 
-              prop={{ ...propData, id: item.id }}
-              onEditPress={() => handlePropPress(item.id)}
-              onDeletePress={() => handleDeleteProp(item.id)}
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <FlatList
+          data={filteredProps}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }: { item: Prop }) => {
+            if (!item) {
+              console.warn(`Prop data missing for item`);
+              return null;
+            }
+            return (
+              <PropCard 
+                prop={item}
+                onEditPress={() => handlePropPress(item.id)}
+                onDeletePress={() => handleDeleteProp(item.id)}
+              />
+            );
+          }}
+          contentContainerStyle={styles.listContentContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#2563eb']}
+             
             />
-          );
-        }}
-        contentContainerStyle={styles.listContentContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#2563eb']}
-            tintColor="#2563eb"
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <MaterialIcons name="inventory" size={48} color="#94a3b8" />
-            <Text style={styles.emptyText}>No props found</Text>
-            <Text style={styles.emptySubtext}>Add your first prop to get started</Text>
-          </View>
-        }
-      />
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={handleAddProp}
-      >
-        <MaterialIcons name="add" size={24} color="white" />
-      </TouchableOpacity>
-    </SafeAreaView>
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="inventory" size={48} color="#94a3b8" />
+              <Text style={styles.emptySubtext}>Add your first prop to get started</Text>
+            </View>
+          }
+        />
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={handleAddProp}
+        >
+          <MaterialIcons name="add" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
   centerContainer: {
     flex: 1,
@@ -237,4 +280,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
+  modal: { backgroundColor: 'rgba(30,30,30,0.7)' },
+  button: { backgroundColor: 'rgba(30,30,30,0.7)' },
 }); 

@@ -30,6 +30,7 @@ import { FirebaseProvider, useFirebase } from './contexts/FirebaseContext.tsx';
 import { RootNavigator } from './navigation/RootNavigator.tsx';
 import { useFonts } from './hooks/useFonts.ts';
 // import SplashScreen from './screens/SplashScreen'; // Commented out as file not found
+import React from "react";
 
 const initialFilters: Filters = {
   search: '',
@@ -70,7 +71,8 @@ function App() {
       try {
         await firebaseService.initialize();
         // auth = firebaseService.auth(); // Old
-        webAuthInstance = firebaseService.getFirebaseAuthJsInstance(); // New
+        // webAuthInstance = firebaseService.getFirebaseAuthJsInstance(); // New
+        // webAuthInstance = firebaseService.getFirestoreJsInstance(); // Removed invalid assignment
         // db = firebaseService.firestore(); 
         setFirebaseInitialized(true);
         console.log('Firebase initialized in App.tsx');
@@ -109,9 +111,8 @@ function App() {
       (docs: FirebaseDocument<Show>[]) => {
         const showsData = docs.map((doc: FirebaseDocument<Show>) => {
           const data = { ...doc.data }; // Clone data to safely delete id if it exists
-          if (!data) return null;
-          if ('id' in data && typeof data.id === 'string') { // Ensure data.id is not doc.id
-            delete data.id; 
+          if ('id' in data && typeof data.id !== 'undefined') {
+            delete (data as any).id;
           }
           const acts = Array.isArray(data.acts) ? data.acts.map((act: any) => ({
             ...act,
@@ -125,7 +126,7 @@ function App() {
             name: 'Act 1',
             scenes: [{ id: 1, name: 'Scene 1' }]
           }];
-          return { id: doc.id, ...data, acts, collaborators: Array.isArray(data.collaborators) ? data.collaborators : [] } as Show;
+          return { ...data, id: doc.id, acts, collaborators: Array.isArray(data.collaborators) ? data.collaborators : [] } as Show;
         }).filter(Boolean) as Show[];
         
         setShows(showsData);
@@ -155,7 +156,7 @@ function App() {
       'props',
       (docs: FirebaseDocument<Prop>[]) => {
         console.log('Props snapshot received, document count:', docs.length);
-        const propsData = docs.map((doc: FirebaseDocument<Prop>) => ({ id: doc.id, ...doc.data } as Prop));
+        const propsData = docs.map((doc: FirebaseDocument<Prop>) => ({ ...doc.data, id: doc.id } as Prop));
         console.log('Loaded props:', propsData.length);
         setProps(propsData);
         setLoading(false);

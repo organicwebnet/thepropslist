@@ -16,7 +16,7 @@ export default function NewShowPage() {
       return;
     }
     
-    const currentUser = service.auth().currentUser; 
+    const currentUser = service.auth.currentUser; 
     if (!currentUser) {
       Alert.alert('Error', 'User not authenticated.');
       return;

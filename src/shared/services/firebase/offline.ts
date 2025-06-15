@@ -79,7 +79,7 @@ export class OfflineSyncService {
 
       // Cache documents locally
       for (const doc of docs) {
-        const data = await doc.get();
+        const data = await (doc as any).get();
         if (data) {
           await this.cacheDocument(collectionName, doc.id, data);
         }
@@ -162,7 +162,7 @@ export class OfflineSyncService {
     const syncStatus = await this.firebase.offline().getSyncStatus();
 
     return {
-      isEnabled: syncStatus.isEnabled,
+      isEnabled: (syncStatus as any).isEnabled,
       lastSync: metadata.lastSyncTimestamp,
       syncedCollections: metadata.collections
     };

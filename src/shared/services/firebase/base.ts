@@ -1,119 +1,121 @@
-import type { FirebaseService, FirebaseAuth, FirebaseFirestore, FirebaseStorage, OfflineSync, CustomTransaction, CustomWriteBatch, CustomDocumentData, FirebaseDocument, CustomDocumentReference, CustomStorageReference } from './types.ts';
+import type { 
+    FirebaseService, 
+    CustomAuth, 
+    CustomFirestore, 
+    CustomStorage, 
+    OfflineSync, 
+    CustomTransaction, 
+    CustomWriteBatch, 
+    DocumentData, 
+    FirebaseDocument, 
+    CustomDocumentReference, 
+    QueryOptions,
+    CustomUserCredential
+} from './types.ts';
 import { FirebaseError } from './types.ts';
 
-// Corrected paths for application-specific types using tsconfig aliases
-import type { UserProfile } from '@/shared/types/auth.ts';
-import type { Prop } from '@/shared/types/props.ts';
-import type { Show, Act, Scene } from './types.ts';
-import type { PackingBox, PackedProp } from '@/types/packing.ts';
-import type { Location } from '@/types/locations.ts';
-import type { MaintenanceRecord } from '@/types/lifecycle.ts';
-import type { BoardData, ListData, CardData, MemberData } from '@/shared/types/taskManager.ts';
+// Corrected paths for application-specific types using tsconfig aliases if you have them
+// Example: import type { Prop } from '@/shared/types/props';
+import type { Prop } from '../../types/props';
+import type { Show } from '../../../types';
 
 /**
- * Base Firebase service class that implements common functionality.
- * Platform-specific implementations should extend this class and implement
- * the abstract methods.
+ * An abstract base class for Firebase services.
+ * It enforces the FirebaseService interface and requires platform-specific
+ * classes to implement all abstract methods.
  */
 export abstract class BaseFirebaseService implements FirebaseService {
-  protected readonly appName: string;
-  protected readonly firestoreInstance: FirebaseFirestore;
-  protected readonly authInstance: FirebaseAuth;
-  protected readonly storageInstance: FirebaseStorage;
+  // These properties will be initialized by the concrete implementations
+  abstract auth: CustomAuth;
+  abstract firestore: CustomFirestore;
+  abstract storage: CustomStorage;
 
-  constructor(appName: string, firestore: FirebaseFirestore, auth: FirebaseAuth, storage: FirebaseStorage) {
-    this.appName = appName;
-    this.firestoreInstance = firestore;
-    this.authInstance = auth;
-    this.storageInstance = storage;
-  }
+  // --- Abstract Methods (to be implemented by platform-specific classes) ---
 
+  // Core
   abstract initialize(): Promise<void>;
+  
+  // Firestore Document/Collection
+  abstract getDocument<T extends DocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null>;
+  abstract getCollection<T extends DocumentData>(collectionPath: string, options?: QueryOptions): Promise<FirebaseDocument<T>[]>;
+  abstract getDocuments<T extends DocumentData>(collectionPath: string, options?: QueryOptions): Promise<FirebaseDocument<T>[]>;
+  abstract addDocument<T extends DocumentData>(collectionPath: string, data: Omit<T, 'id'>): Promise<FirebaseDocument<T>>;
+  abstract setDocument<T extends DocumentData>(collectionPath: string, documentId: string, data: T, options?: { merge?: boolean }): Promise<void>;
+  abstract updateDocument<T extends DocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void>;
+  abstract deleteDocument(collectionPath: string, documentId: string): Promise<void>;
+  
+  // Firestore Listeners
+  abstract listenToDocument<T extends DocumentData>(path: string, onNext: (doc: FirebaseDocument<T>) => void, onError?: (error: Error) => void): () => void;
+  abstract listenToCollection<T extends DocumentData>(path: string, onNext: (docs: FirebaseDocument<T>[]) => void, onError?: (error: Error) => void, options?: QueryOptions): () => void;
+
+  // Transaction and Batch
   abstract runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T>;
   abstract batch(): CustomWriteBatch;
-  abstract listenToDocument<T extends CustomDocumentData>(
-    path: string, 
-    onNext: (doc: FirebaseDocument<T>) => void, 
-    onError?: (error: Error) => void
-  ): () => void;
-  abstract listenToCollection<T extends CustomDocumentData>(
-    path: string, 
-    onNext: (docs: FirebaseDocument<T>[]) => void, 
-    onError?: (error: Error) => void
-  ): () => void;
-  abstract createDocumentWrapper<T extends CustomDocumentData>(
-    docRef: CustomDocumentReference<T>
-  ): FirebaseDocument<T>;
-  abstract getStorageRef(path: string): CustomStorageReference;
 
-  // Add abstract getDocuments method
-  abstract getDocuments<T extends CustomDocumentData>(collectionPath: string, options?: import('./types.ts').QueryOptions): Promise<FirebaseDocument<T>[]>;
+  // Auth
+  abstract signInWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential>;
+  abstract createUserWithEmailAndPassword(email: string, password: string): Promise<CustomUserCredential>;
+  abstract sendPasswordResetEmail(email: string): Promise<void>;
+  abstract signOut(): Promise<void>;
 
-  abstract auth(): FirebaseAuth;
-  abstract firestore(): FirebaseFirestore;
+  // Storage
+  abstract uploadFile(path: string, file: string | File, metadata?: any): Promise<string>;
+  abstract deleteFile(path: string): Promise<void>;
+  abstract getStorageRef(path: string): any;
+
+  // Helpers
   abstract getFirestoreJsInstance(): import('firebase/firestore').Firestore;
   abstract getFirestoreReactNativeInstance(): import('@react-native-firebase/firestore').FirebaseFirestoreTypes.Module;
-  abstract storage(): FirebaseStorage;
+
+  // Offline Sync
   abstract offline(): OfflineSync;
 
-  // Add placeholder implementation for deleteShow
-  async deleteShow(showId: string): Promise<void> {
-    // TODO: Implement actual delete logic for shows
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+  // App-specific methods
+  // TODO: These should likely be moved to their own dedicated services (e.g., ShowService)
+  // For now, we make them abstract to satisfy the interface.
+  public async deleteShow(showId: string): Promise<void> {
+    console.log(`Deleting show ${showId}`);
+    // 1. Delete all props in the show
+    const props = await this.getDocuments(`shows/${showId}/props`);
+    const batch = this.batch();
+    props.forEach(prop => {
+        batch.delete(prop.ref as any);
+    });
+    
+    // 2. Delete all tasks related to the show (if tasks are not a subcollection)
+    const tasks = await this.getDocuments('tasks', { where: [['showId', '==', showId]] });
+    tasks.forEach(task => {
+        batch.delete(task.ref as any);
+    });
+
+    // 3. Delete the show document itself
+    const showRef = (this.firestore as any).collection('shows').doc(showId);
+    batch.delete(showRef);
+
+    await batch.commit();
+    console.log(`Successfully deleted show ${showId} and all related data.`);
   }
 
-  // Add placeholder implementations for other missing FirebaseService methods
-  async deleteDocument(collectionPath: string, documentId: string): Promise<void> {
-    throw new FirebaseError('Method not implemented', 'unimplemented');
+  // Stubs to satisfy FirebaseService interface
+  async updateCard(boardId: string, listId: string, cardId: string, updates: Partial<any>): Promise<void> { throw new Error('Not implemented'); }
+  async deleteCard(boardId: string, listId: string, cardId: string): Promise<void> { throw new Error('Not implemented'); }
+  async reorderCardsInList(boardId: string, listId: string, orderedCards: any[]): Promise<void> { throw new Error('Not implemented'); }
+  async getBoardMembers(boardId: string): Promise<any[]> { return []; }
+  async addBoardMember(boardId: string, userId: string, role: string): Promise<void> { throw new Error('Not implemented'); }
+  async removeBoardMember(boardId: string, userId: string): Promise<void> { throw new Error('Not implemented'); }
+  async addList(boardId: string, listData: any): Promise<any> { return Promise.resolve({} as any); }
+  async addCard(boardId: string, listId: string, cardData: any): Promise<any> { return Promise.resolve({} as any); }
+  async moveCardToList(boardId: string, cardId: string, fromListId: string, toListId: string, newOrder: number): Promise<void> { throw new Error('Not implemented'); }
+
+  // --- Error Handling ---
+  protected handleError(message: string, error: unknown): FirebaseError {
+    // Basic implementation, can be enhanced in specific services
+    console.error(`[FirebaseService Error] ${message}`, error);
+    if (error instanceof FirebaseError) {
+      return error;
+    }
+    // Attempt to get a code from the error object
+    const code = (error as any)?.code || 'unknown';
+    return new FirebaseError(message, code);
   }
-
-  async getDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null> {
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-
-  async updateDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: Partial<T>): Promise<void> {
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-
-  async addDocument<T extends CustomDocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-
-  async uploadFile(path: string, file: string | File, metadata?: any): Promise<string> {
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-
-  async deleteFile(path: string): Promise<void> {
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-
-  // --- Add Missing Auth Method Stubs ---
-  async signInWithEmailAndPassword(email: string, password: string): Promise<any> { // Return type 'any' for stub
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-
-  async createUserWithEmailAndPassword(email: string, password: string): Promise<any> { // Return type 'any' for stub
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-
-  async sendPasswordResetEmail(email: string): Promise<void> {
-    throw new FirebaseError('Method not implemented', 'unimplemented');
-  }
-
-  // Added missing abstract methods
-  abstract signOut(): Promise<void>;
-  abstract setDocument<T extends CustomDocumentData>(collectionPath: string, documentId: string, data: T, options?: { merge?: boolean }): Promise<void>;
-  abstract getPropsByShowId(showId: string): Promise<FirebaseDocument<Prop>[]>;
-
-  // Abstract TaskManager methods
-  abstract getBoard(boardId: string): Promise<BoardData | null>;
-  abstract getListsForBoard(boardId: string): Promise<ListData[]>;
-  abstract getCardsForList(boardId: string, listId: string): Promise<CardData[]>;
-  abstract getBoardMembers(boardId: string): Promise<MemberData[]>;
-  abstract addList(boardId: string, listData: Omit<ListData, 'id' | 'boardId'>): Promise<ListData>;
-  abstract addCard(boardId: string, listId: string, cardData: Omit<CardData, 'id' | 'boardId' | 'listId'>): Promise<CardData>;
-  abstract updateCard(boardId: string, listId: string, cardId: string, updates: Partial<CardData>): Promise<void>;
-  abstract deleteCard(boardId: string, listId: string, cardId: string): Promise<void>;
-  abstract moveCardToList(boardId: string, cardId: string, originalListId: string, targetListId: string, newOrder: number): Promise<void>;
-  abstract reorderCardsInList(boardId: string, listId: string, orderedCards: CardData[]): Promise<void>;
 }

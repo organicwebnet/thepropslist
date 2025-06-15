@@ -27,5 +27,8 @@
     "hosting": {
       "port": 5000
     }
+  },
+  "firestore": {
+    "rules": "_docs/firestore.rules"
   }
 }

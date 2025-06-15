@@ -1,3 +1,4 @@
+import * as React from 'react';
 import {
     ActivityIndicator, Text, View, Button, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform
 } from 'react-native';
@@ -9,7 +10,8 @@ import { PropSelector } from './PropSelector.tsx';
 // For icons, we need to use lucide-react-native
 import { X, Clock, HandCoins, Package, PackageOpen, AlertTriangle } from 'lucide-react-native'; 
 import { Timestamp } from 'firebase/firestore';
-import { theme } from '../../styles/theme';
+import { darkTheme, lightTheme } from '../../styles/theme';
+const theme = darkTheme;
 
 export interface PropInstance extends Prop { 
   instanceId: string; 
@@ -35,12 +37,12 @@ export function PackingList({
   onUpdateBox,
   onDeleteBox,
 }: PackingListProps) {
-  const [currentBoxName, setCurrentBoxName] = useState('');
-  const [selectedProps, setSelectedProps] = useState<PropInstance[]>([]); 
-  const [propInstances, setPropInstances] = useState<PropInstance[]>([]); 
-  const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
+  const [currentBoxName, setCurrentBoxName] = React.useState('');
+  const [selectedProps, setSelectedProps] = React.useState<PropInstance[]>([]); 
+  const [propInstances, setPropInstances] = React.useState<PropInstance[]>([]); 
+  const [editingBoxId, setEditingBoxId] = React.useState<string | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const instances: PropInstance[] = [];
     props.forEach(prop => { 
       const quantity = prop.quantity || 1;
@@ -55,7 +57,7 @@ export function PackingList({
     setPropInstances(instances);
   }, [props]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setPropInstances(prevInstances => {
       const packedPropIds = new Set<string>();
       boxes.forEach(box => {
@@ -133,7 +135,7 @@ export function PackingList({
   const renderSourceIcon = (prop: PropInstance) => {
     // This will need native styling and lucide-react-native icons
     const iconSize = 16;
-    const iconColor = prop?.source === 'rented' ? theme.colors.yellow[500] : theme.colors.blue[500]; // yellow-500, blue-500
+    const iconColor = prop?.source === 'rented' ? theme.colors.iconWarning : theme.colors.primary; // yellow-500, blue-500
 
     if (prop?.source === 'rented') {
       return (

@@ -119,7 +119,7 @@ export default function MobilePdfOptionsScreen() {
         propsUnsubscribe = firebaseService.listenToCollection<Prop>(
           'props',
           (propDocs: FirebaseDocument<Prop>[]) => {
-            const extractedData = propDocs.map(doc => ({ id: doc.id, ...doc.data } as Prop));
+            const extractedData = propDocs.map(doc => ({ ...doc.data, id: doc.id } as Prop));
             setPropData(extractedData);
             setIsLoading(false);
           },

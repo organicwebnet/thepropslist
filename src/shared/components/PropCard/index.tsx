@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
 import { formatDistanceToNow } from 'date-fns';
 import { Edit3, Trash2, Package, CalendarDays, UserCircle, Building, Palette, Paperclip } from 'lucide-react';
-import type { Prop, PropImage } from '../../types/props.ts';
+import type { Prop } from '../../types';
 import { lifecycleStatusLabels } from '../../../types/lifecycle.ts';
 import { Image as ImageIcon } from 'lucide-react-native';
 import { PrintLabelButton } from './PrintLabelButton.tsx';
@@ -21,17 +20,23 @@ function isValidImageSource(source: any): source is { uri: string } {
   return typeof source === 'object' && source !== null && typeof source.uri === 'string';
 }
 
+// Defensive helper to safely render text
+function safeText(value: any, fallback = ''): string {
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (value === undefined || value === null) return fallback;
+  console.warn('Non-string value passed to <Text> in PropCard:', value);
+  return fallback;
+}
+
 const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress, onDeletePress }) => {
   const [imageError, setImageError] = useState(false);
   const router = useRouter();
 
-  // Log the prop object to check its contents, especially name and description - REMOVE THIS
-
   const renderImage = () => {
-    // Use prop.primaryImageUrl first, then fallback to prop.imageUrl
-    const imageUrl = prop.primaryImageUrl || prop.imageUrl;
+    // Find the primary image from the images array or fallback to the legacy imageUrl
+    const primaryImage = prop.images?.find(img => img.isMain);
+    const imageUrl = primaryImage?.url || prop.imageUrl;
 
-    // Condition 1: Already errored, or no imageUrl string, or empty imageUrl string
     if (imageError || typeof imageUrl !== 'string' || imageUrl.trim() === '') {
       return (
         <View style={styles.placeholderImage}>
@@ -39,50 +44,25 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
         </View>
       );
     }
-
-    // At this point, imageUrl is a non-empty string
+    
     const imageSource: ImageSourcePropType = { uri: imageUrl };
-
-    // The isValidImageSource check is a bit redundant here if we've already confirmed imageUrl is a string
-    // but keeping it for safety, or it could be removed if confident.
-    if (isValidImageSource(imageSource)) { 
+    
     return (
       <Image
         source={imageSource} 
         style={styles.image}
         resizeMode="cover"
-        onError={() => {
-          setImageError(true);
-        }}
+        onError={() => setImageError(true)}
       />
     );
-     } else {
-       setImageError(true); 
-       return (
-        <View style={styles.placeholderImage}>
-           <Text style={styles.placeholderText}>{prop.name?.[0]?.toUpperCase() || 'P'}</Text>
-         </View>
-       );
-     }
   };
 
-  // Helper to format dimensions safely
-  const formatDimensions = () => {
-    // Use direct properties from prop
-    const { length, width, height, depth, unit } = prop; 
-    const parts = [length, width, height, depth].filter(d => d != null && d > 0);
-    if (parts.length === 0) return null;
-    return `${parts.join(' x ')} ${unit || ''}`.trim();
-  };
-
-  const dimensionsText = formatDimensions();
   const statusLabel = prop.status && prop.status in lifecycleStatusLabels 
     ? lifecycleStatusLabels[prop.status as keyof typeof lifecycleStatusLabels] 
     : (prop.status || 'Unknown');
 
   const handleNavigate = () => {
-    // Programmatic navigation
-    router.push({ pathname: `/propsTab/[id]` as any, params: { id: prop.id } });
+    router.push(`/props/${prop.id}` as any);
   };
 
   return (
@@ -97,10 +77,10 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
           </View>
           <View style={styles.contentContainer}>
             <View style={styles.topContent}>
-              <Text style={styles.name}>{prop.name}</Text>
+              <Text style={styles.name}>{safeText(prop.name, 'Unnamed Prop')}</Text>
              {!compact && prop.description ? (
                 <Text style={styles.description} numberOfLines={2}>
-                  {prop.description}
+                  {safeText(prop.description)}
                 </Text>
               ) : null}
             </View>
@@ -108,58 +88,23 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
             {!compact ? (
               <View style={styles.detailsSection}>
                 <View style={styles.detailRow}>
-                  {(prop.act || prop.scene) ? (
-                    <View style={[styles.tag, styles.actSceneTag]}>
-                      <Text style={styles.tagText}>
-                        {`${prop.act ? `Act ${prop.act}` : ''}${prop.act && prop.scene ? ', ' : ''}${prop.scene ? `Scene ${prop.scene}` : ''}`}
-                      </Text>
-                    </View>
-                  ) : null}
                   {prop.category ? (
                     <View style={[styles.tag, styles.categoryTag]}>
-                      <Text style={styles.tagText}>{prop.category}</Text>
+                      <Text style={styles.tagText}>{safeText(prop.category, 'Uncategorized')}</Text>
                     </View>
                   ) : null}
-                </View>
-                
-                <View style={styles.detailRow}>
-                  {dimensionsText ? (
-                     <Text style={styles.detailText}>{dimensionsText}</Text>
-                  ) : null}
-                  <View style={[styles.tag, styles.statusTag]}>
-                     <Text style={styles.tagText}>{statusLabel}</Text>
+                   <View style={[styles.tag, styles.statusTag]}>
+                     <Text style={styles.tagText}>{safeText(statusLabel, 'Unknown')}</Text>
+                  </View>
+                  <View style={[styles.tag, styles.qtyTag]}>
+                    <Text style={styles.tagText}>Qty: {safeText(prop.quantity, '1')}</Text>
                   </View>
                 </View>
               </View>
             ) : null}
 
             {(onEditPress || onDeletePress) ? (
-              <View style={styles.buttonContainer}>
-                {onEditPress ? (
-                  <TouchableOpacity 
-                    style={[styles.button, styles.editButton]} 
-                    onPress={(e) => { 
-                      e.stopPropagation();
-                      onEditPress(prop.id); 
-                    }}
-                    accessibilityRole="button" 
-                  >
-                    <Text style={styles.buttonText}>Edit</Text>
-                  </TouchableOpacity>
-                ) : null}
-                {onDeletePress ? (
-                  <TouchableOpacity 
-                    style={[styles.button, styles.deleteButton]} 
-                    onPress={(e) => { 
-                      e.stopPropagation();
-                      onDeletePress(prop.id); 
-                    }}
-                    accessibilityRole="button" 
-                  >
-                    <Text style={styles.buttonText}>Delete</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
+              null
             ) : null} 
           </View>
         </View>
@@ -170,10 +115,10 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
 const baseContainerStyle: ViewStyle = {
   position: 'relative',
   padding: 16,
-  borderRadius: 8,
-  backgroundColor: '#282828',
+  borderRadius: 12,
+  backgroundColor: 'rgba(24,24,27,0.85)',
   borderWidth: 1,
-  borderColor: '#606060',
+  borderColor: '#222',
   marginBottom: 16,
 };
 
@@ -181,132 +126,121 @@ const styles = StyleSheet.create({
   container: {
     ...baseContainerStyle,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as const } : {}),
-    // --- Start: Comment out platform-specific shadows ---
-    /*
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' as any } // Cast for web
-      : Platform.OS === 'android'
-      ? { elevation: 3 }
-      : {
-          shadowColor: '#000',
-          shadowOpacity: 0.2,
-          shadowRadius: 1.41,
-        }),
-    */
-    // --- End: Comment out platform-specific shadows ---
   } as ViewStyle,
   compactContainer: {
     padding: 8,
   },
   cardLayoutRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    // backgroundColor: '#555', // Removed main row debug color
+    alignItems: 'center',
   },
   imageContainer: {
     marginRight: 16,
-    width: 80,
-    height: 80,
-    // borderColor: 'orange', // Removed imageContainer debug border
-    // borderWidth: 2,
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#222C',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   image: {
-    width: 80,
-    height: 80,
-    borderRadius: 4,
+    width: 72,
+    height: 72,
+    borderRadius: 12,
     backgroundColor: '#404040',
   },
   placeholderImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 4,
+    width: 72,
+    height: 72,
+    borderRadius: 12,
     backgroundColor: '#404040',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  placeholderText: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
   contentContainer: {
-    flex: 1, 
-    // backgroundColor: 'yellow', // REMOVE yellow background
+    flex: 1,
+    justifyContent: 'center',
   },
   topContent: {
-    marginBottom: 12,
-    // backgroundColor: 'orange', // REMOVE orange background
-    minHeight: 30, 
+    marginBottom: 8,
+    minHeight: 30,
+  },
+  name: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  description: {
+    color: '#b0b0b0',
+    fontSize: 14,
+    lineHeight: 18,
+    marginBottom: 2,
   },
   detailsSection: {
-    marginBottom: 10,
+    marginBottom: 4,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    marginBottom: 6,
-  },
-  detailText: {
-    color: '#A0A0A0',
-    fontSize: 13,
-    marginRight: 8,
     marginBottom: 4,
   },
   tag: {
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 3,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     marginRight: 6,
-    marginBottom: 6,
-  },
-  actSceneTag: {
-    backgroundColor: '#4B5563',
+    marginBottom: 4,
+    backgroundColor: '#333',
   },
   categoryTag: {
-    backgroundColor: '#8B5CF6',
+    backgroundColor: '#6366f1',
   },
   statusTag: {
-    backgroundColor: '#6B7280',
+    backgroundColor: '#6ee7b7',
+  },
+  qtyTag: {
+    backgroundColor: '#4caf50',
+    marginLeft: 0,
   },
   tagText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontSize: 12,
-    fontWeight: '600',
-  },
-  name: {
-    color: '#FFFFFF',
-    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 6,
-    // backgroundColor: 'red', // REMOVE red background
   },
-  description: {
-    color: '#A0A0A0',
-    fontSize: 14,
-    lineHeight: 18,
+  detailText: {
+    color: '#b0b0b0',
+    fontSize: 13,
+    marginRight: 8,
+    marginBottom: 2,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    marginTop: 6,
   },
   button: {
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 4,
+    paddingHorizontal: 18,
+    borderRadius: 999,
     marginLeft: 8,
   },
   editButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#2563eb',
   },
   deleteButton: {
     backgroundColor: '#EF4444',
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
   },
+  mainRow: { backgroundColor: 'transparent' },
+  secondaryRow: { backgroundColor: 'transparent' },
+  card: { backgroundColor: 'transparent' },
 });
 
 export default PropCard;

@@ -6,6 +6,7 @@ import type { Show } from '../types/index.ts';
 import { Box } from 'lucide-react-native';
 import { useShows } from '../contexts/ShowsContext.tsx';
 import { usePacking } from '../hooks/usePacking.ts';
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function Packing() {
   const navigation = useNavigation<RootStackScreenProps<'MainTabs'>['navigation']>();
@@ -25,48 +26,56 @@ export default function Packing() {
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={shows}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.showCard}
-            onPress={() => handleShowPress(item)}
-          >
-            <View style={styles.iconContainer}>
-              <Box size={24} color="#6B7280" />
-            </View>
-            <View style={styles.content}>
-              <Text style={styles.showName}>{item.name}</Text>
-              <View style={styles.showItemDetails}>
-                <Text style={styles.showItemTitle}>{item.name}</Text>
-                <Text style={styles.showItemSubtitle}>
-                  {item.acts?.length || 0} Acts • {item.productionCompany}
-                </Text>
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <FlatList
+          data={shows}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.showCard}
+              onPress={() => handleShowPress(item)}
+            >
+              <View style={styles.iconContainer}>
+                <Box size={24} color="#6B7280" />
               </View>
+              <View style={styles.content}>
+                <Text style={styles.showName}>{item.name}</Text>
+                <View style={styles.showItemDetails}>
+                  <Text style={styles.showItemTitle}>{item.name}</Text>
+                  <Text style={styles.showItemSubtitle}>
+                    {item.acts?.length || 0} Acts • {item.productionCompany}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Box size={48} color="#6B7280" />
+              <Text style={styles.emptyText}>No shows to pack</Text>
+              <Text style={styles.emptySubtext}>
+                Create a show first to start packing props
+              </Text>
             </View>
-          </TouchableOpacity>
-        )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Box size={48} color="#6B7280" />
-            <Text style={styles.emptyText}>No shows to pack</Text>
-            <Text style={styles.emptySubtext}>
-              Create a show first to start packing props
-            </Text>
-          </View>
-        }
-      />
-    </View>
+          }
+        />
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000'
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
@@ -79,7 +88,7 @@ const styles = StyleSheet.create({
     flexGrow: 1
   },
   showCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(30,30,30,0.7)',
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
@@ -138,5 +147,11 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     paddingHorizontal: 32
-  }
+  },
+  anotherContainer: {
+    backgroundColor: 'rgba(30,30,30,0.7)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
 }); 

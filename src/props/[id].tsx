@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import type { Prop } from '../shared/types/props.ts';
 import type { PropLifecycleStatus } from '../types/lifecycle.ts';
+import LinearGradient from 'react-native-linear-gradient';
 // import { getProp } from '../services/propService'; // Commented out: Cannot find module
 
 export default function PropDetails() {
@@ -76,113 +77,138 @@ export default function PropDetails() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
-        <ActivityIndicator size="large" color={isDark ? '#fff' : '#000'} />
-      </View>
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
+          <ActivityIndicator size="large" color={isDark ? '#fff' : '#000'} />
+        </View>
+      </LinearGradient>
     );
   }
 
   if (!prop) {
     return (
-      <View style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
-        <Text style={[styles.errorText, { color: isDark ? '#fff' : '#000' }]}>
-          Prop not found
-        </Text>
-      </View>
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
+          <Text style={[styles.errorText, { color: isDark ? '#fff' : '#000' }]}>
+            Prop not found
+          </Text>
+        </View>
+      </LinearGradient>
     );
   }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}
-      contentContainerStyle={styles.content}
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
     >
-      <View style={styles.header}>
-        <Text style={[styles.name, { color: isDark ? '#fff' : '#000' }]}>
-          {prop.name}
-        </Text>
-        <Text
-          style={[
-            styles.status,
-            { backgroundColor: getStatusColor(prop.status) },
-          ]}
+      <View style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.content}
         >
-          {prop.status}
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
-          Description
-        </Text>
-        <Text style={[styles.description, { color: isDark ? '#aaa' : '#666' }]}>
-          {prop.description}
-        </Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
-          Details
-        </Text>
-        <View style={styles.detailsGrid}>
-          <DetailItem
-            label="Category"
-            value={prop.category}
-            isDark={isDark}
-          />
-          <DetailItem
-            label="Location"
-            value={prop.location}
-            isDark={isDark}
-          />
-          <DetailItem
-            label="Condition"
-            value={prop.condition ?? 'N/A'}
-            isDark={isDark}
-          />
-          <DetailItem
-            label="Last Updated"
-            value={prop.lastUpdated ? new Date(prop.lastUpdated).toLocaleDateString() : 'N/A'}
-            isDark={isDark}
-          />
-        </View>
-      </View>
-
-      {prop.notes && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
-            Notes
-          </Text>
-          <Text style={[styles.notes, { color: isDark ? '#aaa' : '#666' }]}>
-            {prop.notes}
-          </Text>
-        </View>
-      )}
-
-      {(prop.tags?.length ?? 0) > 0 && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
-            Tags
-          </Text>
-          <View style={styles.tags}>
-            {prop.tags?.map((tag: string, index: number) => (
-              <Text
-                key={index}
-                style={[
-                  styles.tag,
-                  {
-                    backgroundColor: isDark ? '#333' : '#eee',
-                    color: isDark ? '#fff' : '#000',
-                  },
-                ]}
-              >
-                {tag}
-              </Text>
-            ))}
+          <View style={styles.header}>
+            <Text style={[styles.name, { color: isDark ? '#fff' : '#000' }]}>
+              {prop.name}
+            </Text>
+            <Text
+              style={[
+                styles.status,
+                { backgroundColor: getStatusColor(prop.status) },
+              ]}
+            >
+              {prop.status}
+            </Text>
           </View>
-        </View>
-      )}
-    </ScrollView>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
+              Description
+            </Text>
+            <Text style={[styles.description, { color: isDark ? '#aaa' : '#666' }]}>
+              {prop.description}
+            </Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
+              Details
+            </Text>
+            <View style={styles.detailsGrid}>
+              <DetailItem
+                label="Category"
+                value={prop.category}
+                isDark={isDark}
+              />
+              <DetailItem
+                label="Location"
+                value={prop.location}
+                isDark={isDark}
+              />
+              <DetailItem
+                label="Condition"
+                value={prop.condition ?? 'N/A'}
+                isDark={isDark}
+              />
+              <DetailItem
+                label="Last Updated"
+                value={prop.lastUpdated ? new Date(prop.lastUpdated).toLocaleDateString() : 'N/A'}
+                isDark={isDark}
+              />
+            </View>
+          </View>
+
+          {prop.notes && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
+                Notes
+              </Text>
+              <Text style={[styles.notes, { color: isDark ? '#aaa' : '#666' }]}>
+                {prop.notes}
+              </Text>
+            </View>
+          )}
+
+          {(prop.tags?.length ?? 0) > 0 && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: isDark ? '#fff' : '#000' }]}>
+                Tags
+              </Text>
+              <View style={styles.tags}>
+                {prop.tags?.map((tag: string, index: number) => (
+                  <Text
+                    key={index}
+                    style={[
+                      styles.tag,
+                      {
+                        backgroundColor: isDark ? '#333' : '#eee',
+                        color: isDark ? '#fff' : '#000',
+                      },
+                    ]}
+                  >
+                    {tag}
+                  </Text>
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    </LinearGradient>
   );
 }
 
@@ -227,6 +253,10 @@ function getStatusColor(status: PropLifecycleStatus | undefined): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'rgba(30,30,30,0.7)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
   content: {
     padding: 16,
@@ -247,10 +277,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
     overflow: 'hidden',
     color: '#fff',
     textTransform: 'capitalize',
+    backgroundColor: 'rgba(30,30,30,0.7)',
   },
   section: {
     marginBottom: 24,

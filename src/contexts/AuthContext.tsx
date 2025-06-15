@@ -8,10 +8,14 @@ import { Address } from '../shared/types/address.ts';
 // import { FirebaseDocument } from '@/shared/services/firebase/types'; // Not needed for minimal
 // import { arrayUnion, arrayRemove, doc, collection } from 'firebase/firestore'; // Not needed for minimal
 
+type AuthStatus = 'pending' | 'in' | 'out';
+
 interface AuthContextProps {
   user: CustomUser | null;
   userProfile: UserProfile | null;
+  isAdmin: boolean;
   loading: boolean;
+  status: AuthStatus;
   error: Error | null;
   permissions: Partial<UserPermissions>;
   refreshUserProfile: () => Promise<void>;
@@ -29,15 +33,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseInitError } = useFirebase();
   const [user, setUser] = useState<CustomUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [status, setStatus] = useState<AuthStatus>('pending');
   const [error, setError] = useState<Error | null>(null);
   const [permissions, setPermissions] = useState<Partial<UserPermissions>>(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
   const [isGoogleSignIn, setIsGoogleSignIn] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   useEffect(() => {
     if (firebaseInitError) {
       setError(firebaseInitError);
-      setLoading(false);
+      setStatus('out');
     }
   }, [firebaseInitError]);
 
@@ -49,58 +54,74 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      // Assuming user profiles are stored in a 'users' collection
-      // And firebaseService has a method like getDocument(collectionPath, documentId)
-      // Adjust collectionPath and how you get data based on your FirebaseService implementation
-      const profileDoc = await firebaseService.getDocument<UserProfile>('users', userId);
+      // Corrected to fetch from 'userProfiles' to match firestore.rules
+      const profileDoc = await firebaseService.getDocument<UserProfile>('userProfiles', userId);
       
       if (profileDoc && profileDoc.data) {
         const profileData = profileDoc.data;
         setUserProfile(profileData);
-        // Derive permissions from role, or use stored permissions if available
-        const role = profileData.role || UserRole.VIEWER; // Ensure role is valid
+        const role = profileData.role || UserRole.VIEWER;
         setPermissions(profileData.permissions || DEFAULT_ROLE_PERMISSIONS[role] || {});
       } else {
-        // Optionally, create a default profile here if one doesn't exist
-        // For now, set to null and default viewer permissions
-        setUserProfile(null); 
-        setPermissions(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
+        // If no profile exists, create a new one.
+        const newProfile: Omit<UserProfile, 'id'> = {
+          email: user?.email || '',
+          displayName: user?.displayName || 'New User',
+          role: UserRole.EDITOR,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          permissions: DEFAULT_ROLE_PERMISSIONS[UserRole.EDITOR],
+        };
+        // Use setDocument to create the profile with the user's UID as the document ID
+        await firebaseService.setDocument('userProfiles', userId, newProfile);
+        setUserProfile({ ...newProfile, id: userId });
+        setPermissions(newProfile.permissions || {});
       }
     } catch (e: any) {
       setError(new Error("Failed to fetch user profile: " + e.message));
       setUserProfile(null);
       setPermissions(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
     }
-  }, [firebaseService]);
+  }, [firebaseService, user]);
 
   useEffect(() => {
     if (!firebaseService || !firebaseInitialized) {
       // Firebase might not be ready yet, or failed to initialize
       if (firebaseInitialized && !firebaseService) { // Initialized but service is null (could be error)
           setError(firebaseInitError || new Error("Firebase service is not available after initialization."));
-          setLoading(false);
+          setStatus('out');
       }
       // If not initialized, wait for firebaseInitialized to become true
       // If firebaseInitError is set, that will be handled by the other useEffect
       return;
     }
 
-    setLoading(true);
-    const unsubscribe = firebaseService.auth().onAuthStateChanged(async (firebaseUser: CustomUser | null) => {
+    const unsubscribe = firebaseService.auth.onAuthStateChanged(async (firebaseUser: CustomUser | null) => {
       if (firebaseUser) {
-        setUser(firebaseUser);
-        // Check for Google Sign-In provider
-        const googleProvider = firebaseUser.providerData.find(p => p.providerId === 'google.com');
-        setIsGoogleSignIn(!!googleProvider);
-        await fetchUserProfile(firebaseUser.uid);
-        setError(null);
+        // Get custom claims
+        try {
+          const idTokenResult = await firebaseUser.getIdTokenResult();
+          setIsAdmin(!!idTokenResult.claims.admin);
+
+          setUser(firebaseUser);
+          const googleProvider = firebaseUser.providerData.find(p => p.providerId === 'google.com');
+          setIsGoogleSignIn(!!googleProvider);
+          await fetchUserProfile(firebaseUser.uid);
+          setError(null);
+          setStatus('in');
+        } catch (e: any) {
+          console.error("Error during auth state change processing:", e);
+          setError(e);
+          setStatus('out');
+        }
       } else {
         setUser(null);
         setUserProfile(null);
         setPermissions(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
-        setIsGoogleSignIn(false); // Reset on sign out
+        setIsGoogleSignIn(false);
+        setIsAdmin(false);
+        setStatus('out');
       }
-      setLoading(false);
     });
 
     return () => {
@@ -110,9 +131,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshUserProfile = useCallback(async () => {
     if (user) {
-      setLoading(true);
+      setStatus('pending');
       await fetchUserProfile(user.uid);
-      setLoading(false);
+      setStatus('in');
     } else {
       // setError(new Error("No user is logged in to refresh profile."));
     }
@@ -171,7 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
-      // Step 2: Update Firestore 'users' document
+      // Step 2: Update Firestore 'userProfiles' document
       const firestoreUpdateData: Partial<UserProfile> = { ...updatedData };
       if (updatedData.email && isGoogleSignIn) {
         // Prevent accidental update of email in Firestore if it's a Google account and somehow email was passed
@@ -181,10 +202,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       firestoreUpdateData.updatedAt = new Date();
 
-      await firebaseService.updateDocument('users', user.uid, firestoreUpdateData);
+      await firebaseService.updateDocument('userProfiles', user.uid, firestoreUpdateData);
 
-      // Step 3: Refresh the local userProfile state from Firestore (and potentially user state for new email)
-      await fetchUserProfile(user.uid); // This fetches Firestore data
+      // Step 3: Refresh the local userProfile state from Firestore
+      await fetchUserProfile(user.uid);
       // If email was changed in Auth, the user object might need explicit refresh or onAuthStateChanged will handle it.
       // Forcing a refresh of the user object from auth is tricky without re-triggering onAuthStateChanged manually.
       // Assuming for now that if updateEmail succeeded, the user object in state will reflect it or soon will.
@@ -203,7 +224,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         userProfile,
-        loading,
+        isAdmin,
+        loading: status === 'pending',
+        status,
         error,
         permissions,
         refreshUserProfile,

@@ -8,6 +8,7 @@ import type { Show } from '../types/index.ts';
 import type { Filters } from '../types/props.ts';
 import { useProps } from '../contexts/PropsContext.tsx';
 import { useShows } from '../contexts/ShowsContext.tsx';
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function Props() {
   const [props, setProps] = useState<Prop[]>([]);
@@ -72,34 +73,46 @@ export default function Props() {
   });
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-          title: show.name,
-          headerShown: true,
-        }} 
-      />
-      <View style={styles.content}>
-        <PropList
-          props={filteredProps}
-          onEdit={(prop) => { /* handle edit */ }}
-          onDelete={(id) => { /* handle delete */ }}
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: show.name,
+            headerShown: true,
+          }} 
         />
+        <View style={styles.content}>
+          <PropList
+            props={filteredProps}
+            onEdit={(prop) => { /* handle edit */ }}
+            onDelete={(id) => { /* handle delete */ }}
+          />
+        </View>
+        <Link href="/props/new" style={styles.addButton}>
+          <Text style={styles.addButtonText}>Add New Prop</Text>
+        </Link>
       </View>
-      <Link href="/props/new" style={styles.addButton}>
-        <Text style={styles.addButtonText}>Add New Prop</Text>
-      </Link>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
   centered: {
     flex: 1,
@@ -111,7 +124,7 @@ const styles = StyleSheet.create({
     bottom: 20,
     right: 20,
     padding: 15,
-    backgroundColor: '#007bff',
+    backgroundColor: 'rgba(30,30,30,0.7)',
     borderRadius: 50,
   },
   addButtonText: {

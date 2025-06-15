@@ -38,8 +38,8 @@ export function useProps(showId: string | undefined) {
           const updatedAtTimestamp = data.updatedAt;
 
           return {
-            id: docSnapshot.id,
             ...data,
+            id: docSnapshot.id,
             createdAt: createdAtTimestamp && typeof (createdAtTimestamp as any).toDate === 'function' ? (createdAtTimestamp as any).toDate() : (createdAtTimestamp ? new Date(createdAtTimestamp as any) : new Date()),
             updatedAt: updatedAtTimestamp && typeof (updatedAtTimestamp as any).toDate === 'function' ? (updatedAtTimestamp as any).toDate() : (updatedAtTimestamp ? new Date(updatedAtTimestamp as any) : new Date()),
           } as Prop;

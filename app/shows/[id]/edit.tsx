@@ -27,11 +27,6 @@ export default function EditShowScreen() {
         router.back();
         return;
       }
-      if (show.userId !== user?.uid) {
-        Alert.alert('Permission Denied', 'You are not the owner of this show.');
-        router.back();
-        return;
-      }
       setInitialData({ ...show, acts: show.acts ?? [] });
       setLoading(false);
     }

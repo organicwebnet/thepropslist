@@ -61,6 +61,8 @@ export interface CardData {
   comments?: CommentData[];
   activity?: ActivityData[];
   attachments?: AttachmentData[];
+  images?: string[];
+  completed?: boolean;
 }
 
 export interface ListData {
@@ -74,6 +76,7 @@ export interface BoardData {
   id: string;
   name: string;
   ownerId?: string;
+  showId?: string;
 }
 
 export interface AttachmentData {

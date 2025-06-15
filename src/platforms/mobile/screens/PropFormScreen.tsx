@@ -183,7 +183,7 @@ export function PropFormScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   addButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: 'transparent',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -266,10 +266,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
-    backgroundColor: 'white',
+    backgroundColor: 'transparent',
   },
   saveButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: 'transparent',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -279,4 +279,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  button: { backgroundColor: 'transparent' },
+  overlay: { backgroundColor: 'transparent' },
 }); 

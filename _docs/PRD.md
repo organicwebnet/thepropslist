@@ -456,3 +456,83 @@ Each role has a set of permissions (see table below). Props supervisor can custo
 
 ### Security
 - All permissions enforced on backend and UI. 
+
+## Team Management: Implementation & Wireframes
+
+### 1. Data Model
+- Each show document contains a `team` map: `{ [userId]: role }` (e.g., god, props_supervisor, stage_manager, etc.)
+- Invitations are stored in an `invitations` collection with fields: `email`, `showId`, `role`, `invitedBy`, `status`, `createdAt`, `acceptedAt`.
+
+### 2. Firestore Security Rules
+- Team membership and roles are enforced using map lookups in Firestore rules.
+- Only god/props_supervisor can invite, change roles, or remove users.
+- See `_docs/firestore.rules` for full details.
+
+### 3. Backend Logic (Firebase Functions)
+- **inviteUserToShow**: Only god/props_supervisor can invite. Creates invitation document.
+- **acceptInvitation**: User accepts invite, is added to show team, invitation marked accepted.
+- **updateTeamMemberRole**: Only god/props_supervisor can change roles.
+- **removeTeamMember**: Only god/props_supervisor can remove users (not god).
+
+### 4. Frontend Integration (React Native/Expo)
+- List team members, show roles, allow role change/remove if permitted.
+- Invite modal for email/role.
+- Show pending invitations with resend/cancel.
+- Accept invitation screen for new users.
+- Fetch user profiles for display (name, avatar, etc.).
+
+### 5. Error Handling & Edge Cases
+- Cannot remove or demote god.
+- Prevent duplicate invites.
+- Handle expired/accepted invites.
+- Show clear error messages for all actions.
+
+### 6. Advanced Features
+- Search/filter team members.
+- Audit log of team actions (optional).
+- Bulk actions for role change/removal.
+- Real-time updates with Firestore listeners.
+
+### 7. Figma-Ready Wireframe Spec
+
+**Team Management Screen (Mobile)**
+
+```
+-------------------------------------------------
+| < Back |           Team Management            |
+-------------------------------------------------
+| [Avatar]  John Doe         god                |
+| [Avatar]  Jane Smith       props_supervisor   | [Change Role ▼] [Remove]
+| [Avatar]  Bob Brown        stage_manager      | [Change Role ▼] [Remove]
+| [Avatar]  Alice White      invited (pending)  | [Resend] [Cancel]
+-------------------------------------------------
+| + Invite Member                                 |
+-------------------------------------------------
+```
+
+**Invite Member Modal**
+- Email input
+- Role dropdown
+- Send Invite button
+- Cancel button
+
+**Annotations:**
+- "Change Role" is a dropdown for permitted users.
+- "Remove" is disabled for god.
+- Pending invites are shown with "pending" status and actions.
+
+### 8. Mermaid Diagram: Team Management Flow
+
+```mermaid
+flowchart TD
+  A[Team Management Screen]
+  A --> B[Team Member List]
+  B --> C[Member Card: Avatar, Name, Role, Actions]
+  B --> D[Pending Invite Card: Email, Role, Actions]
+  A --> E[Invite Member Button]
+  E --> F[Invite Modal: Email, Role, Send, Cancel]
+```
+
+---
+
+*This section provides a consolidated reference for your team management system, suitable for handoff to developers or designers, and for use in Figma or other design tools.* 

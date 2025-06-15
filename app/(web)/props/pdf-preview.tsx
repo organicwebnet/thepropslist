@@ -160,7 +160,7 @@ export default function PdfPreviewPage() {
         propsUnsubscribe = firebaseService.listenToCollection<Prop>(
           'props',
           (propDocs: FirebaseDocument<Prop>[]) => {
-            const extractedData = propDocs.map(doc => ({ id: doc.id, ...doc.data } as Prop));
+            const extractedData = propDocs.map(doc => ({ ...doc.data, id: doc.id } as Prop));
             console.log('[PDF Preview] Fetched propData:', extractedData);
             setPropData(extractedData);
             setIsLoading(false);

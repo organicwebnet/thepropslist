@@ -34,20 +34,19 @@ export function PropList({
     });
   };
 
-  const handleEditPress = (propId: string) => {
-    const propToEdit = props.find(p => p.id === propId);
-    if (propToEdit && onEdit) {
-      onEdit(propToEdit);
+  const handleEditPress = (prop: Prop) => {
+    if (prop && onEdit) {
+      onEdit(prop);
     }
   };
 
   const renderPropCard = ({ item }: { item: Prop }) => {
     // Original PropCard rendering restored
     return (
-      <View style={styles.cardContainer}> 
+      <View style={styles.cardContainer} key={item.id}> 
         <PropCard 
           prop={item} 
-          onEditPress={handleEditPress}
+          onEditPress={() => handleEditPress(item)}
           onDeletePress={onDelete}
         />
       </View>

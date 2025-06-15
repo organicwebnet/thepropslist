@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 // REMOVE Import modular functions from RNFirebase Firestore
 // import firestore, { 
 //   FirebaseFirestoreTypes, 
@@ -12,11 +12,12 @@ import { useAuth } from './AuthContext.tsx';
 import { useFirebase } from './FirebaseContext.tsx';
 import { Show } from '../shared/services/firebase/types.ts';
 // Import FirebaseDocument type
-import { FirebaseDocument /* QueryOptions */ } from '../shared/services/firebase/types.ts'; // Removed QueryOptions
+import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types.ts';
 import { Platform } from 'react-native';
 // import type { FirebaseService } from '../shared/services/firebase/types.ts'; // Removed FirebaseService type import, service is used directly
 // Remove direct firestore imports as service is used
 // import { collection, onSnapshot, query, where, orderBy, limit, doc, getDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { useNavigation } from '@react-navigation/native';
 
 interface ShowsContextType {
   shows: Show[];
@@ -48,7 +49,7 @@ interface ShowsProviderProps {
 
 export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
   const { service: firebaseService, isInitialized: firebaseInitialized, error: firebaseError } = useFirebase();
-  const { user } = useAuth();
+  const { user, isAdmin, status: authStatus } = useAuth();
   const [shows, setShows] = useState<Show[]>([]);
   const [selectedShow, setSelectedShowInternal] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,113 +78,127 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
   // const db = firebaseService?.firestore() as FirebaseFirestoreTypes.Module | undefined;
 
   useEffect(() => {
-    // Check if firebaseService is initialized
-    if (!firebaseInitialized || !firebaseService) { // Check service directly
-      if (firebaseError) {
-        setErrorState(firebaseError);
+    if (!firebaseInitialized || !firebaseService || authStatus !== 'in' || !user) {
+      if (authStatus !== 'pending') {
+        setShows([]);
+        setSelectedShow(null);
         setLoading(false);
-      } else {
-         // If not initialized and no error yet, just keep loading
-         setLoading(true); 
       }
-      // Reset state if firebase isn't ready
-      setShows([]);
-      setSelectedShow(null);
-      return;
-    }
-
-    // Only fetch shows if user is authenticated
-    if (!user) {
-      setShows([]);
-      setSelectedShow(null);
-      setLoading(false);
       return;
     }
 
     setErrorState(null);
     setLoading(true);
 
+    let ownedShows: Show[] = [];
+    let teamShows: Show[] = [];
     let permissionDenied = false;
-    // Use the service method to listen
-    const unsubscribe = firebaseService.listenToCollection<Show>(
-      'shows', // Collection path
-      (docs: FirebaseDocument<Show>[]) => { // Callback for successful updates
-        if (permissionDenied) return; // Don't update state if permission denied previously
-        const showsData: Show[] = docs.map(doc => {
-          const rawActs = doc.data?.acts;
-          return {
-            id: doc.id,
-            ...(doc.data || {}),
-            // Assign acts safely, defaulting to empty array if not an array
-            acts: Array.isArray(rawActs) ? rawActs.map((act: any) => ({
-                ...act,
-                id: act.id ?? Date.now(), // Use a more unique default ID if needed
-                name: act.name ?? `Act ${act.id ?? '?'}`,
-                scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
-                    ...scene,
-                    id: scene.id ?? Date.now(), // Use a more unique default ID if needed
-                    name: scene.name ?? `Scene ${scene.id ?? '?'}`
-                })) : [] // Default scenes to empty array
-            })) : [], // <-- Default to empty array if rawActs is not an array
-            // Ensure collaborators also defaults safely
-            collaborators: Array.isArray(doc.data?.collaborators) ? doc.data.collaborators : [] 
-          } as Show;
-        });
 
-        setShows(showsData);
-        setErrorState(null);
-        
-        // --- Logic to determine initial selected show ---
+    const processAndSetShows = () => {
+      const allShows = [...ownedShows, ...teamShows];
+      const uniqueShows = Array.from(new Map(allShows.map(show => [show.id, show])).values());
+      
+      const processedShows = uniqueShows.map(show => {
+        const rawActs = show.acts;
+        return {
+          ...show,
+          team: show.team && typeof show.team === 'object' ? show.team : {},
+          acts: Array.isArray(rawActs) ? rawActs.map((act: any) => ({
+              ...act,
+              id: act.id ?? Date.now(),
+              name: act.name ?? `Act ${act.id ?? '?'}`,
+              scenes: Array.isArray(act.scenes) ? act.scenes.map((scene: any) => ({
+                  ...scene,
+                  id: scene.id ?? Date.now(),
+                  name: scene.name ?? `Scene ${scene.id ?? '?'}`
+              })) : []
+          })) : [],
+          collaborators: Array.isArray(show.collaborators) ? show.collaborators : [] 
+        } as Show;
+      });
+
+      setShows(processedShows);
+
+      if (loading) {
         let showToSelect: Show | null = null;
         let lastSelectedId: string | null = null;
 
-        // 1. Try restoring from localStorage (on web)
         if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
-           try {
-             lastSelectedId = localStorage.getItem('lastSelectedShowId');
-             if (lastSelectedId) {
-               showToSelect = showsData.find(s => s.id === lastSelectedId) || null;
-             }
-           } catch (e) {
-            // Silently fail if localStorage is unavailable
-           }
+          try {
+            lastSelectedId = localStorage.getItem('lastSelectedShowId');
+            if (lastSelectedId) {
+              showToSelect = processedShows.find(s => s.id === lastSelectedId) || null;
+            }
+          } catch (e) { /* silent */ }
         }
 
-        // 2. If not restored and data available, select the first show
-        if (!showToSelect && showsData.length > 0) {
-            showToSelect = showsData[0];
+        if (!showToSelect && processedShows.length > 0) {
+          showToSelect = processedShows[0];
         }
 
-        // 3. If current selection is different or disappeared, update it
         if (!selectedShow && showToSelect) {
-            setSelectedShowInternal(showToSelect);
+          setSelectedShowInternal(showToSelect);
         }
-        // --- End initial selection logic ---
-        
-        setLoading(false);
-      },
-      (err: Error) => { // Callback for errors
-        if (err.message && err.message.includes('permission-denied')) {
-          setErrorState(new Error('You do not have permission to access shows. Please check your account or contact support.'));
-          setLoading(false);
-          permissionDenied = true;
-          // Do not reset state or retry
-          return;
-        }
+      }
+      setLoading(false);
+    };
+
+    const handleError = (err: Error) => {
+      if (err.message && err.message.includes('permission-denied')) {
+        setErrorState(new Error('You do not have permission to access shows.'));
+        permissionDenied = true;
+      } else {
         setErrorState(err);
-        setShows([]);
-        setSelectedShow(null);
-        setLoading(false);
+      }
+      setShows([]);
+      setSelectedShow(null);
+      setLoading(false);
+    };
+
+    const ownedShowsQuery: QueryOptions = { where: [['ownerId', '==', user.uid]] };
+    const ownedUnsubscribe = firebaseService.listenToCollection<Show>(
+      'shows',
+      (docs) => {
+        if (permissionDenied) return;
+        ownedShows = docs.map(doc => ({ ...doc.data, id: doc.id } as Show));
+        processAndSetShows();
       },
-      { where: [['ownerId', '==', user.uid]] } // <-- Add this line to filter by ownerId
+      handleError,
+      ownedShowsQuery
     );
 
-    // Cleanup function
+    let teamUnsubscribe = () => {};
+    if (!isAdmin) {
+      const teamShowsQuery: QueryOptions = { where: [[`team.${user.uid}`, '>=', '']] };
+      teamUnsubscribe = firebaseService.listenToCollection<Show>(
+        'shows',
+        (docs) => {
+          if (permissionDenied) return;
+          teamShows = docs.map(doc => ({ ...doc.data, id: doc.id } as Show));
+          processAndSetShows();
+        },
+        handleError,
+        teamShowsQuery
+      );
+    } else {
+      // If user is admin, we can fetch all shows with one query.
+      // For simplicity, we can just treat all shows as 'team' shows.
+      teamUnsubscribe = firebaseService.listenToCollection<Show>(
+        'shows',
+        (docs) => {
+          if (permissionDenied) return;
+          teamShows = docs.map(doc => ({ ...doc.data, id: doc.id } as Show));
+          processAndSetShows();
+        },
+        handleError
+      );
+    }
+    
     return () => {
-        unsubscribe();
+      ownedUnsubscribe();
+      teamUnsubscribe();
     };
-  // Dependencies: service availability, user (if re-enabled)
-  }, [firebaseInitialized, firebaseService, selectedShow, stableSetSelectedShowInternal, setSelectedShow, user]); // Added user to dependencies
+  }, [firebaseInitialized, firebaseService, user, isAdmin, authStatus, stableSetSelectedShowInternal]);
 
   const setSelectedShowById = useCallback((id: string | null) => {
     if (id === null) {
@@ -270,7 +285,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       }
       try {
          const doc = await firebaseService.getDocument<Show>('shows', id);
-         return doc ? { id: doc.id, ...doc.data } as Show : null;
+         return doc ? { ...doc.data } as Show : null;
       } catch (err: any) {
         // Intentionally swallowing error for now, should be handled with user feedback
         return null;
@@ -280,7 +295,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
 
   const value = {
     shows,
-    loading: loading || !firebaseInitialized,
+    loading: loading || authStatus === 'pending' || !firebaseInitialized,
     error: error || firebaseError,
     selectedShow,
     setSelectedShow,

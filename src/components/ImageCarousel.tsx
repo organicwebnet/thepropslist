@@ -175,4 +175,5 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 14,
   },
+  container: { backgroundColor: 'transparent' },
 }); 

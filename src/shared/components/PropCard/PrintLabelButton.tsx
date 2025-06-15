@@ -41,7 +41,7 @@ export const PrintLabelButton: React.FC<PrintLabelButtonProps> = ({
     <TouchableOpacity
       onPress={handlePrint}
       style={[{
-        backgroundColor: '#3B82F6',
+        backgroundColor: 'transparent',
         padding: 8,
         borderRadius: 6,
         alignItems: 'center',

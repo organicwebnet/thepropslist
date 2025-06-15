@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, ScrollView, TextInput } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, ActivityIndicator, ScrollView, TextInput, StyleSheet } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter, Link } from 'expo-router';
 import { usePacking } from '@/hooks/usePacking.ts';
 import type { PackingBox, PackedProp } from '@/types/packing.ts';
@@ -7,8 +7,8 @@ import { useProps } from '@/contexts/PropsContext.tsx';
 import { type Prop } from '@/shared/types/props.ts';
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
-import { Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, ArrowLeft, Save, Loader2, X } from 'lucide-react';
-import PropCard from '@/shared/components/PropCard/index.tsx';
+import { Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, ArrowLeft, Save, Loader2, X } from 'lucide-react-native';
+import PropCard from '../../../../../src/shared/components/PropCard';
 
 // Reuse status styles logic (consider moving to a shared location later)
 type StatusStyle = { bg: string; text: string; icon: React.ElementType };
@@ -23,18 +23,10 @@ const statusStyles: Record<string, StatusStyle> = {
 
 // Helper to format date safely
 const formatUpdateTime = (updatedAt: any): string => {
-  if (updatedAt && updatedAt instanceof Timestamp) {
-    try { return formatDistanceToNow(updatedAt.toDate(), { addSuffix: true }); } catch { return "Invalid date"; }
-  } else if (updatedAt instanceof Date) {
-    try { return formatDistanceToNow(updatedAt, { addSuffix: true }); } catch { return "Invalid date"; }
-  } else if (typeof updatedAt === 'string') {
-    try {
-      const date = new Date(updatedAt);
-      if (!isNaN(date.getTime())) return formatDistanceToNow(date, { addSuffix: true });
-      else return "Invalid date string";
-    } catch { return "Invalid date format"; }
+  if (updatedAt && typeof (updatedAt as any).toDate === 'function') {
+    try { return formatDistanceToNow((updatedAt as any).toDate(), { addSuffix: true }); } catch { return "Invalid date"; }
   }
-  return 'Not available';
+  return "Last updated: " + (updatedAt instanceof Date ? updatedAt.toLocaleString() : String(updatedAt));
 };
 
 export default function BoxDetailPage() {
@@ -49,6 +41,15 @@ export default function BoxDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditingNotes, setIsEditingNotes] = useState<boolean>(false); // State for note editing mode
+
+  const updatedAt = box?.updatedAt; // Extract for dependency array
+
+  const lastUpdated = useMemo(() => {
+    if (updatedAt && typeof (updatedAt as any).toDate === 'function') {
+      return `Last updated: ${(updatedAt as any).toDate().toLocaleString()}`;
+    }
+    return `Last updated: ${(updatedAt instanceof Date ? updatedAt.toLocaleString() : String(updatedAt))}`;
+  }, [updatedAt]);
 
   useEffect(() => {
     const currentLoading = loadingBoxes || loadingProps;
@@ -160,7 +161,7 @@ export default function BoxDetailPage() {
             <View className="flex flex-row justify-between items-center text-xs text-gray-500 border-t border-gray-700 pt-2">
                <span>Total Weight: {totalWeightKg.toFixed(1)} kg</span>
                <div className="flex items-center gap-3">
-                 <span>Last Updated: {timeAgo}</span>
+                 <span>{lastUpdated}</span>
                  <Link
                    href={{ 
                      pathname: `/packing/label/${boxId}` as any,

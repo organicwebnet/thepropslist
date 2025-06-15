@@ -7,7 +7,8 @@ import {
   linkWithPopup, 
   unlink,
   User as FirebaseWebUser,
-  type UserInfo as FirebaseWebUserInfo 
+  type UserInfo as FirebaseWebUserInfo,
+  deleteUser
 } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { useFirebase } from '../contexts/FirebaseContext.tsx';
@@ -16,6 +17,8 @@ import type { UserProfile } from '../types.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import * as ImagePicker from 'expo-image-picker';
+import { Alert } from 'react-native';
 
 // Define available fonts
 const fontOptions = [
@@ -54,6 +57,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [feedback, setFeedback] = useState<{ type: string; message: string } | null>(null);
 
   const providerData = useMemo(() => {
     if (!(user as FirebaseAuthTypes.User)?.providerData) return [];
@@ -142,7 +146,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     setError(null);
 
     try {
-      const auth = firebaseService.auth();
+      const auth = firebaseService.auth;
       const db = firebaseService.getFirestoreJsInstance();
 
       const firebaseJsUser = auth.currentUser as FirebaseWebUser;
@@ -184,8 +188,8 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
       const tempURL = URL.createObjectURL(file);
       setProfile((prev: UserProfile & { googleLinked?: boolean }) => ({ ...prev, photoURL: tempURL }));
       
-      const storage = firebaseService.storage();
-      const storageRef = ref(storage, `profile_images/${user.uid}`);
+      const storage = firebaseService.storage;
+      const storageRef = ref(storage as any, `profile_images/${user.uid}`);
       
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
@@ -204,7 +208,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     const rnUser = user as FirebaseAuthTypes.User | null;
     if (!firebaseService || !rnUser) return;
     try {
-      const auth = firebaseService.auth();
+      const auth = firebaseService.auth;
       const webCurrentUser = auth.currentUser as FirebaseWebUser | null;
       if (!webCurrentUser) {
         setError("No current user to link.");
@@ -223,7 +227,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     const rnUser = user as FirebaseAuthTypes.User | null;
     if (!firebaseService || !rnUser) return;
     try {
-      const auth = firebaseService.auth();
+      const auth = firebaseService.auth;
       const webCurrentUser = auth.currentUser as FirebaseWebUser | null;
       if (!webCurrentUser) {
         setError("No current user to unlink.");
@@ -252,7 +256,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     const rnUser = user as FirebaseAuthTypes.User | null;
     if (!firebaseService || !rnUser) return;
     try {
-      const auth = firebaseService.auth();
+      const auth = firebaseService.auth;
       const webCurrentUser = auth.currentUser as FirebaseWebUser | null;
       if (!webCurrentUser) {
         setError("No current user to link.");
@@ -271,7 +275,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     const rnUser = user as FirebaseAuthTypes.User | null;
     if (!firebaseService || !rnUser) return;
     try {
-      const auth = firebaseService.auth();
+      const auth = firebaseService.auth;
       const webCurrentUser = auth.currentUser as FirebaseWebUser | null;
       if (!webCurrentUser) {
         setError("No current user to unlink.");
@@ -308,6 +312,141 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      setFeedback({ type: 'error', message: 'Passwords do not match.' });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setFeedback({ type: 'error', message: 'Password must be at least 6 characters long.' });
+      return;
+    }
+
+    try {
+      const user = firebaseService.auth.currentUser;
+      if (user) {
+        // This is a placeholder for a secure password update flow.
+        // In a real app, you would re-authenticate the user before updating the password.
+        setFeedback({ type: 'success', message: 'Password update functionality not fully implemented.' });
+      }
+    } catch (error: any) {
+      setFeedback({ type: 'error', message: error.message });
+    }
+  };
+
+  const handleUpdateProfileImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const { uri } = result.assets[0];
+      setProfile((prev: UserProfile & { googleLinked?: boolean }) => ({ ...prev, photoURL: uri }));
+
+      try {
+        const user = firebaseService.auth.currentUser;
+        if (user) {
+          const storage = firebaseService.storage;
+          const storageRef = ref(storage as any, `profileImages/${user.uid}`);
+          
+          // Convert URI to Blob
+          const response = await fetch(uri);
+          const blob = await response.blob();
+
+          await uploadBytes(storageRef, blob);
+          const downloadURL = await getDownloadURL(storageRef);
+
+          await updateProfile(user as any, {
+            displayName: profile.displayName,
+            photoURL: downloadURL
+          });
+          
+          // Also update the user's profile document in Firestore if you have one
+          const userDocRef = doc(firebaseService.firestore as any, 'userProfiles', user.uid);
+          await setDoc(userDocRef, {
+            displayName: profile.displayName,
+            photoURL: downloadURL
+          }, { merge: true });
+
+          setFeedback({ type: 'success', message: 'Profile image updated successfully!' });
+        }
+      } catch (error: any) {
+        setFeedback({ type: 'error', message: `Image upload failed: ${error.message}` });
+      }
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    try {
+      const user = firebaseService.auth.currentUser;
+      if (user) {
+        await updateProfile(user as any, {
+          displayName: profile.displayName,
+          photoURL: profile.photoURL
+        });
+
+        // Also update the user's profile document in Firestore
+        const userDocRef = doc(firebaseService.firestore as any, 'userProfiles', user.uid);
+        await setDoc(userDocRef, {
+          displayName: profile.displayName,
+          photoURL: profile.photoURL
+        }, { merge: true });
+
+        setFeedback({ type: 'success', message: 'Profile updated successfully!' });
+      }
+    } catch (error: any) {
+      setFeedback({ type: 'error', message: error.message });
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    try {
+      const user = firebaseService.auth.currentUser;
+      if (user) {
+        await deleteUser(user as any);
+        setFeedback({ type: 'success', message: 'Account deactivated successfully.' });
+      }
+    } catch (error: any) {
+      setFeedback({ type: 'error', message: error.message });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setFeedback({ type: 'success', message: 'Logged out successfully.' });
+      // Navigation logic should be handled by the AuthContext listener
+    } catch (error: any) {
+      setFeedback({ type: 'error', message: error.message });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    // This is a destructive action and should require re-authentication.
+    Alert.alert(
+      "Delete Account",
+      "This is a destructive action and cannot be undone. Are you sure you want to delete your account?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: async () => {
+          try {
+            const user = firebaseService.auth.currentUser;
+            if (user) {
+              await deleteUser(user as any);
+              // After deletion, navigate away or show a confirmation message.
+              Alert.alert("Account Deleted", "Your account has been permanently deleted.");
+            }
+          } catch (error: any) {
+            Alert.alert("Error", error.message);
+          }
+        }}
+      ]
+    );
   };
 
   if (loading) {
@@ -418,7 +557,7 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                     )}
                     <div 
                       className="absolute bottom-0 right-0 p-2 bg-primary rounded-full shadow-lg cursor-pointer hover:bg-primary-dark transition-colors"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={handleUpdateProfileImage}
                     >
                       <Camera className="h-5 w-5 text-white" />
                     </div>

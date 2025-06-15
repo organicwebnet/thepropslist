@@ -44,6 +44,7 @@ import Editor from 'react-native-mentions-editor'; // Removed { displayTextWithM
 import type { Prop } from '../../shared/types/props'; // For prop suggestions
 import type { PackingBox } from '../../types/packing'; // For container suggestions
 import { useAuth } from '../../contexts/AuthContext'; // ADD THIS LINE
+import LinearGradient from 'react-native-linear-gradient';
 
 // WYSIWYG and HTML rendering commented out for now
 // import Editor from 'react-simple-wysiwyg';
@@ -74,15 +75,6 @@ interface CardDetailPanelProps {
     boardId: string;
 }
 
-const parseDate = (dateValue: string | CustomTimestamp | undefined | null): Date | null => {
-    if (!dateValue) return null;
-    if (typeof dateValue === 'string') return new Date(dateValue);
-    if (dateValue && typeof (dateValue as CustomTimestamp).toDate === 'function') {
-        return (dateValue as CustomTimestamp).toDate();
-    }
-    return null;
-};
-
 const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     isVisible,
     card,
@@ -97,7 +89,288 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     boardId
 }) => {
     const { theme: themeName } = useTheme();
-    const currentThemeColors = themeName === 'dark' ? darkTheme.colors : lightTheme.colors; // Select colors object
+    const currentThemeColors = themeName === 'dark' ? darkTheme.colors : lightTheme.colors;
+    const styles = StyleSheet.create({
+        overlay: { flex: 1, backgroundColor: currentThemeColors.background, justifyContent: 'center', alignItems: 'center' },
+        panel: {
+            backgroundColor: currentThemeColors.cardBg,
+            borderRadius: 10,
+            padding: 0,
+            shadowColor: '#000',
+            shadowOffset: {
+                width: 0,
+                height: 2,
+            },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+            elevation: 5,
+            width: '90%',
+            maxHeight: '90%',
+            alignSelf: 'center',
+            marginTop: 50,
+        },
+        modalContent: {
+            padding: 20,
+        },
+        modalHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottomWidth: 1,
+            paddingBottom: 10,
+            marginBottom: 10,
+            paddingTop: 18,
+            paddingLeft: 18,
+            paddingRight: 12,
+        },
+        sectionContentRow: {
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+        },
+        section: {
+            marginBottom: 20,
+        },
+        sectionTitle: {
+            fontSize: 18,
+            fontWeight: 'bold',
+            marginBottom: 10,
+            color: '#fff',
+        },
+        title: {
+            fontSize: 24,
+            fontWeight: 'bold',
+            marginBottom: 10,
+            color: '#fff',
+            paddingTop: 0,
+            paddingLeft: 0,
+        },
+        pickerSection: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginVertical: 8,
+        },
+        icon: {
+            marginRight: 10
+        },
+        pickerContainer: {
+            flex: 1,
+            borderWidth: 1,
+            borderColor: '#ccc',
+            borderRadius: 5,
+            backgroundColor: 'transparent', // Ensure picker background doesn't hide container styles
+        },
+        picker: {
+            width: '100%',
+            height: 40,
+        },
+        label: {
+            fontSize: 14,
+            color: '#fff',
+        },
+        descriptionTextValue: {
+            fontSize: 16,
+            lineHeight: 24,
+        },
+        propLinkText: {
+            color: currentThemeColors.primary,
+            fontWeight: 'bold',
+            fontSize: 16,
+        },
+        containerLinkText: {
+            color: '#4caf50', // Example color for containers
+            fontWeight: 'bold',
+            fontSize: 16,
+        },
+        descriptionText: {
+            fontSize: 16,
+        },
+        input: {
+            borderWidth: 1,
+            borderRadius: 5,
+            padding: 10,
+            fontSize: 16,
+            minHeight: 60,
+            textAlignVertical: 'top'
+        },
+        buttonContainer: {
+            flexDirection: 'row',
+            justifyContent: 'flex-start',
+            marginTop: 10,
+        },
+        primaryButton: {
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 5,
+            marginRight: 10,
+        },
+        secondaryButton: {
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 5,
+        },
+        deleteButton: {
+            backgroundColor: currentThemeColors.error,
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 5,
+            marginLeft: 'auto'
+        },
+        primaryButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
+        secondaryButtonText: { color: currentThemeColors.text, fontWeight: 'bold', fontSize: 15 },
+        deleteButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
+        commentItemContainer: { flexDirection: 'row', marginBottom: 10, padding: 8, backgroundColor: currentThemeColors.inputBg, borderRadius: 4 },
+        commentAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: currentThemeColors.primary, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+        commentAvatarText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
+        commentContent: { flex: 1 },
+        commentHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
+        commentUserName: { fontWeight: 'bold', color: currentThemeColors.text, fontSize: 13 },
+        commentDate: { fontSize: 11, color: currentThemeColors.textSecondary },
+        commentText: { color: currentThemeColors.text, fontSize: 14 },
+        disabledInput: { backgroundColor: '#444444', color: '#888888' },
+        disabledButton: { backgroundColor: '#555555' },
+        commentInputContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+        commentInput: { flex: 1, borderWidth: 1, borderColor: currentThemeColors.border, borderRadius: 4, padding: 10, marginRight: 10, color: currentThemeColors.text, backgroundColor: currentThemeColors.inputBg },
+        commentPostButton: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: currentThemeColors.primary, borderRadius: 4 },
+        commentPostButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
+        commentListContainer: { maxHeight: 200 },
+        imagePreview: { width: '100%', height: 180, borderRadius: 6, marginBottom: 10, backgroundColor: currentThemeColors.border },
+        imageButtonsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 10 },
+        imageButton: { paddingVertical: 8, paddingHorizontal: 12, backgroundColor: currentThemeColors.primary, borderRadius: 4, marginHorizontal: 5, flex:1, alignItems:'center' },
+        removeImageButton: { backgroundColor: currentThemeColors.error },
+        uploadingIndicator: { marginVertical: 10 },
+        imagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+        imagePlaceholderText: {
+            color: '#fff',
+            fontStyle: 'italic',
+        },
+        pickImageButton: { backgroundColor: currentThemeColors.primary, borderRadius: 4, paddingVertical: 8, paddingHorizontal: 12 },
+        labelsContainer: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            marginBottom: 5,
+        },
+        labelChip: {
+            paddingVertical: 4,
+            paddingHorizontal: 10,
+            borderRadius: 6,
+            marginRight: 6,
+            marginBottom: 6,
+        },
+        labelText: {
+            fontSize: 12,
+            color: '#FFFFFF',
+            fontWeight: 'bold',
+        },
+        addLabelButton: {
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            backgroundColor: currentThemeColors.card,
+            borderRadius: 4,
+            alignSelf: 'flex-start',
+            marginTop: 5,
+            borderWidth: 1,
+            borderColor: currentThemeColors.border,
+        },
+        addLabelButtonText: {
+            fontSize: 14,
+            color: currentThemeColors.text,
+        },
+        membersContainer: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            marginBottom: 5,
+        },
+        memberChip: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: currentThemeColors.inputBg,
+            borderRadius: 15,
+            paddingVertical: 5,
+            paddingHorizontal: 10,
+            marginRight: 8,
+            marginBottom: 8,
+        },
+        avatarPlaceholder: {
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            backgroundColor: currentThemeColors.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: 6,
+        },
+        avatarText: {
+            color: '#FFFFFF',
+            fontSize: 10,
+            fontWeight: 'bold',
+        },
+        memberName: {
+            fontSize: 12,
+            color: currentThemeColors.text,
+        },
+        addMemberButton: {
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            backgroundColor: currentThemeColors.card,
+            borderRadius: 4,
+            alignSelf: 'flex-start',
+            marginTop: 5,
+            borderWidth: 1,
+            borderColor: currentThemeColors.border,
+        },
+        addMemberButtonText: {
+            fontSize: 14,
+            color: currentThemeColors.text,
+        },
+        datePickerButton: {
+            paddingVertical: 10,
+            paddingHorizontal: 15,
+            backgroundColor: currentThemeColors.inputBg,
+            borderRadius: 4,
+            borderWidth:1,
+            borderColor: currentThemeColors.border,
+            marginBottom:10
+        },
+        dateText: {
+            fontSize: 15,
+            color: currentThemeColors.text
+        },
+        removeDateButton: {
+            alignSelf: 'flex-start',
+            marginTop: 5,
+            padding: 5
+        },
+        removeDateText: {
+            color: currentThemeColors.error,
+            fontSize: 14,
+        },
+        checklistContainer: { marginBottom: 15 },
+        checklistItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingVertical: 4 },
+        checklistItemText: { marginLeft: 8, fontSize: 15, color: currentThemeColors.text, flexShrink: 1 },
+        checklistItemTextCompleted: { textDecorationLine: 'line-through', color: currentThemeColors.textSecondary },
+        checklistInputContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 5, marginBottom: 10 },
+        checklistInput: { flex: 1, borderWidth: 1, borderColor: currentThemeColors.border, borderRadius: 4, padding: 8, marginRight: 8, color: currentThemeColors.text, backgroundColor: currentThemeColors.inputBg },
+        checklistAddButton: { paddingVertical: 8, paddingHorizontal: 12, backgroundColor: currentThemeColors.primary, borderRadius: 4 },
+        checklistAddButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
+        checklistProgressBarContainer: { height: 6, backgroundColor: currentThemeColors.border, borderRadius: 3, marginTop: 4, marginBottom:8 },
+        checklistProgressBar: { height: '100%', backgroundColor: currentThemeColors.primary, borderRadius: 3 },
+        deleteButtonSmall: { marginLeft: 'auto', padding: 5 }, 
+        attachmentItem: { marginBottom: 10, padding: 10, backgroundColor: currentThemeColors.inputBg, borderRadius: 5 },
+        attachmentInput: { borderWidth: 1, borderColor: currentThemeColors.border, borderRadius: 4, padding: 8, color: currentThemeColors.text, backgroundColor: currentThemeColors.inputBg, marginBottom: 5 }, 
+        attachmentLinkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+        attachmentTypeIcon: { marginRight: 8 }, 
+        attachmentNameText: { color: currentThemeColors.text, flexShrink:1, marginRight: 5 },
+        attachmentValidationContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 5 },
+        attachmentErrorText: { color: currentThemeColors.error, fontSize: 12, marginRight: 5 },
+        addAttachmentButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: currentThemeColors.card, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 4, alignSelf: 'flex-start', marginTop: 5, marginBottom:10, borderWidth: 1, borderColor: currentThemeColors.border },
+        addAttachmentButtonText: { color: currentThemeColors.text, marginLeft: 6 },
+        linkInput: { borderWidth: 1, borderColor: currentThemeColors.border, padding: 10, borderRadius: 4, color: currentThemeColors.text, backgroundColor: currentThemeColors.inputBg, fontSize: 15, lineHeight: 20 },
+        actionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: currentThemeColors.border, paddingTop: 15, paddingBottom:15, paddingHorizontal: 20 },
+        editButton: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: currentThemeColors.card, borderRadius: 5, minWidth: 80, alignItems:'center' },
+        saveButton: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: currentThemeColors.primary, borderRadius: 5, minWidth: 80, alignItems:'center' },
+        cancelButton: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: currentThemeColors.card, borderRadius: 5, minWidth: 80, alignItems:'center' },
+    });
+
     const { service, isInitialized: isFirebaseInitialized, error: firebaseError } = useFirebase(); // Get Firebase status
     const { user } = useAuth();
 
@@ -317,6 +590,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const pickImage = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) { Alert.alert("Permission Required", "Photo access needed."); return; }
+        // TODO: Update to ImagePicker.MediaType.IMAGE when available in your version
         const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [4, 3], quality: 0.8 });
         if (!result.canceled && result.assets && result.assets.length > 0) setEditedImageUri(result.assets[0].uri);
     };
@@ -419,13 +693,19 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         // setAllAvailableMembersForPicker(prev => [...prev, newMember]); // If managing a local copy for picker
     };
     const handleAddComment = async () => {
-        if (!isFirebaseInitialized || firebaseError || !newCommentText.trim() || !internalCard || !service.auth().currentUser) { Alert.alert("Error", "Cannot post comment."); return; }
-        const currentUser = service.auth().currentUser!;
+        if (!isFirebaseInitialized || firebaseError || !newCommentText.trim() || !internalCard || !service.auth.currentUser) { Alert.alert("Error", "Cannot post comment."); return; }
+        const currentUser = service.auth.currentUser!;
         const userName = currentUser.displayName || currentUser.email || 'Anonymous';
         const newComment: CommentData = { id: uuidv4(), userId: currentUser.uid, userName, userAvatarInitials: (userName[0] || 'U').toUpperCase(), text: newCommentText.trim(), createdAt: new Date().toISOString() };
         const updatedComments = [...(internalCard.comments || []), newComment];
-        try { await onUpdateCard(internalCard.id, internalCard.listId, { comments: updatedComments }); setInternalCard(prev => prev ? { ...prev, comments: updatedComments } : null); setNewCommentText(''); }
-        catch (error) { Alert.alert("Error", "Failed to add comment."); }
+        try {
+            await onUpdateCard(internalCard.id, internalCard.listId, { comments: updatedComments });
+            setInternalCard(prev => prev ? { ...prev, comments: updatedComments } : null);
+            setNewCommentText('');
+        } catch (error) {
+            console.error('Error posting comment:', error);
+            Alert.alert("Error", "Could not post comment.");
+        }
     };
 
     const handleAddChecklist = async () => {
@@ -488,285 +768,28 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         });
         setInternalCard(prev => prev ? { ...prev, attachments: updatedAttachments } : null);
     };
-    const renderCommentItem = ({ item }: { item: CommentData }) => (
-        <View style={styles.commentItemContainer}>
-            <View style={styles.commentAvatar}><Text style={styles.commentAvatarText}>{item.userAvatarInitials || 'U'}</Text></View>
-            <View style={styles.commentContent}>
-                <View style={styles.commentHeader}><Text style={styles.commentUserName}>{item.userName}</Text><Text style={styles.commentDate}>{new Date(item.createdAt).toLocaleString()}</Text></View>
-                <Text style={styles.commentText}>{item.text}</Text>
+    const renderActivityOrCommentItem = ({ item }: { item: CommentData | ActivityData }) => {
+        const isComment = (item as CommentData).createdAt !== undefined;
+        const initials = isComment ? (item as CommentData).userAvatarInitials || 'U' : 'A';
+        const name = isComment ? (item as CommentData).userName : 'Activity';
+        const date = isComment ? (item as CommentData).createdAt : (item as ActivityData).date;
+        return (
+            <View style={styles.commentItemContainer}>
+                <View style={styles.commentAvatar}><Text style={styles.commentAvatarText}>{initials}</Text></View>
+                <View style={styles.commentContent}>
+                    <View style={styles.commentHeader}>
+                        <Text style={styles.commentUserName}>{name}</Text>
+                        <Text style={styles.commentDate}>{new Date(date).toLocaleString()}</Text>
+                    </View>
+                    {isComment ? (
+                        <Text style={styles.commentText}>{(item as CommentData).text}</Text>
+                    ) : (
+                        <Text style={[styles.commentText, { fontStyle: 'italic', color: currentThemeColors.textSecondary }]}> {(item as ActivityData).text}</Text>
+                    )}
+                </View>
             </View>
-        </View>
-    );
-
-    const styles = StyleSheet.create({
-        overlay: { flex: 1, backgroundColor: currentThemeColors.background, justifyContent: 'center', alignItems: 'center' },
-        panel: {
-            backgroundColor: currentThemeColors.cardBg,
-            borderRadius: 10,
-            padding: 0,
-            shadowColor: '#000',
-            shadowOffset: {
-                width: 0,
-                height: 2,
-            },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
-            elevation: 5,
-            width: '90%',
-            maxHeight: '90%',
-            alignSelf: 'center',
-            marginTop: 50,
-        },
-        modalContent: {
-            padding: 20,
-        },
-        modalHeader: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottomWidth: 1,
-            paddingBottom: 10,
-            marginBottom: 10,
-        },
-        sectionContentRow: {
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-        },
-        section: {
-            marginBottom: 20,
-        },
-        sectionTitle: {
-            fontSize: 18,
-            fontWeight: 'bold',
-            marginBottom: 10,
-        },
-        title: {
-            fontSize: 24,
-            fontWeight: 'bold',
-            marginBottom: 10,
-        },
-        pickerSection: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginVertical: 8,
-        },
-        icon: {
-            marginRight: 10
-        },
-        pickerContainer: {
-            flex: 1,
-            borderWidth: 1,
-            borderColor: '#ccc',
-            borderRadius: 5,
-            backgroundColor: 'transparent', // Ensure picker background doesn't hide container styles
-        },
-        picker: {
-            width: '100%',
-            height: 40,
-        },
-        label: {
-            fontSize: 14,
-        },
-        descriptionTextValue: {
-            fontSize: 16,
-            lineHeight: 24,
-        },
-        propLinkText: {
-            color: currentThemeColors.primary,
-            fontWeight: 'bold',
-            fontSize: 16,
-        },
-        containerLinkText: {
-            color: '#4caf50', // Example color for containers
-            fontWeight: 'bold',
-            fontSize: 16,
-        },
-        descriptionText: {
-            fontSize: 16,
-        },
-        input: {
-            borderWidth: 1,
-            borderRadius: 5,
-            padding: 10,
-            fontSize: 16,
-            minHeight: 60,
-            textAlignVertical: 'top'
-        },
-        buttonContainer: {
-            flexDirection: 'row',
-            justifyContent: 'flex-start',
-            marginTop: 10,
-        },
-        primaryButton: {
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 5,
-            marginRight: 10,
-        },
-        secondaryButton: {
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 5,
-        },
-        deleteButton: {
-            backgroundColor: currentThemeColors.error,
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 5,
-            marginLeft: 'auto'
-        },
-        primaryButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
-        secondaryButtonText: { color: currentThemeColors.text, fontWeight: 'bold', fontSize: 15 },
-        deleteButtonText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 },
-        commentItemContainer: { flexDirection: 'row', marginBottom: 10, padding: 8, backgroundColor: currentThemeColors.inputBg, borderRadius: 4 },
-        commentAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: currentThemeColors.primary, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-        commentAvatarText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 14 },
-        commentContent: { flex: 1 },
-        commentHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
-        commentUserName: { fontWeight: 'bold', color: currentThemeColors.text, fontSize: 13 },
-        commentDate: { fontSize: 11, color: currentThemeColors.textSecondary },
-        commentText: { color: currentThemeColors.text, fontSize: 14 },
-        disabledInput: { backgroundColor: '#444444', color: '#888888' },
-        disabledButton: { backgroundColor: '#555555' },
-        commentInputContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-        commentInput: { flex: 1, borderWidth: 1, borderColor: currentThemeColors.border, borderRadius: 4, padding: 10, marginRight: 10, color: currentThemeColors.text, backgroundColor: currentThemeColors.inputBg },
-        commentPostButton: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: currentThemeColors.primary, borderRadius: 4 },
-        commentPostButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
-        commentListContainer: { maxHeight: 200 },
-        imagePreview: { width: '100%', height: 180, borderRadius: 6, marginBottom: 10, backgroundColor: currentThemeColors.border },
-        imageButtonsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 10 },
-        imageButton: { paddingVertical: 8, paddingHorizontal: 12, backgroundColor: currentThemeColors.primary, borderRadius: 4, marginHorizontal: 5, flex:1, alignItems:'center' },
-        removeImageButton: { backgroundColor: currentThemeColors.error },
-        uploadingIndicator: { marginVertical: 10 },
-        imagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-        imagePlaceholderText: { color: currentThemeColors.textSecondary, fontStyle: 'italic' },
-        pickImageButton: { backgroundColor: currentThemeColors.primary, borderRadius: 4, paddingVertical: 8, paddingHorizontal: 12 },
-        labelsContainer: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            marginBottom: 5,
-        },
-        labelChip: {
-            paddingVertical: 4,
-            paddingHorizontal: 10,
-            borderRadius: 12,
-            marginRight: 6,
-            marginBottom: 6,
-        },
-        labelText: {
-            fontSize: 12,
-            color: '#FFFFFF',
-            fontWeight: 'bold',
-        },
-        addLabelButton: {
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            backgroundColor: currentThemeColors.card,
-            borderRadius: 4,
-            alignSelf: 'flex-start',
-            marginTop: 5,
-            borderWidth: 1,
-            borderColor: currentThemeColors.border,
-        },
-        addLabelButtonText: {
-            fontSize: 14,
-            color: currentThemeColors.text,
-        },
-        membersContainer: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            marginBottom: 5,
-        },
-        memberChip: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: currentThemeColors.inputBg,
-            borderRadius: 15,
-            paddingVertical: 5,
-            paddingHorizontal: 10,
-            marginRight: 8,
-            marginBottom: 8,
-        },
-        avatarPlaceholder: {
-            width: 24,
-            height: 24,
-            borderRadius: 12,
-            backgroundColor: currentThemeColors.primary,
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginRight: 6,
-        },
-        avatarText: {
-            color: '#FFFFFF',
-            fontSize: 10,
-            fontWeight: 'bold',
-        },
-        memberName: {
-            fontSize: 12,
-            color: currentThemeColors.text,
-        },
-        addMemberButton: {
-            paddingVertical: 8,
-            paddingHorizontal: 12,
-            backgroundColor: currentThemeColors.card,
-            borderRadius: 4,
-            alignSelf: 'flex-start',
-            marginTop: 5,
-            borderWidth: 1,
-            borderColor: currentThemeColors.border,
-        },
-        addMemberButtonText: {
-            fontSize: 14,
-            color: currentThemeColors.text,
-        },
-        datePickerButton: {
-            paddingVertical: 10,
-            paddingHorizontal: 15,
-            backgroundColor: currentThemeColors.inputBg,
-            borderRadius: 4,
-            borderWidth:1,
-            borderColor: currentThemeColors.border,
-            marginBottom:10
-        },
-        dateText: {
-            fontSize: 15,
-            color: currentThemeColors.text
-        },
-        removeDateButton: {
-            alignSelf: 'flex-start',
-            marginTop: 5,
-            padding: 5
-        },
-        removeDateText: {
-            color: currentThemeColors.error,
-            fontSize: 14,
-        },
-        checklistContainer: { marginBottom: 15 },
-        checklistItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingVertical: 4 },
-        checklistItemText: { marginLeft: 8, fontSize: 15, color: currentThemeColors.text, flexShrink: 1 },
-        checklistItemTextCompleted: { textDecorationLine: 'line-through', color: currentThemeColors.textSecondary },
-        checklistInputContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 5, marginBottom: 10 },
-        checklistInput: { flex: 1, borderWidth: 1, borderColor: currentThemeColors.border, borderRadius: 4, padding: 8, marginRight: 8, color: currentThemeColors.text, backgroundColor: currentThemeColors.inputBg },
-        checklistAddButton: { paddingVertical: 8, paddingHorizontal: 12, backgroundColor: currentThemeColors.primary, borderRadius: 4 },
-        checklistAddButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
-        checklistProgressBarContainer: { height: 6, backgroundColor: currentThemeColors.border, borderRadius: 3, marginTop: 4, marginBottom:8 },
-        checklistProgressBar: { height: '100%', backgroundColor: currentThemeColors.primary, borderRadius: 3 },
-        deleteButtonSmall: { marginLeft: 'auto', padding: 5 }, 
-        attachmentItem: { marginBottom: 10, padding: 10, backgroundColor: currentThemeColors.inputBg, borderRadius: 5 },
-        attachmentInput: { borderWidth: 1, borderColor: currentThemeColors.border, borderRadius: 4, padding: 8, color: currentThemeColors.text, backgroundColor: currentThemeColors.inputBg, marginBottom: 5 }, 
-        attachmentLinkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-        attachmentTypeIcon: { marginRight: 8 }, 
-        attachmentNameText: { color: currentThemeColors.text, flexShrink:1, marginRight: 5 },
-        attachmentValidationContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 5 },
-        attachmentErrorText: { color: currentThemeColors.error, fontSize: 12, marginRight: 5 },
-        addAttachmentButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: currentThemeColors.card, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 4, alignSelf: 'flex-start', marginTop: 5, marginBottom:10, borderWidth: 1, borderColor: currentThemeColors.border },
-        addAttachmentButtonText: { color: currentThemeColors.text, marginLeft: 6 },
-        linkInput: { borderWidth: 1, borderColor: currentThemeColors.border, padding: 10, borderRadius: 4, color: currentThemeColors.text, backgroundColor: currentThemeColors.inputBg, fontSize: 15, lineHeight: 20 },
-        actionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: currentThemeColors.border, paddingTop: 15, paddingBottom:15, paddingHorizontal: 20 },
-        editButton: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: currentThemeColors.card, borderRadius: 5, minWidth: 80, alignItems:'center' },
-        saveButton: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: currentThemeColors.primary, borderRadius: 5, minWidth: 80, alignItems:'center' },
-        cancelButton: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: currentThemeColors.card, borderRadius: 5, minWidth: 80, alignItems:'center' },
-    });
+        );
+    };
 
     const listName = useMemo(() => lists.find(l => l.id === internalCard?.listId)?.name || 'Unknown List', [lists, internalCard?.listId]);
 
@@ -790,75 +813,222 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         return safeMembers.filter(m => !internalCard.assignedTo?.includes(m.id));
     }, [internalCard?.assignedTo, safeMembers]);
 
+    // 1. Add completed state to the card (local state for now)
+    const [completed, setCompleted] = useState(false);
+    const [addMenuVisible, setAddMenuVisible] = useState(false);
+    useEffect(() => { setCompleted(!!internalCard?.completed); }, [internalCard]);
+
+    // Add a helper to get all images for the card
+    const cardImages = useMemo(() => {
+        if (internalCard?.images && Array.isArray(internalCard.images) && internalCard.images.length > 0) {
+            return internalCard.images;
+        }
+        if (internalCard?.imageUrl) {
+            return [internalCard.imageUrl];
+        }
+        if (editedImageUri) {
+            return [editedImageUri];
+        }
+        return [];
+    }, [internalCard, editedImageUri]);
+    const [carouselIndex, setCarouselIndex] = useState(0);
+
+    // Move parseDate inside the component
+    const parseDate = (dateValue: string | CustomTimestamp | undefined | null): Date | null => {
+        if (!dateValue) return null;
+        if (typeof dateValue === 'string') return new Date(dateValue);
+        if (dateValue && typeof (dateValue as CustomTimestamp).toDate === 'function') {
+            return (dateValue as CustomTimestamp).toDate();
+        }
+        return null;
+    };
+
+    // State for toggling activity log visibility
+    const [showActivity, setShowActivity] = useState(true);
+
     if (!internalCard) return null;
 
     const currentList = lists.find(l => l.id === internalCard.listId);
 
+    // 2. Add addMenu state for the '+ Add' menu
+    const addMenuOptions = [
+        { label: 'Dates', icon: 'calendar-outline', onPress: () => {/* TODO: open date picker */} },
+        { label: 'Checklist', icon: 'checkbox-outline', onPress: () => {/* TODO: open checklist add */} },
+        { label: 'Members', icon: 'person-outline', onPress: handleOpenMemberEditor },
+        { label: 'Attachment', icon: 'attach-outline', onPress: () => {/* TODO: open attachment add */} },
+    ];
+
     return (
         <Modal transparent={true} visible={isVisible} animationType="fade" onRequestClose={onClose}>
-            <View style={styles.overlay}>
-                <View style={styles.panel}>
-                    <View style={styles.modalHeader}>
-                        {editingTitleState ? (
-                            <TextInput style={styles.input} value={editedTitle} onChangeText={setEditedTitle} placeholder="Card Title" onBlur={handleSaveTitle} autoFocus placeholderTextColor={currentThemeColors.textSecondary}/>
-                        ) : (
-                            <Pressable onPress={handleEditTitle} style={{flex:1}}><Text style={styles.title}>{internalCard.title}</Text></Pressable>
-                        )}
-                        <Pressable onPress={onClose} style={styles.deleteButton}>
-                            <Ionicons name="close-circle-outline" size={30} color={currentThemeColors.textSecondary} />
-                        </Pressable>
-                    </View>
-
-                    <ScrollView style={styles.modalContent}>
-                        {!isAnyFieldEditing && (<View style={{marginBottom: 15}}><Text style={{fontSize: 13, color: currentThemeColors.textSecondary}}>in list <Text style={{fontWeight:'bold'}}>{listName}</Text></Text></View>)}
-
-                        {(internalCard.labels?.length || showEditControlsForOtherSections) && (
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Labels</Text>
-                                <View style={styles.labelsContainer}>
-                                    {internalCard.labels?.map(label => (<View key={label.id} style={[styles.labelChip, { backgroundColor: label.color || currentThemeColors.primary }]}><Text style={styles.labelText}>{label.name}</Text></View>))}
-                                    {showEditControlsForOtherSections && !internalCard.labels?.length && <Text style={styles.imagePlaceholderText}>No labels.</Text>}
+            <LinearGradient
+                colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+                locations={[0, 0.2, 0.5, 0.8, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+            >
+                <View style={[styles.panel, { backgroundColor: 'rgba(20,22,30,0.98)' }]}> 
+                <ScrollView style={[styles.modalContent,{padding:0}]}>
+                    {cardImages.length > 0 && (
+                        <View style={{ position: 'relative', marginBottom: 6,padding:0 }}>
+                            
+                                {cardImages.map((img: string, idx: number) => (
+                                    <Image
+                                        key={img + idx}
+                                        source={{ uri: img }}
+                                        style={{
+                                            width: '100%',
+                                            height: 180,
+                                            borderTopLeftRadius: 10,
+                                            borderTopRightRadius: 10,
+                                            borderBottomLeftRadius: 0,
+                                            borderBottomRightRadius: 0,
+                                            marginRight: 0,
+                                            alignSelf: 'stretch',
+                                        }}
+                                        resizeMode="cover"
+                                    />
+                                ))}
+                           
+                            {/* Add/Edit image button (pencil if image exists, plus if not) */}
+                            <Pressable onPress={pickImage} style={{ position: 'absolute', top: 8, right: 40, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 16, padding: 4 }}>
+                                <Ionicons name={cardImages.length > 0 ? 'pencil' : 'add'} size={20} color="#fff" />
+                            </Pressable>
+                            {/* Carousel indicators */}
+                            {cardImages.length > 1 && (
+                                <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
+                                    {cardImages.map((_: string, idx: number) => (
+                                        <View key={idx} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: carouselIndex === idx ? '#fff' : 'rgba(255,255,255,0.3)', marginHorizontal: 3 }} />
+                                    ))}
                                 </View>
-                                {showEditControlsForOtherSections && (<Pressable onPress={handleOpenLabelEditor} style={styles.addLabelButton}><Text style={styles.addLabelButtonText}>Add/Edit Labels...</Text></Pressable>)}
+                            )}
+                        </View>
+                    )}
+                    <View style={[styles.modalHeader, { borderBottomColor: 'rgba(255,255,255,0.08)',padding:6 }]}> 
+                        <Pressable
+                            onPress={async () => {
+                                const newCompleted = !completed;
+                                setCompleted(newCompleted);
+                                if (internalCard) {
+                                    const currentUser = user;
+                                    const activity: ActivityData = {
+                                        id: uuidv4(),
+                                        text: newCompleted ? 'marked this card as complete' : 'marked this card as incomplete',
+                                        date: new Date().toISOString(),
+                                    };
+                                    const updatedActivity = [...(internalCard.activity || []), activity];
+                                    await onUpdateCard(internalCard.id, internalCard.listId, { completed: newCompleted, activity: updatedActivity });
+                                    setInternalCard(prev => prev ? { ...prev, completed: newCompleted, activity: updatedActivity } : null);
+                                }
+                            }}
+                            style={{ marginRight: 12 }}
+                            accessibilityLabel={completed ? 'Mark incomplete' : 'Mark complete'}
+                            accessibilityRole="button"
+                        >
+                            <Ionicons name={completed ? 'checkmark-circle' : 'ellipse-outline'} size={28} color={completed ? '#4caf50' : '#bdbdbd'} />
+                        </Pressable>
+                        {editingTitleState ? (
+                            <TextInput style={[styles.input, { color: '#fff', fontWeight: 'bold', fontSize: 24, flex: 1 }]} value={editedTitle} onChangeText={setEditedTitle} placeholder="Card Title" onBlur={handleSaveTitle} autoFocus placeholderTextColor={currentThemeColors.textSecondary}/>
+                        ) : (
+                            <Pressable onPress={handleEditTitle} style={{flex:1}}>
+                                <Text style={[styles.title, completed && { textDecorationLine: 'line-through', color: currentThemeColors.textSecondary }]}>{internalCard.title}</Text>
+                            </Pressable>
+                        )}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Pressable onPress={handleEditTitle} style={{ marginRight: 8 }}>
+                                <Ionicons name="pencil" size={22} color="#bdbdbd" />
+                            </Pressable>
+                            <Pressable onPress={handleDelete} style={{ marginRight: 8 }}>
+                                <Ionicons name="trash" size={22} color="#e57373" style={{ textShadowColor: '#000', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
+                            </Pressable>
+                            <Pressable onPress={onClose} style={{ padding: 4 }}>
+                                <Ionicons name="close" size={22} color="#bdbdbd" />
+                            </Pressable>
+                        </View>
+                    </View>
+                    <View style={{ marginBottom: 18, marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}>
+                        <Pressable onPress={() => setAddMenuVisible(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#23272f', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 18, marginTop: 2, marginBottom: 2 }}>
+                            <Ionicons name="add" size={22} color="#fff" style={{ marginRight: 6 }} />
+                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Add</Text>
+                        </Pressable>
+                        {/* Due date pill to the right of Add button */}
+                        {selectedDueDate && (
+                            <View style={{ marginLeft: 12, alignItems: 'flex-start' }}>
+                                <Text style={{ color: currentThemeColors.textSecondary, fontSize: 13, marginBottom: 2 }}>Due date</Text>
+                                <Pressable
+                                    onPress={() => setShowDatePicker(true)}
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        backgroundColor: '#23272f',
+                                        borderRadius: 8,
+                                        paddingVertical: 7,
+                                        paddingHorizontal: 14,
+                                    }}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15, marginRight: 4 }}>
+                                        {selectedDueDate.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={18} color="#bdbdbd" />
+                                </Pressable>
+                            </View>
+                        )}
+                    </View>
+                    
+                        {(internalCard.labels?.length || showEditControlsForOtherSections || true) && (
+                            <View style={styles.section}>
+                                <View style={[styles.labelsContainer, { flexDirection: 'row', alignItems: 'center',paddingHorizontal:6 }]}> 
+                                    {internalCard.labels?.map(label => (
+                                        <View key={label.id} style={[styles.labelChip, { backgroundColor: label.color || currentThemeColors.primary }]}> 
+                                            <Text style={styles.labelText}>{label.name}</Text>
+                                        </View>
+                                    ))}
+                                    {/* Always show the + button beside the labels */}
+                                    <Pressable onPress={handleOpenLabelEditor} style={{ marginLeft: 4, borderWidth: 1, borderColor: '#fff', borderRadius: 6, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' }}>
+                                        <Ionicons name="add" size={20} color="#fff" />
+                                    </Pressable>
+                                </View>
                             </View>
                         )}
 
                         {(internalCard.members?.length || showEditControlsForOtherSections) && (
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Members</Text>
-                                <View style={styles.membersContainer}>
-                                    {internalCard.members?.map(member => (<View key={member.id} style={styles.memberChip}><View style={styles.avatarPlaceholder}><Text style={styles.avatarText}>{member.avatarInitials || 'N/A'}</Text></View><Text style={styles.memberName}>{member.name}</Text></View>))}
-                                    {showEditControlsForOtherSections && !internalCard.members?.length && <Text style={styles.imagePlaceholderText}>No members.</Text>}
+                            <View style={[styles.section,{paddingHorizontal:10}]}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8,padding:6 }}>
+                                    <Text style={styles.sectionTitle}>Members</Text>
+                                    {/* + button for adding members */}
+                                    <Pressable onPress={handleOpenMemberEditor} style={{ marginLeft: 4, borderWidth: 1, borderColor: '#fff', borderRadius: 6, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' }}>
+                                        <Ionicons name="add" size={20} color="#fff" />
+                                    </Pressable>
                                 </View>
-                                {showEditControlsForOtherSections && (<Pressable onPress={handleOpenMemberEditor} style={styles.addMemberButton}><Text style={styles.addMemberButtonText}>Add/Edit Members...</Text></Pressable>)}
+                                <View style={styles.membersContainer}>
+                                    {internalCard.members?.map(member => (
+                                        <View key={member.id} style={styles.memberChip}>
+                                            <View style={styles.avatarPlaceholder}><Text style={styles.avatarText}>{member.avatarInitials || 'N/A'}</Text></View><Text style={styles.memberName}>{member.name}</Text>
+                                        </View>
+                                    ))}
+                                </View>
                             </View>
                         )}
                         
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Image</Text>
-                            {showEditControlsForOtherSections ? (
-                                <React.Fragment>
-                                    {editedImageUri ? <Image source={{ uri: editedImageUri }} style={styles.imagePreview} resizeMode="cover"/> : <View style={[styles.imagePreview, {justifyContent:'center', alignItems:'center'}]}><Text style={styles.imagePlaceholderText}>No Image</Text></View>}
-                                    <View style={styles.imageButtonsContainer}>
-                                        <Pressable onPress={pickImage} style={[styles.imageButton, styles.pickImageButton]}><Text style={styles.primaryButtonText}>Pick</Text></Pressable>
-                                        {editedImageUri && <Pressable onPress={handleRemoveImage} style={[styles.imageButton, styles.removeImageButton]}><Text style={styles.deleteButtonText}>Remove</Text></Pressable>}
-                                    </View>
-                                </React.Fragment>
-                            ) : ( internalCard.imageUrl ? <Image source={{ uri: internalCard.imageUrl }} style={styles.imagePreview} resizeMode="cover"/> : <Text style={styles.imagePlaceholderText}>No image.</Text> )}
-                            {isImageUploading && <ActivityIndicator size="large" color={currentThemeColors.primary} style={styles.uploadingIndicator} />}
-                        </View>
-
-                        <View style={styles.section}>
+                        <View style={[styles.section,{paddingHorizontal:10}]}>
                             <Text style={styles.sectionTitle}>Description</Text>
                             <View style={styles.sectionContentRow}>
-                                <Ionicons name="document-text-outline" size={20} color={currentThemeColors.iconDefault} />
-                                {editingDescription ? (
+                                {(!internalCard?.description && !editedDescription) ? (
+                                    <TextInput
+                                        style={[styles.input, { flex: 1, minHeight: 40, color: '#fff' }]}
+                                        placeholder="Add description..."
+                                        value={editedDescription}
+                                        onChangeText={setEditedDescription}
+                                        onBlur={handleSaveAll}
+                                        placeholderTextColor={currentThemeColors.textSecondary}
+                                    />
+                                ) : editingDescription ? (
                                     <View style={{ flex: 1 }}>
                                         <Editor
                                             ref={editorRef}
-                                            list={mentionSuggestions} 
-                                            initialValue={editedDescription} 
-                                            onChange={onDescriptionChange} 
+                                            list={mentionSuggestions}
+                                            initialValue={editedDescription}
+                                            onChange={onDescriptionChange}
                                             placeholder="Add description... @prop #container"
                                             editorStyles={{
                                                 input: { ...styles.input, color: currentThemeColors.text, padding: 8 },
@@ -872,30 +1042,27 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                     </View>
                                 ) : (
                                     <Pressable onPress={handleEditDescription} style={{ flex: 1 }}>
-                                        {parsedDescription && parsedDescription.length > 0 ? 
-                                            <View>{parsedDescription}</View> : 
+                                        {parsedDescription && parsedDescription.length > 0 ?
+                                            <View>{parsedDescription}</View> :
                                             <Text style={styles.descriptionText}>{internalCard?.description || 'Add description...'}</Text>}
                                     </Pressable>
                                 )}
                             </View>
                         </View>
 
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Due Date</Text>
-                            {showEditControlsForOtherSections ? (<Pressable onPress={() => setShowDatePicker(true)} style={styles.datePickerButton}><Text style={styles.dateText}>{selectedDueDate ? selectedDueDate.toLocaleDateString() : 'Set Date'}</Text></Pressable>) : (<Text style={styles.dateText}>{selectedDueDate ? selectedDueDate.toLocaleDateString() : 'No date'}</Text>)}
-                            {showEditControlsForOtherSections && selectedDueDate && (<Pressable onPress={() => setSelectedDueDate(null)} style={styles.removeDateButton}><Text style={styles.removeDateText}>Remove</Text></Pressable>)}
-                            {showDatePicker && (<DateTimePicker value={selectedDueDate || new Date()} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={onDateChange}/>)}
-                        </View>
-                        
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Link URL</Text>
-                            {showEditControlsForOtherSections ? (<TextInput style={styles.linkInput} value={editedLinkUrl} onChangeText={setEditedLinkUrl} placeholder="https://..." keyboardType="url" autoCapitalize="none" placeholderTextColor={currentThemeColors.textSecondary}/>)
-                            : internalCard.linkUrl ? (<Pressable onPress={async () => { if (internalCard.linkUrl) { try { if(await Linking.canOpenURL(internalCard.linkUrl)) await Linking.openURL(internalCard.linkUrl); else Alert.alert("Error", `Cannot open: ${internalCard.linkUrl}`); } catch (e) { Alert.alert("Error", "Link error."); } } }}><Text style={{color: currentThemeColors.primary}}>{internalCard.linkUrl}</Text></Pressable>)
-                            : (<Text style={styles.imagePlaceholderText}>No link.</Text>)}
+                        <View style={[styles.section,{paddingHorizontal:10}]}>
+                            <Text style={styles.sectionTitle}><Ionicons name="link" size={18} color="#fff" /> Link</Text>
+                            {showEditControlsForOtherSections ? (
+                                <TextInput style={styles.linkInput} value={editedLinkUrl} onChangeText={setEditedLinkUrl} placeholder="https://..." keyboardType="url" autoCapitalize="none" placeholderTextColor={currentThemeColors.textSecondary}/>
+                            ) : (
+                                internalCard.linkUrl ? (
+                                    <Pressable onPress={async () => { if (internalCard.linkUrl) { try { if(await Linking.canOpenURL(internalCard.linkUrl)) await Linking.openURL(internalCard.linkUrl); else Alert.alert("Error", `Cannot open: ${internalCard.linkUrl}`); } catch (e) { Alert.alert("Error", "Link error."); } } }}><Text style={{color: currentThemeColors.primary}}>{internalCard.linkUrl}</Text></Pressable>
+                                ) : null
+                            )}
                         </View>
 
                         {showEditControlsForOtherSections && (
-                            <View style={[styles.section, styles.pickerSection]}>
+                            <View style={[styles.section, styles.pickerSection,{paddingHorizontal:10}]}>
                                 <Ionicons name="move" size={20} color={currentThemeColors.textSecondary} style={styles.icon} />
                                 <View style={styles.pickerContainer}>
                                     <Picker
@@ -918,7 +1085,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             </View>
                         )}
 
-                        <View style={styles.section}>
+                        <View style={[styles.section,{paddingHorizontal:10}]}>
                             <Text style={styles.sectionTitle}>Checklists</Text>
                             {showEditControlsForOtherSections && (<View style={styles.checklistInputContainer}><TextInput style={styles.checklistInput} placeholder="New Checklist" value={newChecklistTitle} onChangeText={setNewChecklistTitle} placeholderTextColor={currentThemeColors.textSecondary}/><TouchableOpacity onPress={handleAddChecklist} style={styles.checklistAddButton}><Text style={styles.checklistAddButtonText}>Add</Text></TouchableOpacity></View>)}
                             {(internalCard?.checklists || []).map(cl => { const comp = cl.items.filter(i=>i.completed).length; const tot = cl.items.length; const prog = tot>0?(comp/tot)*100:0; return (
@@ -932,8 +1099,8 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             {!internalCard?.checklists?.length && <Text style={styles.imagePlaceholderText}>{showEditControlsForOtherSections ? 'No checklists.': 'No checklists.'}</Text>}
                         </View>
 
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Attachments</Text>
+                        <View style={[styles.section,{paddingHorizontal:10}]}>
+                            <Text style={styles.sectionTitle}><Ionicons name="attach-outline" size={20} color="#fff" />Attachments</Text>
                             {showEditControlsForOtherSections && (<TouchableOpacity onPress={handleAddAttachment} style={styles.addAttachmentButton}><Ionicons name="attach-outline" size={20} color={currentThemeColors.text} /><Text style={styles.addAttachmentButtonText}>Add Link</Text></TouchableOpacity>)}
                              {attachmentError && showEditControlsForOtherSections && <Text style={styles.attachmentErrorText}>{attachmentError}</Text>}
                             {(internalCard?.attachments || []).map(att => { const stat=attachmentValidationStatus[att.id]|| 'idle'; let icon:any='document-text-outline'; if(att.type==='image')icon='image-outline';else if(att.type==='video')icon='film-outline';else if(att.url?.match(/youtube|youtu.be|vimeo/))icon='logo-youtube'; return (
@@ -945,30 +1112,41 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                     {showEditControlsForOtherSections&&(<Pressable onPress={()=>handleRemoveAttachment(att.id)} style={{alignSelf:'flex-end',padding:5}}><Ionicons name="trash-bin-outline" size={20} color={currentThemeColors.error}/></Pressable>)}
                                 </View>
                             );})}
-                            {!internalCard?.attachments?.length && <Text style={styles.imagePlaceholderText}>{showEditControlsForOtherSections? 'No attachments.': 'No attachments.'}</Text>}
+
                         </View>
 
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Comments</Text>
+                        <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 18,paddingHorizontal:10 }} />
+                        <View style={[styles.section,{paddingHorizontal:10}]}>
+                            <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                                <Text style={styles.sectionTitle}><Ionicons name="newspaper-outline" size={15} color="#fff" /> Comments and activity</Text>
+                                <Pressable onPress={() => setShowActivity(v => !v)} style={{paddingHorizontal:10,paddingVertical:4}}>
+                                    <Text style={{color: currentThemeColors.primary, fontWeight:'bold'}}>{showActivity ? 'Hide details' : 'Show details'}</Text>
+                                </Pressable>
+                            </View>
                             <View style={styles.commentInputContainer}><TextInput style={[styles.commentInput,(!isFirebaseInitialized||firebaseError)&&styles.disabledInput]} placeholder={isFirebaseInitialized? "Comment...": "Initializing..."} value={newCommentText} onChangeText={setNewCommentText} multiline editable={isFirebaseInitialized&&!firebaseError} placeholderTextColor={currentThemeColors.textSecondary}/><TouchableOpacity onPress={handleAddComment} style={[styles.commentPostButton,(!isFirebaseInitialized||firebaseError)&&styles.disabledButton]} disabled={!isFirebaseInitialized||!!firebaseError}><Text style={styles.commentPostButtonText}>Post</Text></TouchableOpacity></View>
-                            <View style={styles.commentListContainer}>{(internalCard?.comments?.length)?([...internalCard.comments].sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime()).map(c=>(<View key={c.id}>{renderCommentItem({item:c})}</View>))):(<Text style={styles.imagePlaceholderText}>No comments.</Text>)}</View>
+                            <View style={styles.commentListContainer}>
+                                {(() => {
+                                    let items: (CommentData | ActivityData)[] = [];
+                                    if (showActivity) {
+                                        items = [ ...(internalCard?.activity || []), ...(internalCard?.comments || []) ];
+                                    } else {
+                                        items = [ ...(internalCard?.comments || []) ];
+                                    }
+                                    if (!items.length) return <Text style={styles.imagePlaceholderText}>{showActivity ? 'No comments or activity.' : 'No comments.'}</Text>;
+                                    return items
+                                        .sort((a, b) => {
+                                            const dateA = (a as any).createdAt || (a as any).date;
+                                            const dateB = (b as any).createdAt || (b as any).date;
+                                            return new Date(dateB).getTime() - new Date(dateA).getTime();
+                                        })
+                                        .map(item => <View key={item.id}>{renderActivityOrCommentItem({ item })}</View>);
+                                })()}
+                            </View>
                         </View>
 
                     </ScrollView>
-
-                    <View style={styles.actionsRow}>
-                        {isAnyFieldEditing ? (
-                            <View style={{flexDirection:'row', justifyContent: 'flex-start', flex:1, gap: 10}}>
-                                <Pressable onPress={handleSaveAll} style={styles.saveButton}><Text style={styles.primaryButtonText}>Save All</Text></Pressable>
-                                <Pressable onPress={() => resetLocalStateAndEditingModes(internalCard)} style={styles.cancelButton}><Text style={styles.secondaryButtonText}>Cancel</Text></Pressable>
-                            </View>
-                        ) : (
-                            <Pressable onPress={() => { setEditingTitleState(true); setEditingDescription(true); }} style={styles.editButton}><Text style={styles.secondaryButtonText}>Edit Card</Text></Pressable>
-                        )}
-                        <Pressable onPress={handleDelete} style={[styles.deleteButton, {marginLeft: isAnyFieldEditing ? 0: 10}]}><Text style={styles.deleteButtonText}>Delete</Text></Pressable>
-                    </View>
                 </View>
-            </View>
+            </LinearGradient>
             {showLabelPicker && (
                 <LabelPicker
                     isVisible={showLabelPicker}
@@ -989,6 +1167,33 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                     onClose={() => setShowMemberPickerModal(false)}
                     onSaveMembers={handleMemberPickerSave}
                 />
+            )}
+            {addMenuVisible && (
+                <Modal transparent animationType="fade" visible={addMenuVisible} onRequestClose={() => setAddMenuVisible(false)}>
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ backgroundColor: '#23272f', borderRadius: 18, padding: 18, width: 320, maxWidth: '90%' }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Add to card</Text>
+                                <Pressable onPress={() => setAddMenuVisible(false)}>
+                                    <Ionicons name="close" size={22} color="#bdbdbd" />
+                                </Pressable>
+                            </View>
+                            {addMenuOptions.map(opt => (
+                                <Pressable key={opt.label} onPress={() => { setAddMenuVisible(false); opt.onPress(); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderRadius: 8, marginBottom: 2 }}>
+                                    <Ionicons name={opt.icon as any} size={22} color="#bdbdbd" style={{ marginRight: 14 }} />
+                                    <View>
+                                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{opt.label}</Text>
+                                        {/* Optionally add a subtitle here */}
+                                    </View>
+                                </Pressable>
+                            ))}
+                        </View>
+                    </View>
+                </Modal>
+            )}
+            {/* Date picker modal still works as before */}
+            {showDatePicker && (
+                <DateTimePicker value={selectedDueDate || new Date()} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={onDateChange}/>
             )}
         </Modal>
     );

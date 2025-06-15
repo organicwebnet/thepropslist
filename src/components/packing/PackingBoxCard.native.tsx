@@ -41,21 +41,26 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
 
   const updatedAt = box.updatedAt;
   let timeAgo = 'Just now';
-  if (updatedAt && updatedAt instanceof Timestamp) {
+  if (updatedAt && typeof (updatedAt as any).toDate === 'function') {
     try {
-      timeAgo = formatDistanceToNow(updatedAt.toDate(), { addSuffix: true });
-    } catch (e) { /* ignore */ }
-  } else if (updatedAt && updatedAt instanceof Date) {
-      try {
-        timeAgo = formatDistanceToNow(updatedAt, { addSuffix: true });
-      } catch (e) { /* ignore */ }
+      timeAgo = formatDistanceToNow((updatedAt as any).toDate(), { addSuffix: true });
+    } catch {
+      timeAgo = 'Invalid date';
+    }
+  } else if (updatedAt instanceof Date) {
+    try {
+      timeAgo = formatDistanceToNow(updatedAt, { addSuffix: true });
+    } catch {
+      timeAgo = 'Invalid date';
+    }
   } else if (typeof updatedAt === 'string') {
-      try {
-          const date = new Date(updatedAt);
-          if (!isNaN(date.getTime())) {
-              timeAgo = formatDistanceToNow(date, { addSuffix: true });
-          }
-      } catch(e) { /* ignore */ }
+    try {
+      const date = new Date(updatedAt);
+      if (!isNaN(date.getTime())) timeAgo = formatDistanceToNow(date, { addSuffix: true });
+      else timeAgo = 'Invalid date string';
+    } catch {
+      timeAgo = 'Invalid date format';
+    }
   }
   
   const totalWeightKg = box.props?.reduce((sum, p) => sum + (p.weight || 0), 0) ?? 0;

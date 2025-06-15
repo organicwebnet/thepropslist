@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext.tsx';
 import { User } from 'firebase/auth';
 import { lightTheme, darkTheme } from '../styles/theme.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function PropDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -633,54 +634,62 @@ export default function PropDetailPage() {
     );
   } else {
     return (
-      <ScrollView style={styles.containerMobile}>
-        <View style={styles.backButtonMobile}>
-          <TouchableOpacity onPress={() => router.push('/props')}>
-            <Text style={styles.backButtonTextMobile}>Back to Props</Text>
-          </TouchableOpacity>
-        </View>
-        {prop.images && prop.images.length > 0 ? (
-          <Image 
-            source={{ uri: prop.images[0].url }} 
-            style={styles.imageMobile} 
-            resizeMode="contain"
-            onError={(e) => console.error("Mobile Image Load Error:", e.nativeEvent.error)}
-          />
-        ) : (
-          <View style={styles.imagePlaceholderMobile}>
-            <Text>No Image</Text>
-          </View>
-        )}
-        <View style={styles.headerMobile}>
-          <Text style={styles.titleMobile}>{prop.name}</Text>
-          <View style={styles.actionsMobile}>
-            <TouchableOpacity onPress={() => setIsEditing(true)}>
-              <EditNative size={24} color="#BB86FC" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleDeleteProp} style={{ marginLeft: 12 }}>
-              <Trash2Native size={24} color="#CF6679" />
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.containerMobile}>
+          <View style={styles.backButtonMobile}>
+            <TouchableOpacity onPress={() => router.push('/props')}>
+              <Text style={styles.backButtonTextMobile}>Back to Props</Text>
             </TouchableOpacity>
           </View>
+          {prop.images && prop.images.length > 0 ? (
+            <Image 
+              source={{ uri: prop.images[0].url }} 
+              style={styles.imageMobile} 
+              resizeMode="contain"
+              onError={(e) => console.error("Mobile Image Load Error:", e.nativeEvent.error)}
+            />
+          ) : (
+            <View style={styles.imagePlaceholderMobile}>
+              <Text>No Image</Text>
+            </View>
+          )}
+          <View style={styles.headerMobile}>
+            <Text style={styles.titleMobile}>{prop.name}</Text>
+            <View style={styles.actionsMobile}>
+              <TouchableOpacity onPress={() => setIsEditing(true)}>
+                <EditNative size={24} color="#BB86FC" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDeleteProp} style={{ marginLeft: 12 }}>
+                <Trash2Native size={24} color="#CF6679" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.detailsSectionMobile}>
+            <Text style={styles.detailLabelMobile}>Category:</Text>
+            <Text style={styles.detailValueMobile}>{prop.category}</Text>
+            {/* Dimensions */}
+            {dimensionsText ? <Text style={styles.detailValueMobile}>Dimensions: {dimensionsText}</Text> : null}
+            {/* Price */}
+            {prop.price != null ? <Text style={styles.detailValueMobile}>Price: £{prop.price.toFixed(2)}</Text> : null}
+          </View>
         </View>
-        <View style={styles.detailsSectionMobile}>
-          <Text style={styles.detailLabelMobile}>Category:</Text>
-          <Text style={styles.detailValueMobile}>{prop.category}</Text>
-          {/* Dimensions */}
-          {dimensionsText ? <Text style={styles.detailValueMobile}>Dimensions: {dimensionsText}</Text> : null}
-          {/* Price */}
-          {prop.price != null ? <Text style={styles.detailValueMobile}>Price: £{prop.price.toFixed(2)}</Text> : null}
-        </View>
-      </ScrollView>
+      </LinearGradient>
     );
   }
 }
 
 const styles = StyleSheet.create({
-  containerMobile: { flex: 1, padding: 16, backgroundColor: '#121212' },
+  containerMobile: { flex: 1, padding: 16, backgroundColor: 'rgba(30,30,30,0.7)' },
   backButtonMobile: { marginBottom: 16, padding: 8, alignSelf: 'flex-start' },
   backButtonTextMobile: { color: '#BB86FC', fontSize: 16 },
-  imageMobile: { width: '100%', height: 250, marginBottom: 16, backgroundColor: '#333', borderRadius: 8 },
-  imagePlaceholderMobile: { width: '100%', height: 250, marginBottom: 16, backgroundColor: '#333', alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
+  imageMobile: { width: '100%', height: 250, marginBottom: 16, backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 8 },
+  imagePlaceholderMobile: { width: '100%', height: 250, marginBottom: 16, backgroundColor: 'rgba(30,30,30,0.7)', alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   headerMobile: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   titleMobile: { fontSize: 24, fontWeight: 'bold', color: '#fff', flexShrink: 1, marginRight: 8 },
   actionsMobile: { flexDirection: 'row' },

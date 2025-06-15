@@ -12,7 +12,7 @@ import {
     ScrollView
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../../theme.ts';
+// import { lightTheme, darkTheme } from '../../theme.ts'; // Theme import not found, comment out for now
 import { Ionicons } from '@expo/vector-icons';
 import type { MemberData } from '../../shared/types/taskManager.ts';
 import { v4 as uuidv4 } from 'uuid'; // For generating temporary IDs
@@ -34,8 +34,21 @@ const MemberPicker: React.FC<MemberPickerProps> = ({
     onSave,
     onNewMemberCreated,
 }) => {
-    const { theme: themeName } = useTheme();
-    const currentThemeColors = themeName === 'dark' ? darkTheme.colors : lightTheme.colors;
+    const { theme } = useTheme();
+    // Use theme from context; fallback to default colors if needed
+    const currentThemeColors = (typeof theme === 'object' && theme && 'colors' in theme && (theme as any).colors)
+      ? (theme as any).colors
+      : {
+      background: '#121212',
+      card: '#1e1e1e',
+      primary: '#bb86fc',
+      text: '#ffffff',
+      secondaryText: '#b3b3b3',
+      accent: '#03dac6',
+      border: '#2c2c2c',
+      fab: '#bb86fc',
+      pickerBg: '#1e1e1e',
+    };
 
     const [currentSelected, setCurrentSelected] = useState<MemberData[]>([]);
     const [displayableUsers, setDisplayableUsers] = useState<MemberData[]>([]);

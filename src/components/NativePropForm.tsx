@@ -126,7 +126,7 @@ export function NativePropForm({
       return null;
     }
     const filename = `props_images/${uuidv4()}-${uri.substring(uri.lastIndexOf('/') + 1)}`;
-    const reference = firebaseService.storage().ref(filename);
+    const reference = firebaseService.storage.ref(filename);
     
     try {
       const task = reference.putFile(uri);

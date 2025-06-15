@@ -53,6 +53,7 @@ export interface Show {
   createdAt: string | CustomTimestamp;
   updatedAt: string | CustomTimestamp;
   collaborators: ShowCollaborator[];
+  team?: { uid: string; role: 'editor' | 'viewer' }[];
   stageManager: string;
   stageManagerEmail: string;
   stageManagerPhone?: string;

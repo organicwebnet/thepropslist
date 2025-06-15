@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, Share } from 'reac
 import { PackingContainer } from '../../../shared/services/inventory/packListService.ts';
 import { PrintLabelButton } from '../../../shared/components/PropCard/PrintLabelButton.tsx';
 import { PackingBoxCardBaseProps, PackingBoxState, generateContainerUrl, calculateIsHeavy } from '../../../shared/types/packing.ts';
+import LinearGradient from 'react-native-linear-gradient';
 
 export const PackingBoxCardMobile: React.FC<PackingBoxCardBaseProps> = ({
   container,
@@ -54,13 +55,22 @@ export const PackingBoxCardMobile: React.FC<PackingBoxCardBaseProps> = ({
   const isHeavy = calculateIsHeavy(container);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>{container.name}</Text>
-          <Text style={styles.subtitle}>Status: {container.status}</Text>
-          <Text style={styles.subtitle}>Props: {container.props.length}</Text>
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ borderRadius: 8, marginVertical: 8, marginHorizontal: 16 }}
+    >
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>{container.name}</Text>
+            <Text style={styles.subtitle}>Status: {container.status}</Text>
+            <Text style={styles.subtitle}>Props: {container.props.length}</Text>
+          </View>
         </View>
+
         <View style={styles.buttonContainer}>
           <PrintLabelButton
             label={label}
@@ -80,69 +90,69 @@ export const PackingBoxCardMobile: React.FC<PackingBoxCardBaseProps> = ({
             <Text style={styles.buttonText}>Scan</Text>
           </TouchableOpacity>
         </View>
-      </View>
 
-      {container.labels.length > 0 && (
-        <View style={styles.labelsContainer}>
-          {container.labels.map((label: string) => (
-            <View key={label} style={styles.label}>
-              <Text style={styles.labelText}>{label}</Text>
-            </View>
-          ))}
+        {container.labels.length > 0 && (
+          <View style={styles.labelsContainer}>
+            {container.labels.map((label: string) => (
+              <View key={label} style={styles.label}>
+                <Text style={styles.labelText}>{label}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {container.description && (
+          <Text style={styles.description}>{container.description}</Text>
+        )}
+
+        <View style={styles.notesContainer}>
+          <Text style={styles.notesLabel}>Notes</Text>
+          <TextInput
+            style={styles.notesInput}
+            value={container.description || ''}
+            onChangeText={onUpdateNotes}
+            placeholder="Add notes about this box..."
+            placeholderTextColor="#666"
+            multiline
+            numberOfLines={3}
+          />
         </View>
-      )}
 
-      {container.description && (
-        <Text style={styles.description}>{container.description}</Text>
-      )}
-
-      <View style={styles.notesContainer}>
-        <Text style={styles.notesLabel}>Notes</Text>
-        <TextInput
-          style={styles.notesInput}
-          value={container.description || ''}
-          onChangeText={onUpdateNotes}
-          placeholder="Add notes about this box..."
-          placeholderTextColor="#666"
-          multiline
-          numberOfLines={3}
-        />
-      </View>
-
-      {container.dimensions && (
-        <Text style={styles.details}>
-          Dimensions: {container.dimensions.width} x {container.dimensions.height} x{' '}
-          {container.dimensions.depth} {container.dimensions.unit}
-        </Text>
-      )}
-
-      {container.maxWeight && (
-        <Text style={styles.details}>
-          Max Weight: {container.maxWeight.value} {container.maxWeight.unit}
-        </Text>
-      )}
-
-      {container.currentWeight && (
-        <View style={styles.weightContainer}>
+        {container.dimensions && (
           <Text style={styles.details}>
-            Current Weight: {container.currentWeight.value} {container.currentWeight.unit}
+            Dimensions: {container.dimensions.width} x {container.dimensions.height} x{' '}
+            {container.dimensions.depth} {container.dimensions.unit}
           </Text>
-          {isHeavy && (
-            <Text style={styles.heavyWarning}>(Heavy)</Text>
-          )}
-        </View>
-      )}
+        )}
 
-      {state.error && (
-        <Text style={styles.error}>{state.error}</Text>
-      )}
-    </View>
+        {container.maxWeight && (
+          <Text style={styles.details}>
+            Max Weight: {container.maxWeight.value} {container.maxWeight.unit}
+          </Text>
+        )}
+
+        {container.currentWeight && (
+          <View style={styles.weightContainer}>
+            <Text style={styles.details}>
+              Current Weight: {container.currentWeight.value} {container.currentWeight.unit}
+            </Text>
+            {isHeavy && (
+              <Text style={styles.heavyWarning}>(Heavy)</Text>
+            )}
+          </View>
+        )}
+
+        {state.error && (
+          <Text style={styles.error}>{state.error}</Text>
+        )}
+      </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(30,30,30,0.7)',
     borderRadius: 8,
     padding: 16,
     marginVertical: 8,
@@ -171,7 +181,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   button: {
-    backgroundColor: '#262626',
+    backgroundColor: 'rgba(30,30,30,0.7)',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
@@ -189,7 +199,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   label: {
-    backgroundColor: '#262626',
+    backgroundColor: 'rgba(30,30,30,0.7)',
     borderRadius: 12,
     paddingVertical: 4,
     paddingHorizontal: 8,
@@ -245,4 +255,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 12,
   },
+  card: { backgroundColor: 'transparent' },
+  overlay: { backgroundColor: 'transparent' },
 }); 

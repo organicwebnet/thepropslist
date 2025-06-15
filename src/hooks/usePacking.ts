@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { Platform } from 'react-native'; // Import Platform
 import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useAuth } from '../contexts/AuthContext.tsx';
 import { PackingBox, PackedProp } from '../types/packing.ts';
 import { FirebaseDocument, CustomFirestore } from '../shared/services/firebase/types.ts'; // Import CustomFirestore
 // Import RN Firebase types if needed for explicit casting, though CustomFirestore should suffice
@@ -41,6 +42,7 @@ export function usePacking(showId?: string): {
   getDocument: (docId: string) => Promise<FirebaseDocument<PackingBox> | null>;
 } {
   const { service } = useFirebase();
+  const { isAdmin } = useAuth();
   const [boxes, setBoxes] = useState<PackingBox[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -56,10 +58,13 @@ export function usePacking(showId?: string): {
     setLoading(true);
     setError(null);
 
-    const queryOptions: QueryOptions = {
-      where: [["showId", "==", showId]],
-      // Add orderBy if needed, e.g., orderBy: [['createdAt', 'desc']]
-    };
+    const queryOptions: QueryOptions = {};
+    
+    // If the user is not an admin, restrict the query to the current show.
+    // Admins will not have this filter, so they will see all boxes.
+    if (!isAdmin) {
+      queryOptions.where = [["showId", "==", showId]];
+    }
 
     const unsubscribe = service.listenToCollection<PackingBox>(
       'packingBoxes',
@@ -95,7 +100,7 @@ export function usePacking(showId?: string): {
         unsubscribe();
       }
     };
-  }, [showId, service]);
+  }, [showId, service, isAdmin]);
 
   const operations: PackingOperations = useMemo(() => ({
     createBox: async (propsToPack: PackedProp[], boxName: string, description = '', actNumber = 0, sceneNumber = 0) => {
@@ -132,9 +137,9 @@ export function usePacking(showId?: string): {
       }
     },
     updateBox: async (boxId, updates) => {
-      if (!service?.setDocument) { // Assuming setDocument for full replace, or updateDocument for partial
-          setError(new Error('Failed to update box: Service not ready.'));
-          return;
+      if (!service?.updateDocument) {
+        setError(new Error('Failed to update box: Service not ready.'));
+        return;
       }
        const dataToUpdateForFirestore = { 
          ...updates, 
@@ -144,8 +149,7 @@ export function usePacking(showId?: string): {
        try {
            // If using setDocument with merge, it's like an upsert or update.
            // If service.updateDocument is preferred for partial updates and handles FieldValue:
-           // await service.updateDocument('packingBoxes', boxId, dataToUpdateForFirestore);
-           await service.setDocument('packingBoxes', boxId, dataToUpdateForFirestore, { merge: true });
+           await service.updateDocument('packingBoxes', boxId, dataToUpdateForFirestore);
        } catch (err) {
            throw err; 
        }

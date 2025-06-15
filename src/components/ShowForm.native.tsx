@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, ScrollView, Switch, Alert, Platform, TouchableOpacity, Image } from 'react-native';
 import { default as DateTimePicker, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index.ts';
 import { Address } from '../shared/types/address.ts';
-import { Timestamp } from 'firebase/firestore'; // Import Timestamp
-import { PlusCircle, MinusCircle } from 'lucide-react-native'; // Import icons
+import { Timestamp } from 'firebase/firestore';
+import { CustomTimestamp } from '../shared/services/firebase/types';
+import { PlusCircle, MinusCircle } from 'lucide-react-native';
 
 interface ShowFormNativeProps {
   mode: 'create' | 'edit';
@@ -64,47 +65,39 @@ const FormField = ({ label, children, required = false }: { label: string, child
 );
 
 // Helper function to format Date objects, Timestamps, or string dates
-const formatDate = (date: Date | Timestamp | string | null | undefined): string => {
+const formatDate = (date: Date | CustomTimestamp | string | null | undefined): string => {
   if (!date) return 'Select Date';
+
+  if (date && typeof (date as any).toDate === 'function') {
+    return (date as any).toDate().toLocaleDateString();
+  }
+
   let dateObj: Date;
-  
-  // Check if it's a Firestore Timestamp
-  if (date instanceof Timestamp) {
-     dateObj = date.toDate();
-  } else if (typeof date === 'string') {
-    // Attempt to parse ISO string or DD-MM-YYYY
-    if (date.includes('-') && date.length >= 10) {
-       const parts = date.split('-');
-       if (parts[0].length === 4) { // Assume YYYY-MM-DD (ISO-like)
-          dateObj = new Date(date);
-       } else if (parts[2].length === 4) { // Assume DD-MM-YYYY
-          dateObj = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-       } else {
-          return 'Invalid Date';
-       }
-    } else {
-       return 'Invalid Date';
-    }
-  } else {
-     // Assume it's already a Date object
+  if (date instanceof Date) {
     dateObj = date;
+  } else if (typeof date === 'string') {
+    // Handle ISO string or other string formats
+    dateObj = new Date(date);
+  } else if (date && typeof (date as any).toDate === 'function') {
+    // Handle Firestore Timestamp-like objects from different SDK versions
+    dateObj = (date as any).toDate();
+  } else {
+    // If it's an unrecognized format, return a fallback string
+    return 'Invalid Date';
   }
 
+  // Check if dateObj is valid before calling toLocaleDateString
   if (isNaN(dateObj.getTime())) {
-      return 'Invalid Date';
+    return 'Invalid Date';
   }
 
-  const day = String(dateObj.getDate()).padStart(2, '0');
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const year = dateObj.getFullYear();
-  return `${day}-${month}-${year}`;
+  return dateObj.toLocaleDateString();
 };
 
 // Helper function to parse string/Timestamp back to Date or return now
 const parseDateString = (dateInput: string | Date | Timestamp | null | undefined): Date => {
    if (dateInput instanceof Date) return dateInput;
-   if (dateInput instanceof Timestamp) return dateInput.toDate();
-   
+   if (dateInput && typeof (dateInput as any).toDate === 'function') return (dateInput as any).toDate();
    if (typeof dateInput === 'string' && dateInput.includes('-') && dateInput.length >= 10) {
       const parts = dateInput.split('-');
       let parsedDate: Date;
@@ -501,8 +494,8 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
   };
 
   return (
-    <View style={styles.formContainer}>
-       {/* Basic Show Info */}
+    <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
+      {/* Basic Show Info */}
       <FormField label="Show Name" required>
         <TextInput
           style={styles.input}
@@ -513,9 +506,16 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
         />
       </FormField>
 
-      <FormField label="Description">
-         {/* Placeholder for WysiwygEditor */}
-         <Text style={styles.placeholderText}>Rich Text Editor (Coming Soon)</Text>
+      <FormField label="Description" required>
+        <TextInput
+          style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]}
+          placeholder="Enter show description"
+          value={formData.description}
+          onChangeText={value => handleInputChange('description', value)}
+          multiline
+          numberOfLines={4}
+          placeholderTextColor="#6b7280"
+        />
       </FormField>
 
       <FormField label="Image URL (Optional Poster/Banner)">
@@ -1019,7 +1019,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
           </View>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 

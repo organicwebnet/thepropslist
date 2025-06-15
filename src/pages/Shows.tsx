@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext.tsx';
 import firestore from '@react-native-firebase/firestore';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function Shows() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -30,42 +31,50 @@ export default function Shows() {
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={shows}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.showCard}
-            onPress={() => handleShowPress(item)}
-          >
-            <Text style={styles.showName}>{item.name}</Text>
-            <Text style={styles.showDescription}>{item.description}</Text>
-            <View style={styles.showMeta}>
-              <Text style={styles.showMetaText}>
-                {item.acts?.length || 0} Acts • {item.productionCompany}
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <FlatList
+          data={shows}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.showCard}
+              onPress={() => handleShowPress(item)}
+            >
+              <Text style={styles.showName}>{item.name}</Text>
+              <Text style={styles.showDescription}>{item.description}</Text>
+              <View style={styles.showMeta}>
+                <Text style={styles.showMetaText}>
+                  {item.acts?.length || 0} Acts • {item.productionCompany}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No shows yet</Text>
+              <Text style={styles.emptySubtext}>
+                Create your first show to get started
               </Text>
             </View>
-          </TouchableOpacity>
-        )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No shows yet</Text>
-            <Text style={styles.emptySubtext}>
-              Create your first show to get started
-            </Text>
-          </View>
-        }
-      />
-    </View>
+          }
+        />
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000'
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     flex: 1,
@@ -78,7 +87,7 @@ const styles = StyleSheet.create({
     flexGrow: 1
   },
   showCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(30,30,30,0.7)',
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,
@@ -121,5 +130,11 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     paddingHorizontal: 32
-  }
+  },
+  anotherContainer: {
+    backgroundColor: 'rgba(30,30,30,0.7)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+  },
 }); 

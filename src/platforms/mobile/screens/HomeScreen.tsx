@@ -1,379 +1,519 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useRouter } from 'expo-router';
-import { useFirebase } from '../../../contexts/FirebaseContext.tsx';
-import type { FirebaseDocument } from '../../../shared/services/firebase/types.ts';
-import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
-
-// Assuming AuthContext.tsx exists in your contexts folder and provides currentUser
-import { useAuth } from '../../../contexts/AuthContext.tsx';
-import { useShows } from '../../../contexts/ShowsContext.tsx';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
+  ScrollView,
+  Image,
+  Modal,
+  TextInput,
+  Button,
+} from 'react-native';
+import { useNavigation, useRouter } from 'expo-router';
+import { FAB } from 'react-native-paper';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useFirebase } from '../../../contexts/FirebaseContext';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useShows } from '../../../contexts/ShowsContext';
+import type { RootStackParamList } from '../../../navigation/types';
+import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import LinearGradient from 'react-native-linear-gradient';
 
-// Define a basic type for TodoBoard for now. This should be refined based on your actual data structure.
-interface TodoBoard {
-  id: string;
-  name: string;
-  ownerId: string;
-  sharedWith?: string[];
-  showId?: string;
-  // ... other properties like createdAt, etc.
-}
-
-// Define a basic type for Task. Refine based on your actual data structure.
-interface Task {
-  id: string;
-  title: string;
-  assignedTo: string; // Assuming this field holds the user UID
-  boardId?: string; // Optional: to link back to a board
-  dueDate?: FirebaseFirestoreTypes.Timestamp | null; // Use Firestore Timestamp
-  // ... other task properties
-}
-
-type RootStackParamList = {
-  Home: undefined;
-  PropsList: undefined;
-  // Potentially add TodoBoardDetail or similar if you navigate to a board
-};
+// Define types locally to avoid import issues
+import type { DocumentData, WhereClause } from '../../../shared/services/firebase/types';
+type TodoBoard = import('../../../shared/types/taskManager').BoardData & DocumentData;
+type Task = import('../../../shared/types/tasks').Task;
+type FirebaseDocument<T extends DocumentData> = import('../../../shared/services/firebase/types').FirebaseDocument<T>;
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+const darkColors = {
+  background: '#121212',
+  card: '#1e1e1e',
+  primary: '#bb86fc',
+  text: '#ffffff',
+  secondaryText: '#b3b3b3',
+  accent: '#03dac6',
+  border: '#2c2c2c',
+  fab: '#bb86fc',
+  pickerBg: '#1e1e1e',
+};
+
+interface InfoCardProps {
+  title: string;
+  data: any[];
+  loading: boolean;
+  error: string | null;
+  onCardPress: (item: any) => void;
+  onSeeAllPress: () => void;
+  renderItem: (item: any) => string;
+  emptyText: string;
+}
+
 export function HomeScreen() {
-  const navigation = useNavigation<HomeScreenNavigationProp>();
   const router = useRouter();
   const { service } = useFirebase();
-  const { user } = useAuth(); // Get user from useAuth()
-  const { shows, selectedShow, setSelectedShow } = useShows();
-  const [showPickerOpen, setShowPickerOpen] = useState(false);
-
+  const { user } = useAuth();
+  const { shows, selectedShow, setSelectedShow, loading: showsLoading } = useShows();
+  
   const [todoBoards, setTodoBoards] = useState<FirebaseDocument<TodoBoard>[]>([]);
   const [loadingBoards, setLoadingBoards] = useState(true);
   const [errorBoards, setErrorBoards] = useState<string | null>(null);
 
-  // New state for tasks
-  const [userTasks, setUserTasks] = useState<FirebaseDocument<Task>[]>([]);
+  const [upcomingTasks, setUpcomingTasks] = useState<FirebaseDocument<Task>[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [errorTasks, setErrorTasks] = useState<string | null>(null);
 
-  // New state for upcoming/overdue tasks
-  const [upcomingOverdueTasks, setUpcomingOverdueTasks] = useState<FirebaseDocument<Task>[]>([]);
-  const [loadingUpcomingOverdue, setLoadingUpcomingOverdue] = useState(true);
-  const [errorUpcomingOverdue, setErrorUpcomingOverdue] = useState<string | null>(null);
+  const filteredBoards = useMemo(() => {
+    return todoBoards.filter(board => board.data?.showId === selectedShow?.id);
+  }, [todoBoards, selectedShow?.id]);
+
+  // Ref to manage nested card listeners to prevent memory leaks
+  const cardListenersRef = useRef(new Map<string, (() => void)[]>());
+
+  // Modal state for board creation
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [newBoardName, setNewBoardName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const isCreatingLock = useRef(false);
+
+  // State for the FAB group
+  const [fabOpen, setFabOpen] = useState(false);
+
+  // Add this state to memoize the date range per selectedShow
+  const [dateRange, setDateRange] = useState<{start: string, end: string} | null>(null);
+
+  const [boardCardCounts, setBoardCardCounts] = useState<Record<string, number>>({});
+
+  const [defaultBoardCreated, setDefaultBoardCreated] = useState<Record<string, boolean>>({});
+  const [boardCreateError, setBoardCreateError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!service || !user?.uid) {
-      setLoadingBoards(false);
-      if (!user?.uid) {
-        setErrorBoards('Not logged in. Cannot fetch todo boards.');
-      }
+    if (!selectedShow?.id) return;
+    const now = new Date();
+    const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    setDateRange({ start: now.toISOString(), end: twoWeeksFromNow.toISOString() });
+  }, [selectedShow?.id]);
+
+  // Board creation handler, now wrapped in useCallback and stabilized with a ref lock
+  const handleCreateBoard = useCallback(async ({ isDefault = false } = {}) => {
+    const boardName = isDefault ? selectedShow?.name || 'Default Board' : newBoardName;
+    if (isCreatingLock.current) return;
+    if (!boardName.trim()) {
+      if (!isDefault) alert('Please enter a board name.');
       return;
     }
+    if (!service || !user?.uid) {
+      if (!isDefault) alert('Firebase service not ready or user not logged in.');
+      return;
+    }
+    if (!selectedShow) {
+      if (!isDefault) alert('Please select a show before creating a board.');
+      return;
+    }
+    isCreatingLock.current = true;
+    setIsCreating(true);
+    setBoardCreateError(null);
+    try {
+      const boardData = {
+        name: boardName.trim(),
+        ownerId: user.uid,
+        showId: selectedShow.id,
+        sharedWith: [user.uid],
+        createdAt: new Date().toISOString(),
+      };
+      await service.addDocument('todo_boards', boardData);
+      if (!isDefault) {
+        setNewBoardName('');
+        setIsCreateModalVisible(false);
+      }
+    } catch (error) {
+      setBoardCreateError((error as Error).message || 'Could not create board.');
+      if (!isDefault) alert('Could not create board. Please try again.');
+      console.error('Board creation error:', error);
+    } finally {
+      isCreatingLock.current = false;
+      setIsCreating(false);
+    }
+  }, [selectedShow, newBoardName, user, service]);
 
+  // Effect for fetching boards
+  useEffect(() => {
+    if (!service || !user?.uid || !selectedShow?.id) {
+      setTodoBoards([]);
+      setLoadingBoards(false);
+      setErrorBoards(selectedShow ? null : 'Please select a show to view boards.');
+      return;
+    }
+  
     setLoadingBoards(true);
     setErrorBoards(null);
-
-    // Firestore does not support OR queries directly, so fetch both and merge client-side
-    const unsubOwner = service.listenToCollection<TodoBoard>(
-      'todo_boards',
-      (boards: FirebaseDocument<TodoBoard>[]) => {
-        setTodoBoards(prevBoards => {
-          // Remove any boards not owned by the user (in case of overlap)
-          const notOwned = prevBoards.filter(b => b.data?.ownerId !== user.uid && !(b.data?.sharedWith?.includes(user.uid)));
-          return [
-            ...notOwned,
-            ...boards.filter(b => b.data?.ownerId === user.uid)
-          ];
-        });
-        setLoadingBoards(false);
-      },
-      (err: Error) => {
-        setErrorBoards(err.message || 'Failed to fetch todo_boards');
-        setLoadingBoards(false);
-      },
-      { where: [['ownerId', '==', user.uid]] }
-    );
-
-    const unsubShared = service.listenToCollection<TodoBoard>(
-      'todo_boards',
-      (boards: FirebaseDocument<TodoBoard>[]) => {
-        setTodoBoards(prevBoards => {
-          // Remove any boards not shared with the user (in case of overlap)
-          const notShared = prevBoards.filter(b => !(b.data?.sharedWith?.includes(user.uid)) && b.data?.ownerId !== user.uid);
-          return [
-            ...notShared,
-            ...boards.filter(b => b.data?.sharedWith?.includes(user.uid))
-          ];
-        });
-        setLoadingBoards(false);
-      },
-      (err: Error) => {
-        setErrorBoards(err.message || 'Failed to fetch todo_boards');
-        setLoadingBoards(false);
-      },
-      { where: [['sharedWith', 'array-contains', user.uid]] }
-    );
-
-    return () => {
-      unsubOwner();
-      unsubShared();
+  
+    const boardQueryOptions: { where: WhereClause[] } = {
+      where: [
+        ['showId', '==', selectedShow.id],
+        ['sharedWith', 'array-contains', user.uid],
+      ],
     };
-  }, [service, user?.uid]);
 
-  // useEffect for fetching tasks assigned to the user
-  useEffect(() => {
-    if (!service || !user?.uid) {
-      setLoadingTasks(false);
-      if (!user?.uid) {
-        setErrorTasks('Not logged in. Cannot fetch tasks.');
+    // First, check if any boards exist for the current show.
+    service.getCollection<TodoBoard>('todo_boards', {
+      where: boardQueryOptions.where,
+      limit: 1,
+    }).then((existingBoards: FirebaseDocument<TodoBoard>[]) => {
+      // If no boards exist, create a default one.
+      if (existingBoards.length === 0) {
+        // Use a flag to ensure this only runs once per show selection
+        if (!defaultBoardCreated[selectedShow.id]) {
+          setDefaultBoardCreated(prev => ({ ...prev, [selectedShow.id]: true }));
+          handleCreateBoard({ isDefault: true });
+        }
       }
-      return;
-    }
-
-    console.log(`HomeScreen: Subscribing to tasks for user ${user.uid}`);
-    setLoadingTasks(true);
+    }).catch((err: Error) => {
+      console.error("Error checking for existing boards:", err);
+      setErrorBoards("Failed to check for boards.");
+    });
+  
+    // Now, set up the listener for real-time updates.
+    const unsubscribe = service.listenToCollection<TodoBoard>(
+      'todo_boards',
+      (boards) => {
+        setTodoBoards(boards);
+        setLoadingBoards(false);
+      },
+      (err: Error) => {
+        setErrorBoards(err.message);
+        setLoadingBoards(false);
+      },
+      { where: boardQueryOptions.where }
+    );
+  
+    return () => unsubscribe();
+  }, [service, user?.uid, selectedShow?.id, handleCreateBoard]);
+  
+  // Effect for fetching tasks
+  useEffect(() => {
     setErrorTasks(null);
-
-    const unsubscribeTasks = service.listenToCollection<Task>(
-      'tasks', // Assuming this is your tasks collection name
-      (tasks: FirebaseDocument<Task>[]) => {
-        console.log(`HomeScreen: Received ${tasks.length} tasks.`);
-        setUserTasks(tasks);
-        setLoadingTasks(false);
-      },
-      (err: Error) => {
-        console.error('HomeScreen: Error fetching tasks:', err);
-        setErrorTasks(err.message || 'Failed to fetch tasks');
-        setLoadingTasks(false);
-      },
-      // Assuming tasks are filtered by an 'assignedTo' field matching the user's UID
-      { where: [['assignedTo', '==', user.uid]] } 
-      // Add orderBy if needed, e.g., { orderBy: [['dueDate', 'asc']] }
-    );
-
-    return () => {
-      console.log('HomeScreen: Unsubscribing from tasks.');
-      unsubscribeTasks();
-    };
-  }, [service, user?.uid]);
-
-  // useEffect for fetching upcoming/overdue tasks
-  useEffect(() => {
-    if (!service || !user?.uid) {
-      setLoadingUpcomingOverdue(false);
-      if (!user?.uid) {
-        setErrorUpcomingOverdue('Not logged in. Cannot fetch upcoming tasks.');
+    if (!service || !user?.uid || !selectedShow?.id || !dateRange) {
+      setUpcomingTasks([]);
+      setLoadingTasks(false);
+      if (!selectedShow) {
+        setErrorTasks('Please select a show to view tasks.');
       }
       return;
     }
 
-    console.log(`HomeScreen: Subscribing to upcoming/overdue tasks for user ${user.uid}`);
-    setLoadingUpcomingOverdue(true);
-    setErrorUpcomingOverdue(null);
+    setLoadingTasks(true);
 
-    const today = new Date();
-    const threeDaysFromNow = new Date();
-    threeDaysFromNow.setDate(today.getDate() + 3);
+    const unsubscribe = service.listenToCollection<Task>(
+        'tasks',
+        (tasks) => {
+            if (!dateRange) {
+              setUpcomingTasks([]);
+              setLoadingTasks(false);
+              return;
+            }
+            const startDate = new Date(dateRange.start);
+            const endDate = new Date(dateRange.end);
 
-    // Convert to Firestore Timestamps for the query
-    // Note: If your dueDates are already Timestamps, this direct conversion for query might not be needed
-    // depending on how Firestore handles date comparisons with native Date objects in queries via RNFirebase.
-    // It's often safer to convert to Timestamp if the field is a Timestamp.
-    // However, for RNFirebase, comparing a Timestamp field with a JS Date object in a `where` clause usually works.
+            const filteredAndSortedTasks = tasks
+              .filter(task => {
+                if (!task.data?.dueDate) return false;
+                
+                const dueDate = task.data.dueDate.toDate ? task.data.dueDate.toDate() : new Date(task.data.dueDate as any);
+                return dueDate >= startDate && dueDate <= endDate;
+              })
+              .sort((a, b) => {
+                const dateA = a.data?.dueDate ? (a.data.dueDate.toDate ? a.data.dueDate.toDate() : new Date(a.data.dueDate as any)) : 0;
+                const dateB = b.data?.dueDate ? (b.data.dueDate.toDate ? b.data.dueDate.toDate() : new Date(b.data.dueDate as any)) : 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+                return dateA.getTime() - dateB.getTime();
+              });
 
-    const unsubscribeUpcoming = service.listenToCollection<Task>(
-      'tasks',
-      (tasks: FirebaseDocument<Task>[]) => {
-        console.log(`HomeScreen: Received ${tasks.length} tasks for upcoming/overdue check.`);
-        // Further client-side filtering/sorting might be needed here if the query is broad
-        // For now, we just set them. We'll sort and categorize in the render logic.
-        setUpcomingOverdueTasks(
-          tasks.sort((a, b) => {
-            const timeA = a.data?.dueDate?.toDate()?.getTime() || 0;
-            const timeB = b.data?.dueDate?.toDate()?.getTime() || 0;
-            return timeA - timeB;
-          })
-        );
-        setLoadingUpcomingOverdue(false);
-      },
-      (err: Error) => {
-        console.error('HomeScreen: Error fetching upcoming/overdue tasks:', err);
-        setErrorUpcomingOverdue(err.message || 'Failed to fetch upcoming/overdue tasks');
-        setLoadingUpcomingOverdue(false);
-      },
-      {
-        where: [
-          ['assignedTo', '==', user.uid],
-          // Fetch tasks due up to 3 days from now. Overdue tasks also match this.
-          ['dueDate', '<=', threeDaysFromNow]
-        ],
-        orderBy: [['dueDate', 'asc']] // Order by due date ascending
-      }
+            setUpcomingTasks(filteredAndSortedTasks);
+            setLoadingTasks(false);
+        },
+        (err: Error) => {
+            setErrorTasks(err.message);
+            setLoadingTasks(false);
+        },
+        { 
+          where: [
+            ['showId', '==', selectedShow.id],
+            ['assignedTo', 'array-contains', user.uid],
+          ]
+        }
     );
+    return () => unsubscribe();
+}, [service, user?.uid, selectedShow?.id, dateRange]);
 
+  // Fetch card counts for each board
+  useEffect(() => {
+    // This ref will hold the unsubscribe functions for the list listeners from THIS render
+    const listUnsubs: (() => void)[] = [];
+
+    if (!service || !filteredBoards.length) {
+      setBoardCardCounts({});
+      // No boards, so clear any lingering listeners if any exist
+      cardListenersRef.current.forEach(unsubs => unsubs.forEach(u => u()));
+      cardListenersRef.current.clear();
+      return;
+    }
+
+    // Clear any listeners associated with boards that are no longer present
+    const currentBoardIds = new Set(filteredBoards.map(b => b.id));
+    for (const boardId of cardListenersRef.current.keys()) {
+      if (!currentBoardIds.has(boardId)) {
+        cardListenersRef.current.get(boardId)?.forEach(u => u());
+        cardListenersRef.current.delete(boardId);
+      }
+    }
+
+    filteredBoards.forEach(board => {
+      const unsubLists = service.listenToCollection(
+        `todo_boards/${board.id}/lists`,
+        (lists) => {
+          // When this callback fires, it means the lists for a board have changed.
+          // We must clean up the old card listeners for THIS board.
+          const oldCardUnsubs = cardListenersRef.current.get(board.id) ?? [];
+          oldCardUnsubs.forEach(u => u());
+
+          if (!lists.length) {
+            setBoardCardCounts(prev => ({ ...prev, [board.id]: 0 }));
+            cardListenersRef.current.set(board.id, []); // Store empty array for this board
+            return;
+          }
+
+          const newCardUnsubs: (() => void)[] = [];
+          const counts: Record<string, number> = {};
+
+          lists.forEach(list => {
+            counts[list.id] = 0; // Initialize count for this list
+            const unsubCards = service.listenToCollection(
+              `todo_boards/${board.id}/lists/${list.id}/cards`,
+              (cards) => {
+                counts[list.id] = cards.length;
+                const totalForBoard = Object.values(counts).reduce((sum, count) => sum + count, 0);
+                setBoardCardCounts(prev => ({ ...prev, [board.id]: totalForBoard }));
+              },
+              (error: Error) => console.error(`[CardListener Error] board ${board.id}, list ${list.id}:`, error)
+            );
+            newCardUnsubs.push(unsubCards);
+          });
+
+          // Store the new unsubscribe functions for the cards.
+          cardListenersRef.current.set(board.id, newCardUnsubs);
+        },
+        (error: Error) => console.error(`[ListListener Error] board ${board.id}:`, error)
+      );
+      listUnsubs.push(unsubLists);
+    });
+
+    // This is the main cleanup function for the useEffect.
     return () => {
-      console.log('HomeScreen: Unsubscribing from upcoming/overdue tasks.');
-      unsubscribeUpcoming();
+      listUnsubs.forEach(unsub => unsub());
+      cardListenersRef.current.forEach(unsubArray => unsubArray.forEach(u => u()));
+      cardListenersRef.current.clear();
     };
-  }, [service, user?.uid]);
+  }, [service, filteredBoards]);
 
-  // Helper function to categorize and format tasks
-  const getTaskCategory = (dueDate: FirebaseFirestoreTypes.Timestamp | null | undefined): string => {
-    if (!dueDate) return 'No due date';
-    const taskDate = dueDate.toDate();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize today to the start of the day
-    taskDate.setHours(0, 0, 0, 0); // Normalize taskDate to the start of the day
+  const renderWelcomeHeader = () => (
+    <View style={styles.headerContainer}>
+      <Image
+        source={{ uri: user?.photoURL || `https://i.pravatar.cc/150?u=${user?.uid}` }}
+        style={styles.avatar}
+      />
+      <View>
+        <Text style={styles.welcomeText}>Welcome back,</Text>
+        <Text style={styles.userName}>{user?.displayName || 'User'}</Text>
+      </View>
+    </View>
+  );
 
-    const diffTime = taskDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const renderShowSelector = () => (
+    <View style={styles.pickerContainer}>
+      <Picker
+        mode="dropdown"
+        selectedValue={selectedShow?.id}
+        onValueChange={(itemValue) => {
+          const show = shows.find(s => s.id === itemValue);
+          setSelectedShow(show || null);
+        }}
+        style={styles.picker}
+        dropdownIconColor={darkColors.primary}
+      >
+        {showsLoading ? (
+          <Picker.Item label="Loading shows..." value={null} key="loading-shows" />
+        ) : (
+          shows.map(s => <Picker.Item key={s.id} label={s.name} value={s.id} color="#000000" />)
+        )}
+      </Picker>
+    </View>
+  );
 
-    if (diffDays < 0) return 'Overdue';
-    if (diffDays === 0) return 'Due Today';
-    if (diffDays === 1) return 'Due Tomorrow';
-    return `Due in ${diffDays} days`;
+  const renderInfoCard = ({ title, data, loading, error, onCardPress, onSeeAllPress, renderItem, emptyText }: InfoCardProps) => (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <TouchableOpacity onPress={onSeeAllPress}>
+          <Text style={styles.seeAllText}>See all</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.cardContent}>
+        {loading ? <ActivityIndicator color={darkColors.primary} /> :
+         error ? <Text style={styles.errorText}>{error}</Text> :
+         data.length === 0 ? <Text style={styles.emptyText}>{emptyText}</Text> :
+         <FlatList
+            data={data}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => item.id || index.toString()}
+            renderItem={({ item }) => (
+                <TouchableOpacity onPress={() => { console.log('Navigating to board:', item.id); onCardPress(item.id); }} style={styles.itemCard}>
+                    <Text style={styles.itemText}>{renderItem(item)}</Text>
+                    {title === 'To-Do Boards' && (
+                      <Text style={styles.cardCountText}>
+                        {typeof boardCardCounts[item.id] === 'number' ? boardCardCounts[item.id] : ''}
+                      </Text>
+                    )}
+                </TouchableOpacity>
+            )}
+          />
+        }
+      </View>
+    </View>
+  );
+
+  const handleCreateNewBoard = () => {
+    setNewBoardName('');
+    setIsCreateModalVisible(true);
   };
 
-  const getTaskStyle = (dueDate: FirebaseFirestoreTypes.Timestamp | null | undefined): object => {
-    if (!dueDate) return styles.listItemOkay;
-    const taskDate = dueDate.toDate();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    taskDate.setHours(0, 0, 0, 0);
-    const diffTime = taskDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) return styles.listItemOverdue; // Overdue
-    if (diffDays === 0) return styles.listItemDueToday; // Due Today
-    if (diffDays <= 3) return styles.listItemUpcoming; // Due within 3 days
-    return styles.listItemOkay; // Due later or no date
-  };
-
-  // Filter todo boards by selected show
-  const filteredBoards = selectedShow
-    ? todoBoards.filter(b => b.data?.showId === selectedShow.id)
-    : todoBoards;
-
-  // Debug: Log selectedShow and shows whenever they change
-  React.useEffect(() => {
-    console.log('[DEBUG] selectedShow:', selectedShow);
-  }, [selectedShow]);
-  React.useEffect(() => {
-    console.log('[DEBUG] shows:', shows);
-  }, [shows]);
+  // Modal for creating a new board
+  const renderCreateBoardModal = () => (
+    <Modal
+      visible={isCreateModalVisible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setIsCreateModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: 'transparent' }]}>
+          <Text style={[styles.modalTitle, { color: darkColors.text }]}>Create New Board</Text>
+          <TextInput
+            style={[styles.modalInput, { color: darkColors.text, backgroundColor: 'transparent', borderColor: darkColors.border }]}
+            placeholder="Board Name"
+            value={newBoardName}
+            onChangeText={setNewBoardName}
+            placeholderTextColor={darkColors.secondaryText}
+            editable={!isCreating}
+          />
+          <View style={styles.modalButtonRow}>
+            <Button title="Cancel" onPress={() => setIsCreateModalVisible(false)} color={darkColors.secondaryText} disabled={isCreating} />
+            <Button title={isCreating ? 'Creating...' : 'Create'} onPress={() => handleCreateBoard()} color={darkColors.primary} disabled={isCreating} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Show Picker at the top */}
-      <View style={{ width: '100%', marginBottom: 16 }}>
-        <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 4 }}>Select Show:</Text>
-        <View style={{ borderWidth: 1, borderColor: '#e0e7ff', borderRadius: 8, backgroundColor: '#f0f4f8' }}>
-          <Picker
-            selectedValue={selectedShow?.id || ''}
-            onValueChange={(itemValue) => {
-              const show = shows.find(s => s.id === itemValue);
-              console.log('[DEBUG] Picker onValueChange:', itemValue, show);
-              if (show) setSelectedShow(show);
-            }}
-            enabled={shows.length > 0}
-            style={{ width: '100%' }}
-          >
-            {shows.length === 0 ? (
-              <Picker.Item label="No shows available" value="" />
-            ) : (
-              shows.map(show => (
-                <Picker.Item key={show.id} label={show.name} value={show.id} />
-              ))
+    <SafeAreaView style={{ flex: 1, backgroundColor: darkColors.background }}>
+      <View style={{ padding: 16 }}>
+        <TouchableOpacity
+          style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 16 }}
+          onPress={() => router.push('/props')}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Go to Props List</Text>
+        </TouchableOpacity>
+      </View>
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.container}>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {renderWelcomeHeader()}
+            {renderShowSelector()}
+            
+            {!selectedShow && !showsLoading && (
+              <View style={styles.centeredMessage}>
+                <Ionicons name="information-circle-outline" size={48} color={darkColors.primary} />
+                <Text style={styles.centeredMessageText}>Select a show to get started</Text>
+              </View>
             )}
-          </Picker>
-        </View>
-      </View>
-      {/* Show current show name above Props Bible */}
-      <View style={{ width: '100%', alignItems: 'center', marginBottom: 8 }}>
-        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1e40af' }}>
-          {selectedShow ? selectedShow.name : 'No show selected'}
-        </Text>
-      </View>
-      <View style={styles.content}>
-        <Text style={styles.title}>Props Bible</Text>
-        <Text style={styles.subtitle}>Your Digital Props Management Solution</Text>
-        
-        {/* Todo Boards Section */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>My Todo Boards</Text>
-          {loadingBoards && <ActivityIndicator size="large" color="#1e40af" />}
-          {errorBoards && <Text style={styles.errorText}>{errorBoards}</Text>}
-          {!loadingBoards && !errorBoards && filteredBoards.length === 0 && (
-            <Text>No todo boards found for this show.</Text>
-          )}
-          {!loadingBoards && !errorBoards && filteredBoards.length > 0 && (
-            <FlatList
-              data={filteredBoards}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.listItem} 
-                  onPress={() => {
-                    console.log("Navigating to /taskBoard with ID:", item.id);
-                    router.push({ pathname: '/taskBoard/[boardId]', params: { boardId: item.id } });
-                  }}
-                >
-                  <Text style={styles.listItemText}>{item.data?.name || 'Unnamed Board'}</Text>
-                </TouchableOpacity>
-              )}
-              style={{ width: '100%' }}
-            />
-          )}
-        </View>
 
-        {/* Upcoming & Overdue Tasks Section (replaces View Props button) */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Upcoming & Overdue Tasks</Text>
-          {loadingUpcomingOverdue && <ActivityIndicator size="large" color="#1e40af" />}
-          {errorUpcomingOverdue && <Text style={styles.errorText}>{errorUpcomingOverdue}</Text>}
-          {!loadingUpcomingOverdue && !errorUpcomingOverdue && upcomingOverdueTasks.length === 0 && (
-            <Text>No upcoming or overdue tasks assigned to you.</Text>
-          )}
-          {!loadingUpcomingOverdue && !errorUpcomingOverdue && upcomingOverdueTasks.length > 0 && (
-            <FlatList
-              data={upcomingOverdueTasks}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={[styles.listItem, getTaskStyle(item.data?.dueDate)]} onPress={() => alert(`Task: ${item.data?.title}\nStatus: ${getTaskCategory(item.data?.dueDate)}`)}>
-                  <Text style={styles.listItemText}>{item.data?.title || 'Unnamed Task'}</Text>
-                  <Text style={styles.listItemSubText}>{getTaskCategory(item.data?.dueDate)}</Text>
-                </TouchableOpacity>
-              )}
-              style={{ width: '100%' }}
-            />
-          )}
-        </View>
+            {selectedShow && (
+              <>
+                {renderInfoCard({
+                  title: "To-Do Boards",
+                  data: filteredBoards,
+                  loading: loadingBoards,
+                  error: errorBoards,
+                  onCardPress: (boardId) => router.push(`/taskBoard/${boardId}`),
+                  onSeeAllPress: () => router.push('/(tabs)/todos'),
+                  renderItem: (item) => item.data?.name || 'Untitled Board',
+                  emptyText: "No boards found for this show. Creating one...",
+                })}
+                {renderInfoCard({
+                  title: "Upcoming Tasks",
+                  data: upcomingTasks,
+                  loading: loadingTasks,
+                  error: errorTasks,
+                  onCardPress: (item) => router.push(`/tasks/${item.id}` as any),
+                  onSeeAllPress: () => router.push('/(tabs)/tasks' as any),
+                  renderItem: (item) => item.data?.title || 'Untitled Task',
+                  emptyText: "No upcoming tasks for this show."
+                })}
+              </>
+            )}
+          </ScrollView>
 
-        {/* My Tasks Section - general list */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>All My Tasks</Text>
-          {loadingTasks && <ActivityIndicator size="large" color="#1e40af" />}
-          {errorTasks && <Text style={styles.errorText}>{errorTasks}</Text>}
-          {!loadingTasks && !errorTasks && userTasks.length === 0 && (
-            <Text>No tasks assigned to you.</Text>
-          )}
-          {!loadingTasks && !errorTasks && userTasks.length > 0 && (
-            <FlatList
-              data={userTasks}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.listItem} onPress={() => alert(`Task: ${item.data?.title}`)}>
-                  <Text style={styles.listItemText}>{item.data?.title || 'Unnamed Task'}</Text>
-                  {/* Optionally display due date or board name here */}
-                </TouchableOpacity>
-              )}
-              style={{ width: '100%' }}
-            />
-          )}
+          <FAB.Group
+             visible={true}
+             open={fabOpen}
+             icon={fabOpen ? 'close' : 'plus'}
+             actions={[
+               {
+                 icon: 'shape-outline',
+                 label: 'Add Show',
+                 onPress: () => router.push('/(tabs)/shows/create' as any),
+                 style: styles.fabAction,
+                 labelStyle: styles.fabLabel,
+               },
+               ...(selectedShow ? [{
+                 icon: 'plus-box-outline',
+                 label: 'Add Prop',
+                 onPress: () => router.push({ pathname: '/props/create', params: { showId: selectedShow.id } } as any),
+                 style: styles.fabAction,
+                 labelStyle: styles.fabLabel,
+               }] : []),
+               ...(selectedShow ? [{
+                 icon: 'view-dashboard-outline',
+                 label: 'Add Board',
+                 onPress: handleCreateNewBoard,
+                 style: styles.fabAction,
+                 labelStyle: styles.fabLabel,
+               }] : []),
+             ]}
+             onStateChange={({ open }) => setFabOpen(open)}
+             fabStyle={[styles.fab, { backgroundColor: '#c084fc' }]}
+             color="#FFFFFF"
+             backdropColor="transparent"
+          />
+          
+          {renderCreateBoardModal()}
         </View>
-      </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -381,85 +521,165 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
   },
-  content: {
-    flex: 1,
-    alignItems: 'center',
+  scrollContent: { padding: 16, paddingBottom: 80 },
+  headerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
+  welcomeText: { color: darkColors.secondaryText, fontSize: 16 },
+  userName: { color: darkColors.text, fontSize: 20, fontWeight: 'bold' },
+  pickerContainer: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: darkColors.border
+  },
+  picker: { color: darkColors.text },
+  card: {
+    backgroundColor: '#1d2125',
+    borderRadius: 20,
     padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  title: {
-    fontSize: 32,
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    color: '#fff',
     fontWeight: 'bold',
-    color: '#1e40af',
-    marginBottom: 10,
-  },
-  subtitle: {
     fontSize: 18,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
   },
-  sectionContainer: {
-    width: '100%',
-    marginBottom: 20,
-    padding: 15,
-    backgroundColor: '#f0f4f8',
-    borderRadius: 8,
+  cardTitle: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  seeAllText: { color: darkColors.primary, fontSize: 14 },
+  cardContent: {
+    minHeight: 100,
+    justifyContent: 'center',
+    gap: 12,
+  },
+  itemCard: {
+    backgroundColor: '#111111',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    marginRight: 12,
+    minWidth: 150,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  itemText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  emptyText: {
+    color: darkColors.secondaryText,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  errorText: { color: 'red', alignSelf: 'center' },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#c084fc',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: 'transparent',
+    elevation: 0,
+    borderWidth: 0,
+  },
+  fabAction: {
+    backgroundColor: 'rgba(30,30,30,0.7)',
+  },
+  fabLabel: {
+    color: '#FFFFFF',
+    backgroundColor: 'rgba(30,30,30,0.7)',
+    paddingHorizontal: 8,
+    borderRadius: 4,
+  },
+  centeredMessage: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+    gap: 12,
+  },
+  centeredMessageText: {
+    marginTop: 16,
+    color: darkColors.secondaryText,
+    fontSize: 18
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  sectionTitle: {
+  modalContent: {
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: darkColors.text,
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1e40af',
-    marginBottom: 10,
+    marginBottom: 16,
   },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-  },
-  listItem: {
-    backgroundColor: '#e0e7ff',
-    padding: 15,
-    borderRadius: 6,
-    marginBottom: 10,
+  modalInput: {
     width: '100%',
+    borderWidth: 1,
+    borderColor: darkColors.border,
+    borderRadius: 8,
+    padding: 12,
+    color: darkColors.text,
+    backgroundColor: 'transparent',
+    marginBottom: 20,
   },
-  listItemText: {
-    fontSize: 16,
-    color: '#3730a3',
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 12,
   },
-  listItemSubText: {
-    fontSize: 12,
-    color: '#555',
+  cardCountText: {
+    color: darkColors.secondaryText,
+    fontSize: 13,
     marginTop: 4,
   },
-  listItemOkay: {
-    backgroundColor: '#e0e7ff',
-  },
-  listItemUpcoming: {
-    backgroundColor: '#fffac0',
-    borderColor: '#fadf98',
-    borderWidth: 1,
-  },
-  listItemDueToday: {
-    backgroundColor: '#ffdac0',
-    borderColor: '#ffb598',
-    borderWidth: 1,
-  },
-  listItemOverdue: {
-    backgroundColor: '#ffc0c0',
-    borderColor: '#ff9898',
-    borderWidth: 1,
-  },
-  button: {
-    backgroundColor: '#1e40af',
-    paddingHorizontal: 24,
+  pickerBg: { backgroundColor: 'transparent' },
+  background: { backgroundColor: 'transparent' },
+  addButton: {
+    marginTop: 16,
+    backgroundColor: '#22272b',
+    borderRadius: 12,
     paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 20,
+    paddingHorizontal: 20,
+    alignSelf: 'flex-start',
   },
-  buttonText: {
+  addButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
