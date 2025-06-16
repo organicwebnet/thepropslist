@@ -106,6 +106,7 @@ export abstract class BaseFirebaseService implements FirebaseService {
   async addList(boardId: string, listData: any): Promise<any> { return Promise.resolve({} as any); }
   async addCard(boardId: string, listId: string, cardData: any): Promise<any> { return Promise.resolve({} as any); }
   async moveCardToList(boardId: string, cardId: string, fromListId: string, toListId: string, newOrder: number): Promise<void> { throw new Error('Not implemented'); }
+  async reorderLists(boardId: string, orderedLists: any[]): Promise<void> { return Promise.resolve(); }
 
   // --- Error Handling ---
   protected handleError(message: string, error: unknown): FirebaseError {

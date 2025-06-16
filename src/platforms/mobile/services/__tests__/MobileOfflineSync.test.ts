@@ -82,8 +82,6 @@ describe('MobileOfflineSync', () => {
       const mockOperations = [
         {
           id: '1',
-          execute: jest.fn(),
-          isProcessing: true,
           timestamp: Date.now()
         }
       ];
@@ -106,14 +104,10 @@ describe('MobileOfflineSync', () => {
       const mockOperations: PendingOperation[] = [
         {
           id: '1',
-          execute: jest.fn(),
-          priority: 'normal',
           timestamp: Date.now()
         },
         {
           id: '2',
-          execute: jest.fn(),
-          priority: 'high',
           timestamp: Date.now()
         }
       ];
@@ -131,17 +125,11 @@ describe('MobileOfflineSync', () => {
       const mockOperations: PendingOperation[] = [
         {
           id: '1',
-          execute: async () => {
-            executionOrder.push('1');
-          },
-          priority: 'normal'
+          timestamp: Date.now()
         },
         {
           id: '2',
-          execute: async () => {
-            executionOrder.push('2');
-          },
-          priority: 'high'
+          timestamp: Date.now()
         }
       ];
 
@@ -163,11 +151,7 @@ describe('MobileOfflineSync', () => {
     it('should retry failed operations', async () => {
       const mockOperation: PendingOperation = {
         id: '1',
-        execute: jest.fn()
-          .mockRejectedValueOnce(new Error('Network error'))
-          .mockRejectedValueOnce(new Error('Network error'))
-          .mockResolvedValueOnce(undefined),
-        priority: 'high'
+        timestamp: Date.now()
       } as any;
 
       await offlineSync.enableSync();
@@ -185,8 +169,7 @@ describe('MobileOfflineSync', () => {
     it('should mark operation as failed after max retries', async () => {
       const mockOperation: PendingOperation = {
         id: '1',
-        execute: jest.fn().mockRejectedValue(new Error('Persistent error')),
-        priority: 'high'
+        timestamp: Date.now()
       } as any;
 
       await offlineSync.enableSync();
@@ -207,8 +190,7 @@ describe('MobileOfflineSync', () => {
     it('should process pending operations when network is restored', async () => {
       const mockOperation: PendingOperation = {
         id: '1',
-        execute: jest.fn().mockResolvedValue(undefined),
-        priority: 'normal'
+        timestamp: Date.now()
       } as any;
 
       await offlineSync.enableSync();

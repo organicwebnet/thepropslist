@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ScrollView, Switch, Alert, Platform, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ScrollView, Switch, Alert, Platform, TouchableOpacity, Image, PanResponder } from 'react-native';
 import { default as DateTimePicker, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index.ts';
@@ -114,6 +114,286 @@ const parseDateString = (dateInput: string | Date | Timestamp | null | undefined
    }
    return new Date(); // Default to now if parsing fails or input is invalid
 };
+
+// Section styles and StyleSheet must be defined before the component uses them
+const sectionCardStyle = {
+  backgroundColor: 'rgba(45,45,68,0.95)',
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 24,
+};
+
+const styles = StyleSheet.create({
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 16,
+  },
+  fieldContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    color: '#d1d5db', // Lighter gray for labels
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  requiredAsterisk: {
+     color: '#f87171', // Red asterisk
+  },
+  input: {
+    backgroundColor: '#374151', // Slightly lighter background for inputs
+    color: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#4b5563', // Border color for inputs
+    fontSize: 16,
+  },
+  textArea: {
+      height: 100, // Make text area taller
+      textAlignVertical: 'top', // Align text to top for multiline
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start', // Align switch to the left
+    // height: 40, // Ensure consistent height like TextInput
+  },
+  switch: {
+     // Add specific styles for the switch if needed, e.g., margins
+     // marginLeft: 10, // Example if spacing is needed
+  },
+  placeholderText: {
+     color: '#9ca3af', // Gray color for placeholder info
+     fontSize: 14,
+     fontStyle: 'italic',
+     marginTop: 8,
+     paddingVertical: 10, // Match input padding
+     paddingHorizontal: 12,
+     backgroundColor: '#374151',
+     borderRadius: 6,
+     borderColor: '#4b5563',
+     borderWidth: 1,
+  },
+  buttonContainer: {
+    marginTop: 24,
+    backgroundColor: Platform.OS === 'ios' ? '#007AFF' : 'transparent', // Blue background for iOS button wrapper
+    borderRadius: Platform.OS === 'ios' ? 8 : 0, // Rounded corners for iOS wrapper
+  },
+  cancelButtonContainer: {
+     marginTop: 12,
+     backgroundColor: Platform.OS === 'ios' ? '#FF3B30' : 'transparent', // Red background for iOS cancel wrapper
+     borderRadius: Platform.OS === 'ios' ? 8 : 0, // Rounded corners for iOS wrapper
+  },
+  datePickerButton: {
+    backgroundColor: '#374151',
+    padding: 12,
+    borderRadius: 6,
+    justifyContent: 'center',
+    minHeight: 44, // Ensure touchable area is large enough
+  },
+  dateText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  imagePickerButton: {
+    backgroundColor: '#007AFF',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  imagePickerButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  logoPreview: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 8,
+  },
+  removeImageButton: {
+    backgroundColor: '#FF3B30',
+    padding: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  removeImageButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  actContainer: {
+    backgroundColor: '#2a3b4d', // Slightly different background for sectioning
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  actHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  actInput: {
+    flex: 1, // Take up available space
+    marginRight: 10, // Space before remove button
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  actDescriptionInput: {
+    minHeight: 40,
+    marginBottom: 10,
+  },
+  sceneContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 10, // Indent scenes
+    marginBottom: 5,
+  },
+  sceneInput: {
+    flex: 1,
+    marginRight: 5, // Space between scene inputs or before remove button
+    fontSize: 14,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4b5563',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 5,
+    alignSelf: 'flex-start', // Don't take full width
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  removeButton: {
+    padding: 5, // Make it easier to tap
+  },
+  removeButtonSmall: {
+    padding: 3,
+  },
+  venueContainer: {
+    backgroundColor: '#2a3b4d',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 15,
+    borderColor: '#4b5563',
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  venueHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  venueNameInput: {
+    flex: 1,
+    marginRight: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  subLabel: {
+    fontSize: 13,
+    color: '#a1a1aa', // Lighter gray for sub-labels
+    marginTop: 8,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  contactContainer: {
+    backgroundColor: '#2a3b4d',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 10,
+    borderColor: '#4b5563',
+    borderWidth: 1,
+  },
+  contactHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  addressContainer: {
+    backgroundColor: '#2a3b4d',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 10,
+    borderColor: '#4b5563',
+    borderWidth: 1,
+  },
+  addressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  collaboratorItemContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#2a3b4d',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  collaboratorInfoContainer: {
+    flexDirection: 'column',
+  },
+  collaboratorText: {
+    color: '#e5e7eb',
+    fontSize: 15,
+  },
+  collaboratorRoleText: {
+    color: '#9ca3af',
+    fontSize: 12,
+  },
+  roleSelectorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  roleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#4b5563',
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  roleButtonSelected: {
+    backgroundColor: '#007AFF',
+  },
+  roleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  addButtonSmallMargin: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4b5563',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginTop: 8, // Added specific margin for this button
+    alignSelf: 'flex-start',
+  },
+});
 
 export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }: ShowFormNativeProps) {
   const [formData, setFormData] = useState<Partial<Show>>(() => {
@@ -493,804 +773,548 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
     onSubmit(dataToSubmit);
   };
 
-  return (
-    <ScrollView contentContainerStyle={styles.formContainer} keyboardShouldPersistTaps="handled">
-      {/* Basic Show Info */}
-      <FormField label="Show Name" required>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter show name"
-          value={formData.name}
-          onChangeText={(value) => handleInputChange('name', value)}
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
+  // Stepper logic
+  const steps = [
+    'Basic Info',
+    'Dates',
+    'Acts & Scenes',
+    'Venues',
+    'Contacts',
+    'Storage & Rehearsal',
+    'Collaborators',
+  ];
+  const [step, setStep] = useState(0);
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 20 && Math.abs(gestureState.dy) < 20;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -50) {
+          setStep(s => Math.min(s + 1, steps.length - 1));
+        } else if (gestureState.dx > 50) {
+          setStep(s => Math.max(s - 1, 0));
+        }
+      },
+    })
+  ).current;
 
-      <FormField label="Description" required>
-        <TextInput
-          style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]}
-          placeholder="Enter show description"
-          value={formData.description}
-          onChangeText={value => handleInputChange('description', value)}
-          multiline
-          numberOfLines={4}
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
+  // Renderers for each step
+  const renderStep = () => {
+    switch (step) {
+      case 0:
+        return (
+          <View style={sectionCardStyle}>
+            <Text style={[styles.sectionTitle]}>Basic Info</Text>
+            {/* Name, Description, Logo, Production Company, etc. */}
+            <FormField label="Show Name" required>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter show name"
+                value={formData.name}
+                onChangeText={(value) => handleInputChange('name', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
 
-      <FormField label="Image URL (Optional Poster/Banner)">
-        <TextInput
-          style={styles.input}
-          placeholder="Enter image URL"
-          value={formData.imageUrl}
-          onChangeText={(value) => handleInputChange('imageUrl', value)}
-          keyboardType="url"
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
+            <FormField label="Description" required>
+              <TextInput
+                style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]}
+                placeholder="Enter show description"
+                value={formData.description}
+                onChangeText={value => handleInputChange('description', value)}
+                multiline
+                numberOfLines={4}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
 
-      <FormField label="Logo Image">
-        <TouchableOpacity onPress={handlePickLogo} style={styles.imagePickerButton}>
-          <Text style={styles.imagePickerButtonText}>{selectedLogoUri ? 'Change Logo' : 'Select Logo'}</Text>
-        </TouchableOpacity>
-        {selectedLogoUri && (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: selectedLogoUri }} style={styles.logoPreview} />
-            <TouchableOpacity onPress={handleRemoveLogo} style={styles.removeImageButton}>
-              <Text style={styles.removeImageButtonText}>Remove</Text>
+            <FormField label="Image URL (Optional Poster/Banner)">
+              <TextInput
+                style={styles.input}
+                placeholder="Enter image URL"
+                value={formData.imageUrl}
+                onChangeText={(value) => handleInputChange('imageUrl', value)}
+                keyboardType="url"
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+
+            <FormField label="Logo Image">
+              <TouchableOpacity onPress={handlePickLogo} style={styles.imagePickerButton}>
+                <Text style={styles.imagePickerButtonText}>{selectedLogoUri ? 'Change Logo' : 'Select Logo'}</Text>
+              </TouchableOpacity>
+              {selectedLogoUri && (
+                <View style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: selectedLogoUri }} style={styles.logoPreview} />
+                  <TouchableOpacity onPress={handleRemoveLogo} style={styles.removeImageButton}>
+                    <Text style={styles.removeImageButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {!selectedLogoUri && mode === 'edit' && initialData?.logoImage?.url && (
+                <Text style={styles.placeholderText}>Current logo will be kept unless a new one is selected.</Text>
+              )}
+            </FormField>
+
+            <FormField label="Is Touring Show?">
+              <View style={styles.switchContainer}>
+                   <Switch
+                       trackColor={{ false: "#767577", true: "#81b0ff" }}
+                       thumbColor={formData.isTouringShow ? "#007AFF" : "#f4f3f4"}
+                       ios_backgroundColor="#3e3e3e"
+                       onValueChange={(value) => handleInputChange('isTouringShow', value)}
+                       value={formData.isTouringShow}
+                       style={styles.switch}
+                   />
+               </View>
+            </FormField>
+
+            <FormField label="Production Company" required>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter production company name"
+                value={formData.productionCompany}
+                onChangeText={(value) => handleInputChange('productionCompany', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+             <FormField label="Prod. Contact Name" required>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter production contact name"
+                value={formData.productionContactName}
+                onChangeText={(value) => handleInputChange('productionContactName', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+            <FormField label="Prod. Contact Email" required>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter production contact email"
+                value={formData.productionContactEmail}
+                onChangeText={(value) => handleInputChange('productionContactEmail', value)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+             <FormField label="Prod. Contact Phone">
+              <TextInput
+                style={styles.input}
+                placeholder="Enter production contact phone"
+                value={formData.productionContactPhone}
+                onChangeText={(value) => handleInputChange('productionContactPhone', value)}
+                keyboardType="phone-pad"
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+          </View>
+        );
+      case 1:
+        return (
+          <View style={sectionCardStyle}>
+            <Text style={[styles.sectionTitle]}>Dates</Text>
+            {/* Start Date, End Date, etc. */}
+            <FormField label="Start Date">
+              <TouchableOpacity onPress={() => setShowStartDatePicker(true)} style={styles.datePickerButton}>
+                <Text style={styles.dateText}>{formatDate(startDate)}</Text>
+              </TouchableOpacity>
+              {showStartDatePicker && (
+                <DateTimePicker
+                  testID="startDatePicker"
+                  value={startDate}
+                  mode="date"
+                  display="default"
+                  onChange={onStartDateChange}
+                />
+              )}
+            </FormField>
+
+            <FormField label="End Date">
+              <TouchableOpacity onPress={() => setShowEndDatePicker(true)} style={styles.datePickerButton}>
+                <Text style={styles.dateText}>{formatDate(endDate)}</Text>
+              </TouchableOpacity>
+              {showEndDatePicker && (
+                <DateTimePicker
+                  testID="endDatePicker"
+                  value={endDate}
+                  mode="date"
+                  display="default"
+                  onChange={onEndDateChange}
+                />
+              )}
+            </FormField>
+
+            <FormField label="Status">
+               <Text style={styles.placeholderText}>Status Picker (Coming Soon)</Text>
+            </FormField>
+          </View>
+        );
+      case 2:
+        return (
+          <View style={sectionCardStyle}>
+            <Text style={[styles.sectionTitle]}>Acts & Scenes</Text>
+            {/* Acts, Scenes, Add/Remove, etc. */}
+            {(formData.acts || []).map((act, actIndex) => (
+              <View key={act.id || actIndex} style={styles.actContainer}>
+                <View style={styles.actHeader}>
+                  <TextInput
+                    style={[styles.input, styles.actInput]}
+                    placeholder={`Act ${actIndex + 1} Name`}
+                    value={act.name}
+                    onChangeText={(value) => handleActChange(actIndex, 'name', value)}
+                    placeholderTextColor="#6b7280"
+                  />
+                  { (formData.acts || []).length > 1 &&
+                    <TouchableOpacity onPress={() => removeAct(actIndex)} style={styles.removeButton}>
+                      <MinusCircle size={20} color="#FF3B30" />
+                    </TouchableOpacity>
+                  }
+                </View>
+                <TextInput
+                  style={[styles.input, styles.textArea, styles.actDescriptionInput]}
+                  placeholder={`Act ${actIndex + 1} Description (Optional)`}
+                  value={act.description}
+                  onChangeText={(value) => handleActChange(actIndex, 'description', value)}
+                  multiline
+                  placeholderTextColor="#6b7280"
+                />
+
+                {(act.scenes || []).map((scene, sceneIndex) => (
+                  <View key={scene.id || sceneIndex} style={styles.sceneContainer}>
+                    <TextInput
+                      style={[styles.input, styles.sceneInput]}
+                      placeholder={`Scene ${sceneIndex + 1} Name`}
+                      value={scene.name}
+                      onChangeText={(value) => handleSceneChange(actIndex, sceneIndex, 'name', value)}
+                      placeholderTextColor="#6b7280"
+                    />
+                    <TextInput
+                      style={[styles.input, styles.sceneInput]}
+                      placeholder={`Scene ${sceneIndex + 1} Setting (Optional)`}
+                      value={scene.setting}
+                      onChangeText={(value) => handleSceneChange(actIndex, sceneIndex, 'setting', value)}
+                      placeholderTextColor="#6b7280"
+                    />
+                    { (act.scenes || []).length > 1 &&
+                      <TouchableOpacity onPress={() => removeScene(actIndex, sceneIndex)} style={styles.removeButton}>
+                        <MinusCircle size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    }
+                  </View>
+                ))}
+                <TouchableOpacity onPress={() => addScene(actIndex)} style={styles.addButton}>
+                  <PlusCircle size={20} color="#007AFF" />
+                  <Text style={styles.addButtonText}>Add Scene</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity onPress={addAct} style={styles.addButton}>
+              <PlusCircle size={20} color="#007AFF" />
+              <Text style={styles.addButtonText}>Add Act</Text>
             </TouchableOpacity>
           </View>
-        )}
-        {!selectedLogoUri && mode === 'edit' && initialData?.logoImage?.url && (
-          <Text style={styles.placeholderText}>Current logo will be kept unless a new one is selected.</Text>
-        )}
-      </FormField>
+        );
+      case 3:
+        return (
+          <View style={sectionCardStyle}>
+            <Text style={[styles.sectionTitle]}>Venues</Text>
+            {/* Venues, Add/Remove, etc. */}
+            {(!formData.isTouringShow && formData.venues && formData.venues.length > 0 ? [formData.venues[0]] : formData.venues || []).map((venue, venueIndex) => (
+              <View key={venue.id || venueIndex} style={styles.venueContainer}>
+                <View style={styles.venueHeader}>
+                  <TextInput
+                    style={[styles.input, styles.venueNameInput]}
+                    placeholder={formData.isTouringShow ? `Venue ${venueIndex + 1} Name` : "Primary Venue Name"}
+                    value={venue.name}
+                    onChangeText={(value) => handleVenueChange(venueIndex, 'name', value)}
+                    placeholderTextColor="#6b7280"
+                  />
+                  {(formData.isTouringShow && (formData.venues || []).length > 0) && // Show remove only if touring and has venues
+                    <TouchableOpacity onPress={() => removeVenue(venueIndex)} style={styles.removeButton}>
+                      <MinusCircle size={20} color="#FF3B30" />
+                    </TouchableOpacity>
+                  }
+                </View>
+                
+                {/* Address Fields */}
+                <Text style={styles.subLabel}>Address</Text>
+                {(Object.keys(defaultAddress) as Array<keyof Address>)
+                  .filter(key => key !== 'id' && key !== 'companyName' && key !== 'nickname' && key !== 'name') // Exclude fields not typically for venue address block
+                  .map((addressKey) => (
+                    <TextInput
+                      key={addressKey}
+                      style={styles.input}
+                      placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
+                      value={venue.address?.[addressKey] || ''}
+                      onChangeText={(value) => handleVenueChange(venueIndex, `address.${addressKey}`, value)}
+                      placeholderTextColor="#6b7280"
+                      // Add keyboardType for postalCode, etc. if needed
+                    />
+                ))}
+                
+                <Text style={styles.subLabel}>Venue Dates</Text>
+                 <TouchableOpacity 
+                    onPress={() => { 
+                        setCurrentVenueDateValue(parseDateString(venue.startDate)); 
+                        setVenueDatePickerVisible({ index: venueIndex, field: 'startDate' }); 
+                    }}
+                    style={styles.datePickerButton}
+                 >
+                    <Text style={styles.dateText}>{venue.startDate ? formatDate(venue.startDate) : 'Select Start Date'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    onPress={() => { 
+                        setCurrentVenueDateValue(parseDateString(venue.endDate)); 
+                        setVenueDatePickerVisible({ index: venueIndex, field: 'endDate' }); 
+                    }}
+                    style={styles.datePickerButton}
+                >
+                    <Text style={styles.dateText}>{venue.endDate ? formatDate(venue.endDate) : 'Select End Date'}</Text>
+                </TouchableOpacity>
 
-      <FormField label="Is Touring Show?">
-        <View style={styles.switchContainer}>
-             <Switch
-                 trackColor={{ false: "#767577", true: "#81b0ff" }}
-                 thumbColor={formData.isTouringShow ? "#007AFF" : "#f4f3f4"}
-                 ios_backgroundColor="#3e3e3e"
-                 onValueChange={(value) => handleInputChange('isTouringShow', value)}
-                 value={formData.isTouringShow}
-                 style={styles.switch}
-             />
-         </View>
-      </FormField>
-
-       {/* Personnel */}
-       <FormField label="Stage Manager" required>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter stage manager name"
-          value={formData.stageManager}
-          onChangeText={(value) => handleInputChange('stageManager', value)}
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-      <FormField label="SM Email" required>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter stage manager email"
-          value={formData.stageManagerEmail}
-          onChangeText={(value) => handleInputChange('stageManagerEmail', value)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-       <FormField label="SM Phone">
-        <TextInput
-          style={styles.input}
-          placeholder="Enter stage manager phone"
-          value={formData.stageManagerPhone}
-          onChangeText={(value) => handleInputChange('stageManagerPhone', value)}
-          keyboardType="phone-pad"
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-
-      <FormField label="Props Supervisor" required>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter props supervisor name"
-          value={formData.propsSupervisor}
-          onChangeText={(value) => handleInputChange('propsSupervisor', value)}
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-      <FormField label="Props Email" required>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter props supervisor email"
-          value={formData.propsSupervisorEmail}
-          onChangeText={(value) => handleInputChange('propsSupervisorEmail', value)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-       <FormField label="Props Phone">
-        <TextInput
-          style={styles.input}
-          placeholder="Enter props supervisor phone"
-          value={formData.propsSupervisorPhone}
-          onChangeText={(value) => handleInputChange('propsSupervisorPhone', value)}
-          keyboardType="phone-pad"
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-
-      <FormField label="Production Company" required>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter production company name"
-          value={formData.productionCompany}
-          onChangeText={(value) => handleInputChange('productionCompany', value)}
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-       <FormField label="Prod. Contact Name" required>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter production contact name"
-          value={formData.productionContactName}
-          onChangeText={(value) => handleInputChange('productionContactName', value)}
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-      <FormField label="Prod. Contact Email" required>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter production contact email"
-          value={formData.productionContactEmail}
-          onChangeText={(value) => handleInputChange('productionContactEmail', value)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-       <FormField label="Prod. Contact Phone">
-        <TextInput
-          style={styles.input}
-          placeholder="Enter production contact phone"
-          value={formData.productionContactPhone}
-          onChangeText={(value) => handleInputChange('productionContactPhone', value)}
-          keyboardType="phone-pad"
-          placeholderTextColor="#6b7280"
-        />
-      </FormField>
-
-      {/* Contacts Section */}
-      <FormField label="Other Key Contacts">
-        {(formData.contacts || []).map((contact, contactIndex) => (
-          <View key={contact.id || contactIndex} style={styles.contactContainer}>
-            <View style={styles.contactHeader}>
-              <Text style={styles.subLabel}>Contact {contactIndex + 1}</Text>
-              <TouchableOpacity onPress={() => removeContact(contactIndex)} style={styles.removeButton}>
-                <MinusCircle size={20} color="#FF3B30" />
+                <Text style={styles.subLabel}>Notes</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Venue notes (e.g., stage door, parking)"
+                  value={venue.notes}
+                  onChangeText={(value) => handleVenueChange(venueIndex, 'notes', value)}
+                  multiline
+                  placeholderTextColor="#6b7280"
+                />
+              </View>
+            ))}
+            {formData.isTouringShow && (
+              <TouchableOpacity onPress={addVenue} style={styles.addButton}>
+                <PlusCircle size={20} color="#007AFF" />
+                <Text style={styles.addButtonText}>Add Venue</Text>
               </TouchableOpacity>
-            </View>
+            )}
+             { (!formData.venues || formData.venues.length === 0) && !formData.isTouringShow && (
+              <TouchableOpacity onPress={addVenue} style={styles.addButton}>
+                <PlusCircle size={20} color="#007AFF" />
+                <Text style={styles.addButtonText}>Add Venue Details</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      case 4:
+        return (
+          <View style={sectionCardStyle}>
+            <Text style={[styles.sectionTitle]}>Contacts</Text>
+            {/* Contacts, Add/Remove, etc. */}
+            {(formData.contacts || []).map((contact, contactIndex) => (
+              <View key={contact.id || contactIndex} style={styles.contactContainer}>
+                <View style={styles.contactHeader}>
+                  <Text style={styles.subLabel}>Contact {contactIndex + 1}</Text>
+                  <TouchableOpacity onPress={() => removeContact(contactIndex)} style={styles.removeButton}>
+                    <MinusCircle size={20} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Contact Name"
+                  value={contact.name}
+                  onChangeText={(value) => handleContactChange(contactIndex, 'name', value)}
+                  placeholderTextColor="#6b7280"
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Role"
+                  value={contact.role}
+                  onChangeText={(value) => handleContactChange(contactIndex, 'role', value)}
+                  placeholderTextColor="#6b7280"
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email (Optional)"
+                  value={contact.email}
+                  onChangeText={(value) => handleContactChange(contactIndex, 'email', value)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholderTextColor="#6b7280"
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Phone (Optional)"
+                  value={contact.phone}
+                  onChangeText={(value) => handleContactChange(contactIndex, 'phone', value)}
+                  keyboardType="phone-pad"
+                  placeholderTextColor="#6b7280"
+                />
+              </View>
+            ))}
+            <TouchableOpacity onPress={addContact} style={styles.addButton}>
+              <PlusCircle size={20} color="#007AFF" />
+              <Text style={styles.addButtonText}>Add Contact</Text>
+            </TouchableOpacity>
+          </View>
+        );
+      case 5:
+        return (
+          <View style={sectionCardStyle}>
+            <Text style={[styles.sectionTitle]}>Storage & Rehearsal</Text>
+            {/* StorageAddresses, RehearsalAddresses, Add/Remove, etc. */}
+            <FormField label="Rehearsal Addresses">
+              {(formData.rehearsalAddresses || []).map((address, index) => (
+                <View key={address.id || index} style={styles.addressContainer}>
+                  <View style={styles.addressHeader}>
+                      <Text style={styles.subLabel}>Rehearsal Space {index + 1}</Text>
+                      <TouchableOpacity onPress={() => removeAddressFromList('rehearsalAddresses', index)} style={styles.removeButton}>
+                          <MinusCircle size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                  </View>
+                  {(Object.keys(defaultAddress) as Array<keyof Address>)
+                    .filter(key => key !== 'id' && key !== 'companyName') // Filter out fields not needed for simple address entry
+                    .map(addressKey => (
+                      <TextInput
+                        key={addressKey}
+                        style={styles.input}
+                        placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
+                        value={address[addressKey] || ''}
+                        onChangeText={(value) => handleAddressListChange('rehearsalAddresses', index, addressKey, value)}
+                        placeholderTextColor="#6b7280"
+                      />
+                  ))}
+                </View>
+              ))}
+              <TouchableOpacity onPress={() => addAddressToList('rehearsalAddresses')} style={styles.addButton}>
+                <PlusCircle size={20} color="#007AFF" />
+                <Text style={styles.addButtonText}>Add Rehearsal Address</Text>
+              </TouchableOpacity>
+            </FormField>
+
+            <FormField label="Storage Addresses">
+              {(formData.storageAddresses || []).map((address, index) => (
+                <View key={address.id || index} style={styles.addressContainer}>
+                   <View style={styles.addressHeader}>
+                      <Text style={styles.subLabel}>Storage Location {index + 1}</Text>
+                      <TouchableOpacity onPress={() => removeAddressFromList('storageAddresses', index)} style={styles.removeButton}>
+                          <MinusCircle size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                  </View>
+                  {(Object.keys(defaultAddress) as Array<keyof Address>)
+                    .filter(key => key !== 'id' && key !== 'companyName') // Filter out fields not needed for simple address entry
+                    .map(addressKey => (
+                      <TextInput
+                        key={addressKey}
+                        style={styles.input}
+                        placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
+                        value={address[addressKey] || ''}
+                        onChangeText={(value) => handleAddressListChange('storageAddresses', index, addressKey, value)}
+                        placeholderTextColor="#6b7280"
+                      />
+                  ))}
+                </View>
+              ))}
+              <TouchableOpacity onPress={() => addAddressToList('storageAddresses')} style={styles.addButton}>
+                <PlusCircle size={20} color="#007AFF" />
+                <Text style={styles.addButtonText}>Add Storage Address</Text>
+              </TouchableOpacity>
+            </FormField>
+          </View>
+        );
+      case 6:
+        return (
+          <View style={sectionCardStyle}>
+            <Text style={[styles.sectionTitle]}>Collaborators</Text>
+            {/* Collaborators, Add/Remove, etc. */}
+            {(formData.collaborators || []).map((collaborator, index) => (
+              <View key={index} style={styles.collaboratorItemContainer}>
+                <View style={styles.collaboratorInfoContainer}>
+                    <Text style={styles.collaboratorText}>{collaborator.email}</Text>
+                    <Text style={styles.collaboratorRoleText}>({collaborator.role})</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleRemoveCollaborator(collaborator.email)} style={styles.removeButtonSmall}>
+                  <MinusCircle size={18} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ))}
             <TextInput
               style={styles.input}
-              placeholder="Contact Name"
-              value={contact.name}
-              onChangeText={(value) => handleContactChange(contactIndex, 'name', value)}
-              placeholderTextColor="#6b7280"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Role"
-              value={contact.role}
-              onChangeText={(value) => handleContactChange(contactIndex, 'role', value)}
-              placeholderTextColor="#6b7280"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Email (Optional)"
-              value={contact.email}
-              onChangeText={(value) => handleContactChange(contactIndex, 'email', value)}
+              placeholder="Collaborator Email"
+              value={newCollaboratorEmail}
+              onChangeText={setNewCollaboratorEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               placeholderTextColor="#6b7280"
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Phone (Optional)"
-              value={contact.phone}
-              onChangeText={(value) => handleContactChange(contactIndex, 'phone', value)}
-              keyboardType="phone-pad"
-              placeholderTextColor="#6b7280"
-            />
-          </View>
-        ))}
-        <TouchableOpacity onPress={addContact} style={styles.addButton}>
-          <PlusCircle size={20} color="#007AFF" />
-          <Text style={styles.addButtonText}>Add Contact</Text>
-        </TouchableOpacity>
-      </FormField>
-
-      {/* Collaborators Section */}
-      <FormField label="Collaborators">
-        {(formData.collaborators || []).map((collaborator, index) => (
-          <View key={index} style={styles.collaboratorItemContainer}>
-            <View style={styles.collaboratorInfoContainer}>
-                <Text style={styles.collaboratorText}>{collaborator.email}</Text>
-                <Text style={styles.collaboratorRoleText}>({collaborator.role})</Text>
-            </View>
-            <TouchableOpacity onPress={() => handleRemoveCollaborator(collaborator.email)} style={styles.removeButtonSmall}>
-              <MinusCircle size={18} color="#FF3B30" />
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TextInput
-          style={styles.input}
-          placeholder="Collaborator Email"
-          value={newCollaboratorEmail}
-          onChangeText={setNewCollaboratorEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholderTextColor="#6b7280"
-        />
-        <View style={styles.roleSelectorContainer}> 
-            <Text style={styles.subLabel}>Role: </Text>
-            <TouchableOpacity 
-                style={[styles.roleButton, newCollaboratorRole === 'viewer' && styles.roleButtonSelected]}
-                onPress={() => setNewCollaboratorRole('viewer')}
-            >
-                <Text style={styles.roleButtonText}>Viewer</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-                style={[styles.roleButton, newCollaboratorRole === 'editor' && styles.roleButtonSelected]}
-                onPress={() => setNewCollaboratorRole('editor')}
-            >
-                <Text style={styles.roleButtonText}>Editor</Text>
-            </TouchableOpacity>
-        </View>
-        <TouchableOpacity onPress={handleAddCollaborator} style={styles.addButtonSmallMargin}>
-          <PlusCircle size={20} color="#007AFF" />
-          <Text style={styles.addButtonText}>Add Collaborator</Text>
-        </TouchableOpacity>
-      </FormField>
-
-      {/* Dates & Status */}
-      <FormField label="Start Date">
-        <TouchableOpacity onPress={() => setShowStartDatePicker(true)} style={styles.datePickerButton}>
-          <Text style={styles.dateText}>{formatDate(startDate)}</Text>
-        </TouchableOpacity>
-        {showStartDatePicker && (
-          <DateTimePicker
-            testID="startDatePicker"
-            value={startDate}
-            mode="date"
-            display="default"
-            onChange={onStartDateChange}
-          />
-        )}
-      </FormField>
-
-      <FormField label="End Date">
-        <TouchableOpacity onPress={() => setShowEndDatePicker(true)} style={styles.datePickerButton}>
-          <Text style={styles.dateText}>{formatDate(endDate)}</Text>
-        </TouchableOpacity>
-        {showEndDatePicker && (
-          <DateTimePicker
-            testID="endDatePicker"
-            value={endDate}
-            mode="date"
-            display="default"
-            onChange={onEndDateChange}
-          />
-        )}
-      </FormField>
-
-      <FormField label="Status">
-         <Text style={styles.placeholderText}>Status Picker (Coming Soon)</Text>
-      </FormField>
-
-       {/* Venues/Locations */}
-       <FormField label="Venues">
-        {(!formData.isTouringShow && formData.venues && formData.venues.length > 0 ? [formData.venues[0]] : formData.venues || []).map((venue, venueIndex) => (
-          <View key={venue.id || venueIndex} style={styles.venueContainer}>
-            <View style={styles.venueHeader}>
-              <TextInput
-                style={[styles.input, styles.venueNameInput]}
-                placeholder={formData.isTouringShow ? `Venue ${venueIndex + 1} Name` : "Primary Venue Name"}
-                value={venue.name}
-                onChangeText={(value) => handleVenueChange(venueIndex, 'name', value)}
-                placeholderTextColor="#6b7280"
-              />
-              {(formData.isTouringShow && (formData.venues || []).length > 0) && // Show remove only if touring and has venues
-                <TouchableOpacity onPress={() => removeVenue(venueIndex)} style={styles.removeButton}>
-                  <MinusCircle size={20} color="#FF3B30" />
+            <View style={styles.roleSelectorContainer}> 
+                <Text style={styles.subLabel}>Role: </Text>
+                <TouchableOpacity 
+                    style={[styles.roleButton, newCollaboratorRole === 'viewer' && styles.roleButtonSelected]}
+                    onPress={() => setNewCollaboratorRole('viewer')}
+                >
+                    <Text style={styles.roleButtonText}>Viewer</Text>
                 </TouchableOpacity>
-              }
-            </View>
-            
-            {/* Address Fields */}
-            <Text style={styles.subLabel}>Address</Text>
-            {(Object.keys(defaultAddress) as Array<keyof Address>)
-              .filter(key => key !== 'id' && key !== 'companyName' && key !== 'nickname' && key !== 'name') // Exclude fields not typically for venue address block
-              .map((addressKey) => (
-                <TextInput
-                  key={addressKey}
-                  style={styles.input}
-                  placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
-                  value={venue.address?.[addressKey] || ''}
-                  onChangeText={(value) => handleVenueChange(venueIndex, `address.${addressKey}`, value)}
-                  placeholderTextColor="#6b7280"
-                  // Add keyboardType for postalCode, etc. if needed
-                />
-            ))}
-            
-            <Text style={styles.subLabel}>Venue Dates</Text>
-             <TouchableOpacity 
-                onPress={() => { 
-                    setCurrentVenueDateValue(parseDateString(venue.startDate)); 
-                    setVenueDatePickerVisible({ index: venueIndex, field: 'startDate' }); 
-                }}
-                style={styles.datePickerButton}
-             >
-                <Text style={styles.dateText}>{venue.startDate ? formatDate(venue.startDate) : 'Select Start Date'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-                onPress={() => { 
-                    setCurrentVenueDateValue(parseDateString(venue.endDate)); 
-                    setVenueDatePickerVisible({ index: venueIndex, field: 'endDate' }); 
-                }}
-                style={styles.datePickerButton}
-            >
-                <Text style={styles.dateText}>{venue.endDate ? formatDate(venue.endDate) : 'Select End Date'}</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.subLabel}>Notes</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Venue notes (e.g., stage door, parking)"
-              value={venue.notes}
-              onChangeText={(value) => handleVenueChange(venueIndex, 'notes', value)}
-              multiline
-              placeholderTextColor="#6b7280"
-            />
-          </View>
-        ))}
-        {formData.isTouringShow && (
-          <TouchableOpacity onPress={addVenue} style={styles.addButton}>
-            <PlusCircle size={20} color="#007AFF" />
-            <Text style={styles.addButtonText}>Add Venue</Text>
-          </TouchableOpacity>
-        )}
-         { (!formData.venues || formData.venues.length === 0) && !formData.isTouringShow && (
-          <TouchableOpacity onPress={addVenue} style={styles.addButton}>
-            <PlusCircle size={20} color="#007AFF" />
-            <Text style={styles.addButtonText}>Add Venue Details</Text>
-          </TouchableOpacity>
-        )}
-      </FormField>
-
-      {/* Conditionally rendered DateTimePicker for Venue Dates */}
-      {venueDatePickerVisible && (
-        <DateTimePicker
-          testID={`venueDatePicker_${venueDatePickerVisible.field}_${venueDatePickerVisible.index}`}
-          value={currentVenueDateValue} // The date to show in the picker
-          mode="date"
-          display="default"
-          onChange={onVenueDateChange}
-        />
-      )}
-
-      {/* Rehearsal Addresses Section */}
-      <FormField label="Rehearsal Addresses">
-        {(formData.rehearsalAddresses || []).map((address, index) => (
-          <View key={address.id || index} style={styles.addressContainer}>
-            <View style={styles.addressHeader}>
-                <Text style={styles.subLabel}>Rehearsal Space {index + 1}</Text>
-                <TouchableOpacity onPress={() => removeAddressFromList('rehearsalAddresses', index)} style={styles.removeButton}>
-                    <MinusCircle size={20} color="#FF3B30" />
+                <TouchableOpacity 
+                    style={[styles.roleButton, newCollaboratorRole === 'editor' && styles.roleButtonSelected]}
+                    onPress={() => setNewCollaboratorRole('editor')}
+                >
+                    <Text style={styles.roleButtonText}>Editor</Text>
                 </TouchableOpacity>
             </View>
-            {(Object.keys(defaultAddress) as Array<keyof Address>)
-              .filter(key => key !== 'id' && key !== 'companyName') // Filter out fields not needed for simple address entry
-              .map(addressKey => (
-                <TextInput
-                  key={addressKey}
-                  style={styles.input}
-                  placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
-                  value={address[addressKey] || ''}
-                  onChangeText={(value) => handleAddressListChange('rehearsalAddresses', index, addressKey, value)}
-                  placeholderTextColor="#6b7280"
-                />
-            ))}
-          </View>
-        ))}
-        <TouchableOpacity onPress={() => addAddressToList('rehearsalAddresses')} style={styles.addButton}>
-          <PlusCircle size={20} color="#007AFF" />
-          <Text style={styles.addButtonText}>Add Rehearsal Address</Text>
-        </TouchableOpacity>
-      </FormField>
-
-      {/* Storage Addresses Section */}
-      <FormField label="Storage Addresses">
-        {(formData.storageAddresses || []).map((address, index) => (
-          <View key={address.id || index} style={styles.addressContainer}>
-             <View style={styles.addressHeader}>
-                <Text style={styles.subLabel}>Storage Location {index + 1}</Text>
-                <TouchableOpacity onPress={() => removeAddressFromList('storageAddresses', index)} style={styles.removeButton}>
-                    <MinusCircle size={20} color="#FF3B30" />
-                </TouchableOpacity>
-            </View>
-            {(Object.keys(defaultAddress) as Array<keyof Address>)
-              .filter(key => key !== 'id' && key !== 'companyName') // Filter out fields not needed for simple address entry
-              .map(addressKey => (
-                <TextInput
-                  key={addressKey}
-                  style={styles.input}
-                  placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
-                  value={address[addressKey] || ''}
-                  onChangeText={(value) => handleAddressListChange('storageAddresses', index, addressKey, value)}
-                  placeholderTextColor="#6b7280"
-                />
-            ))}
-          </View>
-        ))}
-        <TouchableOpacity onPress={() => addAddressToList('storageAddresses')} style={styles.addButton}>
-          <PlusCircle size={20} color="#007AFF" />
-          <Text style={styles.addButtonText}>Add Storage Address</Text>
-        </TouchableOpacity>
-      </FormField>
-
-      {/* Acts & Scenes */}
-      <FormField label="Acts & Scenes">
-        {(formData.acts || []).map((act, actIndex) => (
-          <View key={act.id || actIndex} style={styles.actContainer}>
-            <View style={styles.actHeader}>
-              <TextInput
-                style={[styles.input, styles.actInput]}
-                placeholder={`Act ${actIndex + 1} Name`}
-                value={act.name}
-                onChangeText={(value) => handleActChange(actIndex, 'name', value)}
-                placeholderTextColor="#6b7280"
-              />
-              { (formData.acts || []).length > 1 &&
-                <TouchableOpacity onPress={() => removeAct(actIndex)} style={styles.removeButton}>
-                  <MinusCircle size={20} color="#FF3B30" />
-                </TouchableOpacity>
-              }
-            </View>
-            <TextInput
-              style={[styles.input, styles.textArea, styles.actDescriptionInput]}
-              placeholder={`Act ${actIndex + 1} Description (Optional)`}
-              value={act.description}
-              onChangeText={(value) => handleActChange(actIndex, 'description', value)}
-              multiline
-              placeholderTextColor="#6b7280"
-            />
-
-            {(act.scenes || []).map((scene, sceneIndex) => (
-              <View key={scene.id || sceneIndex} style={styles.sceneContainer}>
-                <TextInput
-                  style={[styles.input, styles.sceneInput]}
-                  placeholder={`Scene ${sceneIndex + 1} Name`}
-                  value={scene.name}
-                  onChangeText={(value) => handleSceneChange(actIndex, sceneIndex, 'name', value)}
-                  placeholderTextColor="#6b7280"
-                />
-                <TextInput
-                  style={[styles.input, styles.sceneInput]}
-                  placeholder={`Scene ${sceneIndex + 1} Setting (Optional)`}
-                  value={scene.setting}
-                  onChangeText={(value) => handleSceneChange(actIndex, sceneIndex, 'setting', value)}
-                  placeholderTextColor="#6b7280"
-                />
-                { (act.scenes || []).length > 1 &&
-                  <TouchableOpacity onPress={() => removeScene(actIndex, sceneIndex)} style={styles.removeButton}>
-                    <MinusCircle size={20} color="#FF3B30" />
-                  </TouchableOpacity>
-                }
-              </View>
-            ))}
-            <TouchableOpacity onPress={() => addScene(actIndex)} style={styles.addButton}>
+            <TouchableOpacity onPress={handleAddCollaborator} style={styles.addButtonSmallMargin}>
               <PlusCircle size={20} color="#007AFF" />
-              <Text style={styles.addButtonText}>Add Scene</Text>
+              <Text style={styles.addButtonText}>Add Collaborator</Text>
             </TouchableOpacity>
           </View>
-        ))}
-        <TouchableOpacity onPress={addAct} style={styles.addButton}>
-          <PlusCircle size={20} color="#007AFF" />
-          <Text style={styles.addButtonText}>Add Act</Text>
-        </TouchableOpacity>
-      </FormField>
+        );
+      default:
+        return <View><Text>Step not implemented yet.</Text></View>;
+    }
+  };
 
-       {/* Action Buttons */}
-      <View style={styles.buttonContainer}>
-        <Button
-          title={mode === 'create' ? 'Create Show' : 'Update Show'}
-          onPress={handleSubmit}
-          color={Platform.OS === 'ios' ? '#FFFFFF' : '#007AFF'} // iOS uses white text on blue bg
-        />
-        {onCancel && (
-          <View style={styles.cancelButtonContainer}>
-            <Button
-              title="Cancel"
-              onPress={onCancel}
-              color={Platform.OS === 'ios' ? '#FFFFFF' : '#FF3B30'} // Red color for cancel
-            />
-          </View>
-        )}
-      </View>
-    </ScrollView>
+  // Stepper header with dots
+  const renderStepperHeader = () => (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 16 }}>
+      {steps.map((label, idx) => (
+        <View key={label} style={{
+          width: 12,
+          height: 12,
+          borderRadius: 6,
+          backgroundColor: step === idx ? '#c084fc' : '#404040',
+          marginHorizontal: 4,
+        }} />
+      ))}
+    </View>
   );
-}
 
-// Styles need significant updates for new fields
-const styles = StyleSheet.create({
-  formContainer: {
-    padding: 16,
-    backgroundColor: '#1f2937', // Darker background for form area
-    borderRadius: 8,
-  },
-  fieldContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    color: '#d1d5db', // Lighter gray for labels
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  requiredAsterisk: {
-     color: '#f87171', // Red asterisk
-  },
-  input: {
-    backgroundColor: '#374151', // Slightly lighter background for inputs
-    color: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#4b5563', // Border color for inputs
-    fontSize: 16,
-  },
-  textArea: {
-      height: 100, // Make text area taller
-      textAlignVertical: 'top', // Align text to top for multiline
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start', // Align switch to the left
-    // height: 40, // Ensure consistent height like TextInput
-  },
-  switch: {
-     // Add specific styles for the switch if needed, e.g., margins
-     // marginLeft: 10, // Example if spacing is needed
-  },
-  placeholderText: {
-     color: '#9ca3af', // Gray color for placeholder info
-     fontSize: 14,
-     fontStyle: 'italic',
-     marginTop: 8,
-     paddingVertical: 10, // Match input padding
-     paddingHorizontal: 12,
-     backgroundColor: '#374151',
-     borderRadius: 6,
-     borderColor: '#4b5563',
-     borderWidth: 1,
-  },
-  buttonContainer: {
-    marginTop: 24,
-    backgroundColor: Platform.OS === 'ios' ? '#007AFF' : 'transparent', // Blue background for iOS button wrapper
-    borderRadius: Platform.OS === 'ios' ? 8 : 0, // Rounded corners for iOS wrapper
-  },
-  cancelButtonContainer: {
-     marginTop: 12,
-     backgroundColor: Platform.OS === 'ios' ? '#FF3B30' : 'transparent', // Red background for iOS cancel wrapper
-     borderRadius: Platform.OS === 'ios' ? 8 : 0, // Rounded corners for iOS wrapper
-  },
-  datePickerButton: {
-    backgroundColor: '#374151',
-    padding: 12,
-    borderRadius: 6,
-    justifyContent: 'center',
-    minHeight: 44, // Ensure touchable area is large enough
-  },
-  dateText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-  },
-  imagePickerButton: {
-    backgroundColor: '#007AFF',
-    padding: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  imagePickerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  imagePreviewContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  logoPreview: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 8,
-  },
-  removeImageButton: {
-    backgroundColor: '#FF3B30',
-    padding: 8,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  removeImageButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  actContainer: {
-    backgroundColor: '#2a3b4d', // Slightly different background for sectioning
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 10,
-  },
-  actHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  actInput: {
-    flex: 1, // Take up available space
-    marginRight: 10, // Space before remove button
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  actDescriptionInput: {
-    minHeight: 40,
-    marginBottom: 10,
-  },
-  sceneContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 10, // Indent scenes
-    marginBottom: 5,
-  },
-  sceneInput: {
-    flex: 1,
-    marginRight: 5, // Space between scene inputs or before remove button
-    fontSize: 14,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4b5563',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginTop: 5,
-    alignSelf: 'flex-start', // Don't take full width
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  removeButton: {
-    padding: 5, // Make it easier to tap
-  },
-  removeButtonSmall: {
-    padding: 3,
-  },
-  venueContainer: {
-    backgroundColor: '#2a3b4d',
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 15,
-    borderColor: '#4b5563',
-    borderWidth: 1,
-    alignSelf: 'flex-start',
-  },
-  venueHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  venueNameInput: {
-    flex: 1,
-    marginRight: 10,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  subLabel: {
-    fontSize: 13,
-    color: '#a1a1aa', // Lighter gray for sub-labels
-    marginTop: 8,
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  contactContainer: {
-    backgroundColor: '#2a3b4d',
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 10,
-    borderColor: '#4b5563',
-    borderWidth: 1,
-  },
-  contactHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  addressContainer: {
-    backgroundColor: '#2a3b4d',
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 10,
-    borderColor: '#4b5563',
-    borderWidth: 1,
-  },
-  addressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  collaboratorItemContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#2a3b4d',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  collaboratorInfoContainer: {
-    flexDirection: 'column',
-  },
-  collaboratorText: {
-    color: '#e5e7eb',
-    fontSize: 15,
-  },
-  collaboratorRoleText: {
-    color: '#9ca3af',
-    fontSize: 12,
-  },
-  roleSelectorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  roleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#4b5563',
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  roleButtonSelected: {
-    backgroundColor: '#007AFF',
-  },
-  roleButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  addButtonSmallMargin: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#4b5563',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginTop: 8, // Added specific margin for this button
-    alignSelf: 'flex-start',
-  },
-}); 
+  return (
+    <View style={{ padding: 16 }}>
+      {renderStepperHeader()}
+      <View {...panResponder.panHandlers}>
+        {renderStep()}
+      </View>
+      {/* Stepper nav buttons */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+        <TouchableOpacity onPress={() => setStep(s => Math.max(s - 1, 0))} disabled={step === 0}>
+          <Text style={{ color: step === 0 ? '#888' : '#c084fc', fontWeight: 'bold', fontSize: 16 }}>Back</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setStep(s => Math.min(s + 1, steps.length - 1))} disabled={step === steps.length - 1}>
+          <Text style={{ color: step === steps.length - 1 ? '#888' : '#c084fc', fontWeight: 'bold', fontSize: 16 }}>Next</Text>
+        </TouchableOpacity>
+      </View>
+      {/* Submit/Cancel Buttons (only on last step) */}
+      {step === steps.length - 1 && (
+        <View style={{ marginTop: 24 }}>
+          <Button
+            title={mode === 'create' ? 'Create Show' : 'Update Show'}
+            onPress={handleSubmit}
+            color={Platform.OS === 'ios' ? '#007AFF' : undefined}
+          />
+          {onCancel && (
+            <View style={styles.cancelButtonContainer}>
+              <Button
+                title="Cancel"
+                onPress={onCancel}
+                color={Platform.OS === 'ios' ? '#FF3B30' : undefined}
+              />
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+} 

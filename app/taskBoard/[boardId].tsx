@@ -682,7 +682,7 @@ const TaskBoardDetailScreen = () => {
             <Ionicons name="list-circle-outline" size={28} color={colors.text} />
             <DefaultText style={{ color: colors.text, fontSize: 12 }}>Shows</DefaultText>
           </Pressable>
-          <Pressable onPress={() => router.push('/propsTab/index')} style={{ alignItems: 'center', flex: 1, paddingVertical: 8 }}>
+          <Pressable onPress={() => router.push('/props')} style={{ alignItems: 'center', flex: 1, paddingVertical: 8 }}>
             <Ionicons name="briefcase-outline" size={28} color={colors.text} />
             <DefaultText style={{ color: colors.text, fontSize: 12 }}>Props</DefaultText>
           </Pressable>

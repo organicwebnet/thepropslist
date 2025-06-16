@@ -66,6 +66,7 @@ import type {
   QueueStatus,
 } from '../../../shared/services/firebase/types.ts';
 import { FirebaseError } from '../../../shared/services/firebase/types.ts';
+import type { ListData } from '../../../shared/types/taskManager';
 
 export class WebFirebaseService extends BaseFirebaseService implements FirebaseService {
   private app: FirebaseApp;
@@ -298,4 +299,12 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   async addList(boardId: string, listData: any): Promise<any> { return Promise.resolve({} as any); }
   async addCard(boardId: string, listId: string, cardData: any): Promise<any> { return Promise.resolve({} as any); }
   async moveCardToList(boardId: string, fromListId: string, toListId: string, cardId: string): Promise<void> { throw new Error('Not implemented'); }
+  async reorderLists(boardId: string, orderedLists: ListData[]): Promise<void> {
+    // TODO: Implement or mock for web
+    return Promise.resolve();
+  }
+  getCollection<T>(collectionName: string): any {
+    // TODO: Implement or mock for web
+    return null;
+  }
 }

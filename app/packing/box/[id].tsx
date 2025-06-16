@@ -37,7 +37,7 @@ export default function BoxDetailScreen() {
   }, [boxId, showId, boxes, boxesLoading]);
 
   const handleViewPropDetails = (propId: string) => {
-    router.push(`/propsTab/${propId}`); 
+    router.push(`/props/${propId}`); 
   };
 
   const handleQuantitySubmit = useCallback(async (newQuantity: number) => {

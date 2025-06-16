@@ -40,19 +40,19 @@ export default function TabsLayout() {
         headerShown: false, // Default, but individual screens can override
       }}
     >
-  <Tabs.Screen
-    name="index" 
-    options={{
-      title: 'Home', 
-      tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
-        <Ionicons
-          name={focused ? 'home' : 'home-outline'} 
-          size={size}
-          color={color}
-        />
-      ),
-    }}
-  />
+      <Tabs.Screen
+        name="index" 
+        options={{
+          title: 'Home', 
+          tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'} 
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="shows"
         options={{
@@ -69,7 +69,7 @@ export default function TabsLayout() {
           headerTintColor: currentThemeColors.primary, // Color for back button if ever shown
           tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
-              name={focused ? 'list-circle' : 'list-circle-outline'}
+              name={focused ? 'people' : 'people-outline'}
               size={size}
               color={color} 
             />
@@ -98,26 +98,24 @@ export default function TabsLayout() {
           ),
         }}
       />
-      
       <Tabs.Screen
         name="packing"
         options={{
           title: 'Packing',
-          headerShown: true, // Ensure header is shown for the QR scan button
+          headerShown: true,
           headerStyle: { backgroundColor: tabBarStyleBackground },
           headerTitleStyle: { color: currentThemeColors.text },
-          headerTintColor: currentThemeColors.primary, 
+          headerTintColor: currentThemeColors.primary,
           tabBarIcon: ({ color, focused, size }: { color: string; focused: boolean; size: number }) => (
             <Ionicons
-              name={focused ? 'archive' : 'archive-outline'}
+              name={focused ? 'cube' : 'cube-outline'}
               size={size}
               color={color}
             />
           ),
-          // Note: headerRight for Packing screen (QR Scan button) is defined within PackingScreen.tsx itself using Stack.Screen
         }}
       />
-       <Tabs.Screen
+      <Tabs.Screen
         name="profile/index"
         options={{
           title: 'Profile',
@@ -134,7 +132,13 @@ export default function TabsLayout() {
           ),
         }}
       />
+     
       {/* Screens to hide from tab bar */}
+      <Tabs.Screen name="todos/index" options={{ href: null }} />
+      <Tabs.Screen name="propsTab/index" options={{ href: null }} />
+      <Tabs.Screen name="props/create" options={{ href: null }} />
+      <Tabs.Screen name="props/[id]/index" options={{ href: null }} />
+      <Tabs.Screen name="props/[id]/edit" options={{ href: null }} />
       <Tabs.Screen name="profile/edit" options={{ href: null }} />
       {/* <Tabs.Screen name="propsTab/[id]" options={{ href: null }} /> */}
     </Tabs>

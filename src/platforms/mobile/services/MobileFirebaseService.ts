@@ -219,7 +219,7 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
 
   async updateDocument<T extends DocumentData>(collectionPath: string, docId: string, data: Partial<T>): Promise<void> {
     const docRef = fbDoc(this.firestore, collectionPath, docId);
-    await fbUpdate(docRef, data);
+    await fbUpdate(docRef, data as any);
   }
 
   async deleteDocument(collectionPath: string, docId: string): Promise<void> {
@@ -374,7 +374,7 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
     await fbUpdate(docRef, {
       ...updates,
       updatedAt: serverTimestamp(),
-    });
+    } as any);
   }
 
   async deleteCard(boardId: string, listId: string, cardId: string): Promise<void> {

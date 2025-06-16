@@ -919,6 +919,14 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                     const updatedActivity = [...(internalCard.activity || []), activity];
                                     await onUpdateCard(internalCard.id, internalCard.listId, { completed: newCompleted, activity: updatedActivity });
                                     setInternalCard(prev => prev ? { ...prev, completed: newCompleted, activity: updatedActivity } : null);
+                                    // --- Prop status sync ---
+                                    if (newCompleted && internalCard.propId && service) {
+                                        try {
+                                            await service.updateDocument('props', internalCard.propId, { status: 'repaired_back_in_show' });
+                                        } catch (err) {
+                                            console.error('Failed to update prop status from card completion:', err);
+                                        }
+                                    }
                                 }
                             }}
                             style={{ marginRight: 12 }}

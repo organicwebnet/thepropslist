@@ -143,6 +143,11 @@ export interface PropFormData {
   returnDueDate?: string | Date | null;
   availabilityStatus?: string;
   publicNotes?: string;
+
+  // Assignment for maintenance/repair/other statuses
+  assignedTo?: string[]; // Array of user IDs assigned for maintenance/repair
+  repairDeadline?: string;
+  showId?: string;
 }
 
 export interface Prop {
@@ -261,6 +266,10 @@ export interface Prop {
     checkedOutAt?: string; // ISO date string
     expectedReturnAt?: string; // ISO date string (optional)
   };
+
+  // Assignment for maintenance/repair/other statuses
+  assignedTo?: string[]; // Array of user IDs assigned for maintenance/repair
+  assignedUserDetails?: { id: string; name: string; email?: string }[]; // Optional: denormalized user info for display
 }
 
 export type PropUpdateFormData = Partial<PropFormData>;

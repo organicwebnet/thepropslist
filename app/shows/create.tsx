@@ -6,6 +6,7 @@ import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import type { Show } from '../../src/shared/services/firebase/types.ts'; // Using Show from firebase/types
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
 import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts';
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function CreateShowScreen() {
   const router = useRouter();
@@ -54,30 +55,45 @@ export default function CreateShowScreen() {
 
   if (isAddingShow || isSubmitting) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={currentThemeColors.primary} />
-      </View>
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={currentThemeColors.primary} />
+        </View>
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.container}> 
-      <Stack.Screen options={{ title: 'Create New Show' }} />
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <ShowFormNative
-          mode="create"
-          onSubmit={handleFormSubmit}
-          onCancel={() => router.back()}
-        />
-      </ScrollView>
-    </View>
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <Stack.Screen options={{ title: 'Create New Show' }} />
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <ShowFormNative
+            mode="create"
+            onSubmit={handleFormSubmit}
+            onCancel={() => router.back()}
+          />
+        </ScrollView>
+      </View>
+    </LinearGradient>
   );
 }
 
 const getStyles = (themeColors: typeof appLightTheme.colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: themeColors.background,
   },
   scrollContainer: {
     padding: 16,
@@ -86,6 +102,5 @@ const getStyles = (themeColors: typeof appLightTheme.colors) => StyleSheet.creat
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: themeColors.background,
   },
 }); 

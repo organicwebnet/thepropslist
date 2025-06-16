@@ -63,6 +63,7 @@ export interface CardData {
   attachments?: AttachmentData[];
   images?: string[];
   completed?: boolean;
+  propId?: string; // Link to a prop for status sync
 }
 
 export interface ListData {

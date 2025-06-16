@@ -49,11 +49,16 @@ module.exports = ({ config }) => {
     scheme: "propsbible",
     plugins: [
       "@react-native-firebase/app",
-      "expo-router",
+      "expo-router"
     ],
     experiments: {
       tsconfigPaths: true,
       typedRoutes: true
+    },
+    extra: {
+      "eas": {
+        "projectId": "1d8f8a65-5d2a-4357-93c8-7186636a0280"
+      }
     }
   };
 }; 

@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet, Text, FlatList, TouchableOpacity, 
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
+import LinearGradient from 'react-native-linear-gradient';
 
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import { usePacking } from '../../src/hooks/usePacking.ts';
@@ -133,34 +134,42 @@ export default function PackingScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          title: selectedShow ? `Packing: ${selectedShow.name}` : 'Packing',
-          headerRight: () => (
-            <TouchableOpacity onPress={() => setIsQRScannerVisible(true)} style={{ marginRight: 15 }}>
-              <Ionicons name="qr-code-outline" size={28} color={currentThemeColors.primary} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <FlatList
-        data={boxes}
-        renderItem={renderBoxItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContentContainer}
-      />
-      <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
-        radius: 4,
-        opacity: 0.3,
-        color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
-        offset: [0, 2],
-      })]}>
-        <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
-          <Ionicons name="add" size={30} color={currentThemeColors.text || currentThemeColors.text} />
-        </TouchableOpacity>
-      </ShadowedView>
-    </View>
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <Stack.Screen 
+          options={{
+            title: selectedShow ? `Packing: ${selectedShow.name}` : 'Packing',
+            headerRight: () => (
+              <TouchableOpacity onPress={() => setIsQRScannerVisible(true)} style={{ marginRight: 15 }}>
+                <Ionicons name="qr-code-outline" size={28} color={currentThemeColors.primary} />
+              </TouchableOpacity>
+            ),
+          }}
+        />
+        <FlatList
+          data={boxes}
+          renderItem={renderBoxItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContentContainer}
+        />
+        <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
+          radius: 4,
+          opacity: 0.3,
+          color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
+          offset: [0, 2],
+        })]}>
+          <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
+            <Ionicons name="add" size={30} color={currentThemeColors.text || currentThemeColors.text} />
+          </TouchableOpacity>
+        </ShadowedView>
+      </View>
+    </LinearGradient>
   );
 }
 

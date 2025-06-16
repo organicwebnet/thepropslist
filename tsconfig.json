@@ -12,7 +12,9 @@
     "allowImportingTsExtensions": true,
     "module": "esnext",
     "noEmit": true,
-    "jsx": "react-native"
+    "jsx": "react-native",
+    "esModuleInterop": true,
+    "lib": ["esnext"]
   },
   "exclude": [
     "node_modules"
@@ -23,5 +25,5 @@
     "nativewind-env.d.ts",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ]
+, "app/(tabs)/old_props_form.bak"  ]
 }

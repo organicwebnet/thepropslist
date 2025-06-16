@@ -94,7 +94,7 @@ export function PropsListScreen() {
   }, []);
 
   const handleAddProp = () => {
-    navigation.navigate('PropForm', {});
+    router.push({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } });
   };
 
   const handlePropPress = (propId: string) => {
@@ -198,7 +198,7 @@ export function PropsListScreen() {
           style={styles.addButton}
           onPress={handleAddProp}
         >
-          <MaterialIcons name="add" size={24} color="white" />
+          <MaterialIcons name="add" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
     </LinearGradient>
@@ -282,4 +282,9 @@ const styles = StyleSheet.create({
   },
   modal: { backgroundColor: 'rgba(30,30,30,0.7)' },
   button: { backgroundColor: 'rgba(30,30,30,0.7)' },
+  addButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
 }); 

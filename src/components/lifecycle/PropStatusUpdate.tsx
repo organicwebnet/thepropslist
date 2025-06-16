@@ -10,6 +10,7 @@ import { WysiwygEditor } from '../WysiwygEditor.tsx';
 import { AlertTriangle, Clock, RefreshCcw, Camera, Upload, X, Image } from 'lucide-react';
 import { HelpTooltip } from '../HelpTooltip.tsx';
 import { useFirebase } from '../../contexts/FirebaseContext.tsx';
+import { UserPicker } from '../UserPicker.tsx';
 
 interface PropStatusUpdateProps {
   currentStatus: PropLifecycleStatus;
@@ -33,15 +34,18 @@ export function PropStatusUpdate({
   const [notifyTeam, setNotifyTeam] = useState(false);
   const [damageImages, setDamageImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!newStatus || newStatus === currentStatus) return;
-
+    // Validation: require assignment for statuses that need it
+    if (showAssignment && (!assignedTo || assignedTo.length === 0)) {
+      alert('Please assign at least one user for this status.');
+      return;
+    }
     setIsSubmitting(true);
-    
     try {
       await onStatusUpdate(
         newStatus,
@@ -49,12 +53,11 @@ export function PropStatusUpdate({
         notifyTeam,
         damageImages.length > 0 ? damageImages : undefined
       );
-
-      // Reset form state after successful update
       setNotes('');
       setDamageImages([]);
       setImagePreviews([]);
       // Don't reset status as we want to show the new current status
+      setAssignedTo([]);
     } catch (error) {
       alert('Failed to update prop status. Please try again.');
     } finally {
@@ -117,6 +120,33 @@ export function PropStatusUpdate({
     statusColor = defaultColor;
   }
 
+  // --- Status-driven field logic ---
+  const statusFieldMap: Record<PropLifecycleStatus, { assignment?: boolean; repair?: boolean; imageUpload?: boolean; notes?: boolean }> = {
+    confirmed: { notes: true },
+    cut: { notes: true },
+    out_for_repair: { assignment: true, repair: true, imageUpload: true, notes: true },
+    damaged_awaiting_repair: { assignment: true, repair: true, imageUpload: true, notes: true },
+    damaged_awaiting_replacement: { assignment: true, repair: true, imageUpload: true, notes: true },
+    missing: { notes: true },
+    in_transit: { notes: true },
+    under_maintenance: { assignment: true, repair: true, notes: true },
+    loaned_out: { notes: true },
+    on_hold: { notes: true },
+    under_review: { notes: true },
+    being_modified: { notes: true },
+    backup: { notes: true },
+    temporarily_retired: { notes: true },
+    ready_for_disposal: { notes: true },
+    repaired_back_in_show: { notes: true },
+    available_in_storage: { notes: true },
+    checked_out: { notes: true },
+    in_use_on_set: { notes: true },
+  };
+  const showAssignment = !!(newStatus && statusFieldMap[newStatus]?.assignment);
+  const showRepair = !!(newStatus && statusFieldMap[newStatus]?.repair);
+  const showImageUpload = !!(newStatus && statusFieldMap[newStatus]?.imageUpload);
+  const showNotes = !!(newStatus && statusFieldMap[newStatus]?.notes);
+
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div>
@@ -169,54 +199,53 @@ export function PropStatusUpdate({
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2 flex items-center gap-2">
-          Status Update Notes
-          <HelpTooltip content={
-            <div>
-              <p className="font-medium mb-1">Update Notes:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Explain reason for status change</li>
-                <li>Include relevant details</li>
-                <li>Note any required actions</li>
-              </ul>
-            </div>
-          } />
-        </label>
-        <WysiwygEditor
-          value={notes}
-          onChange={setNotes}
-          placeholder="Enter any relevant notes about this status change..."
-          minHeight={100}
-          disabled={disabled || isSubmitting}
-        />
-      </div>
-
+      {/* Assignment field for statuses that require it */}
+      {showAssignment && (
+        <div>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Assign To (Select users)</label>
+          <UserPicker
+            selectedUserIds={assignedTo}
+            onChange={setAssignedTo}
+            disabled={isSubmitting || disabled}
+          />
+        </div>
+      )}
+      {/* Repair fields for repair/maintenance statuses */}
+      {showRepair && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Repair Deadline</label>
+            <input
+              type="date"
+              className="w-full bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2"
+              disabled={isSubmitting || disabled}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Estimated Return Date</label>
+            <input
+              type="date"
+              className="w-full bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2"
+              disabled={isSubmitting || disabled}
+            />
+          </div>
+        </div>
+      )}
       {/* Image Upload Section - only show for damage-related statuses */}
-      {shouldShowImageUpload && (
+      {showImageUpload && (
         <div className="p-4 rounded-lg bg-[var(--bg-secondary)] space-y-3">
           <div className="flex justify-between items-center">
             <label className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
               Damage Documentation
-              <HelpTooltip content={
-                <div>
-                  <p className="font-medium mb-1">Documentation Guidelines:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Clear photos of damage</li>
-                    <li>Multiple angles if needed</li>
-                    <li>Good lighting for visibility</li>
-                  </ul>
-                </div>
-              } />
+              <HelpTooltip content="Upload images of the damage for documentation and insurance purposes." />
             </label>
             <button
               type="button"
+              className="flex items-center gap-1 px-3 py-1 bg-[var(--highlight-color)] text-white rounded-md hover:bg-[var(--highlight-color-dark)]"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[var(--input-bg)] hover:bg-[var(--input-bg)]/80 text-[var(--text-primary)] rounded-md transition-colors"
-              disabled={disabled || isSubmitting}
+              disabled={isSubmitting || disabled}
             >
-              <Upload className="h-4 w-4" />
-              Upload Images
+              <Upload className="h-4 w-4" /> Upload
             </button>
             <input
               ref={fileInputRef}
@@ -225,44 +254,43 @@ export function PropStatusUpdate({
               multiple
               className="hidden"
               onChange={handleImageUpload}
-              disabled={disabled || isSubmitting}
+              disabled={isSubmitting || disabled}
             />
           </div>
-
           {/* Image previews */}
           {imagePreviews.length > 0 && (
-            <div className="grid grid-cols-3 gap-3 mt-3">
-              {imagePreviews.map((preview, index) => (
-                <div key={index} className="relative group h-24 border border-[var(--border-color)] rounded-md overflow-hidden">
-                  <img 
-                    src={preview} 
-                    alt={`Damage documentation ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {imagePreviews.map((src, idx) => (
+                <div key={idx} className="relative group">
+                  <img src={src} alt="Damage Preview" className="w-24 h-24 object-cover rounded-md" />
                   <button
                     type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute top-1 right-1 bg-red-500/90 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Remove image"
+                    className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => removeImage(idx)}
+                    disabled={isSubmitting || disabled}
                   >
-                    <X className="h-3 w-3" />
+                    <X size={16} />
                   </button>
                 </div>
               ))}
             </div>
           )}
-
-          {imagePreviews.length === 0 && (
-            <div className="flex flex-col items-center justify-center gap-2 p-8 border border-dashed border-[var(--border-color)] rounded-md">
-              <Camera className="h-8 w-8 text-[var(--text-secondary)]" />
-              <p className="text-sm text-[var(--text-secondary)]">
-                Upload images to document the damage
-              </p>
-              <p className="text-xs text-[var(--text-secondary)]/70">
-                (Drag and drop or click the upload button)
-              </p>
-            </div>
-          )}
+        </div>
+      )}
+      {/* Notes field for statuses that require it */}
+      {showNotes && (
+        <div>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2 flex items-center gap-2">
+            Status Update Notes
+            <HelpTooltip content={<div><p className="font-medium mb-1">Update Notes:</p><ul className="list-disc list-inside space-y-1"><li>Explain reason for status change</li><li>Include relevant details</li><li>Note any required actions</li></ul></div>} />
+          </label>
+          <WysiwygEditor
+            value={notes}
+            onChange={setNotes}
+            placeholder="Enter any relevant notes about this status change..."
+            minHeight={100}
+            disabled={disabled || isSubmitting}
+          />
         </div>
       )}
 

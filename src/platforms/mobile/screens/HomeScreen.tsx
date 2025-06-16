@@ -26,6 +26,7 @@ import LinearGradient from 'react-native-linear-gradient';
 
 // Define types locally to avoid import issues
 import type { DocumentData, WhereClause } from '../../../shared/services/firebase/types';
+import { maxBy } from 'lodash';
 type TodoBoard = import('../../../shared/types/taskManager').BoardData & DocumentData;
 type Task = import('../../../shared/types/tasks').Task;
 type FirebaseDocument<T extends DocumentData> = import('../../../shared/services/firebase/types').FirebaseDocument<T>;
@@ -404,7 +405,7 @@ export function HomeScreen() {
       onRequestClose={() => setIsCreateModalVisible(false)}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: 'transparent' }]}>
+        <View style={[styles.modalContent, { backgroundColor: '#181A2A' }]}>
           <Text style={[styles.modalTitle, { color: darkColors.text }]}>Create New Board</Text>
           <TextInput
             style={[styles.modalInput, { color: darkColors.text, backgroundColor: 'transparent', borderColor: darkColors.border }]}
@@ -424,22 +425,16 @@ export function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: darkColors.background }}>
-      <View style={{ padding: 16 }}>
-        <TouchableOpacity
-          style={{ backgroundColor: '#007AFF', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 16 }}
-          onPress={() => router.push('/props')}
-        >
-          <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>Go to Props List</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
       <LinearGradient
-        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
-        locations={[0, 0.2, 0.5, 0.8, 1]}
+        colors={['#1e3a8a', '#6d28d9']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{ flex: 1 }}
       >
+        <View style={{ padding: 16 }}>
+          {/* Removed 'Go to Props List' button */}
+        </View>
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {renderWelcomeHeader()}
@@ -484,26 +479,56 @@ export function HomeScreen() {
              icon={fabOpen ? 'close' : 'plus'}
              actions={[
                {
-                 icon: 'shape-outline',
+                 icon: ({ color, size }) => (
+                   <View style={{ position: 'relative' }}>
+                     <Ionicons name="people-outline" size={size} color={color} />
+                     <Ionicons
+                       name="add-circle"
+                       size={size * 0.4}
+                       color={color}
+                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: 'white', borderRadius: size * 0.2 }}
+                     />
+                   </View>
+                 ),
                  label: 'Add Show',
                  onPress: () => router.push('/(tabs)/shows/create' as any),
                  style: styles.fabAction,
-                 labelStyle: styles.fabLabel,
+                 labelStyle: [styles.fabLabel, { marginLeft: 0, paddingLeft: 0, minWidth: 0 }],
                },
-               ...(selectedShow ? [{
-                 icon: 'plus-box-outline',
+               {
+                 icon: ({ color, size }) => (
+                   <View style={{ position: 'relative' }}>
+                     <Ionicons name="rose-outline" size={size} color={color} />
+                     <Ionicons
+                       name="add-circle"
+                       size={size * 0.4}
+                       color={color}
+                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: 'white', borderRadius: size * 0.2 }}
+                     />
+                   </View>
+                 ),
                  label: 'Add Prop',
-                 onPress: () => router.push({ pathname: '/props/create', params: { showId: selectedShow.id } } as any),
-                 style: styles.fabAction,
-                 labelStyle: styles.fabLabel,
-               }] : []),
-               ...(selectedShow ? [{
-                 icon: 'view-dashboard-outline',
+                 onPress: () => router.push({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } }),
+                 style: [styles.fabAction, { marginBottom: 0}],
+                 labelStyle: [styles.fabLabel, { marginLeft: 0, paddingLeft: 0, minWidth: 0 }],
+               },
+               {
+                 icon: ({ color, size }) => (
+                   <View style={{ position: 'relative' }}>
+                     <Ionicons name="cube-outline" size={size} color={color} />
+                     <Ionicons
+                       name="add-circle"
+                       size={size * 0.4}
+                       color={color}
+                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: 'white', borderRadius: size * 0.2 }}
+                     />
+                   </View>
+                 ),
                  label: 'Add Board',
                  onPress: handleCreateNewBoard,
-                 style: styles.fabAction,
-                 labelStyle: styles.fabLabel,
-               }] : []),
+                 style: [styles.fabAction, { marginBottom:52,}],
+                 labelStyle: [styles.fabLabel, { marginLeft: 0, paddingLeft: 0, minWidth: 0 }],
+               },
              ]}
              onStateChange={({ open }) => setFabOpen(open)}
              fabStyle={[styles.fab, { backgroundColor: '#c084fc' }]}
@@ -636,7 +661,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#181A2A',
     borderRadius: 16,
     padding: 24,
     width: '85%',
