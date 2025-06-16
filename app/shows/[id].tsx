@@ -104,121 +104,270 @@ export default function ShowDetailScreen() {
       end={{ x: 1, y: 1 }}
       style={{ flex: 1 }}
     >
-      <ScrollView style={[styles.container, { backgroundColor: 'transparent' }]}>
+      <ScrollView style={[styles.container, { backgroundColor: 'transparent' }]} 
+        contentContainerStyle={{ paddingTop: 0, paddingBottom: 16 }}
+      >
         <Stack.Screen options={{ title: name || 'Show Details' }} />
         <TouchableOpacity
           onPress={() => router.push('/shows')}
-          style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginLeft: 8, marginBottom: 12 }}
+          style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, marginLeft: 2, marginBottom: 2 }}
         >
-          <Ionicons name="arrow-back" size={24} color={currentThemeColors.primary} />
+          <Ionicons name="arrow-back" size={20} color={currentThemeColors.primary} />
           <Text style={{ color: currentThemeColors.primary, fontWeight: 'bold', marginLeft: 6 }}>Back to Shows</Text>
         </TouchableOpacity>
 
-        {displayImageUrl && (
-          <Image source={{ uri: displayImageUrl }} style={styles.headerImage} resizeMode="cover" />
-        )}
-        
-        <View style={styles.contentContainer}>
-          {/* Highlight if this is the currently selected show */}
-          {selectedShow?.id === showToDisplay.id && (
-            <View style={{
-              borderWidth: 2,
-              borderColor: currentThemeColors.primary,
-              borderRadius: 8,
-              marginBottom: 12,
-              padding: 6,
-              alignSelf: 'flex-start',
-              backgroundColor: currentThemeColors.background,
-            }}>
-              <Text style={{ color: currentThemeColors.primary, fontWeight: 'bold' }}>Currently Selected Show</Text>
-            </View>
+        <View style={{ alignItems: 'center', marginBottom: 2 }}>
+          {displayImageUrl && (
+            <Image source={{ uri: displayImageUrl }} style={[styles.headerImage, { height: 40, marginBottom: 0 }]} resizeMode="cover" />
           )}
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
-            <TouchableOpacity onPress={() => router.push(`/shows/${showToDisplay.id}/edit` as any)} style={{ marginRight: 16 }}>
-              <Ionicons name="pencil" size={22} color={currentThemeColors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => {
-              Alert.alert(
-                'Delete Show',
-                `Are you sure you want to delete "${showToDisplay.name}"? This cannot be undone.`,
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Delete', 
-                    style: 'destructive', 
-                    onPress: async () => {
-                      await deleteShow(showToDisplay.id);
-                      router.back();
-                    }
-                  },
-                ]
-              );
-            }}>
-              <Ionicons name="trash" size={22} color={currentThemeColors.error || 'red'} />
-            </TouchableOpacity>
+        </View>
+        {/* Header Row: Logo | Title/Desc | Edit/Delete */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4, marginBottom: 8, paddingHorizontal: 12 }}>
+          {/* Logo (if present) */}
+          {logoImage?.url && logoImage.url !== imageUrl && (
+            <Image source={{ uri: logoImage.url }} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#222', marginRight: 10 }} resizeMode="cover" />
+          )}
+          {/* Title and Description */}
+          <View style={{ flex: 1, alignItems: 'flex-start', justifyContent: 'center' }}>
+            <Text style={[styles.title, { marginTop: 0, marginBottom: 2 }]}>{name}</Text>
+            {description && <Text style={[styles.description, { marginTop: 0, marginBottom: 0, textAlign: 'left' }]}>{description}</Text>}
           </View>
-          <Text style={styles.title}>{name}</Text>
-          {description && <Text style={styles.description}>{description}</Text>}
-
-          <View style={styles.detailRow}>
-            <DetailItem icon="calendar-outline" label="Start Date" value={formatDate(startDate)} themeColors={currentThemeColors}/>
-            <DetailItem icon="calendar-outline" label="End Date" value={formatDate(endDate)} themeColors={currentThemeColors}/>
+          {/* Edit/Delete icons */}
+          <TouchableOpacity onPress={() => router.push(`/shows/${showToDisplay.id}/edit` as any)} style={{ marginRight: 12 }}>
+            <Ionicons name="pencil" size={22} color={currentThemeColors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => {
+            Alert.alert(
+              'Delete Show',
+              `Are you sure you want to delete "${showToDisplay.name}"? This cannot be undone.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { 
+                  text: 'Delete', 
+                  style: 'destructive', 
+                  onPress: async () => {
+                    await deleteShow(showToDisplay.id);
+                    router.back();
+                  }
+                },
+              ]
+            );
+          }}>
+            <Ionicons name="trash" size={22} color={currentThemeColors.error || 'red'} />
+          </TouchableOpacity>
+        </View>
+        {/* Currently Selected Pill at top right */}
+        {selectedShow?.id === showToDisplay.id && (
+          <View style={{ position: 'absolute', top: 8, right: 12, zIndex: 10, backgroundColor: currentThemeColors.background }}>
+            <Text style={{ borderWidth: 2, borderColor: currentThemeColors.primary, borderRadius: 8, paddingVertical: 2, paddingHorizontal: 8, color: currentThemeColors.primary, fontWeight: 'bold', backgroundColor: currentThemeColors.background }}>Currently Selected Show</Text>
           </View>
-          <View style={styles.detailRow}>
-            <DetailItem icon="business-outline" label="Status" value={status || 'N/A'} themeColors={currentThemeColors}/>
-            <DetailItem icon="earth-outline" label="Touring" value={isTouringShow ? 'Yes' : 'No'} themeColors={currentThemeColors}/>
-          </View>
+        )}
 
-          <Text style={styles.sectionHeader}>Production & Management</Text>
-          <ContactInfo label="Production Company" name={productionCompany} email={productionContactEmail} phone={productionContactPhone} themeColors={currentThemeColors}/>
-          <ContactInfo label="Stage Manager" name={stageManager} email={stageManagerEmail} phone={stageManagerPhone} themeColors={currentThemeColors}/>
-          <ContactInfo label="Props Supervisor" name={propsSupervisor} email={propsSupervisorEmail} phone={propsSupervisorPhone} themeColors={currentThemeColors}/>
+        {/* Key Dates Section */}
+        <Text style={styles.sectionHeader}>Key Dates</Text>
+        <View style={[styles.detailRow, { flexWrap: 'wrap', rowGap: 12, columnGap: 12 }]}> 
+          <DetailItem icon="calendar-outline" label="Start Date" value={formatDate(startDate)} themeColors={currentThemeColors} />
+          <DetailItem icon="calendar-outline" label="End Date" value={formatDate(endDate)} themeColors={currentThemeColors} />
+          {(showToDisplay as any)?.techWeekStart && (
+            <DetailItem icon="calendar-outline" label="Tech Week Start" value={formatDate((showToDisplay as any).techWeekStart)} themeColors={currentThemeColors} />
+          )}
+          {(showToDisplay as any)?.firstPreview && (
+            <DetailItem icon="calendar-outline" label="First Preview" value={formatDate((showToDisplay as any).firstPreview)} themeColors={currentThemeColors} />
+          )}
+          {(showToDisplay as any)?.pressNight && (
+            <DetailItem icon="calendar-outline" label="Press Night" value={formatDate((showToDisplay as any).pressNight)} themeColors={currentThemeColors} />
+          )}
+          {Array.isArray((showToDisplay as any)?.additionalDates) && (showToDisplay as any).additionalDates.length > 0 &&
+            (showToDisplay as any).additionalDates.map((d: any, i: number) => (
+              <DetailItem key={i} icon="calendar-outline" label={d.label} value={formatDate(d.date)} themeColors={currentThemeColors} />
+            ))
+          }
+        </View>
+        <View style={styles.detailRow}>
+          <DetailItem icon="business-outline" label="Status" value={status || 'N/A'} themeColors={currentThemeColors}/>
+          <DetailItem icon="earth-outline" label="Touring" value={isTouringShow ? 'Yes' : 'No'} themeColors={currentThemeColors}/>
+        </View>
 
+        {/* Production & Creative Team Section */}
+        <Text style={styles.sectionHeader}>Production & Creative Team</Text>
+        <View style={styles.contactBlock}>
+          {/* Production Company */}
+          <Text style={[styles.detailSubheader, { marginBottom: 2 }]}>Production Company</Text>
+          {productionCompany && <Text style={styles.detailText}>{productionCompany}</Text>}
+          {productionContactEmail && (
+            <Text style={styles.detailText}>
+              <Text style={{ fontWeight: 'bold' }}>Email: </Text>
+              <Text style={styles.linkText} onPress={() => Linking.openURL(`mailto:${productionContactEmail}`)}>{productionContactEmail}</Text>
+            </Text>
+          )}
+          {productionContactPhone && (
+            <Text style={styles.detailText}>
+              <Text style={{ fontWeight: 'bold' }}>Phone: </Text>
+              <Text style={styles.linkText} onPress={() => Linking.openURL(`tel:${productionContactPhone}`)}>{productionContactPhone}</Text>
+            </Text>
+          )}
+
+          {/* Stage Management */}
+          {(stageManager || stageManagerEmail || stageManagerPhone || (showToDisplay as any)?.productionContactPhone) && (
+            <>
+              <Text style={[styles.detailSubheader, { marginTop: 10, marginBottom: 2 }]}>Stage Management</Text>
+              {stageManager && <Text style={styles.detailText}><Text style={{ fontWeight: 'bold' }}>Stage Manager: </Text>{stageManager}</Text>}
+              {stageManagerEmail && (
+                <Text style={styles.detailText}>
+                  <Text style={{ fontWeight: 'bold' }}>Email: </Text>
+                  <Text style={styles.linkText} onPress={() => Linking.openURL(`mailto:${stageManagerEmail}`)}>{stageManagerEmail}</Text>
+                </Text>
+              )}
+              {stageManagerPhone && (
+                <Text style={styles.detailText}>
+                  <Text style={{ fontWeight: 'bold' }}>Phone: </Text>
+                  <Text style={styles.linkText} onPress={() => Linking.openURL(`tel:${stageManagerPhone}`)}>{stageManagerPhone}</Text>
+                </Text>
+              )}
+              {(showToDisplay as any)?.productionContactPhone && (
+                <Text style={styles.detailText}><Text style={{ fontWeight: 'bold' }}>Assistant Stage Manager: </Text>{(showToDisplay as any).productionContactPhone}</Text>
+              )}
+            </>
+          )}
+
+          {/* Props */}
+          {(propsSupervisor || propsSupervisorEmail || propsSupervisorPhone || (showToDisplay as any)?.propmakerName) && (
+            <>
+              <Text style={[styles.detailSubheader, { marginTop: 10, marginBottom: 2 }]}>Props</Text>
+              {propsSupervisor && <Text style={styles.detailText}><Text style={{ fontWeight: 'bold' }}>Props Supervisor: </Text>{propsSupervisor}</Text>}
+              {propsSupervisorEmail && (
+                <Text style={styles.detailText}>
+                  <Text style={{ fontWeight: 'bold' }}>Email: </Text>
+                  <Text style={styles.linkText} onPress={() => Linking.openURL(`mailto:${propsSupervisorEmail}`)}>{propsSupervisorEmail}</Text>
+                </Text>
+              )}
+              {propsSupervisorPhone && (
+                <Text style={styles.detailText}>
+                  <Text style={{ fontWeight: 'bold' }}>Phone: </Text>
+                  <Text style={styles.linkText} onPress={() => Linking.openURL(`tel:${propsSupervisorPhone}`)}>{propsSupervisorPhone}</Text>
+                </Text>
+              )}
+              {(showToDisplay as any)?.propmakerName && (
+                <Text style={styles.detailText}><Text style={{ fontWeight: 'bold' }}>Propmaker: </Text>{(showToDisplay as any).propmakerName}</Text>
+              )}
+            </>
+          )}
+
+          {/* Design */}
+          {(showToDisplay as any)?.productionContactName || (showToDisplay as any)?.designerAssistantName ? (
+            <>
+              <Text style={[styles.detailSubheader, { marginTop: 10, marginBottom: 2 }]}>Design</Text>
+              {(showToDisplay as any)?.productionContactName && (
+                <Text style={styles.detailText}><Text style={{ fontWeight: 'bold' }}>Designer: </Text>{(showToDisplay as any).productionContactName}</Text>
+              )}
+              {(showToDisplay as any)?.designerAssistantName && (
+                <Text style={styles.detailText}><Text style={{ fontWeight: 'bold' }}>Designer Assistant: </Text>{(showToDisplay as any).designerAssistantName}</Text>
+              )}
+            </>
+          ) : null}
+
+          {/* Other Contacts (now part of creative team) */}
           {contacts && contacts.length > 0 && (
             <>
-              <Text style={styles.sectionHeader}>Other Contacts</Text>
+              <Text style={[styles.detailSubheader, { marginTop: 10, marginBottom: 2 }]}>Other Contacts</Text>
               {contacts.map((contact: Contact, index: number) => (
-                <ContactInfo key={index} label={contact.role || 'Contact'} name={contact.name} email={contact.email} phone={contact.phone} themeColors={currentThemeColors}/>
-              ))}
-            </>
-          )}
-
-          {venues && venues.length > 0 && (
-            <>
-              <Text style={styles.sectionHeader}>Venues</Text>
-              {venues.map((venue: Venue, index: number) => {
-                const address = venue.address as Address | undefined; // Explicit cast for clarity
-                return (
-                  <View key={index} style={styles.venueContainer}>
-                    <Text style={styles.detailSubheader}>{venue.name}</Text>
-                    {address && <Text style={styles.detailText}>Address: {`${address.street1}${address.street2 ? ", " + address.street2 : ""}, ${address.city}, ${address.region} ${address.postalCode}`}</Text>}
-                    {venue.startDate && <Text style={styles.detailText}>Starts: {formatDate(venue.startDate)}</Text>}
-                    {venue.endDate && <Text style={styles.detailText}>Ends: {formatDate(venue.endDate)}</Text>}
-                    {venue.notes && <Text style={styles.detailText}>Notes: {venue.notes}</Text>}
-                  </View>
-                );
-              })}
-            </>
-          )}
-
-          {acts && acts.length > 0 && (
-            <>
-              <Text style={styles.sectionHeader}>Acts & Scenes</Text>
-              {acts.map((act: Act, actIndex: number) => (
-                <View key={act.id || actIndex} style={styles.actContainer}>
-                  <Text style={styles.detailSubheader}>Act {act.id}: {act.name}</Text>
-                  {act.description && <Text style={styles.detailTextSmall}>{act.description}</Text>}
-                  {act.scenes && act.scenes.map((scene: Scene, sceneIndex: number) => (
-                    <View key={scene.id || sceneIndex} style={styles.sceneContainer}>
-                      <Text style={styles.detailText}>Scene {scene.id}: {scene.name}</Text>
-                      {scene.setting && <Text style={styles.detailTextSmall}>Setting: {scene.setting}</Text>}
-                    </View>
-                  ))}
+                <View key={index} style={{ marginBottom: 6 }}>
+                  <Text style={styles.detailText}><Text style={{ fontWeight: 'bold' }}>{contact.role}: </Text>{contact.name}</Text>
+                  {contact.email && (
+                    <Text style={styles.detailText}>
+                      <Text style={{ fontWeight: 'bold' }}>Email: </Text>
+                      <Text style={styles.linkText} onPress={() => Linking.openURL(`mailto:${contact.email}`)}>{contact.email}</Text>
+                    </Text>
+                  )}
+                  {contact.phone && (
+                    <Text style={styles.detailText}>
+                      <Text style={{ fontWeight: 'bold' }}>Phone: </Text>
+                      <Text style={styles.linkText} onPress={() => Linking.openURL(`tel:${contact.phone}`)}>{contact.phone}</Text>
+                    </Text>
+                  )}
                 </View>
               ))}
             </>
           )}
         </View>
+
+        {/* Venues Section */}
+        {venues && venues.length > 0 && (
+          <>
+            <Text style={styles.sectionHeader}>Venues</Text>
+            {venues.map((venue: Venue, index: number) => {
+              const address = venue.address as Address | undefined; // Explicit cast for clarity
+              const addressString = address ? `${address.street1}${address.street2 ? ', ' + address.street2 : ''}, ${address.city}, ${address.region} ${address.postalCode}` : '';
+              const mapsUrl = addressString ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressString)}` : undefined;
+              const staticMapUrl = addressString ? `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(addressString)}&zoom=15&size=600x200&markers=color:purple|${encodeURIComponent(addressString)}` : undefined;
+              return (
+                <View key={index} style={styles.venueContainer}>
+                  <Text style={styles.detailSubheader}>{venue.name}</Text>
+                  {/* Google Static Map above address */}
+                  {staticMapUrl && (
+                    <TouchableOpacity onPress={() => mapsUrl && Linking.openURL(mapsUrl)}>
+                      <Image source={{ uri: staticMapUrl }} style={{ width: '100%', height: 120, borderRadius: 8, marginBottom: 8 }} resizeMode="cover" />
+                    </TouchableOpacity>
+                  )}
+                  {address && (
+                    <Text style={styles.detailText}>
+                      Address: <Text style={{ color: '#fff', textDecorationLine: 'underline' }} onPress={() => mapsUrl && Linking.openURL(mapsUrl)}>{addressString}</Text>
+                    </Text>
+                  )}
+                  {(venue.startDate || venue.endDate) && (
+                    <Text style={styles.detailText}>
+                      Dates: <Text style={{ color: '#fff' }}>{venue.startDate ? formatDate(venue.startDate) : ''}{venue.startDate && venue.endDate ? ' to ' : ''}{venue.endDate ? formatDate(venue.endDate) : ''}</Text>
+                    </Text>
+                  )}
+                  {venue.notes && (
+                    <Text style={styles.detailText}>
+                      <Text style={{ color: '#a78bfa', fontWeight: 'bold' }}>📝 </Text>
+                      <Text style={{ color: '#fff' }}>{venue.notes}</Text>
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
+          </>
+        )}
+
+        {/* Acts & Scenes Section */}
+        {acts && acts.length > 0 && (
+          <>
+            <Text style={styles.sectionHeader}>Acts & Scenes</Text>
+            {acts.map((act: Act, actIndex: number) => (
+              <View key={act.id || actIndex} style={styles.actContainer}>
+                <Text style={styles.detailSubheader}>
+                  Act {actIndex + 1}{act.name ? `: ${act.name}` : ''}
+                </Text>
+                {act.description && <Text style={styles.detailTextSmall}>{act.description}</Text>}
+                {act.scenes && act.scenes.map((scene: Scene, sceneIndex: number) => (
+                  <View key={scene.id || sceneIndex} style={styles.sceneContainer}>
+                    <Text style={styles.detailText}>
+                      Scene {sceneIndex + 1}{scene.name ? `: ${scene.name}` : ''}
+                    </Text>
+                    {scene.setting && <Text style={styles.detailTextSmall}>Setting: {scene.setting}</Text>}
+                  </View>
+                ))}
+              </View>
+            ))}
+          </>
+        )}
+
+        {/* Collaborators Section */}
+        {Array.isArray(showToDisplay.collaborators) && showToDisplay.collaborators.length > 0 && (
+          <>
+            <Text style={styles.sectionHeader}>Our Team</Text>
+            <View style={styles.contactBlock}>
+              {showToDisplay.collaborators.map((collab, i) => (
+                <View key={collab.email || i} style={{ marginBottom: 8 }}>
+                  <Text style={styles.detailText}>{(collab as any)?.name} <Text style={{ color: '#9ca3af' }}>({(collab as any)?.jobRole})</Text></Text>
+                  <Text style={styles.detailTextSmall}>{collab.email} ({collab.role})</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
     </LinearGradient>
   );

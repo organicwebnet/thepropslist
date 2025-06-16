@@ -377,11 +377,15 @@ export function HomeScreen() {
             keyExtractor={(item, index) => item.id || index.toString()}
             renderItem={({ item }) => (
                 <TouchableOpacity onPress={() => { console.log('Navigating to board:', item.id); onCardPress(item.id); }} style={styles.itemCard}>
-                    <Text style={styles.itemText}>{renderItem(item)}</Text>
-                    {title === 'To-Do Boards' && (
-                      <Text style={styles.cardCountText}>
-                        {typeof boardCardCounts[item.id] === 'number' ? boardCardCounts[item.id] : ''}
-                      </Text>
+                    {title === 'To-Do Boards' ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={[styles.itemText, { fontSize: 18, fontWeight: 'bold' }]}>{renderItem(item)}</Text>
+                        <Text style={[styles.cardCountText, { marginLeft: 8, marginTop: 0, fontSize: 16, fontWeight: 'bold' }]}>
+                          {typeof boardCardCounts[item.id] === 'number' ? boardCardCounts[item.id] : ''}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.itemText}>{renderItem(item)}</Text>
                     )}
                 </TouchableOpacity>
             )}
@@ -594,11 +598,11 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     backgroundColor: '#111111',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 18,
+    paddingHorizontal: 28,
     borderRadius: 14,
     marginRight: 12,
-    minWidth: 150,
+    minWidth: 220,
     justifyContent: 'center',
     alignItems: 'flex-start',
     shadowColor: '#000',

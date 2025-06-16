@@ -831,7 +831,7 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 <Text style={{ color: '#fff', fontSize: 14, marginBottom: 4, fontWeight: '500' }}>
                   Status Notes <MaterialIcons name="help-outline" size={16} color="#c084fc" onPress={() => Alert.alert('Status Notes', 'Enter any notes related to the current status of the prop.')} />
                 </Text>
-                <TextInput style={styles.input} placeholder="Status Notes" placeholderTextColor="#e0e0e0" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
+            <TextInput style={styles.input} placeholder="Status Notes" placeholderTextColor="#e0e0e0" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
               </>
             )}
             <View style={styles.stepperNav}>

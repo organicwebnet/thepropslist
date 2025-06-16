@@ -35,9 +35,11 @@ async function seed() {
   const show1Ref = db.collection('shows').doc();
   const show2Ref = db.collection('shows').doc();
   const show3Ref = db.collection('shows').doc();
+  const show4Ref = db.collection('shows').doc();
   const show1Id = show1Ref.id;
   const show2Id = show2Ref.id;
   const show3Id = show3Ref.id;
+  const show4Id = show4Ref.id;
 
   await show1Ref.set({
     name: 'Show Alpha',
@@ -63,7 +65,76 @@ async function seed() {
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
-  console.log('Seeded 3 shows:', show1Id, show2Id, show3Id);
+  await show4Ref.set({
+    name: 'The Great Gatsby',
+    description: 'A lavish production of the classic novel.',
+    ownerId: YOUR_UID,
+    userId: YOUR_UID,
+    team: { [YOUR_UID]: 'god', [FAKE_UID]: 'props_supervisor' },
+    acts: [
+      { id: 'act1', name: 'Act 1', scenes: [{ id: 'scene1', name: 'Scene 1' }, { id: 'scene2', name: 'Scene 2' }] },
+      { id: 'act2', name: 'Act 2', scenes: [{ id: 'scene3', name: 'Scene 1' }] }
+    ],
+    venues: [
+      {
+        id: 'venue1',
+        name: 'Grand Theatre',
+        address: {
+          id: 'addr1',
+          street1: '123 Main St',
+          city: 'London',
+          region: 'Greater London',
+          postalCode: 'W1A 1AA',
+          country: 'United Kingdom',
+          name: '',
+          companyName: '',
+          street2: '',
+          nickname: ''
+        },
+        startDate: '2025-03-01',
+        endDate: '2025-03-10',
+        notes: 'Main stage, use loading dock B'
+      }
+    ],
+    contacts: [
+      { id: 'contact1', name: 'Alex Props', role: 'Props Supervisor', email: 'props.alex@example.com' },
+      { id: 'contact2', name: 'Jordan Designer', role: 'Designer', email: 'designer.jordan@example.com' }
+    ],
+    isTouringShow: false,
+    startDate: '2025-03-01',
+    endDate: '2025-03-10',
+    imageUrl: 'https://example.com/poster.jpg',
+    logoImage: { url: 'https://example.com/logo.png' },
+    techWeekStart: '2025-02-24',
+    firstPreview: '2025-02-28',
+    pressNight: '2025-03-02',
+    additionalDates: [
+      { label: 'Final Dress', date: '2025-02-27' }
+    ],
+    propmakerName: 'Sam Maker',
+    designerAssistantName: 'Taylor Assistant',
+    propsSupervisor: 'Alex Props',
+    propsSupervisorEmail: 'props.alex@example.com',
+    stageManager: 'Morgan Stage',
+    stageManagerEmail: 'morgan.stage@example.com',
+    assistantStageManager: 'Taylor Assistant',
+    productionContactName: 'Jordan Designer',
+    productionContactEmail: 'designer.jordan@example.com',
+    propmakerEmail: 'sam.maker@example.com',
+    collaborators: [
+      {
+        name: 'Chris Collaborator',
+        jobRole: 'Lighting Designer',
+        email: 'chris@example.com',
+        role: 'editor',
+        addedAt: '2025-01-01T12:00:00Z',
+        addedBy: YOUR_UID
+      }
+    ],
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  console.log('Seeded 4 shows:', show1Id, show2Id, show3Id, show4Id);
 
   // --- PROPS ---
   const props = [
@@ -85,11 +156,151 @@ async function seed() {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   }
-  console.log('Seeded props.');
+  await db.collection('props').add({
+    id: 'prop-test-1',
+    userId: YOUR_UID,
+    showId: show4Id,
+    name: 'Green Light',
+    description: 'A small green lantern for the dock scene.',
+    category: 'Lighting',
+    price: 25.00,
+    quantity: 1,
+    source: 'made',
+    status: 'in_use',
+    act: 1,
+    scene: 2,
+    location: 'Props Table',
+    images: [
+      { id: 'img1', url: 'https://example.com/greenlight.jpg' }
+    ],
+    weight: 0.5,
+    weightUnit: 'kg',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  // Additional props for various statuses
+  await db.collection('props').add({
+    id: 'prop-test-2',
+    userId: YOUR_UID,
+    showId: show4Id,
+    name: 'Broken Mirror',
+    description: 'A cracked mirror for the haunted scene.',
+    category: 'Set Dressing',
+    price: 10.00,
+    quantity: 1,
+    source: 'bought',
+    status: 'maintenance',
+    act: 2,
+    scene: 1,
+    location: 'Workshop',
+    images: [
+      { id: 'img2', url: 'https://example.com/brokenmirror.jpg' }
+    ],
+    weight: 2.0,
+    weightUnit: 'kg',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    maintenanceNotes: 'Needs glass replacement',
+    assignedTo: [YOUR_UID],
+  });
+  await db.collection('props').add({
+    id: 'prop-test-3',
+    userId: YOUR_UID,
+    showId: show4Id,
+    name: 'Retired Cane',
+    description: 'A cane no longer needed after script change.',
+    category: 'Hand Prop',
+    price: 15.00,
+    quantity: 1,
+    source: 'bought',
+    status: 'retired',
+    act: 1,
+    scene: 1,
+    location: 'Storage',
+    images: [
+      { id: 'img3', url: 'https://example.com/retiredcane.jpg' }
+    ],
+    weight: 0.7,
+    weightUnit: 'kg',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    retirementNotes: 'Cut from show after preview',
+  });
+  await db.collection('props').add({
+    id: 'prop-test-4',
+    userId: YOUR_UID,
+    showId: show4Id,
+    name: 'Delivery Parcel',
+    description: 'A package prop currently being delivered.',
+    category: 'Set Dressing',
+    price: 8.00,
+    quantity: 1,
+    source: 'made',
+    status: 'on_delivery',
+    act: 2,
+    scene: 2,
+    location: 'Courier',
+    images: [
+      { id: 'img4', url: 'https://example.com/deliveryparcel.jpg' }
+    ],
+    weight: 1.2,
+    weightUnit: 'kg',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    deliveryInfo: 'Expected at venue by 2025-03-01',
+  });
+  await db.collection('props').add({
+    id: 'prop-test-5',
+    userId: YOUR_UID,
+    showId: show4Id,
+    name: 'Custom Mask',
+    description: 'A mask being made by the propmaker.',
+    category: 'Costume',
+    price: 40.00,
+    quantity: 1,
+    source: 'made',
+    status: 'with_maker',
+    act: 1,
+    scene: 2,
+    location: 'Propmaker Studio',
+    images: [
+      { id: 'img5', url: 'https://example.com/custommask.jpg' }
+    ],
+    weight: 0.3,
+    weightUnit: 'kg',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    makerName: 'Sam Maker',
+    dueDate: '2025-02-20',
+  });
+  await db.collection('props').add({
+    id: 'prop-test-6',
+    userId: YOUR_UID,
+    showId: show4Id,
+    name: 'Cut Banner',
+    description: 'A banner that was cut from the show.',
+    category: 'Set Dressing',
+    price: 12.00,
+    quantity: 1,
+    source: 'bought',
+    status: 'cut_from_show',
+    act: 2,
+    scene: 1,
+    location: 'Storage',
+    images: [
+      { id: 'img6', url: 'https://example.com/cutbanner.jpg' }
+    ],
+    weight: 0.9,
+    weightUnit: 'kg',
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    cutNotes: 'Removed after tech week',
+  });
+  console.log('Seeded props, including new test prop for show4:', show4Id);
 
   // --- TODO BOARDS ---
+  // Board for Show 1
   const board1Ref = db.collection('todo_boards').doc();
-  const board2Ref = db.collection('todo_boards').doc();
   await board1Ref.set({
     name: 'Alpha Board',
     showId: show1Id,
@@ -97,6 +308,8 @@ async function seed() {
     sharedWith: [YOUR_UID, FAKE_UID],
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
+  // Board for Show 2
+  const board2Ref = db.collection('todo_boards').doc();
   await board2Ref.set({
     name: 'Beta Board',
     showId: show2Id,
@@ -104,78 +317,92 @@ async function seed() {
     sharedWith: [YOUR_UID],
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
-  console.log('Seeded todo boards:', board1Ref.id, board2Ref.id);
-
-  // --- TODO BOARD SUBCOLLECTIONS ---
-  // Board 1: 2 lists, each with 2 cards
-  const list1Ref = db.collection(`todo_boards/${board1Ref.id}/lists`).doc();
-  const list2Ref = db.collection(`todo_boards/${board1Ref.id}/lists`).doc();
-  await list1Ref.set({ name: 'To Do', order: 1 });
-  await list2Ref.set({ name: 'Done', order: 2 });
-  await db.collection(`todo_boards/${board1Ref.id}/lists/${list1Ref.id}/cards`).add({ title: 'Card 1', assignedTo: [YOUR_UID], status: 'todo' });
-  await db.collection(`todo_boards/${board1Ref.id}/lists/${list1Ref.id}/cards`).add({ title: 'Card 2', assignedTo: [FAKE_UID], status: 'todo' });
-  await db.collection(`todo_boards/${board1Ref.id}/lists/${list2Ref.id}/cards`).add({ title: 'Card 3', assignedTo: [YOUR_UID, FAKE_UID], status: 'done' });
-  await db.collection(`todo_boards/${board1Ref.id}/lists/${list2Ref.id}/cards`).add({ title: 'Card 4', status: 'done' });
-  // Board 2: 1 list, 1 card
-  const list3Ref = db.collection(`todo_boards/${board2Ref.id}/lists`).doc();
-  await list3Ref.set({ name: 'Tasks', order: 1 });
-  await db.collection(`todo_boards/${board2Ref.id}/lists/${list3Ref.id}/cards`).add({ title: 'Beta Card', assignedTo: [YOUR_UID], status: 'todo' });
-  console.log('Seeded todo board lists and cards.');
-
-  // --- TASKS ---
-  const now = new Date();
-  await db.collection('tasks').add({
-    title: 'Overdue Task',
-    showId: show1Id,
-    assignedTo: [YOUR_UID],
-    dueDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    status: 'open',
-    createdBy: YOUR_UID,
+  // Board for Show 3
+  const board3Ref = db.collection('todo_boards').doc();
+  await board3Ref.set({
+    name: 'Gamma Board',
+    showId: show3Id,
+    ownerId: FAKE_UID,
+    sharedWith: [YOUR_UID],
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
-  await db.collection('tasks').add({
-    title: 'Upcoming Task',
-    showId: show1Id,
-    assignedTo: [FAKE_UID],
-    dueDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    status: 'open',
-    createdBy: FAKE_UID,
+  // Board for Show 4
+  const board4Ref = db.collection('todo_boards').doc();
+  await board4Ref.set({
+    name: 'Gatsby Board',
+    showId: show4Id,
+    ownerId: YOUR_UID,
+    sharedWith: [YOUR_UID, FAKE_UID],
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
-  await db.collection('tasks').add({
-    title: 'Completed Task',
-    showId: show1Id,
-    assignedTo: [YOUR_UID, FAKE_UID],
-    dueDate: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    status: 'done',
-    createdBy: YOUR_UID,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-  console.log('Seeded tasks.');
+  // Add lists and cards for each board
+  async function addListsAndCards(boardRef, showId) {
+    const list1Ref = db.collection(`todo_boards/${boardRef.id}/lists`).doc();
+    const list2Ref = db.collection(`todo_boards/${boardRef.id}/lists`).doc();
+    await list1Ref.set({ name: 'To Do', order: 1 });
+    await list2Ref.set({ name: 'Done', order: 2 });
+    await db.collection(`todo_boards/${boardRef.id}/lists/${list1Ref.id}/cards`).add({
+      title: 'Initial Task',
+      assignedTo: [YOUR_UID],
+      status: 'todo',
+      showId,
+      dueDate: '2025-03-01',
+    });
+    await db.collection(`todo_boards/${boardRef.id}/lists/${list1Ref.id}/cards`).add({
+      title: 'Secondary Task',
+      assignedTo: [FAKE_UID],
+      status: 'todo',
+      showId,
+      dueDate: '2025-03-02',
+    });
+    await db.collection(`todo_boards/${boardRef.id}/lists/${list2Ref.id}/cards`).add({
+      title: 'Completed Task',
+      assignedTo: [YOUR_UID, FAKE_UID],
+      status: 'done',
+      showId,
+      dueDate: '2025-02-28',
+    });
+    await db.collection(`todo_boards/${boardRef.id}/lists/${list2Ref.id}/cards`).add({
+      title: 'Archived Task',
+      status: 'archived',
+      showId,
+    });
+  }
+  await addListsAndCards(board1Ref, show1Id);
+  await addListsAndCards(board2Ref, show2Id);
+  await addListsAndCards(board3Ref, show3Id);
+  await addListsAndCards(board4Ref, show4Id);
+  console.log('Seeded todo boards, lists, and cards for all shows.');
 
   // --- INVITATIONS ---
-  await db.collection('invitations').add({
-    showId: show1Id,
-    email: 'pending@example.com',
-    status: 'pending',
-    invitedBy: YOUR_UID,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-  await db.collection('invitations').add({
-    showId: show1Id,
-    email: 'accepted@example.com',
-    status: 'accepted',
-    invitedBy: YOUR_UID,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-  await db.collection('invitations').add({
-    showId: show1Id,
-    email: 'rejected@example.com',
-    status: 'rejected',
-    invitedBy: YOUR_UID,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
-  console.log('Seeded invitations.');
+  async function addInvitations(showId) {
+    await db.collection('invitations').add({
+      showId,
+      email: `pending+${showId}@example.com`,
+      status: 'pending',
+      invitedBy: YOUR_UID,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await db.collection('invitations').add({
+      showId,
+      email: `accepted+${showId}@example.com`,
+      status: 'accepted',
+      invitedBy: YOUR_UID,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    await db.collection('invitations').add({
+      showId,
+      email: `rejected+${showId}@example.com`,
+      status: 'rejected',
+      invitedBy: YOUR_UID,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+  await addInvitations(show1Id);
+  await addInvitations(show2Id);
+  await addInvitations(show3Id);
+  await addInvitations(show4Id);
+  console.log('Seeded invitations for all shows.');
 }
 
 async function main() {

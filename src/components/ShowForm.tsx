@@ -73,7 +73,60 @@ function RequiredLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+const ensureProductionCompanyContact = (data: Partial<Show>): Show => {
+  // Provide defaults for all required Show fields
+  return {
+    id: data.id || '',
+    userId: data.userId || '',
+    name: data.name || '',
+    description: data.description || '',
+    startDate: data.startDate || '',
+    endDate: data.endDate || '',
+    imageUrl: data.imageUrl || '',
+    acts: data.acts || [],
+    createdAt: data.createdAt || '',
+    updatedAt: data.updatedAt || '',
+    collaborators: data.collaborators || [],
+    team: data.team || [],
+    stageManager: data.stageManager || '',
+    stageManagerEmail: data.stageManagerEmail || '',
+    stageManagerPhone: data.stageManagerPhone || '',
+    propsSupervisor: data.propsSupervisor || '',
+    propsSupervisorEmail: data.propsSupervisorEmail || '',
+    propsSupervisorPhone: data.propsSupervisorPhone || '',
+    productionCompany: data.productionCompany || '',
+    productionContactName: data.productionContactName || '',
+    productionContactEmail: data.productionContactEmail || '',
+    productionContactPhone: data.productionContactPhone || '',
+    venues: data.venues || [],
+    isTouringShow: data.isTouringShow || false,
+    contacts: (() => {
+      const prodContact = {
+        id: 'production-company',
+        role: 'Production Company',
+        name: data.productionCompany || '',
+        email: data.productionContactEmail || '',
+        phone: data.productionContactPhone || '',
+      };
+      let contacts = Array.isArray(data.contacts) ? [...data.contacts] : [];
+      if (!contacts[0] || contacts[0].role !== 'Production Company') {
+        contacts = [prodContact, ...contacts.filter(c => c.role !== 'Production Company')];
+      } else {
+        contacts[0] = { ...contacts[0], ...prodContact };
+      }
+      return contacts;
+    })(),
+    logoImage: data.logoImage,
+    status: data.status,
+    rehearsalAddresses: data.rehearsalAddresses || [],
+    storageAddresses: data.storageAddresses || [],
+    defaultActId: data.defaultActId,
+    defaultSceneId: data.defaultSceneId,
+  };
+};
+
 export default function ShowForm({ mode, initialData, onSubmit, onCancel }: ShowFormProps) {
+ 
   // Make sure initialData has all required properties by merging with initialFormState
   const mergedInitialData = initialData ? {
     ...initialFormState,
@@ -86,26 +139,14 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
     storageAddresses: Array.isArray(initialData.storageAddresses) ? initialData.storageAddresses : [],
   } : initialFormState;
 
-  const [formData, setFormData] = useState<Show>(mergedInitialData);
+  const [formData, setFormData] = useState(() => ensureProductionCompanyContact(mergedInitialData));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Update form data when initialData changes
   useEffect(() => {
     if (initialData) {
-      // Always merge with initialFormState to ensure all properties exist
-      const mergedData = {
-        ...initialFormState,
-        ...initialData,
-        // Ensure nested properties always exist
-        acts: (initialData.acts && initialData.acts.length > 0) ? initialData.acts : initialFormState.acts,
-        venues: (initialData.venues && initialData.venues.length > 0) ? initialData.venues : initialFormState.venues,
-        contacts: Array.isArray(initialData.contacts) ? initialData.contacts : [],
-        rehearsalAddresses: Array.isArray(initialData.rehearsalAddresses) ? initialData.rehearsalAddresses : [],
-        storageAddresses: Array.isArray(initialData.storageAddresses) ? initialData.storageAddresses : [],
-      };
-      
-      setFormData(mergedData);
+      setFormData(ensureProductionCompanyContact({ ...initialFormState, ...initialData }));
     }
   }, [initialData, mode]);
 
@@ -173,48 +214,46 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
     try {
       const isValid = validateForm();
-      
-      if (!isValid) {
-        return;
-      }
-
+      if (!isValid) return;
       setIsSubmitting(true);
-      
-      // Prepare submission data with proper defaults for any potentially undefined fields
+      const prodContact = formData.contacts[0] || {};
       const submissionData: Show = {
+        ...formData,
         id: formData.id || '',
+        userId: formData.userId || '',
         name: formData.name || '',
         description: formData.description || '',
+        startDate: formData.startDate || '',
+        endDate: formData.endDate || '',
+        createdAt: formData.createdAt || '',
+        updatedAt: formData.updatedAt || '',
+        productionCompany: prodContact.name || '',
+        productionContactName: prodContact.name || '',
+        productionContactEmail: prodContact.email || '',
+        productionContactPhone: prodContact.phone || '',
         acts: formData.acts || [],
-        userId: formData.userId || '',
-        createdAt: mode === 'create' ? new Date().toISOString() : (formData.createdAt || new Date().toISOString()),
-        updatedAt: new Date().toISOString(),
         collaborators: formData.collaborators || [],
+        team: formData.team || [],
         stageManager: formData.stageManager || '',
         stageManagerEmail: formData.stageManagerEmail || '',
         stageManagerPhone: formData.stageManagerPhone || '',
         propsSupervisor: formData.propsSupervisor || '',
         propsSupervisorEmail: formData.propsSupervisorEmail || '',
         propsSupervisorPhone: formData.propsSupervisorPhone || '',
-        productionCompany: formData.productionCompany || '',
-        productionContactName: formData.productionContactName || '',
-        productionContactEmail: formData.productionContactEmail || '',
-        productionContactPhone: formData.productionContactPhone || '',
-        startDate: formData.startDate || new Date().toISOString(),
-        endDate: formData.endDate || new Date().toISOString(),
-        venues: formData.isTouringShow ? (formData.venues || []) : [(formData.venues && formData.venues[0]) || { name: '', address: defaultAddress, startDate: '', endDate: '', notes: '' }],
-        isTouringShow: !!formData.isTouringShow,
+        venues: formData.venues || [],
+        isTouringShow: formData.isTouringShow || false,
         contacts: formData.contacts || [],
-        imageUrl: formData.imageUrl || '',
         logoImage: formData.logoImage,
+        status: formData.status,
         rehearsalAddresses: formData.rehearsalAddresses || [],
         storageAddresses: formData.storageAddresses || [],
+        defaultActId: formData.defaultActId,
+        defaultSceneId: formData.defaultSceneId,
+        imageUrl: formData.imageUrl || '',
       };
-
-      await onSubmit(submissionData);
+      onSubmit(submissionData);
 
       if (mode === 'create') {
         // Reset form after successful creation
@@ -749,65 +788,6 @@ export default function ShowForm({ mode, initialData, onSubmit, onCancel }: Show
                 onChange={(e) => setFormData((prevData: Show) => ({ ...prevData, propsSupervisorPhone: e.target.value }))}
                 className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
                 placeholder="Enter props supervisor's phone number (optional)"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="productionCompany" className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
-              Production Company <span className="text-primary">*</span>
-              <HelpTooltip content={
-                <div>
-                  <p className="font-medium mb-1">Production Details:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>Official company name</li>
-                    <li>Primary contact person</li>
-                    <li>Billing and legal information</li>
-                  </ul>
-                </div>
-              } />
-            </label>
-            <div className="space-y-3">
-              <input
-                type="text"
-                id="productionCompany"
-                required
-                value={formData.productionCompany || ''}
-                onChange={(e) => setFormData((prevData: Show) => ({
-                  ...prevData,
-                  productionCompany: e.target.value
-                }))}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-                placeholder="Enter production company name"
-              />
-              <input
-                type="text"
-                id="productionContactName"
-                required
-                value={formData.productionContactName || ''}
-                onChange={(e) => setFormData((prevData: Show) => ({
-                  ...prevData,
-                  productionContactName: e.target.value
-                }))}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-                placeholder="Enter production contact name"
-              />
-              <input
-                type="email"
-                id="productionContactEmail"
-                required
-                value={formData.productionContactEmail || ''}
-                onChange={(e) => setFormData((prevData: Show) => ({ ...prevData, productionContactEmail: e.target.value }))}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-                placeholder="Enter production contact email"
-              />
-              <input
-                type="tel"
-                id="productionContactPhone"
-                value={formData.productionContactPhone || ''}
-                onChange={(e) => setFormData((prevData: Show) => ({ ...prevData, productionContactPhone: e.target.value }))}
-                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-transparent transition-colors"
-                placeholder="Enter production contact phone number (optional)"
               />
             </div>
           </div>

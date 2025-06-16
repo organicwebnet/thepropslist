@@ -264,7 +264,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
         <View className="space-y-4">
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <RequiredLabel>Name</RequiredLabel>
+            <RequiredLabel>Name</RequiredLabel>
               <HelpTooltip content="Enter a descriptive name for the prop." />
             </label>
             <TextInput
@@ -278,7 +278,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <RequiredLabel>Description</RequiredLabel>
+            <RequiredLabel>Description</RequiredLabel>
               <HelpTooltip content="Enter a detailed description of the prop." />
             </label>
             <WysiwygEditor
@@ -290,7 +290,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <RequiredLabel>Category</RequiredLabel>
+            <RequiredLabel>Category</RequiredLabel>
               <HelpTooltip content="Select the category that best describes the prop." />
             </label>
             <View className="relative">
@@ -312,7 +312,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <RequiredLabel>Quantity</RequiredLabel>
+            <RequiredLabel>Quantity</RequiredLabel>
               <HelpTooltip content="Enter the quantity of the prop." />
             </label>
             <TextInput
@@ -326,7 +326,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <RequiredLabel>Price</RequiredLabel>
+            <RequiredLabel>Price</RequiredLabel>
               <HelpTooltip content="Enter the price or estimated value of the prop." />
             </label>
             <TextInput
@@ -341,7 +341,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
 
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <RequiredLabel>Source</RequiredLabel>
+            <RequiredLabel>Source</RequiredLabel>
               <HelpTooltip content="Select the source from which the prop was obtained." />
             </label>
             <View className="relative">
@@ -367,7 +367,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
             <View className={conditionalFieldStyles}>
               <View>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                  <RequiredLabel>Rental Source</RequiredLabel>
+                <RequiredLabel>Rental Source</RequiredLabel>
                   <HelpTooltip content="Enter the source from which the prop was rented." />
                 </label>
                 <TextInput
@@ -379,7 +379,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               </View>
               <View>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                  <RequiredLabel>Return Due Date</RequiredLabel>
+                <RequiredLabel>Return Due Date</RequiredLabel>
                   <HelpTooltip content="Enter the expected return date for the rented prop." />
                 </label>
                 <TextInput
@@ -392,7 +392,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               </View>
               <View>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                  <label htmlFor="rentalReferenceNumber" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Rental Reference #</label>
+                <label htmlFor="rentalReferenceNumber" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Rental Reference #</label>
                   <HelpTooltip content="Enter the rental reference number for the rented prop." />
                 </label>
                 <TextInput
@@ -409,7 +409,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           {formData.source !== 'rented' && (
             <View>
               <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                <label htmlFor="sourceDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Source Details</label>
+              <label htmlFor="sourceDetails" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Source Details</label>
                 <HelpTooltip content="Enter any additional details about the source of the prop." />
               </label>
               <TextInput
@@ -468,7 +468,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
         <View className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Length</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Length</label>
               <HelpTooltip content="Enter the length of the prop." />
             </label>
             <TextInput
@@ -482,7 +482,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Width</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Width</label>
               <HelpTooltip content="Enter the width of the prop." />
             </label>
             <TextInput
@@ -496,7 +496,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Height</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Height</label>
               <HelpTooltip content="Enter the height of the prop." />
             </label>
             <TextInput
@@ -510,7 +510,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Depth</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Depth</label>
               <HelpTooltip content="Enter the depth of the prop." />
             </label>
             <TextInput
@@ -524,7 +524,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Unit</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Unit</label>
               <HelpTooltip content="Select the unit of measurement for the dimensions." />
             </label>
             <View className="relative">
@@ -541,7 +541,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight</label>
               <HelpTooltip content="Enter the weight of the prop." />
             </label>
             <TextInput
@@ -555,7 +555,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight Unit</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Weight Unit</label>
               <HelpTooltip content="Select the unit of measurement for the weight." />
             </label>
             <View className="relative">
@@ -580,7 +580,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           <View className="space-y-4">
             <View>
               <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                <label htmlFor="act" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Act</label>
+              <label htmlFor="act" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Act</label>
                 <HelpTooltip content="Select the act in which the prop is used." />
               </label>
               <View className="relative">
@@ -604,7 +604,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
             {formData.act && (show.acts || []).find(a => (a.id || (show.acts?.indexOf(a) ?? -1) + 1) === formData.act) && (
               <View>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                  <label htmlFor="scene" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Scene</label>
+                <label htmlFor="scene" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Scene</label>
                   <HelpTooltip content="Select the scene in which the prop is used." />
                 </label>
                 <View className="relative">
@@ -686,7 +686,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label htmlFor="materials" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Materials (comma-separated)</label>
+            <label htmlFor="materials" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Materials (comma-separated)</label>
               <HelpTooltip content="Enter the materials used in the prop." />
             </label>
             <TextInput
@@ -702,7 +702,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label htmlFor="color" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Color</label>
+            <label htmlFor="color" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Color</label>
               <HelpTooltip content="Enter the color of the prop." />
             </label>
             <TextInput
@@ -715,7 +715,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label htmlFor="handedness" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Handedness</label>
+            <label htmlFor="handedness" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Handedness</label>
               <HelpTooltip content="Select the handedness of the prop." />
             </label>
             <View className="relative">
@@ -783,7 +783,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
             <View className={conditionalFieldStyles}>
               <View>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                  <label htmlFor="preShowSetupDuration" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Duration (minutes)</label>
+                <label htmlFor="preShowSetupDuration" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Duration (minutes)</label>
                   <HelpTooltip content="Enter the duration of the pre-show setup." />
                 </label>
                 <TextInput
@@ -797,7 +797,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               </View>
               <View>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                  <label htmlFor="preShowSetupNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Notes</label>
+                <label htmlFor="preShowSetupNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Notes</label>
                   <HelpTooltip content="Enter any notes related to the pre-show setup." />
                 </label>
                 <WysiwygEditor
@@ -808,7 +808,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
               </View>
               <View>
                 <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-                  <label htmlFor="preShowSetupVideo" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Video URL</label>
+                <label htmlFor="preShowSetupVideo" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Setup Video URL</label>
                   <HelpTooltip content="Enter the URL of the pre-show setup video." />
                 </label>
                 <TextInput
@@ -861,7 +861,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label htmlFor="travelWeight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Travel Weight (if different)</label>
+            <label htmlFor="travelWeight" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Travel Weight (if different)</label>
               <HelpTooltip content="Enter the travel weight of the prop if it's different from the regular weight." />
             </label>
             <TextInput
@@ -875,7 +875,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label htmlFor="transportNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Transport Notes</label>
+            <label htmlFor="transportNotes" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Transport Notes</label>
               <HelpTooltip content="Enter any notes related to the transportation of the prop." />
             </label>
             <WysiwygEditor
@@ -939,7 +939,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
         <View className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <RequiredLabel>Status</RequiredLabel>
+            <RequiredLabel>Status</RequiredLabel>
               <HelpTooltip content="Select the current status of the prop." />
             </label>
             <View className="relative">
@@ -951,17 +951,17 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                 required
                 disabled={disabled}
               >
-                {propLifecycleStatuses.map((status) => (
+                {propLifecycleStatuses.map((status) => ( 
                   <option key={status} value={status}>
                     {lifecycleStatusLabels[status]}
-                  </option>
-                ))}
+                  </option> 
+                ))} 
               </select>
             </View>
           </View>
           <View>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
-              <label htmlFor="location" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Storage Location</label>
+            <label htmlFor="location" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Storage Location</label>
               <HelpTooltip content="Enter the current storage location of the prop." />
             </label>
             <TextInput
@@ -987,7 +987,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           </View>
           {/* Assignment field for maintenance/repair statuses and repair fields in a single parent */}
           {(isAssignmentStatus || isRepairStatus) && (
-            <View>
+          <View>
               {isAssignmentStatus && (
                 <View>
                   <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 flex items-center gap-1">
@@ -1007,7 +1007,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                     <label htmlFor="repairDeadline" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Repair Deadline</label>
                     <HelpTooltip content="Enter the deadline for repairing the prop." />
                   </label>
-                  <TextInput
+            <TextInput
                     value={formData.repairDeadline || ''}
                     onChangeText={(text) => setFormData({ ...formData, repairDeadline: text })}
                     className={inputStyles}
@@ -1023,9 +1023,9 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                     onChangeText={(text) => setFormData({ ...formData, expectedReturnDate: text })}
                     className={inputStyles}
                     placeholder="YYYY-MM-DD"
-                    editable={!disabled}
-                  />
-                </View>
+              editable={!disabled}
+            />
+          </View>
               )}
             </View>
           )}

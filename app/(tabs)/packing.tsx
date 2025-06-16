@@ -141,34 +141,34 @@ export default function PackingScreen() {
       end={{ x: 1, y: 1 }}
       style={{ flex: 1 }}
     >
-      <View style={styles.container}>
-        <Stack.Screen 
-          options={{
-            title: selectedShow ? `Packing: ${selectedShow.name}` : 'Packing',
-            headerRight: () => (
-              <TouchableOpacity onPress={() => setIsQRScannerVisible(true)} style={{ marginRight: 15 }}>
-                <Ionicons name="qr-code-outline" size={28} color={currentThemeColors.primary} />
-              </TouchableOpacity>
-            ),
-          }}
-        />
-        <FlatList
-          data={boxes}
-          renderItem={renderBoxItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContentContainer}
-        />
-        <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
-          radius: 4,
-          opacity: 0.3,
-          color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
-          offset: [0, 2],
-        })]}>
-          <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
-            <Ionicons name="add" size={30} color={currentThemeColors.text || currentThemeColors.text} />
-          </TouchableOpacity>
-        </ShadowedView>
-      </View>
+    <View style={styles.container}>
+      <Stack.Screen 
+        options={{
+          title: selectedShow ? `Packing: ${selectedShow.name}` : 'Packing',
+          headerRight: () => (
+            <TouchableOpacity onPress={() => setIsQRScannerVisible(true)} style={{ marginRight: 15 }}>
+              <Ionicons name="qr-code-outline" size={28} color={currentThemeColors.primary} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <FlatList
+        data={boxes}
+        renderItem={renderBoxItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContentContainer}
+      />
+      <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
+        radius: 4,
+        opacity: 0.3,
+        color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
+        offset: [0, 2],
+      })]}>
+        <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
+          <Ionicons name="add" size={30} color={currentThemeColors.text || currentThemeColors.text} />
+        </TouchableOpacity>
+      </ShadowedView>
+    </View>
     </LinearGradient>
   );
 }

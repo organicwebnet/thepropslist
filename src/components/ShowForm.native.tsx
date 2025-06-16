@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, ScrollView, Switch, Alert, Platform, TouchableOpacity, Image, PanResponder } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, ScrollView, Switch, Alert, Platform, TouchableOpacity, Image, PanResponder, Modal } from 'react-native';
 import { default as DateTimePicker, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index.ts';
 import { Address } from '../shared/types/address.ts';
 import { Timestamp } from 'firebase/firestore';
 import { CustomTimestamp } from '../shared/services/firebase/types';
-import { PlusCircle, MinusCircle } from 'lucide-react-native';
+import { PlusCircle, MinusCircle, HelpCircle, HomeIcon, CalendarIcon, BoxIcon, PackageIcon, UserIcon } from 'lucide-react-native';
 
 interface ShowFormNativeProps {
   mode: 'create' | 'edit';
@@ -16,7 +16,7 @@ interface ShowFormNativeProps {
 }
 
 // Updated initial state including more fields
-const initialNativeFormState: Partial<Show> = {
+const initialNativeFormState: Partial<Show> & { propmakerName?: string; designerAssistantName?: string; assistantStageManager?: string; techWeekStart?: string; firstPreview?: string; pressNight?: string; additionalDates?: { label: string; date: string }[]; collaborators?: ExtendedShowCollaborator[] } = {
   name: '',
   description: '',
   acts: [{ id: '1', name: '', scenes: [{ id: '1', name: '' }] }], // Initialize with one act and scene
@@ -40,7 +40,14 @@ const initialNativeFormState: Partial<Show> = {
   startDate: '', 
   endDate: '',
   status: 'planning', // Default status
-  collaborators: []
+  collaborators: [{ name: '', jobRole: '', email: '', role: 'viewer', addedAt: '', addedBy: '' }],
+  propmakerName: '',
+  designerAssistantName: '',
+  assistantStageManager: '',
+  techWeekStart: '',
+  firstPreview: '',
+  pressNight: '',
+  additionalDates: [],
 };
 
 const defaultAddress: Address = {
@@ -121,6 +128,8 @@ const sectionCardStyle = {
   borderRadius: 16,
   padding: 16,
   marginBottom: 24,
+  borderWidth: 2,
+  borderColor: '#a78bfa', // Match Add Prop form purple
 };
 
 const styles = StyleSheet.create({
@@ -143,13 +152,13 @@ const styles = StyleSheet.create({
      color: '#f87171', // Red asterisk
   },
   input: {
-    backgroundColor: '#374151', // Slightly lighter background for inputs
+    backgroundColor: '#374151',
     color: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#4b5563', // Border color for inputs
+    borderWidth: 2, // Thicker border
+    borderColor: '#a78bfa', // Match Add Prop form purple
     fontSize: 16,
   },
   textArea: {
@@ -395,11 +404,18 @@ const styles = StyleSheet.create({
   },
 });
 
+type ExtendedShowCollaborator = ShowCollaborator & { name: string; jobRole: string; inviteStatus?: string };
+
 export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }: ShowFormNativeProps) {
-  const [formData, setFormData] = useState<Partial<Show>>(() => {
-    // Merge initialData with defaults, ensuring all keys exist
+  const [formData, setFormData] = useState<Partial<Show> & { propmakerName?: string; designerAssistantName?: string; assistantStageManager?: string; techWeekStart?: string; firstPreview?: string; pressNight?: string; additionalDates?: { label: string; date: string }[]; collaborators?: ExtendedShowCollaborator[] }>(() => {
     const merged = { ...initialNativeFormState, ...(initialData || {}) };
-    // Ensure arrays exist and have at least one item for acts
+    merged.collaborators = (Array.isArray(merged.collaborators)
+      ? merged.collaborators.map((c: any) => ({
+          ...c,
+          name: c.name || '',
+          jobRole: c.jobRole || '',
+        }))
+      : [{ name: '', jobRole: '', email: '', role: 'viewer', addedAt: '', addedBy: '' }]) as ExtendedShowCollaborator[];
     merged.acts = (Array.isArray(merged.acts) && merged.acts.length > 0) ? merged.acts.map(act => ({
       ...act,
       id: act.id || String(Math.random()), // Ensure act has an ID
@@ -423,8 +439,23 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
     merged.contacts = Array.isArray(merged.contacts) ? merged.contacts : [];
     merged.rehearsalAddresses = Array.isArray(merged.rehearsalAddresses) ? merged.rehearsalAddresses : [];
     merged.storageAddresses = Array.isArray(merged.storageAddresses) ? merged.storageAddresses : [];
-    merged.collaborators = Array.isArray(merged.collaborators) ? merged.collaborators : [];
-    return merged;
+    merged.propmakerName = merged.propmakerName || '';
+    merged.designerAssistantName = merged.designerAssistantName || '';
+    merged.assistantStageManager = merged.assistantStageManager || '';
+    merged.techWeekStart = merged.techWeekStart || '';
+    merged.firstPreview = merged.firstPreview || '';
+    merged.pressNight = merged.pressNight || '';
+    merged.additionalDates = merged.additionalDates || [];
+    return merged as Partial<Show> & {
+      propmakerName?: string;
+      designerAssistantName?: string;
+      assistantStageManager?: string;
+      techWeekStart?: string;
+      firstPreview?: string;
+      pressNight?: string;
+      additionalDates?: { label: string; date: string }[];
+      collaborators?: ExtendedShowCollaborator[];
+    };
   });
 
    // State for date pickers
@@ -445,6 +476,25 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
    const [newCollaboratorEmail, setNewCollaboratorEmail] = useState('');
    const [newCollaboratorRole, setNewCollaboratorRole] = useState<'viewer' | 'editor'>('viewer');
 
+   // Add a new state for the press night picker
+   const [showPressNightPicker, setShowPressNightPicker] = useState(false);
+
+   // State for which additional date picker is open
+   const [openAdditionalDateIndex, setOpenAdditionalDateIndex] = useState<number | null>(null);
+   // State for new additional date label
+   const [newDateLabel, setNewDateLabel] = useState('');
+
+   // Add state for new collaborator name and job role
+   const [newCollaboratorName, setNewCollaboratorName] = useState('');
+   const [newCollaboratorJobRole, setNewCollaboratorJobRole] = useState('');
+
+   // Add state for modal and new collaborator fields
+   const [collabModalVisible, setCollabModalVisible] = useState(false);
+   const [modalCollabName, setModalCollabName] = useState('');
+   const [modalCollabJobRole, setModalCollabJobRole] = useState('');
+   const [modalCollabEmail, setModalCollabEmail] = useState('');
+   const [modalCollabRole, setModalCollabRole] = useState<'viewer' | 'editor'>('viewer');
+
   useEffect(() => {
     if (initialData) {
        const merged = { ...initialNativeFormState, ...initialData };
@@ -453,23 +503,57 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
         merged.contacts = Array.isArray(merged.contacts) ? merged.contacts : [];
         merged.rehearsalAddresses = Array.isArray(merged.rehearsalAddresses) ? merged.rehearsalAddresses : [];
         merged.storageAddresses = Array.isArray(merged.storageAddresses) ? merged.storageAddresses : [];
-        merged.collaborators = Array.isArray(merged.collaborators) ? merged.collaborators : [];
-       setFormData(merged);
+        merged.collaborators = (Array.isArray(merged.collaborators)
+          ? merged.collaborators.map((c: any) => ({
+              ...c,
+              name: c.name || '',
+              jobRole: c.jobRole || '',
+            }))
+          : [{ name: '', jobRole: '', email: '', role: 'viewer', addedAt: '', addedBy: '' }]) as ExtendedShowCollaborator[];
+       setFormData(merged as Partial<Show> & {
+         propmakerName?: string;
+         designerAssistantName?: string;
+         assistantStageManager?: string;
+         techWeekStart?: string;
+         firstPreview?: string;
+         pressNight?: string;
+         additionalDates?: { label: string; date: string }[];
+         collaborators?: ExtendedShowCollaborator[];
+       });
        // Update date states when initialData changes
        setStartDate(parseDateString(merged.startDate));
        setEndDate(parseDateString(merged.endDate));
        setSelectedLogoUri(merged.logoImage?.url || null); // Get URL from logoImage object
     } else if (mode === 'create') {
         // Reset to initial state only if creating and no initial data
-        setFormData(initialNativeFormState);
+        setFormData({ ...initialNativeFormState, collaborators: [{ name: '', jobRole: '', email: '', role: 'viewer', addedAt: '', addedBy: '' }] });
         setStartDate(new Date()); // Default to today for create mode
         setEndDate(new Date());
         setSelectedLogoUri(null); // Reset logo URI for create mode
     }
   }, [initialData, mode]);
 
-  const handleInputChange = (name: keyof Show, value: string | boolean | null) => {
-    setFormData((prev: Partial<Show>) => ({ ...prev, [name]: value }));
+  const handleInputChange = (name: keyof Show | 'propmakerName' | 'designerAssistantName' | 'assistantStageManager' | 'techWeekStart' | 'firstPreview' | 'pressNight', value: string | boolean | null) => {
+    setFormData((prev: Partial<Show> & { propmakerName?: string; designerAssistantName?: string; assistantStageManager?: string; techWeekStart?: string; firstPreview?: string; pressNight?: string }) => {
+      const updated = { ...prev, [name]: value };
+      if (updated.collaborators) {
+        updated.collaborators = (updated.collaborators as any[]).map((c: any) => ({
+          ...c,
+          name: c.name || '',
+          jobRole: c.jobRole || '',
+        })) as ExtendedShowCollaborator[];
+      }
+      return updated as Partial<Show> & {
+        propmakerName?: string;
+        designerAssistantName?: string;
+        assistantStageManager?: string;
+        techWeekStart?: string;
+        firstPreview?: string;
+        pressNight?: string;
+        additionalDates?: { label: string; date: string }[];
+        collaborators?: ExtendedShowCollaborator[];
+      };
+    });
   };
 
   const handleActChange = (actIndex: number, field: keyof Act, value: string) => {
@@ -678,42 +762,61 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
 
   // Collaborator Handlers
   const handleAddCollaborator = () => {
+    if (!newCollaboratorName.trim()) {
+      Alert.alert("Validation Error", "Collaborator name cannot be empty.");
+      return;
+    }
+    if (!newCollaboratorJobRole.trim()) {
+      Alert.alert("Validation Error", "Collaborator job role cannot be empty.");
+      return;
+    }
     if (!newCollaboratorEmail.trim()) {
       Alert.alert("Validation Error", "Collaborator email cannot be empty.");
       return;
     }
-    // Basic email validation (can be improved)
     if (!/\S+@\S+\.\S+/.test(newCollaboratorEmail)) {
-        Alert.alert("Validation Error", "Please enter a valid email address.");
-        return;
+      Alert.alert("Validation Error", "Please enter a valid email address.");
+      return;
     }
-
     setFormData(prevData => {
       const existingCollaborators = prevData.collaborators || [];
       if (existingCollaborators.some(c => c.email.toLowerCase() === newCollaboratorEmail.toLowerCase())) {
         Alert.alert("Error", "This collaborator has already been added.");
         return prevData;
       }
-      const newCollaborator: ShowCollaborator = {
+      const newCollaborator: ExtendedShowCollaborator = {
+        name: newCollaboratorName,
+        jobRole: newCollaboratorJobRole,
         email: newCollaboratorEmail,
         role: newCollaboratorRole,
-        // addedAt and addedBy will be set server-side or by a higher-order function
-        addedAt: new Date().toISOString(), // Placeholder, should be handled by submission logic
-        addedBy: 'current-user-placeholder', // Placeholder
+        addedAt: new Date().toISOString(),
+        addedBy: 'current-user-placeholder',
       };
       return {
         ...prevData,
-        collaborators: [...existingCollaborators, newCollaborator]
+        collaborators: [...existingCollaborators, newCollaborator].map((c: any) => ({
+          ...c,
+          name: c.name || '',
+          jobRole: c.jobRole || '',
+        })),
       };
     });
+    setNewCollaboratorName('');
+    setNewCollaboratorJobRole('');
     setNewCollaboratorEmail('');
-    setNewCollaboratorRole('viewer'); // Reset to default
+    setNewCollaboratorRole('viewer');
   };
 
   const handleRemoveCollaborator = (emailToRemove: string) => {
     setFormData(prevData => ({
       ...prevData,
-      collaborators: (prevData.collaborators || []).filter(c => c.email !== emailToRemove)
+      collaborators: (prevData.collaborators || [])
+        .filter(c => c.email !== emailToRemove)
+        .map((c: any) => ({
+          ...c,
+          name: c.name || '',
+          jobRole: c.jobRole || '',
+        })),
     }));
   };
 
@@ -780,7 +883,6 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
     'Acts & Scenes',
     'Venues',
     'Contacts',
-    'Storage & Rehearsal',
     'Collaborators',
   ];
   const [step, setStep] = useState(0);
@@ -805,7 +907,12 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
       case 0:
         return (
           <View style={sectionCardStyle}>
-            <Text style={[styles.sectionTitle]}>Basic Info</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[styles.sectionTitle, { flex: 1 }]}>Basic Info</Text>
+              <TouchableOpacity onPress={() => Alert.alert('Basic Info', 'Enter the show name, description, and other basic details.')}> 
+                <HelpCircle size={20} color="#a78bfa" />
+              </TouchableOpacity>
+            </View>
             {/* Name, Description, Logo, Production Company, etc. */}
             <FormField label="Show Name" required>
               <TextInput
@@ -870,133 +977,157 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                </View>
             </FormField>
 
-            <FormField label="Production Company" required>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter production company name"
-                value={formData.productionCompany}
-                onChangeText={(value) => handleInputChange('productionCompany', value)}
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
-             <FormField label="Prod. Contact Name" required>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter production contact name"
-                value={formData.productionContactName}
-                onChangeText={(value) => handleInputChange('productionContactName', value)}
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
-            <FormField label="Prod. Contact Email" required>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter production contact email"
-                value={formData.productionContactEmail}
-                onChangeText={(value) => handleInputChange('productionContactEmail', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
-             <FormField label="Prod. Contact Phone">
-              <TextInput
-                style={styles.input}
-                placeholder="Enter production contact phone"
-                value={formData.productionContactPhone}
-                onChangeText={(value) => handleInputChange('productionContactPhone', value)}
-                keyboardType="phone-pad"
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
+            
           </View>
         );
       case 1:
         return (
           <View style={sectionCardStyle}>
-            <Text style={[styles.sectionTitle]}>Dates</Text>
-            {/* Start Date, End Date, etc. */}
-            <FormField label="Start Date">
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[styles.sectionTitle, { flex: 1 }]}>Important Dates</Text>
+              <TouchableOpacity onPress={() => Alert.alert('Important Dates', 'Enter the start of tech week, first preview, and press night.')}> 
+                <HelpCircle size={20} color="#a78bfa" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Start of Tech Week */}
+            <FormField label="Start of Tech Week">
               <TouchableOpacity onPress={() => setShowStartDatePicker(true)} style={styles.datePickerButton}>
-                <Text style={styles.dateText}>{formatDate(startDate)}</Text>
+                <Text style={styles.dateText}>{formData.techWeekStart ? formatDate(formData.techWeekStart) : 'Select Date'}</Text>
               </TouchableOpacity>
               {showStartDatePicker && (
                 <DateTimePicker
-                  testID="startDatePicker"
-                  value={startDate}
+                  testID="techWeekStartPicker"
+                  value={formData.techWeekStart ? parseDateString(formData.techWeekStart) : new Date()}
                   mode="date"
                   display="default"
-                  onChange={onStartDateChange}
+                  onChange={(event, selectedDate) => {
+                    setShowStartDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) handleInputChange('techWeekStart', formatDate(selectedDate));
+                  }}
                 />
               )}
             </FormField>
-
-            <FormField label="End Date">
+            {/* First Preview */}
+            <FormField label="First Preview">
               <TouchableOpacity onPress={() => setShowEndDatePicker(true)} style={styles.datePickerButton}>
-                <Text style={styles.dateText}>{formatDate(endDate)}</Text>
+                <Text style={styles.dateText}>{formData.firstPreview ? formatDate(formData.firstPreview) : 'Select Date'}</Text>
               </TouchableOpacity>
               {showEndDatePicker && (
                 <DateTimePicker
-                  testID="endDatePicker"
-                  value={endDate}
+                  testID="firstPreviewPicker"
+                  value={formData.firstPreview ? parseDateString(formData.firstPreview) : new Date()}
                   mode="date"
                   display="default"
-                  onChange={onEndDateChange}
+                  onChange={(event, selectedDate) => {
+                    setShowEndDatePicker(Platform.OS === 'ios');
+                    if (selectedDate) handleInputChange('firstPreview', formatDate(selectedDate));
+                  }}
                 />
               )}
             </FormField>
-
-            <FormField label="Status">
-               <Text style={styles.placeholderText}>Status Picker (Coming Soon)</Text>
+            {/* Press Night */}
+            <FormField label="Press Night">
+              <TouchableOpacity onPress={() => setShowPressNightPicker(true)} style={styles.datePickerButton}>
+                <Text style={styles.dateText}>{formData.pressNight ? formatDate(formData.pressNight) : 'Select Date'}</Text>
+              </TouchableOpacity>
+              {showPressNightPicker && (
+                <DateTimePicker
+                  testID="pressNightPicker"
+                  value={formData.pressNight ? parseDateString(formData.pressNight) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowPressNightPicker(Platform.OS === 'ios');
+                    if (selectedDate) handleInputChange('pressNight', formatDate(selectedDate));
+                    if (Platform.OS !== 'ios') setShowPressNightPicker(false);
+                  }}
+                />
+              )}
+            </FormField>
+            {(formData.additionalDates || []).map((item, idx) => (
+              <View key={idx} style={{ marginBottom: 12 }}>
+                <FormField label={`Custom Date Name`}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      placeholder="Enter date name (e.g. Final Dress)"
+                      value={item.label}
+                      onChangeText={v => handleUpdateAdditionalDate(idx, 'label', v)}
+                      placeholderTextColor="#6b7280"
+                    />
+                    <TouchableOpacity onPress={() => handleRemoveAdditionalDate(idx)} style={{ marginLeft: 8 }}>
+                      <Text style={{ color: '#f87171', fontWeight: 'bold' }}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                </FormField>
+                <FormField label="Date">
+                  <TouchableOpacity onPress={() => setOpenAdditionalDateIndex(idx)} style={styles.datePickerButton}>
+                    <Text style={styles.dateText}>{item.date ? formatDate(item.date) : 'Select Date'}</Text>
+                  </TouchableOpacity>
+                  {openAdditionalDateIndex === idx && (
+                    <DateTimePicker
+                      testID={`additionalDatePicker-${idx}`}
+                      value={item.date ? parseDateString(item.date) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setOpenAdditionalDateIndex(null);
+                        if (selectedDate) handleUpdateAdditionalDate(idx, 'date', formatDate(selectedDate));
+                      }}
+                    />
+                  )}
+                </FormField>
+              </View>
+            ))}
+            <FormField label="Custom Date Name">
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Add another date (name)"
+                  value={newDateLabel}
+                  onChangeText={setNewDateLabel}
+                  placeholderTextColor="#6b7280"
+                />
+                <TouchableOpacity onPress={handleAddAdditionalDate} style={[styles.addButton, { marginLeft: 8 }]}> 
+                  <Text style={styles.addButtonText}>Add</Text>
+                </TouchableOpacity>
+              </View>
             </FormField>
           </View>
         );
       case 2:
         return (
           <View style={sectionCardStyle}>
-            <Text style={[styles.sectionTitle]}>Acts & Scenes</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[styles.sectionTitle, { flex: 1 }]}>Acts & Scenes</Text>
+              <TouchableOpacity onPress={() => Alert.alert('Acts & Scenes', 'Enter the acts and scenes for the show.')}> 
+                <HelpCircle size={20} color="#a78bfa" />
+              </TouchableOpacity>
+            </View>
             {/* Acts, Scenes, Add/Remove, etc. */}
             {(formData.acts || []).map((act, actIndex) => (
-              <View key={act.id || actIndex} style={styles.actContainer}>
-                <View style={styles.actHeader}>
+              <View key={act.id || actIndex} style={[styles.actContainer, { marginBottom: 20 }]}>
+                <FormField label={`Act ${actIndex + 1} Name`} required>
                   <TextInput
-                    style={[styles.input, styles.actInput]}
+                    style={[styles.input, { fontSize: 18, fontWeight: '600', color: '#fff' }]}
                     placeholder={`Act ${actIndex + 1} Name`}
                     value={act.name}
                     onChangeText={(value) => handleActChange(actIndex, 'name', value)}
-                    placeholderTextColor="#6b7280"
+                    placeholderTextColor="#b3b3b3"
                   />
-                  { (formData.acts || []).length > 1 &&
-                    <TouchableOpacity onPress={() => removeAct(actIndex)} style={styles.removeButton}>
-                      <MinusCircle size={20} color="#FF3B30" />
-                    </TouchableOpacity>
-                  }
-                </View>
-                <TextInput
-                  style={[styles.input, styles.textArea, styles.actDescriptionInput]}
-                  placeholder={`Act ${actIndex + 1} Description (Optional)`}
-                  value={act.description}
-                  onChangeText={(value) => handleActChange(actIndex, 'description', value)}
-                  multiline
-                  placeholderTextColor="#6b7280"
-                />
-
+                </FormField>
                 {(act.scenes || []).map((scene, sceneIndex) => (
-                  <View key={scene.id || sceneIndex} style={styles.sceneContainer}>
-                    <TextInput
-                      style={[styles.input, styles.sceneInput]}
-                      placeholder={`Scene ${sceneIndex + 1} Name`}
-                      value={scene.name}
-                      onChangeText={(value) => handleSceneChange(actIndex, sceneIndex, 'name', value)}
-                      placeholderTextColor="#6b7280"
-                    />
-                    <TextInput
-                      style={[styles.input, styles.sceneInput]}
-                      placeholder={`Scene ${sceneIndex + 1} Setting (Optional)`}
-                      value={scene.setting}
-                      onChangeText={(value) => handleSceneChange(actIndex, sceneIndex, 'setting', value)}
-                      placeholderTextColor="#6b7280"
-                    />
+                  <View key={scene.id || sceneIndex} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                    <FormField label={`Scene ${sceneIndex + 1} Name`}>
+                      <TextInput
+                        style={[styles.input, styles.sceneInput, { fontSize: 16, color: '#fff' }]}
+                        placeholder={`Scene ${sceneIndex + 1} Name`}
+                        value={scene.name}
+                        onChangeText={(value) => handleSceneChange(actIndex, sceneIndex, 'name', value)}
+                        placeholderTextColor="#b3b3b3"
+                      />
+                    </FormField>
                     { (act.scenes || []).length > 1 &&
                       <TouchableOpacity onPress={() => removeScene(actIndex, sceneIndex)} style={styles.removeButton}>
                         <MinusCircle size={20} color="#FF3B30" />
@@ -1019,132 +1150,155 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
       case 3:
         return (
           <View style={sectionCardStyle}>
-            <Text style={[styles.sectionTitle]}>Venues</Text>
-            {/* Venues, Add/Remove, etc. */}
-            {(!formData.isTouringShow && formData.venues && formData.venues.length > 0 ? [formData.venues[0]] : formData.venues || []).map((venue, venueIndex) => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[styles.sectionTitle, { flex: 1 }]}>Venues</Text>
+              <TouchableOpacity onPress={() => Alert.alert('Venues', 'Enter the venues for the show.')}> 
+                <HelpCircle size={20} color="#a78bfa" />
+              </TouchableOpacity>
+            </View>
+            {(formData.venues || []).map((venue, venueIndex) => (
               <View key={venue.id || venueIndex} style={styles.venueContainer}>
-                <View style={styles.venueHeader}>
+                <FormField label="Venue Name" required>
                   <TextInput
-                    style={[styles.input, styles.venueNameInput]}
-                    placeholder={formData.isTouringShow ? `Venue ${venueIndex + 1} Name` : "Primary Venue Name"}
+                    style={styles.input}
+                    placeholder={formData.isTouringShow ? `Venue ${venueIndex + 1} Name` : 'Primary Venue Name'}
                     value={venue.name}
                     onChangeText={(value) => handleVenueChange(venueIndex, 'name', value)}
                     placeholderTextColor="#6b7280"
                   />
-                  {(formData.isTouringShow && (formData.venues || []).length > 0) && // Show remove only if touring and has venues
-                    <TouchableOpacity onPress={() => removeVenue(venueIndex)} style={styles.removeButton}>
-                      <MinusCircle size={20} color="#FF3B30" />
-                    </TouchableOpacity>
-                  }
-                </View>
-                
-                {/* Address Fields */}
-                <Text style={styles.subLabel}>Address</Text>
+                </FormField>
+                <Text style={[styles.label, { marginTop: 8, marginBottom: 2 }]}>Address</Text>
                 {(Object.keys(defaultAddress) as Array<keyof Address>)
-                  .filter(key => key !== 'id' && key !== 'companyName' && key !== 'nickname' && key !== 'name') // Exclude fields not typically for venue address block
+                  .filter(key => key !== 'id' && key !== 'companyName' && key !== 'nickname' && key !== 'name')
                   .map((addressKey) => (
-                    <TextInput
-                      key={addressKey}
-                      style={styles.input}
-                      placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
-                      value={venue.address?.[addressKey] || ''}
-                      onChangeText={(value) => handleVenueChange(venueIndex, `address.${addressKey}`, value)}
-                      placeholderTextColor="#6b7280"
-                      // Add keyboardType for postalCode, etc. if needed
-                    />
+                    <FormField key={addressKey} label={addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}>
+                      <TextInput
+                        style={styles.input}
+                        placeholder={addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}
+                        value={venue.address?.[addressKey] || ''}
+                        onChangeText={(value) => handleVenueChange(venueIndex, `address.${addressKey}`, value)}
+                        placeholderTextColor="#6b7280"
+                      />
+                    </FormField>
                 ))}
-                
-                <Text style={styles.subLabel}>Venue Dates</Text>
-                 <TouchableOpacity 
-                    onPress={() => { 
-                        setCurrentVenueDateValue(parseDateString(venue.startDate)); 
-                        setVenueDatePickerVisible({ index: venueIndex, field: 'startDate' }); 
-                    }}
-                    style={styles.datePickerButton}
-                 >
+                <Text style={[styles.label, { marginTop: 8, marginBottom: 2 }]}>Venue Dates</Text>
+                <FormField label="Start Date">
+                  <TouchableOpacity onPress={() => setVenueDatePickerVisible({ index: venueIndex, field: 'startDate' })} style={styles.datePickerButton}>
                     <Text style={styles.dateText}>{venue.startDate ? formatDate(venue.startDate) : 'Select Start Date'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                    onPress={() => { 
-                        setCurrentVenueDateValue(parseDateString(venue.endDate)); 
-                        setVenueDatePickerVisible({ index: venueIndex, field: 'endDate' }); 
-                    }}
-                    style={styles.datePickerButton}
-                >
+                  </TouchableOpacity>
+                  {venueDatePickerVisible && venueDatePickerVisible.index === venueIndex && venueDatePickerVisible.field === 'startDate' && (
+                    <DateTimePicker
+                      testID={`venueStartDatePicker-${venueIndex}`}
+                      value={venue.startDate ? parseDateString(venue.startDate) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setVenueDatePickerVisible(null);
+                        if (selectedDate) handleVenueChange(venueIndex, 'startDate', formatDate(selectedDate));
+                      }}
+                    />
+                  )}
+                </FormField>
+                <FormField label="End Date">
+                  <TouchableOpacity onPress={() => setVenueDatePickerVisible({ index: venueIndex, field: 'endDate' })} style={styles.datePickerButton}>
                     <Text style={styles.dateText}>{venue.endDate ? formatDate(venue.endDate) : 'Select End Date'}</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.subLabel}>Notes</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  placeholder="Venue notes (e.g., stage door, parking)"
-                  value={venue.notes}
-                  onChangeText={(value) => handleVenueChange(venueIndex, 'notes', value)}
-                  multiline
-                  placeholderTextColor="#6b7280"
-                />
+                  </TouchableOpacity>
+                  {venueDatePickerVisible && venueDatePickerVisible.index === venueIndex && venueDatePickerVisible.field === 'endDate' && (
+                    <DateTimePicker
+                      testID={`venueEndDatePicker-${venueIndex}`}
+                      value={venue.endDate ? parseDateString(venue.endDate) : new Date()}
+                      mode="date"
+                      display="default"
+                      onChange={(event, selectedDate) => {
+                        setVenueDatePickerVisible(null);
+                        if (selectedDate) handleVenueChange(venueIndex, 'endDate', formatDate(selectedDate));
+                      }}
+                    />
+                  )}
+                </FormField>
+                <FormField label="Notes">
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    placeholder="Venue notes (e.g., stage door, parking)"
+                    value={venue.notes}
+                    onChangeText={(value) => handleVenueChange(venueIndex, 'notes', value)}
+                    multiline
+                    placeholderTextColor="#6b7280"
+                  />
+                </FormField>
               </View>
             ))}
-            {formData.isTouringShow && (
-              <TouchableOpacity onPress={addVenue} style={styles.addButton}>
-                <PlusCircle size={20} color="#007AFF" />
-                <Text style={styles.addButtonText}>Add Venue</Text>
-              </TouchableOpacity>
-            )}
-             { (!formData.venues || formData.venues.length === 0) && !formData.isTouringShow && (
-              <TouchableOpacity onPress={addVenue} style={styles.addButton}>
-                <PlusCircle size={20} color="#007AFF" />
-                <Text style={styles.addButtonText}>Add Venue Details</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity onPress={addVenue} style={styles.addButton}>
+              <PlusCircle size={20} color="#007AFF" />
+              <Text style={styles.addButtonText}>Add Venue</Text>
+            </TouchableOpacity>
           </View>
         );
       case 4:
         return (
           <View style={sectionCardStyle}>
-            <Text style={[styles.sectionTitle]}>Contacts</Text>
-            {/* Contacts, Add/Remove, etc. */}
-            {(formData.contacts || []).map((contact, contactIndex) => (
-              <View key={contact.id || contactIndex} style={styles.contactContainer}>
-                <View style={styles.contactHeader}>
-                  <Text style={styles.subLabel}>Contact {contactIndex + 1}</Text>
-                  <TouchableOpacity onPress={() => removeContact(contactIndex)} style={styles.removeButton}>
-                    <MinusCircle size={20} color="#FF3B30" />
-                  </TouchableOpacity>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Contact Name"
-                  value={contact.name}
-                  onChangeText={(value) => handleContactChange(contactIndex, 'name', value)}
-                  placeholderTextColor="#6b7280"
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Role"
-                  value={contact.role}
-                  onChangeText={(value) => handleContactChange(contactIndex, 'role', value)}
-                  placeholderTextColor="#6b7280"
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email (Optional)"
-                  value={contact.email}
-                  onChangeText={(value) => handleContactChange(contactIndex, 'email', value)}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  placeholderTextColor="#6b7280"
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Phone (Optional)"
-                  value={contact.phone}
-                  onChangeText={(value) => handleContactChange(contactIndex, 'phone', value)}
-                  keyboardType="phone-pad"
-                  placeholderTextColor="#6b7280"
-                />
-              </View>
-            ))}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[styles.sectionTitle, { flex: 1 }]}>Contacts</Text>
+              <TouchableOpacity onPress={() => Alert.alert('Contacts', 'Enter the contacts for the show.')}> 
+                <HelpCircle size={20} color="#a78bfa" />
+              </TouchableOpacity>
+            </View>
+            <FormField label="Props Supervisor Name" required>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter props supervisor's name"
+                value={formData.propsSupervisor}
+                onChangeText={(value) => handleInputChange('propsSupervisor', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+            <FormField label="Designer Name" required>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter designer's name"
+                value={formData.productionContactName}
+                onChangeText={(value) => handleInputChange('productionContactName', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+            <FormField label="Designer Assistant Name">
+              <TextInput
+                style={styles.input}
+                placeholder="Enter designer assistant's name"
+                value={formData.designerAssistantName}
+                onChangeText={(value) => handleInputChange('designerAssistantName', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+            <FormField label="Stage Manager Name" required>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter stage manager's name"
+                value={formData.stageManager}
+                onChangeText={(value) => handleInputChange('stageManager', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+            <FormField label="Assistant Stage Manager Name">
+              <TextInput
+                style={styles.input}
+                placeholder="Enter assistant stage manager's name"
+                value={formData.assistantStageManager}
+                onChangeText={(value) => handleInputChange('assistantStageManager', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+            <FormField label="Propmaker Name">
+              <TextInput
+                style={styles.input}
+                placeholder="Enter propmaker's name"
+                value={formData.propmakerName}
+                onChangeText={(value) => handleInputChange('propmakerName', value)}
+                placeholderTextColor="#6b7280"
+              />
+            </FormField>
+           
+            {/* Remove all contacts rendering, only show add contact button */}
             <TouchableOpacity onPress={addContact} style={styles.addButton}>
               <PlusCircle size={20} color="#007AFF" />
               <Text style={styles.addButtonText}>Add Contact</Text>
@@ -1154,111 +1308,104 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
       case 5:
         return (
           <View style={sectionCardStyle}>
-            <Text style={[styles.sectionTitle]}>Storage & Rehearsal</Text>
-            {/* StorageAddresses, RehearsalAddresses, Add/Remove, etc. */}
-            <FormField label="Rehearsal Addresses">
-              {(formData.rehearsalAddresses || []).map((address, index) => (
-                <View key={address.id || index} style={styles.addressContainer}>
-                  <View style={styles.addressHeader}>
-                      <Text style={styles.subLabel}>Rehearsal Space {index + 1}</Text>
-                      <TouchableOpacity onPress={() => removeAddressFromList('rehearsalAddresses', index)} style={styles.removeButton}>
-                          <MinusCircle size={20} color="#FF3B30" />
-                      </TouchableOpacity>
-                  </View>
-                  {(Object.keys(defaultAddress) as Array<keyof Address>)
-                    .filter(key => key !== 'id' && key !== 'companyName') // Filter out fields not needed for simple address entry
-                    .map(addressKey => (
-                      <TextInput
-                        key={addressKey}
-                        style={styles.input}
-                        placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
-                        value={address[addressKey] || ''}
-                        onChangeText={(value) => handleAddressListChange('rehearsalAddresses', index, addressKey, value)}
-                        placeholderTextColor="#6b7280"
-                      />
-                  ))}
-                </View>
-              ))}
-              <TouchableOpacity onPress={() => addAddressToList('rehearsalAddresses')} style={styles.addButton}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[styles.sectionTitle, { flex: 1 }]}>Collaborators</Text>
+              <TouchableOpacity onPress={() => setCollabModalVisible(true)} style={styles.addButtonSmallMargin}>
                 <PlusCircle size={20} color="#007AFF" />
-                <Text style={styles.addButtonText}>Add Rehearsal Address</Text>
+                <Text style={styles.addButtonText}>Add Collaborator</Text>
               </TouchableOpacity>
-            </FormField>
-
-            <FormField label="Storage Addresses">
-              {(formData.storageAddresses || []).map((address, index) => (
-                <View key={address.id || index} style={styles.addressContainer}>
-                   <View style={styles.addressHeader}>
-                      <Text style={styles.subLabel}>Storage Location {index + 1}</Text>
-                      <TouchableOpacity onPress={() => removeAddressFromList('storageAddresses', index)} style={styles.removeButton}>
-                          <MinusCircle size={20} color="#FF3B30" />
-                      </TouchableOpacity>
-                  </View>
-                  {(Object.keys(defaultAddress) as Array<keyof Address>)
-                    .filter(key => key !== 'id' && key !== 'companyName') // Filter out fields not needed for simple address entry
-                    .map(addressKey => (
-                      <TextInput
-                        key={addressKey}
-                        style={styles.input}
-                        placeholder={`${addressKey.charAt(0).toUpperCase() + addressKey.slice(1).replace(/([A-Z])/g, ' $1')}`}
-                        value={address[addressKey] || ''}
-                        onChangeText={(value) => handleAddressListChange('storageAddresses', index, addressKey, value)}
-                        placeholderTextColor="#6b7280"
-                      />
-                  ))}
-                </View>
-              ))}
-              <TouchableOpacity onPress={() => addAddressToList('storageAddresses')} style={styles.addButton}>
-                <PlusCircle size={20} color="#007AFF" />
-                <Text style={styles.addButtonText}>Add Storage Address</Text>
+              <TouchableOpacity onPress={() => Alert.alert('Collaborators', 'Enter the collaborators for the show.')}> 
+                <HelpCircle size={20} color="#a78bfa" />
               </TouchableOpacity>
-            </FormField>
-          </View>
-        );
-      case 6:
-        return (
-          <View style={sectionCardStyle}>
-            <Text style={[styles.sectionTitle]}>Collaborators</Text>
-            {/* Collaborators, Add/Remove, etc. */}
-            {(formData.collaborators || []).map((collaborator, index) => (
-              <View key={index} style={styles.collaboratorItemContainer}>
-                <View style={styles.collaboratorInfoContainer}>
-                    <Text style={styles.collaboratorText}>{collaborator.email}</Text>
-                    <Text style={styles.collaboratorRoleText}>({collaborator.role})</Text>
-                </View>
-                <TouchableOpacity onPress={() => handleRemoveCollaborator(collaborator.email)} style={styles.removeButtonSmall}>
-                  <MinusCircle size={18} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TextInput
-              style={styles.input}
-              placeholder="Collaborator Email"
-              value={newCollaboratorEmail}
-              onChangeText={setNewCollaboratorEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholderTextColor="#6b7280"
-            />
-            <View style={styles.roleSelectorContainer}> 
-                <Text style={styles.subLabel}>Role: </Text>
-                <TouchableOpacity 
-                    style={[styles.roleButton, newCollaboratorRole === 'viewer' && styles.roleButtonSelected]}
-                    onPress={() => setNewCollaboratorRole('viewer')}
-                >
-                    <Text style={styles.roleButtonText}>Viewer</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                    style={[styles.roleButton, newCollaboratorRole === 'editor' && styles.roleButtonSelected]}
-                    onPress={() => setNewCollaboratorRole('editor')}
-                >
-                    <Text style={styles.roleButtonText}>Editor</Text>
-                </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={handleAddCollaborator} style={styles.addButtonSmallMargin}>
-              <PlusCircle size={20} color="#007AFF" />
-              <Text style={styles.addButtonText}>Add Collaborator</Text>
-            </TouchableOpacity>
+            {/* Collaborators, Add/Remove, etc. */}
+            {(formData.collaborators || []).map((collaborator, index) => {
+              const { name = '', jobRole = '', email, role, inviteStatus } = collaborator as ExtendedShowCollaborator & { inviteStatus?: string };
+              return (
+                <View key={index} style={styles.collaboratorItemContainer}>
+                  <View style={styles.collaboratorInfoContainer}>
+                    <Text style={styles.collaboratorText}>{name} <Text style={{ color: '#9ca3af' }}>({jobRole})</Text></Text>
+                    <Text style={styles.collaboratorRoleText}>{email} ({role})</Text>
+                    {inviteStatus && (
+                      <Text style={[styles.collaboratorRoleText, { color: inviteStatus === 'accepted' ? '#22c55e' : inviteStatus === 'pending' ? '#facc15' : '#f87171' }]}>Invite: {inviteStatus}</Text>
+                    )}
+                  </View>
+                  {inviteStatus && (inviteStatus === 'pending' || inviteStatus === 'rejected') && (
+                    <TouchableOpacity onPress={() => handleReinviteCollaborator(email)} style={styles.addButtonSmallMargin}>
+                      <Text style={{ color: '#007AFF', fontWeight: 'bold' }}>Reinvite</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={() => handleRemoveCollaborator(email)} style={styles.removeButtonSmall}>
+                    <MinusCircle size={18} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            {/* Modal for adding collaborator */}
+            <Modal
+              visible={collabModalVisible}
+              animationType="slide"
+              transparent={true}
+              onRequestClose={() => setCollabModalVisible(false)}
+            >
+              <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ backgroundColor: '#23234a', padding: 24, borderRadius: 12, width: '90%' }}>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add Collaborator</Text>
+                  <FormField label="Name" required>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Collaborator Name"
+                      value={modalCollabName}
+                      onChangeText={setModalCollabName}
+                      placeholderTextColor="#6b7280"
+                    />
+                  </FormField>
+                  <FormField label="Job Role" required>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. Lighting Designer"
+                      value={modalCollabJobRole}
+                      onChangeText={setModalCollabJobRole}
+                      placeholderTextColor="#6b7280"
+                    />
+                  </FormField>
+                  <FormField label="Email" required>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Collaborator Email"
+                      value={modalCollabEmail}
+                      onChangeText={setModalCollabEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      placeholderTextColor="#6b7280"
+                    />
+                  </FormField>
+                  <View style={styles.roleSelectorContainer}>
+                    <Text style={styles.subLabel}>Permission: </Text>
+                    <TouchableOpacity
+                      style={[styles.roleButton, modalCollabRole === 'viewer' && styles.roleButtonSelected]}
+                      onPress={() => setModalCollabRole('viewer')}
+                    >
+                      <Text style={styles.roleButtonText}>Viewer</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.roleButton, modalCollabRole === 'editor' && styles.roleButtonSelected]}
+                      onPress={() => setModalCollabRole('editor')}
+                    >
+                      <Text style={styles.roleButtonText}>Editor</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
+                    <TouchableOpacity onPress={() => setCollabModalVisible(false)} style={[styles.addButton, { backgroundColor: '#6b7280', marginRight: 8 }]}> 
+                      <Text style={styles.addButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleModalAddCollaborator} style={styles.addButton}> 
+                      <Text style={styles.addButtonText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </View>
         );
       default:
@@ -1281,19 +1428,118 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
     </View>
   );
 
+  // Handler to add a new additional date
+  const handleAddAdditionalDate = () => {
+    if (!newDateLabel.trim()) return;
+    setFormData(prev => ({
+      ...prev,
+      additionalDates: [...(prev.additionalDates || []), { label: newDateLabel, date: '' }],
+    }));
+    setNewDateLabel('');
+  };
+
+  // Handler to update label/date of an additional date
+  const handleUpdateAdditionalDate = (idx: number, field: 'label' | 'date', value: string) => {
+    setFormData(prev => {
+      const updated = [...(prev.additionalDates || [])];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return { ...prev, additionalDates: updated };
+    });
+  };
+
+  // Handler to remove an additional date
+  const handleRemoveAdditionalDate = (idx: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalDates: (prev.additionalDates || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  // Add handler for modal add
+  const handleModalAddCollaborator = () => {
+    if (!modalCollabName.trim() || !modalCollabJobRole.trim() || !modalCollabEmail.trim()) {
+      Alert.alert('Validation Error', 'All fields are required.');
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(modalCollabEmail)) {
+      Alert.alert('Validation Error', 'Please enter a valid email address.');
+      return;
+    }
+    setFormData(prevData => {
+      const existingCollaborators = prevData.collaborators || [];
+      if (existingCollaborators.some(c => c.email.toLowerCase() === modalCollabEmail.toLowerCase())) {
+        Alert.alert('Error', 'This collaborator has already been added.');
+        return prevData;
+      }
+      const newCollaborator: ExtendedShowCollaborator = {
+        name: modalCollabName,
+        jobRole: modalCollabJobRole,
+        email: modalCollabEmail,
+        role: modalCollabRole,
+        addedAt: new Date().toISOString(),
+        addedBy: 'current-user-placeholder',
+        inviteStatus: 'pending', // mock status
+      };
+      return {
+        ...prevData,
+        collaborators: [...existingCollaborators, newCollaborator].map((c: any) => ({
+          ...c,
+          name: c.name || '',
+          jobRole: c.jobRole || '',
+        })),
+      };
+    });
+    setModalCollabName('');
+    setModalCollabJobRole('');
+    setModalCollabEmail('');
+    setModalCollabRole('viewer');
+    setCollabModalVisible(false);
+  };
+
+  // Add handler for reinvite
+  const handleReinviteCollaborator = (email: string) => {
+    setFormData(prevData => {
+      const updated = (prevData.collaborators || []).map(c =>
+        c.email === email ? { ...c, inviteStatus: 'pending' } : c
+      );
+      return { ...prevData, collaborators: updated };
+    });
+  };
+
   return (
     <View style={{ padding: 16 }}>
       {renderStepperHeader()}
       <View {...panResponder.panHandlers}>
         {renderStep()}
       </View>
-      {/* Stepper nav buttons */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-        <TouchableOpacity onPress={() => setStep(s => Math.max(s - 1, 0))} disabled={step === 0}>
-          <Text style={{ color: step === 0 ? '#888' : '#c084fc', fontWeight: 'bold', fontSize: 16 }}>Back</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 24 }}>
+        <TouchableOpacity
+          onPress={() => setStep(s => Math.max(s - 1, 0))}
+          disabled={step === 0}
+          style={{
+            flex: 1,
+            backgroundColor: step === 0 ? '#6b7280' : '#a78bfa',
+            borderRadius: 8,
+            paddingVertical: 14,
+            marginRight: 8,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Back</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setStep(s => Math.min(s + 1, steps.length - 1))} disabled={step === steps.length - 1}>
-          <Text style={{ color: step === steps.length - 1 ? '#888' : '#c084fc', fontWeight: 'bold', fontSize: 16 }}>Next</Text>
+        <TouchableOpacity
+          onPress={() => setStep(s => Math.min(s + 1, steps.length - 1))}
+          disabled={step === steps.length - 1}
+          style={{
+            flex: 1,
+            backgroundColor: step === steps.length - 1 ? '#6b7280' : '#a78bfa',
+            borderRadius: 8,
+            paddingVertical: 14,
+            marginLeft: 8,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Next</Text>
         </TouchableOpacity>
       </View>
       {/* Submit/Cancel Buttons (only on last step) */}
@@ -1315,6 +1561,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
           )}
         </View>
       )}
+      
     </View>
   );
 } 
