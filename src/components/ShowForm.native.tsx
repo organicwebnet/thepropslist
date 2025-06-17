@@ -775,8 +775,8 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
       return;
     }
     if (!/\S+@\S+\.\S+/.test(newCollaboratorEmail)) {
-      Alert.alert("Validation Error", "Please enter a valid email address.");
-      return;
+        Alert.alert("Validation Error", "Please enter a valid email address.");
+        return;
     }
     setFormData(prevData => {
       const existingCollaborators = prevData.collaborators || [];
@@ -905,7 +905,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
   const renderStep = () => {
     switch (step) {
       case 0:
-        return (
+  return (
           <View style={sectionCardStyle}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Basic Info</Text>
@@ -914,68 +914,68 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
               </TouchableOpacity>
             </View>
             {/* Name, Description, Logo, Production Company, etc. */}
-            <FormField label="Show Name" required>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter show name"
-                value={formData.name}
-                onChangeText={(value) => handleInputChange('name', value)}
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
+      <FormField label="Show Name" required>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter show name"
+          value={formData.name}
+          onChangeText={(value) => handleInputChange('name', value)}
+          placeholderTextColor="#6b7280"
+        />
+      </FormField>
 
-            <FormField label="Description" required>
-              <TextInput
-                style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]}
-                placeholder="Enter show description"
-                value={formData.description}
-                onChangeText={value => handleInputChange('description', value)}
-                multiline
-                numberOfLines={4}
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
+      <FormField label="Description" required>
+        <TextInput
+          style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]}
+          placeholder="Enter show description"
+          value={formData.description}
+          onChangeText={value => handleInputChange('description', value)}
+          multiline
+          numberOfLines={4}
+          placeholderTextColor="#6b7280"
+        />
+      </FormField>
 
-            <FormField label="Image URL (Optional Poster/Banner)">
-              <TextInput
-                style={styles.input}
-                placeholder="Enter image URL"
-                value={formData.imageUrl}
-                onChangeText={(value) => handleInputChange('imageUrl', value)}
-                keyboardType="url"
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
+      <FormField label="Image URL (Optional Poster/Banner)">
+        <TextInput
+          style={styles.input}
+          placeholder="Enter image URL"
+          value={formData.imageUrl}
+          onChangeText={(value) => handleInputChange('imageUrl', value)}
+          keyboardType="url"
+          placeholderTextColor="#6b7280"
+        />
+      </FormField>
 
-            <FormField label="Logo Image">
-              <TouchableOpacity onPress={handlePickLogo} style={styles.imagePickerButton}>
-                <Text style={styles.imagePickerButtonText}>{selectedLogoUri ? 'Change Logo' : 'Select Logo'}</Text>
-              </TouchableOpacity>
-              {selectedLogoUri && (
-                <View style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: selectedLogoUri }} style={styles.logoPreview} />
-                  <TouchableOpacity onPress={handleRemoveLogo} style={styles.removeImageButton}>
-                    <Text style={styles.removeImageButtonText}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {!selectedLogoUri && mode === 'edit' && initialData?.logoImage?.url && (
-                <Text style={styles.placeholderText}>Current logo will be kept unless a new one is selected.</Text>
-              )}
-            </FormField>
+      <FormField label="Logo Image">
+        <TouchableOpacity onPress={handlePickLogo} style={styles.imagePickerButton}>
+          <Text style={styles.imagePickerButtonText}>{selectedLogoUri ? 'Change Logo' : 'Select Logo'}</Text>
+        </TouchableOpacity>
+        {selectedLogoUri && (
+          <View style={styles.imagePreviewContainer}>
+            <Image source={{ uri: selectedLogoUri }} style={styles.logoPreview} />
+            <TouchableOpacity onPress={handleRemoveLogo} style={styles.removeImageButton}>
+              <Text style={styles.removeImageButtonText}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {!selectedLogoUri && mode === 'edit' && initialData?.logoImage?.url && (
+          <Text style={styles.placeholderText}>Current logo will be kept unless a new one is selected.</Text>
+        )}
+      </FormField>
 
-            <FormField label="Is Touring Show?">
-              <View style={styles.switchContainer}>
-                   <Switch
-                       trackColor={{ false: "#767577", true: "#81b0ff" }}
-                       thumbColor={formData.isTouringShow ? "#007AFF" : "#f4f3f4"}
-                       ios_backgroundColor="#3e3e3e"
-                       onValueChange={(value) => handleInputChange('isTouringShow', value)}
-                       value={formData.isTouringShow}
-                       style={styles.switch}
-                   />
-               </View>
-            </FormField>
+      <FormField label="Is Touring Show?">
+        <View style={styles.switchContainer}>
+             <Switch
+                 trackColor={{ false: "#767577", true: "#81b0ff" }}
+                 thumbColor={formData.isTouringShow ? "#007AFF" : "#f4f3f4"}
+                 ios_backgroundColor="#3e3e3e"
+                 onValueChange={(value) => handleInputChange('isTouringShow', value)}
+                 value={formData.isTouringShow}
+                 style={styles.switch}
+             />
+         </View>
+      </FormField>
 
             
           </View>
@@ -1007,7 +1007,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                   }}
                 />
               )}
-            </FormField>
+      </FormField>
             {/* First Preview */}
             <FormField label="First Preview">
               <TouchableOpacity onPress={() => setShowEndDatePicker(true)} style={styles.datePickerButton}>
@@ -1025,7 +1025,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                   }}
                 />
               )}
-            </FormField>
+      </FormField>
             {/* Press Night */}
             <FormField label="Press Night">
               <TouchableOpacity onPress={() => setShowPressNightPicker(true)} style={styles.datePickerButton}>
@@ -1044,23 +1044,23 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                   }}
                 />
               )}
-            </FormField>
+      </FormField>
             {(formData.additionalDates || []).map((item, idx) => (
               <View key={idx} style={{ marginBottom: 12 }}>
                 <FormField label={`Custom Date Name`}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <TextInput
+        <TextInput
                       style={[styles.input, { flex: 1 }]}
                       placeholder="Enter date name (e.g. Final Dress)"
                       value={item.label}
                       onChangeText={v => handleUpdateAdditionalDate(idx, 'label', v)}
-                      placeholderTextColor="#6b7280"
-                    />
+          placeholderTextColor="#6b7280"
+        />
                     <TouchableOpacity onPress={() => handleRemoveAdditionalDate(idx)} style={{ marginLeft: 8 }}>
                       <Text style={{ color: '#f87171', fontWeight: 'bold' }}>Remove</Text>
                     </TouchableOpacity>
                   </View>
-                </FormField>
+      </FormField>
                 <FormField label="Date">
                   <TouchableOpacity onPress={() => setOpenAdditionalDateIndex(idx)} style={styles.datePickerButton}>
                     <Text style={styles.dateText}>{item.date ? formatDate(item.date) : 'Select Date'}</Text>
@@ -1077,23 +1077,23 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                       }}
                     />
                   )}
-                </FormField>
+      </FormField>
               </View>
             ))}
             <FormField label="Custom Date Name">
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                <TextInput
+        <TextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="Add another date (name)"
                   value={newDateLabel}
                   onChangeText={setNewDateLabel}
-                  placeholderTextColor="#6b7280"
-                />
+          placeholderTextColor="#6b7280"
+        />
                 <TouchableOpacity onPress={handleAddAdditionalDate} style={[styles.addButton, { marginLeft: 8 }]}> 
                   <Text style={styles.addButtonText}>Add</Text>
                 </TouchableOpacity>
               </View>
-            </FormField>
+      </FormField>
           </View>
         );
       case 2:
@@ -1109,43 +1109,43 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
             {(formData.acts || []).map((act, actIndex) => (
               <View key={act.id || actIndex} style={[styles.actContainer, { marginBottom: 20 }]}>
                 <FormField label={`Act ${actIndex + 1} Name`} required>
-                  <TextInput
+        <TextInput
                     style={[styles.input, { fontSize: 18, fontWeight: '600', color: '#fff' }]}
                     placeholder={`Act ${actIndex + 1} Name`}
                     value={act.name}
                     onChangeText={(value) => handleActChange(actIndex, 'name', value)}
                     placeholderTextColor="#b3b3b3"
-                  />
-                </FormField>
+        />
+      </FormField>
                 {(act.scenes || []).map((scene, sceneIndex) => (
                   <View key={scene.id || sceneIndex} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                     <FormField label={`Scene ${sceneIndex + 1} Name`}>
-                      <TextInput
+        <TextInput
                         style={[styles.input, styles.sceneInput, { fontSize: 16, color: '#fff' }]}
                         placeholder={`Scene ${sceneIndex + 1} Name`}
                         value={scene.name}
                         onChangeText={(value) => handleSceneChange(actIndex, sceneIndex, 'name', value)}
                         placeholderTextColor="#b3b3b3"
-                      />
-                    </FormField>
+        />
+      </FormField>
                     { (act.scenes || []).length > 1 &&
                       <TouchableOpacity onPress={() => removeScene(actIndex, sceneIndex)} style={styles.removeButton}>
-                        <MinusCircle size={20} color="#FF3B30" />
-                      </TouchableOpacity>
+                <MinusCircle size={20} color="#FF3B30" />
+              </TouchableOpacity>
                     }
-                  </View>
+            </View>
                 ))}
                 <TouchableOpacity onPress={() => addScene(actIndex)} style={styles.addButton}>
                   <PlusCircle size={20} color="#007AFF" />
                   <Text style={styles.addButtonText}>Add Scene</Text>
                 </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity onPress={addAct} style={styles.addButton}>
-              <PlusCircle size={20} color="#007AFF" />
-              <Text style={styles.addButtonText}>Add Act</Text>
-            </TouchableOpacity>
           </View>
+        ))}
+            <TouchableOpacity onPress={addAct} style={styles.addButton}>
+          <PlusCircle size={20} color="#007AFF" />
+              <Text style={styles.addButtonText}>Add Act</Text>
+        </TouchableOpacity>
+            </View>
         );
       case 3:
         return (
@@ -1154,19 +1154,19 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Venues</Text>
               <TouchableOpacity onPress={() => Alert.alert('Venues', 'Enter the venues for the show.')}> 
                 <HelpCircle size={20} color="#a78bfa" />
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
+          </View>
             {(formData.venues || []).map((venue, venueIndex) => (
               <View key={venue.id || venueIndex} style={styles.venueContainer}>
                 <FormField label="Venue Name" required>
-                  <TextInput
-                    style={styles.input}
+        <TextInput
+          style={styles.input}
                     placeholder={formData.isTouringShow ? `Venue ${venueIndex + 1} Name` : 'Primary Venue Name'}
                     value={venue.name}
                     onChangeText={(value) => handleVenueChange(venueIndex, 'name', value)}
-                    placeholderTextColor="#6b7280"
-                  />
-                </FormField>
+          placeholderTextColor="#6b7280"
+        />
+      </FormField>
                 <Text style={[styles.label, { marginTop: 8, marginBottom: 2 }]}>Address</Text>
                 {(Object.keys(defaultAddress) as Array<keyof Address>)
                   .filter(key => key !== 'id' && key !== 'companyName' && key !== 'nickname' && key !== 'name')
@@ -1182,56 +1182,56 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                     </FormField>
                 ))}
                 <Text style={[styles.label, { marginTop: 8, marginBottom: 2 }]}>Venue Dates</Text>
-                <FormField label="Start Date">
+      <FormField label="Start Date">
                   <TouchableOpacity onPress={() => setVenueDatePickerVisible({ index: venueIndex, field: 'startDate' })} style={styles.datePickerButton}>
                     <Text style={styles.dateText}>{venue.startDate ? formatDate(venue.startDate) : 'Select Start Date'}</Text>
-                  </TouchableOpacity>
+        </TouchableOpacity>
                   {venueDatePickerVisible && venueDatePickerVisible.index === venueIndex && venueDatePickerVisible.field === 'startDate' && (
-                    <DateTimePicker
+          <DateTimePicker
                       testID={`venueStartDatePicker-${venueIndex}`}
                       value={venue.startDate ? parseDateString(venue.startDate) : new Date()}
-                      mode="date"
-                      display="default"
+            mode="date"
+            display="default"
                       onChange={(event, selectedDate) => {
                         setVenueDatePickerVisible(null);
                         if (selectedDate) handleVenueChange(venueIndex, 'startDate', formatDate(selectedDate));
                       }}
-                    />
-                  )}
-                </FormField>
-                <FormField label="End Date">
+          />
+        )}
+      </FormField>
+      <FormField label="End Date">
                   <TouchableOpacity onPress={() => setVenueDatePickerVisible({ index: venueIndex, field: 'endDate' })} style={styles.datePickerButton}>
                     <Text style={styles.dateText}>{venue.endDate ? formatDate(venue.endDate) : 'Select End Date'}</Text>
-                  </TouchableOpacity>
+        </TouchableOpacity>
                   {venueDatePickerVisible && venueDatePickerVisible.index === venueIndex && venueDatePickerVisible.field === 'endDate' && (
-                    <DateTimePicker
+          <DateTimePicker
                       testID={`venueEndDatePicker-${venueIndex}`}
                       value={venue.endDate ? parseDateString(venue.endDate) : new Date()}
-                      mode="date"
-                      display="default"
+            mode="date"
+            display="default"
                       onChange={(event, selectedDate) => {
                         setVenueDatePickerVisible(null);
                         if (selectedDate) handleVenueChange(venueIndex, 'endDate', formatDate(selectedDate));
                       }}
-                    />
-                  )}
-                </FormField>
+          />
+        )}
+      </FormField>
                 <FormField label="Notes">
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Venue notes (e.g., stage door, parking)"
-                    value={venue.notes}
-                    onChangeText={(value) => handleVenueChange(venueIndex, 'notes', value)}
-                    multiline
-                    placeholderTextColor="#6b7280"
-                  />
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Venue notes (e.g., stage door, parking)"
+              value={venue.notes}
+              onChangeText={(value) => handleVenueChange(venueIndex, 'notes', value)}
+              multiline
+              placeholderTextColor="#6b7280"
+            />
                 </FormField>
-              </View>
-            ))}
-            <TouchableOpacity onPress={addVenue} style={styles.addButton}>
-              <PlusCircle size={20} color="#007AFF" />
-              <Text style={styles.addButtonText}>Add Venue</Text>
-            </TouchableOpacity>
+          </View>
+        ))}
+          <TouchableOpacity onPress={addVenue} style={styles.addButton}>
+            <PlusCircle size={20} color="#007AFF" />
+            <Text style={styles.addButtonText}>Add Venue</Text>
+          </TouchableOpacity>
           </View>
         );
       case 4:
@@ -1241,7 +1241,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Contacts</Text>
               <TouchableOpacity onPress={() => Alert.alert('Contacts', 'Enter the contacts for the show.')}> 
                 <HelpCircle size={20} color="#a78bfa" />
-              </TouchableOpacity>
+          </TouchableOpacity>
             </View>
             <FormField label="Props Supervisor Name" required>
               <TextInput
@@ -1251,7 +1251,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                 onChangeText={(value) => handleInputChange('propsSupervisor', value)}
                 placeholderTextColor="#6b7280"
               />
-            </FormField>
+      </FormField>
             <FormField label="Designer Name" required>
               <TextInput
                 style={styles.input}
@@ -1262,23 +1262,23 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
               />
             </FormField>
             <FormField label="Designer Assistant Name">
-              <TextInput
-                style={styles.input}
+                <TextInput
+                  style={styles.input}
                 placeholder="Enter designer assistant's name"
                 value={formData.designerAssistantName}
                 onChangeText={(value) => handleInputChange('designerAssistantName', value)}
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
+                  placeholderTextColor="#6b7280"
+                />
+      </FormField>
             <FormField label="Stage Manager Name" required>
-              <TextInput
-                style={styles.input}
+                <TextInput
+                  style={styles.input}
                 placeholder="Enter stage manager's name"
                 value={formData.stageManager}
                 onChangeText={(value) => handleInputChange('stageManager', value)}
-                placeholderTextColor="#6b7280"
-              />
-            </FormField>
+                  placeholderTextColor="#6b7280"
+                />
+      </FormField>
             <FormField label="Assistant Stage Manager Name">
               <TextInput
                 style={styles.input}
@@ -1302,8 +1302,8 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
             <TouchableOpacity onPress={addContact} style={styles.addButton}>
               <PlusCircle size={20} color="#007AFF" />
               <Text style={styles.addButtonText}>Add Contact</Text>
-            </TouchableOpacity>
-          </View>
+                </TouchableOpacity>
+            </View>
         );
       case 5:
         return (
@@ -1352,33 +1352,33 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                 <View style={{ backgroundColor: '#23234a', padding: 24, borderRadius: 12, width: '90%' }}>
                   <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>Add Collaborator</Text>
                   <FormField label="Name" required>
-                    <TextInput
+            <TextInput
                       style={styles.input}
                       placeholder="Collaborator Name"
                       value={modalCollabName}
                       onChangeText={setModalCollabName}
-                      placeholderTextColor="#6b7280"
-                    />
+              placeholderTextColor="#6b7280"
+            />
                   </FormField>
                   <FormField label="Job Role" required>
-                    <TextInput
+                <TextInput
                       style={styles.input}
                       placeholder="e.g. Lighting Designer"
                       value={modalCollabJobRole}
                       onChangeText={setModalCollabJobRole}
-                      placeholderTextColor="#6b7280"
-                    />
+                  placeholderTextColor="#6b7280"
+                />
                   </FormField>
                   <FormField label="Email" required>
-                    <TextInput
+                <TextInput
                       style={styles.input}
                       placeholder="Collaborator Email"
                       value={modalCollabEmail}
                       onChangeText={setModalCollabEmail}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                      placeholderTextColor="#6b7280"
-                    />
+                  placeholderTextColor="#6b7280"
+                />
                   </FormField>
                   <View style={styles.roleSelectorContainer}>
                     <Text style={styles.subLabel}>Permission: </Text>
@@ -1387,22 +1387,22 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                       onPress={() => setModalCollabRole('viewer')}
                     >
                       <Text style={styles.roleButtonText}>Viewer</Text>
-                    </TouchableOpacity>
+                  </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.roleButton, modalCollabRole === 'editor' && styles.roleButtonSelected]}
                       onPress={() => setModalCollabRole('editor')}
                     >
                       <Text style={styles.roleButtonText}>Editor</Text>
                     </TouchableOpacity>
-                  </View>
+              </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 }}>
                     <TouchableOpacity onPress={() => setCollabModalVisible(false)} style={[styles.addButton, { backgroundColor: '#6b7280', marginRight: 8 }]}> 
                       <Text style={styles.addButtonText}>Cancel</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleModalAddCollaborator} style={styles.addButton}> 
                       <Text style={styles.addButtonText}>Add</Text>
-                    </TouchableOpacity>
-                  </View>
+            </TouchableOpacity>
+          </View>
                 </View>
               </View>
             </Modal>
@@ -1499,15 +1499,19 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
   // Add handler for reinvite
   const handleReinviteCollaborator = (email: string) => {
     setFormData(prevData => {
-      const updated = (prevData.collaborators || []).map(c =>
-        c.email === email ? { ...c, inviteStatus: 'pending' } : c
-      );
-      return { ...prevData, collaborators: updated };
+      const updated = (prevData.collaborators || []).map(c => {
+        const collab = c as ExtendedShowCollaborator;
+        if (collab.email === email) {
+          return { ...collab, inviteStatus: 'pending', name: collab.name || '', jobRole: collab.jobRole || '' };
+        }
+        return { ...collab, name: collab.name || '', jobRole: collab.jobRole || '' };
+      });
+      return { ...prevData, collaborators: updated as ExtendedShowCollaborator[] };
     });
   };
 
   return (
-    <View style={{ padding: 16 }}>
+    <View style={{ paddingTop: 16, paddingBottom: 16, paddingHorizontal: 16 }}>
       {renderStepperHeader()}
       <View {...panResponder.panHandlers}>
         {renderStep()}
@@ -1545,21 +1549,21 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
       {/* Submit/Cancel Buttons (only on last step) */}
       {step === steps.length - 1 && (
         <View style={{ marginTop: 24 }}>
-          <Button
-            title={mode === 'create' ? 'Create Show' : 'Update Show'}
-            onPress={handleSubmit}
+        <Button
+          title={mode === 'create' ? 'Create Show' : 'Update Show'}
+          onPress={handleSubmit}
             color={Platform.OS === 'ios' ? '#007AFF' : undefined}
-          />
-          {onCancel && (
-            <View style={styles.cancelButtonContainer}>
-              <Button
-                title="Cancel"
-                onPress={onCancel}
+        />
+        {onCancel && (
+          <View style={styles.cancelButtonContainer}>
+            <Button
+              title="Cancel"
+              onPress={onCancel}
                 color={Platform.OS === 'ios' ? '#FF3B30' : undefined}
-              />
-            </View>
-          )}
-        </View>
+            />
+          </View>
+        )}
+      </View>
       )}
       
     </View>

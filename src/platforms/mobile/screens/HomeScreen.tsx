@@ -381,8 +381,8 @@ export function HomeScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={[styles.itemText, { fontSize: 18, fontWeight: 'bold' }]}>{renderItem(item)}</Text>
                         <Text style={[styles.cardCountText, { marginLeft: 8, marginTop: 0, fontSize: 16, fontWeight: 'bold' }]}>
-                          {typeof boardCardCounts[item.id] === 'number' ? boardCardCounts[item.id] : ''}
-                        </Text>
+                        {typeof boardCardCounts[item.id] === 'number' ? boardCardCounts[item.id] : ''}
+                      </Text>
                       </View>
                     ) : (
                       <Text style={styles.itemText}>{renderItem(item)}</Text>
