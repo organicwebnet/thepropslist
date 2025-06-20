@@ -25,6 +25,7 @@ import {
 } from '@react-native-firebase/firestore';
 import { FirebaseError, FirebaseService, QueryOptions } from '../shared/services/firebase/types.ts';
 import type { Prop, WeightUnit } from '../shared/types/props.ts'; // Added WeightUnit
+import { OfflineSyncManager } from '../platforms/mobile/features/offline/OfflineSyncManager';
 
 interface PackingOperations {
   createBox: (props: PackedProp[], boxName: string, description?: string, actNumber?: number, sceneNumber?: number) => Promise<string | undefined>;
@@ -46,6 +47,14 @@ export function usePacking(showId?: string): {
   const [boxes, setBoxes] = useState<PackingBox[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  // Initialize OfflineSyncManager (mobile only)
+  const offlineSyncManager = service?.firestore ? OfflineSyncManager.getInstance(service.firestore) : null;
+  useEffect(() => {
+    if (offlineSyncManager) {
+      offlineSyncManager.initialize().catch(console.error);
+    }
+  }, [offlineSyncManager]);
 
   useEffect(() => {
     if (!showId || !service?.listenToCollection) {
@@ -127,13 +136,12 @@ export function usePacking(showId?: string): {
          status: 'draft' as const,
        };
 
-      try {
-        // Cast to 'any' because PackingBox expects Date, but we send FieldValue for timestamps
+      if (offlineSyncManager) {
+        await offlineSyncManager.queueOperation('create', 'packingBoxes', newBoxDataForFirestore);
+        return 'offline';
+      } else {
         const docRef = await service.addDocument<PackingBox>('packingBoxes', newBoxDataForFirestore as any); 
         return docRef?.id;
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error creating box'));
-        return undefined;
       }
     },
     updateBox: async (boxId, updates) => {
@@ -146,12 +154,10 @@ export function usePacking(showId?: string): {
          // Cast to 'any' because PackingBox expects Date, but we send FieldValue for timestamps
          updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp() as any
         };
-       try {
-           // If using setDocument with merge, it's like an upsert or update.
-           // If service.updateDocument is preferred for partial updates and handles FieldValue:
-           await service.updateDocument('packingBoxes', boxId, dataToUpdateForFirestore);
-       } catch (err) {
-           throw err; 
+       if (offlineSyncManager) {
+         await offlineSyncManager.queueOperation('update', 'packingBoxes', { ...dataToUpdateForFirestore, id: boxId });
+       } else {
+         await service.updateDocument('packingBoxes', boxId, dataToUpdateForFirestore);
        }
     },
     deleteBox: async (boxId) => {
@@ -159,7 +165,11 @@ export function usePacking(showId?: string): {
         setError(new Error('Failed to delete box: Service not ready.'));
         return;
       }
-      await service.deleteDocument('packingBoxes', boxId);
+      if (offlineSyncManager) {
+        await offlineSyncManager.queueOperation('delete', 'packingBoxes', { id: boxId });
+      } else {
+        await service.deleteDocument('packingBoxes', boxId);
+      }
     },
     updateBoxLabelSettings: async (boxId: string, settings: Pick<PackingBox, 'labelHandlingNote' | 'labelIncludeFragile' | 'labelIncludeThisWayUp' | 'labelIncludeKeepDry'>) => {
       if (!service?.updateDocument) {
@@ -171,13 +181,13 @@ export function usePacking(showId?: string): {
         // Cast to 'any' because PackingBox expects Date, but we send FieldValue for timestamps
         updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp() as any,
       };
-      try {
+      if (offlineSyncManager) {
+        await offlineSyncManager.queueOperation('update', 'packingBoxes', { ...dataToUpdate, id: boxId });
+      } else {
         await service.updateDocument('packingBoxes', boxId, dataToUpdate);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error updating label settings'));
       }
     }
-  }), [service, showId]);
+  }), [service, showId, offlineSyncManager]);
 
   const getDocument = useCallback(async (docId: string): Promise<FirebaseDocument<PackingBox> | null> => {
     if (!service?.getDocument) {

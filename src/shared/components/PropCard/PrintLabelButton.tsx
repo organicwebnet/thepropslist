@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, TouchableOpacity, Text, StyleSheet, ViewStyle, StyleProp, TextStyle } from 'react-native';
 import { PackingLabel } from '../../services/inventory/packListService.ts';
 import { LabelPrintService } from '../../services/pdf/labelPrintService.ts';
+import { globalStyles } from '../../../styles/globalStyles';
 
 interface PrintLabelButtonProps {
   label: PackingLabel;
@@ -48,7 +49,7 @@ export const PrintLabelButton: React.FC<PrintLabelButtonProps> = ({
         justifyContent: 'center'
       }, style]}
     >
-      <Text style={{ color: 'white', fontSize: 16 }}>
+      <Text style={[globalStyles.colorWhite, globalStyles.font16]}>
         Print Label
       </Text>
     </TouchableOpacity>

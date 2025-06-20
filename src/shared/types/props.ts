@@ -270,6 +270,10 @@ export interface Prop {
   // Assignment for maintenance/repair/other statuses
   assignedTo?: string[]; // Array of user IDs assigned for maintenance/repair
   assignedUserDetails?: { id: string; name: string; email?: string }[]; // Optional: denormalized user info for display
+
+  estimatedDeliveryDate?: string; // ISO date string for expected delivery
+  courier?: string; // Name of the courier
+  trackingNumber?: string; // Tracking number for the delivery
 }
 
 export type PropUpdateFormData = Partial<PropFormData>;

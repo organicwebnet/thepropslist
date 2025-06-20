@@ -7,6 +7,7 @@ import type { Prop } from '../shared/types/index.ts';
 import type { Show } from '../types.ts';
 import type { Filters } from '../types.ts';
 import LinearGradient from 'react-native-linear-gradient';
+import { globalStyles } from '../styles/globalStyles';
 
 export function PropsPage() {
   const [props, setProps] = useState<Prop[]>([]);
@@ -42,7 +43,7 @@ export function PropsPage() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={globalStyles.centered}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -50,7 +51,7 @@ export function PropsPage() {
 
   if (error || !show) {
     return (
-      <View style={styles.centered}>
+      <View style={globalStyles.centered}>
         <Text>{error || 'Failed to load show data.'}</Text>
       </View>
     );
@@ -75,24 +76,24 @@ export function PropsPage() {
       locations={[0, 0.2, 0.5, 0.8, 1]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={{ flex: 1 }}
+      style={globalStyles.flex1}
     >
-      <View style={styles.container}>
+      <View style={globalStyles.container}>
         <Stack.Screen 
           options={{ 
             title: show.name,
             headerShown: true,
           }} 
         />
-        <View style={styles.content}>
+        <View style={globalStyles.content}>
           <PropList
             props={filteredProps}
             onEdit={(prop: Prop) => console.log('Edit prop', prop)}
             onDelete={(id: string) => console.log('Delete prop', id)}
           />
         </View>
-        <Link href={{ pathname: '/props/new' }} style={styles.addButton}>
-          <Text style={styles.addButtonText}>Add New Prop</Text>
+        <Link href={{ pathname: '/props/new' }} style={globalStyles.addButton}>
+          <Text style={globalStyles.addButtonText}>Add New Prop</Text>
         </Link>
       </View>
     </LinearGradient>

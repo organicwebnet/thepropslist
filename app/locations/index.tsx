@@ -6,7 +6,7 @@ import { Building, QrCode, PlusCircle } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../../src/styles/theme.ts';
+import { lightTheme, darkTheme } from '../../src/styles/theme';
 import { useLocations } from '../../src/hooks/useLocations.ts';
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import StyledText from '../../src/components/StyledText.tsx';

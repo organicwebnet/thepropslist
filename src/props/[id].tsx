@@ -6,6 +6,7 @@ import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import type { Prop } from '../shared/types/props.ts';
 import type { PropLifecycleStatus } from '../types/lifecycle.ts';
 import LinearGradient from 'react-native-linear-gradient';
+import { globalStyles } from '../styles/globalStyles';
 // import { getProp } from '../services/propService'; // Commented out: Cannot find module
 
 export default function PropDetails() {
@@ -82,7 +83,7 @@ export default function PropDetails() {
         locations={[0, 0.2, 0.5, 0.8, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ flex: 1 }}
+        style={globalStyles.flex1}
       >
         <View style={styles.container}>
           <ActivityIndicator size="large" color={isDark ? '#fff' : '#000'} />
@@ -98,7 +99,7 @@ export default function PropDetails() {
         locations={[0, 0.2, 0.5, 0.8, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ flex: 1 }}
+        style={globalStyles.flex1}
       >
         <View style={styles.container}>
           <Text style={[styles.errorText, { color: isDark ? '#fff' : '#000' }]}>
@@ -115,7 +116,7 @@ export default function PropDetails() {
       locations={[0, 0.2, 0.5, 0.8, 1]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={{ flex: 1 }}
+      style={globalStyles.flex1}
     >
       <View style={styles.container}>
         <ScrollView

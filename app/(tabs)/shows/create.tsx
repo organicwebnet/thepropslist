@@ -5,7 +5,7 @@ import ShowFormNative from '../../src/components/ShowForm.native.tsx'; // Adjust
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import type { Show } from '../../src/shared/services/firebase/types.ts'; // Using Show from firebase/types
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme';
 import LinearGradient from 'react-native-linear-gradient';
 
 export default function CreateShowScreen() {

@@ -28,7 +28,9 @@ export type PropLifecycleStatus =
   // New statuses for check-in/out and active use
   | 'available_in_storage' // In its assigned box/location, ready for use
   | 'checked_out'          // Checked out to actor/scene, not in storage loc
-  | 'in_use_on_set';       // Actively on set/stage
+  | 'in_use_on_set'        // Actively on set/stage
+  | 'on_order'            // Newly added for props that are ordered but not yet received
+  | 'to_buy'               // Needs to be purchased
 
 /**
  * Status labels for UI display
@@ -53,7 +55,9 @@ export const lifecycleStatusLabels: Record<PropLifecycleStatus, string> = {
   // New labels
   available_in_storage: 'Available in Storage',
   checked_out: 'Checked Out',
-  in_use_on_set: 'In Use on Set'
+  in_use_on_set: 'In Use on Set',
+  on_order: 'On Order',
+  to_buy: 'To Buy'
 };
 
 /**
@@ -84,7 +88,9 @@ export const lifecycleStatusPriority: Record<PropLifecycleStatus, StatusPriority
   // New priorities
   available_in_storage: 'info',
   checked_out: 'active',
-  in_use_on_set: 'active'
+  in_use_on_set: 'active',
+  on_order: 'info',
+  to_buy: 'info'
 };
 
 /**

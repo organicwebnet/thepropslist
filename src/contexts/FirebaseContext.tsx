@@ -3,6 +3,7 @@ import { View, Text, Platform } from 'react-native';
 import { FirebaseService } from '../shared/services/firebase/types.ts';
 import { MobileFirebaseService } from '../platforms/mobile/services/MobileFirebaseService.ts';
 import { WebFirebaseService } from '../platforms/web/services/firebase.ts';
+import { globalStyles } from '../styles/globalStyles';
 
 interface FirebaseContextType {
   service: FirebaseService;
@@ -71,16 +72,16 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
 
   if (error) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: 'red' }}>Failed to initialize Firebase</Text>
-        <Text style={{ color: 'red' }}>{error.message}</Text>
+      <View style={globalStyles.centered}>
+        <Text style={globalStyles.colorRed}>Failed to initialize Firebase</Text>
+        <Text style={globalStyles.colorRed}>{error.message}</Text>
       </View>
     );
   }
   
   if (!isInitialized) {
     return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={globalStyles.centered}>
             <Text>Initializing Firebase...</Text>
         </View>
     );

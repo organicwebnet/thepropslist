@@ -6,10 +6,10 @@ import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
 import LinearGradient from 'react-native-linear-gradient';
 
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
-import { usePacking } from '../../src/hooks/usePacking.ts';
+import { usePacking } from '../../src/hooks/usePacking';
 import { PackingBox } from '../../src/types/packing.ts';
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme';
 import { QRScannerScreen } from '../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
 
 export default function PackingScreen() {

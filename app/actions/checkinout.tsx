@@ -5,7 +5,7 @@ import { QrCode, Package, Building, ClipboardCheck, LogIn, LogOut, Edit3, Info, 
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../../src/styles/theme.ts';
+import { lightTheme, darkTheme } from '../../src/styles/theme';
 import { useFirebase } from '../../src/contexts/FirebaseContext.tsx';
 import { QRScannerScreen } from '../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
 import StyledText from '../../src/components/StyledText.tsx';

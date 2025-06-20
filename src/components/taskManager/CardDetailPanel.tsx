@@ -53,10 +53,11 @@ import LinearGradient from 'react-native-linear-gradient';
 // Commented-out local type definitions removed.
 
 // Define MentionSuggestion interface at the top level
+type MentionEntityType = 'prop' | 'container' | 'user';
 interface MentionSuggestion {
     id: string;
-    username: string; // Corresponds to prop name or container name (editor expects 'username')
-    type: 'prop' | 'container';
+    username: string;
+    type: MentionEntityType;
 }
 
 // Props for the Panel
@@ -551,34 +552,49 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
             .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
             .map(c => ({ id: c.id, username: c.name, type: 'container' }));
     };
-    const handleMentionSearch = async (keyword: string | null, trigger: string | null) => {
-        if (!trigger || keyword === null || keyword === undefined) { setMentionSuggestions([]); return; }
-        if (trigger === '@') {
+    const fetchUserSuggestions = async (searchTerm: string): Promise<MentionSuggestion[]> => {
+        // Replace with real user/member search
+        const mockUsers = allShowMembers || [];
+        return mockUsers
+            .filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map(u => ({ id: u.id, username: u.name, type: 'user' }));
+    };
+    const handleMentionSearch = async (keyword: string | null, entityType: MentionEntityType | null) => {
+        if (!entityType || keyword === null || keyword === undefined) { setMentionSuggestions([]); return; }
+        if (entityType === 'prop') {
             const suggestions = await fetchPropSuggestions(keyword);
             setMentionSuggestions(suggestions);
-        } else if (trigger === '#') {
+        } else if (entityType === 'container') {
             const suggestions = await fetchContainerSuggestions(keyword);
+            setMentionSuggestions(suggestions);
+        } else if (entityType === 'user') {
+            const suggestions = await fetchUserSuggestions(keyword);
             setMentionSuggestions(suggestions);
         }
     };
     // ADDED: onDescriptionChange for Editor
     const onDescriptionChange = (data: { displayText: string, text: string }) => {
         setEditedDescription(data.text);
-        let currentTrigger: '@' | '#' | null = null;
-        let currentKeyword: string | null = null; 
-        const atMatch = data.displayText.match(/@(\S*)$/);
-        const hashMatch = data.displayText.match(/#(\S*)$/);
-        if (atMatch && data.displayText.endsWith(atMatch[0])) { 
-            currentTrigger = '@';
-            currentKeyword = atMatch[1];
-        } else if (hashMatch && data.displayText.endsWith(hashMatch[0])) { 
-            currentTrigger = '#';
-            currentKeyword = hashMatch[1];
-        } else {
-            setMentionSuggestions([]); // Clear suggestions if no active trigger
+        // If user just typed '@', show the menu
+        if (data.displayText.endsWith('@')) {
+            setShowMentionTypeMenu(true);
+            setPendingMentionTrigger('@');
+            setMentionEntityType(null);
+            setMentionSuggestions([]);
+            return;
         }
-        if(currentKeyword !== null) handleMentionSearch(currentKeyword, currentTrigger); 
-        else setMentionSuggestions([]);
+        // If a mention type is selected, proceed as before
+        if (mentionEntityType) {
+            let currentKeyword: string | null = null;
+            const match = data.displayText.match(/@(\w*)$/);
+            if (match && data.displayText.endsWith(match[0])) {
+                currentKeyword = match[1];
+            }
+            if(currentKeyword !== null) handleMentionSearch(currentKeyword, mentionEntityType);
+            else setMentionSuggestions([]);
+        } else {
+            setMentionSuggestions([]);
+        }
     };
 
     const onMentionSuggestionTap = (mention: MentionSuggestion) => {
@@ -846,6 +862,11 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     // State for toggling activity log visibility
     const [showActivity, setShowActivity] = useState(true);
 
+    // Add state for contextual menu
+    const [showMentionTypeMenu, setShowMentionTypeMenu] = useState(false);
+    const [pendingMentionTrigger, setPendingMentionTrigger] = useState<'@' | null>(null);
+    const [mentionEntityType, setMentionEntityType] = useState<MentionEntityType | null>(null);
+
     if (!internalCard) return null;
 
     const currentList = lists.find(l => l.id === internalCard.listId);
@@ -857,6 +878,25 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         { label: 'Members', icon: 'person-outline', onPress: handleOpenMemberEditor },
         { label: 'Attachment', icon: 'attach-outline', onPress: () => {/* TODO: open attachment add */} },
     ];
+
+    // Add contextual menu component
+    const renderMentionTypeMenu = () => (
+        <View style={{ position: 'absolute', top: 60, left: 20, right: 20, backgroundColor: '#fff', borderRadius: 8, elevation: 5, zIndex: 1000 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, margin: 10 }}>Mention Type</Text>
+            {['prop', 'container', 'user'].map(type => (
+                <Pressable
+                    key={type}
+                    style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
+                    onPress={() => {
+                        setMentionEntityType(type as MentionEntityType);
+                        setShowMentionTypeMenu(false);
+                    }}
+                >
+                    <Text style={{ fontSize: 15 }}>{type === 'prop' ? 'Prop' : type === 'container' ? 'Box/Container' : 'User'}</Text>
+                </Pressable>
+            ))}
+        </View>
+    );
 
     return (
         <Modal transparent={true} visible={isVisible} animationType="fade" onRequestClose={onClose}>
@@ -1203,6 +1243,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
             {showDatePicker && (
                 <DateTimePicker value={selectedDueDate || new Date()} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={onDateChange}/>
             )}
+            {showMentionTypeMenu && renderMentionTypeMenu()}
         </Modal>
     );
 };

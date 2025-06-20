@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform, Pressable, Alert, Text, View, SafeAreaView } from 'react-native'; 
 import { useAuth } from '../../src/contexts/AuthContext.tsx';
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts'; // Import theme objects
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme'; // Import theme objects
 
 // Removed local darkThemeColors definition
 

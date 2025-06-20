@@ -4,6 +4,8 @@ import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import type { Prop } from '../shared/types/props.ts';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { QueryOptions, FirebaseDocument } from '../shared/services/firebase/types.ts';
+import { isWithinInterval, addDays, parseISO } from 'date-fns';
+import { OfflineSyncManager } from '../platforms/mobile/features/offline/OfflineSyncManager';
 
 export function useProps(showId: string | undefined) {
   const { service } = useFirebase();
@@ -11,6 +13,14 @@ export function useProps(showId: string | undefined) {
   const [props, setProps] = useState<Prop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+
+  // Initialize OfflineSyncManager (mobile only)
+  const offlineSyncManager = service?.firestore ? OfflineSyncManager.getInstance(service.firestore) : null;
+  useEffect(() => {
+    if (offlineSyncManager) {
+      offlineSyncManager.initialize().catch(console.error);
+    }
+  }, [offlineSyncManager]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
@@ -69,9 +79,14 @@ export function useProps(showId: string | undefined) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
     };
-    const newDocRef = await service.addDocument('props', dataToSave as any as Omit<Prop, 'id'>);
-    return newDocRef;
-  }, [service, user]);
+    if (offlineSyncManager) {
+      await offlineSyncManager.queueOperation('create', 'props', dataToSave);
+      return { id: 'offline', data: dataToSave };
+    } else {
+      const newDocRef = await service.addDocument('props', dataToSave as any as Omit<Prop, 'id'>);
+      return newDocRef;
+    }
+  }, [service, user, offlineSyncManager]);
 
   const updateProp = useCallback(async (propId: string, updates: Partial<Prop>) => {
      if (!service?.updateDocument) throw new Error('Service not available');
@@ -79,13 +94,38 @@ export function useProps(showId: string | undefined) {
        ...updates, 
        updatedAt: serverTimestamp()
       };
-     await service.updateDocument('props', propId, dataToUpdate as any as Partial<Omit<Prop, 'id'>>);
-  }, [service]);
+     if (offlineSyncManager) {
+       await offlineSyncManager.queueOperation('update', 'props', { ...dataToUpdate, id: propId });
+     } else {
+       await service.updateDocument('props', propId, dataToUpdate as any as Partial<Omit<Prop, 'id'>>);
+     }
+  }, [service, offlineSyncManager]);
 
   const deleteProp = useCallback(async (propId: string) => {
      if (!service?.deleteDocument) throw new Error('Service not available');
-     await service.deleteDocument('props', propId);
-  }, [service]);
+     if (offlineSyncManager) {
+       await offlineSyncManager.queueOperation('delete', 'props', { id: propId });
+     } else {
+       await service.deleteDocument('props', propId);
+     }
+  }, [service, offlineSyncManager]);
 
-  return { props, loading, error, addProp, updateProp, deleteProp };
+  // Helper: Get deliveries due within the next week (status 'on_order' and estimatedDeliveryDate within 7 days)
+  const getUpcomingDeliveries = () => {
+    const now = new Date();
+    const weekFromNow = addDays(now, 7);
+    return props.filter(
+      (prop) =>
+        prop.status === 'on_order' &&
+        prop.estimatedDeliveryDate &&
+        isWithinInterval(parseISO(prop.estimatedDeliveryDate), { start: now, end: weekFromNow })
+    );
+  };
+
+  // Helper: Get props/materials that need to be bought (status 'to_buy')
+  const getShoppingListProps = () => {
+    return props.filter((prop) => prop.status === 'to_buy');
+  };
+
+  return { props, loading, error, addProp, updateProp, deleteProp, getUpcomingDeliveries, getShoppingListProps };
 } 

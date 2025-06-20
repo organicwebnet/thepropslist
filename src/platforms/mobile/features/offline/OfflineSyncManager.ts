@@ -6,7 +6,7 @@ import { FirebaseDocument } from '../../../../shared/services/firebase/types.ts'
 // import { OfflineOperation } from './OfflineOperationStore'; // Commented out: Cannot find module
 
 // Define a placeholder type if OfflineOperation is used elsewhere in the file
-type OfflineOperation = any;
+// type OfflineOperation = any;
 
 interface SyncMetadata {
   lastSyncTimestamp: number;

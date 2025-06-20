@@ -26,6 +26,7 @@ import { User } from 'firebase/auth';
 import { lightTheme, darkTheme } from '../styles/theme.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
 import LinearGradient from 'react-native-linear-gradient';
+import { globalStyles } from '../styles/globalStyles';
 
 export default function PropDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -194,15 +195,15 @@ export default function PropDetailPage() {
   const dimensionsText = formatDimensions(); // Define dimensionsText here
 
   if (loading) {
-    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Loading...</Text></View>;
+    return <View style={globalStyles.centered}><Text>Loading...</Text></View>;
   }
 
   if (error) {
-    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 }}><Text style={{color: 'red'}}>Error: {error}</Text></View>;
+    return <View style={[globalStyles.centered, globalStyles.padding16]}><Text style={globalStyles.colorRed}>Error: {error}</Text></View>;
   }
 
   if (!prop) {
-    return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>Prop not found.</Text></View>;
+    return <View style={globalStyles.centered}><Text>Prop not found.</Text></View>;
   }
 
   if (isEditing) {

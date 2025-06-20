@@ -16,6 +16,7 @@ import { FirebaseDocument } from '../../../shared/services/firebase/types.ts';
 import { Stack, useRouter } from 'expo-router';
 import { useShows } from '../../../contexts/ShowsContext';
 import LinearGradient from 'react-native-linear-gradient';
+import { globalStyles } from '../../../styles/globalStyles';
 
 type RootStackParamList = {
   PropsList: undefined;
@@ -159,7 +160,7 @@ export function PropsListScreen() {
       locations={[0, 0.2, 0.5, 0.8, 1]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={{ flex: 1 }}
+      style={globalStyles.flex1}
     >
       <View style={styles.container}>
         <FlatList

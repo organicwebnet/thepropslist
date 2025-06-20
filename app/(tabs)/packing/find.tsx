@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, 
 import { Stack, useRouter } from 'expo-router';
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import { useProps } from '../../src/contexts/PropsContext.tsx';
-import { usePacking } from '../../src/hooks/usePacking.ts';
+import { usePacking } from '../../src/hooks/usePacking';
 import type { Prop } from '../../src/shared/types/props.ts';
 import type { PackingBox, PackedProp } from '../../src/types/packing.ts';
 import { QRScannerScreen } from '../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../../src/styles/theme.ts';
+import { lightTheme, darkTheme } from '../../src/styles/theme';
 import StyledText from '../../src/components/StyledText.tsx';
 import { Search, Package, QrCode, AlertTriangle, Info } from 'lucide-react-native';
 

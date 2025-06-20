@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View, Image, Alert } from 'react-na
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 import { useRouter } from 'expo-router';
+import { globalStyles } from '../../../../styles/globalStyles';
 
 export default function CameraScreen() {
   const router = useRouter();
@@ -26,13 +27,13 @@ export default function CameraScreen() {
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.button}>
-          <Text style={styles.text}>Grant Camera Permission</Text>
+      <View style={globalStyles.container}>
+        <Text style={globalStyles.text}>We need your permission to show the camera</Text>
+        <TouchableOpacity onPress={requestPermission} style={globalStyles.button}>
+          <Text style={globalStyles.text}>Grant Camera Permission</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.back()} style={[styles.button, styles.cancelButton]}>
-          <Text style={styles.text}>Cancel</Text>
+        <TouchableOpacity onPress={() => router.back()} style={[globalStyles.button, globalStyles.cancelButton]}>
+          <Text style={globalStyles.text}>Cancel</Text>
         </TouchableOpacity>
       </View>
     );
@@ -83,17 +84,17 @@ export default function CameraScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => router.back()}>
-            <Text style={styles.text}>Cancel</Text>
+    <View style={globalStyles.container}>
+      <CameraView style={globalStyles.camera} facing={facing} ref={cameraRef}>
+        <View style={globalStyles.buttonContainer}>
+          <TouchableOpacity style={[globalStyles.button, globalStyles.cancelButton]} onPress={() => router.back()}>
+            <Text style={globalStyles.text}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <Text style={styles.text}>Flip Camera</Text>
+          <TouchableOpacity style={globalStyles.button} onPress={toggleCameraFacing}>
+            <Text style={globalStyles.text}>Flip Camera</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={takePicture}>
-            <Text style={styles.text}>Take Picture</Text>
+          <TouchableOpacity style={globalStyles.button} onPress={takePicture}>
+            <Text style={globalStyles.text}>Take Picture</Text>
           </TouchableOpacity>
         </View>
       </CameraView>

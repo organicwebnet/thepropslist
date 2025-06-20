@@ -27,6 +27,10 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { BoardData, CardData, ListData, MemberData } from '../../src/shared/types/taskManager';
 import { darkTheme, lightTheme } from '../../src/styles/theme';
 import BoardList from '../../src/components/taskManager/BoardList';
+import { useProps } from '../../src/hooks/useProps';
+import { OfflineSyncManager } from '../../src/platforms/mobile/features/offline/OfflineSyncManager';
+import type { Prop } from '../../src/shared/types/props';
+import { SyncStatusBar } from '../../src/components/SyncStatusBar';
 
 const LIST_WIDTH = 280;
 const LIST_SPACING = 16;
@@ -38,6 +42,23 @@ interface ListLayout {
   width: number;
   height: number;
 }
+
+// Standard lists and their filtering logic
+const STANDARD_LISTS = [
+  { name: 'To-Do', filter: (prop: Prop) => !['to_buy', 'on_order', 'being_modified', 'damaged_awaiting_repair', 'out_for_repair'].includes(prop.status) },
+  { name: 'Shopping', filter: (prop: Prop) => prop.status === 'to_buy' },
+  { name: 'Deliveries', filter: (prop: Prop) => prop.status === 'on_order' },
+  { name: 'Make', filter: (prop: Prop) => prop.status === 'being_modified' },
+  { name: 'Repair', filter: (prop: Prop) => ['damaged_awaiting_repair', 'out_for_repair'].includes(prop.status) },
+];
+
+const centralStyles = StyleSheet.create({
+  flex1: { flex: 1 },
+  alignCenter: { alignItems: 'center' },
+  flex1AlignCenter: { flex: 1, alignItems: 'center' },
+  paddingVertical8: { paddingVertical: 8 },
+  font12: { fontSize: 12 },
+});
 
 const TaskBoardDetailScreen = () => {
   const params = useLocalSearchParams();
@@ -95,6 +116,16 @@ const TaskBoardDetailScreen = () => {
     }
     return null;
   }, [selectedCardId, cards]);
+
+  const { props: allProps } = useProps(board?.showId);
+
+  // Initialize OfflineSyncManager (mobile only)
+  const offlineSyncManager = firebaseService?.firestore ? OfflineSyncManager.getInstance(firebaseService.firestore) : null;
+  useEffect(() => {
+    if (offlineSyncManager) {
+      offlineSyncManager.initialize().catch(console.error);
+    }
+  }, [offlineSyncManager]);
 
   // --- Data Fetching ---
   useEffect(() => {
@@ -173,6 +204,25 @@ const TaskBoardDetailScreen = () => {
     };
   }, [boardId, firebaseService, lists, isFirebaseInitialized]);
 
+  useEffect(() => {
+    if (!firebaseService || !boardId || !isFirebaseInitialized) return;
+    if (!lists) return;
+
+    // Check for missing standard lists
+    const existingListNames = lists.map(l => l.name);
+    const missingStandardLists = STANDARD_LISTS.filter(l => !existingListNames.includes(l.name));
+
+    if (missingStandardLists.length > 0) {
+      missingStandardLists.forEach((list, idx) => {
+        firebaseService.addList(boardId, {
+          name: list.name,
+          order: lists.length + idx,
+          boardId,
+        });
+      });
+    }
+  }, [firebaseService, boardId, isFirebaseInitialized, lists]);
+
   // --- Handlers ---
   const handleReorderLists = useCallback(
     async (data: ListData[]) => {
@@ -217,13 +267,20 @@ const TaskBoardDetailScreen = () => {
 
   const handleAddCard = useCallback(async () => {
     if (!newCardTitle.trim() || !user || !newCardListId) return;
+    const cardData = {
+      title: newCardTitle,
+      description: newCardDescription,
+      order: cards[newCardListId]?.length || 0,
+      assignedTo: [user.uid],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     try {
-      await firebaseService.addCard(boardId, newCardListId, {
-        title: newCardTitle,
-        description: newCardDescription,
-        order: cards[newCardListId]?.length || 0,
-        assignedTo: [user.uid],
-      });
+      if (offlineSyncManager) {
+        await offlineSyncManager.queueOperation('create', `todo_boards/${boardId}/lists/${newCardListId}/cards`, cardData);
+      } else {
+        await firebaseService.addCard(boardId, newCardListId, cardData);
+      }
       setNewCardTitle('');
       setNewCardDescription('');
       setAddCardModalVisible(false);
@@ -232,7 +289,7 @@ const TaskBoardDetailScreen = () => {
       console.error('Error adding card:', error);
       Alert.alert('Error', 'Could not add the new card.');
     }
-  }, [boardId, firebaseService, newCardListId, newCardTitle, newCardDescription, user, cards]);
+  }, [boardId, firebaseService, newCardListId, newCardTitle, newCardDescription, user, cards, offlineSyncManager]);
 
   const handleMoveCard = useCallback(
     async (cardId: string, originalListId: string, targetListId: string) => {
@@ -269,13 +326,17 @@ const TaskBoardDetailScreen = () => {
     async (cardId: string, listId: string, updates: Partial<CardData>) => {
       if (!boardId) return;
       try {
-        await firebaseService.updateCard(boardId, listId, cardId, updates);
+        if (offlineSyncManager) {
+          await offlineSyncManager.queueOperation('update', `todo_boards/${boardId}/lists/${listId}/cards`, { ...updates, id: cardId });
+        } else {
+          await firebaseService.updateCard(boardId, listId, cardId, updates);
+        }
       } catch (error) {
         console.error('Error updating card:', error);
         Alert.alert('Error', 'Could not update card details.');
       }
     },
-    [boardId, firebaseService],
+    [boardId, firebaseService, offlineSyncManager],
   );
 
   const handleDeleteCard = useCallback(
@@ -288,7 +349,11 @@ const TaskBoardDetailScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await firebaseService.deleteCard(boardId, listId, cardId);
+              if (offlineSyncManager) {
+                await offlineSyncManager.queueOperation('delete', `todo_boards/${boardId}/lists/${listId}/cards`, { id: cardId });
+              } else {
+                await firebaseService.deleteCard(boardId, listId, cardId);
+              }
               router.back();
             } catch (error) {
               console.error('Error deleting card:', error);
@@ -298,7 +363,7 @@ const TaskBoardDetailScreen = () => {
         },
       ]);
     },
-    [boardId, firebaseService, router],
+    [boardId, firebaseService, router, offlineSyncManager],
   );
 
   // --- Mobile DnD Rendering ---
@@ -481,226 +546,206 @@ const TaskBoardDetailScreen = () => {
     );
   }
 
+  // Instead of just mapping lists, map STANDARD_LISTS in order, and for each, find the matching list and filter cards by the filter
+  const orderedLists = STANDARD_LISTS.map(stdList => lists.find(l => l.name === stdList.name)).filter(Boolean);
+
   return (
-    <LinearGradient
-      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
-      locations={[0, 0.2, 0.5, 0.8, 1]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ flex: 1 }}
-    >
-      <DraxProvider>
-        <DefaultView style={styles.container}>
-          <Stack.Screen
-            options={{
-              title: board?.name ?? 'Board',
-              headerBackTitle: 'Back',
-              headerTransparent: true,
-              headerTintColor: '#FFFFFF',
-            }}
-          />
-          <ScrollView
-            horizontal
-            style={[styles.listsContainer, { paddingTop: headerHeight }]}
-            showsHorizontalScrollIndicator={false}>
-            {lists.map((list, idx) => (
-              <DraxView
-                key={list.id}
-                draggingStyle={{ opacity: 0.7, transform: [{ scale: 1.05 }] }}
-                receivingStyle={{ borderColor: colors.primary, borderWidth: 2 }}
-                dragPayload={{ ...list, index: idx }}
-                draggable
-                receptive
-                longPressDelay={150}
-                onReceiveDragDrop={({ dragged: { payload } }) => {
-                  if (payload && payload.id !== list.id) {
-                    // Reorder lists
-                    const fromIdx = payload.index;
-                    const toIdx = idx;
-                    const newLists = [...lists];
-                    const [moved] = newLists.splice(fromIdx, 1);
-                    newLists.splice(toIdx, 0, moved);
-                    handleReorderLists(newLists);
-                  }
-                }}
-              >
-                <BoardList
-                  listId={list.id}
-                  listName={list.name}
-                  boardId={boardId!}
-                  cards={cards[list.id] || []}
-                  onAddCard={async (listId: any, cardTitle: any) => {
-                    setNewCardListId(listId);
-                    setNewCardTitle(cardTitle);
-                    setAddCardModalVisible(true);
-                  }}
-                  onDeleteCard={handleDeleteCard}
-                  onOpenCardDetail={(card: any) => router.setParams({ selectedCardId: card.id })}
-                  onCardDrop={(card: any, targetListId: string) => {
-                    if (card.listId !== targetListId && card.listId) {
-                      handleMoveCard(card.id, card.listId, targetListId);
-                    }
-                  }}
-                  onReorderCards={handleReorderCards}
-                />
-              </DraxView>
-            ))}
-          </ScrollView>
-          <CardDetailPanel
-            isVisible={!!selectedCard}
-            card={selectedCard}
-            boardId={boardId!}
-            lists={lists}
-            allShowMembers={memoizedMembers}
-            availableLabels={availableLabels}
-            onClose={() => router.replace(`/taskBoard/${boardId}`)}
-            onUpdateCard={handleUpdateCard}
-            onDeleteCard={handleDeleteCard}
-            onMoveCard={handleMoveCard}
-          />
-          {/* Add List Modal */}
-          <Modal
-            transparent
-            visible={isAddListModalVisible}
-            onRequestClose={() => setAddListModalVisible(false)}
-            animationType="slide"
-          >
-            <DefaultView style={styles.modalOverlay}>
-              <DefaultView style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                <ThemedText style={styles.modalTitle}>Add New List</ThemedText>
-                <TextInput
-                  placeholder="List Name"
-                  value={newListName}
-                  onChangeText={setNewListName}
-                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-                  placeholderTextColor={colors.placeholder}
-                />
-                <DefaultView style={styles.modalButtonContainer}>
-                  <Pressable onPress={() => setAddListModalVisible(false)} style={styles.modalButton}>
-                    <ThemedText>Cancel</ThemedText>
-                  </Pressable>
-                  <Pressable onPress={handleAddList} style={styles.modalButton}>
-                    <ThemedText>Add</ThemedText>
-                  </Pressable>
-                </DefaultView>
-              </DefaultView>
-            </DefaultView>
-          </Modal>
-          {/* Add Card Modal */}
-          <Modal
-            transparent
-            visible={isAddCardModalVisible}
-            onRequestClose={() => setAddCardModalVisible(false)}
-            animationType="slide"
-          >
-            <DefaultView style={styles.modalOverlay}>
-              <DefaultView style={[styles.modalContent, { backgroundColor: colors.card }]}>
-                <ThemedText style={styles.modalTitle}>Add New Card</ThemedText>
-                <TextInput
-                  placeholder="Card Title"
-                  value={newCardTitle}
-                  onChangeText={setNewCardTitle}
-                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-                  placeholderTextColor={colors.placeholder}
-                />
-                <TextInput
-                  placeholder="Card Description (optional)"
-                  value={newCardDescription}
-                  onChangeText={setNewCardDescription}
-                  style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, marginTop: 10 }]}
-                  placeholderTextColor={colors.placeholder}
-                  multiline
-                />
-                <DefaultView style={styles.modalButtonContainer}>
-                  <Pressable
-                    onPress={() => {
-                      setAddCardModalVisible(false);
-                      setNewCardListId(null);
+    <View style={centralStyles.flex1}>
+      <SyncStatusBar />
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <DraxProvider>
+          <DefaultView style={styles.container}>
+            <Stack.Screen
+              options={{
+                title: board?.name ?? 'Board',
+                headerBackTitle: 'Back',
+                headerTransparent: true,
+                headerTintColor: '#FFFFFF',
+              }}
+            />
+            <ScrollView
+              horizontal
+              style={[styles.listsContainer, { paddingTop: headerHeight }]}
+              showsHorizontalScrollIndicator={false}>
+              {orderedLists.map((list) => (
+                list ? (
+                  <BoardList
+                    key={list.id}
+                    listId={list.id}
+                    listName={list.name}
+                    boardId={boardId}
+                    cards={cards[list.id]?.filter(card => {
+                      const stdList = STANDARD_LISTS.find(l => l.name === list?.name);
+                      // If card is linked to a prop, filter by prop status
+                      if (card.propId) {
+                        const prop = allProps.find(p => p.id === card.propId);
+                        return prop && stdList && stdList.filter(prop);
+                      }
+                      // Otherwise, show in To-Do by default
+                      return list?.name === 'To-Do';
+                    }) || []}
+                    onAddCard={handleAddCard}
+                    onDeleteCard={handleDeleteCard}
+                    onOpenCardDetail={(card: any) => router.setParams({ selectedCardId: card.id })}
+                    onReorderCards={handleReorderCards}
+                    onCardDrop={(card: any, targetListId: string) => {
+                      if (card.listId !== targetListId && card.listId) {
+                        handleMoveCard(card.id, card.listId, targetListId);
+                      }
                     }}
-                    style={styles.modalButton}
-                  >
-                    <ThemedText>Cancel</ThemedText>
-                  </Pressable>
-                  <Pressable onPress={handleAddCard} style={styles.modalButton}>
-                    <ThemedText>Add</ThemedText>
-                  </Pressable>
+                  />
+                ) : null
+              ))}
+            </ScrollView>
+            <CardDetailPanel
+              isVisible={!!selectedCard}
+              card={selectedCard}
+              boardId={boardId!}
+              lists={lists}
+              allShowMembers={memoizedMembers}
+              availableLabels={availableLabels}
+              onClose={() => router.replace(`/taskBoard/${boardId}`)}
+              onUpdateCard={handleUpdateCard}
+              onDeleteCard={handleDeleteCard}
+              onMoveCard={handleMoveCard}
+            />
+            {/* Add List Modal */}
+            <Modal
+              transparent
+              visible={isAddListModalVisible}
+              onRequestClose={() => setAddListModalVisible(false)}
+              animationType="slide"
+            >
+              <DefaultView style={styles.modalOverlay}>
+                <DefaultView style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                  <ThemedText style={styles.modalTitle}>Add New List</ThemedText>
+                  <TextInput
+                    placeholder="List Name"
+                    value={newListName}
+                    onChangeText={setNewListName}
+                    style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+                    placeholderTextColor={colors.placeholder}
+                  />
+                  <DefaultView style={styles.modalButtonContainer}>
+                    <Pressable onPress={() => setAddListModalVisible(false)} style={styles.modalButton}>
+                      <ThemedText>Cancel</ThemedText>
+                    </Pressable>
+                    <Pressable onPress={handleAddList} style={styles.modalButton}>
+                      <ThemedText>Add</ThemedText>
+                    </Pressable>
+                  </DefaultView>
                 </DefaultView>
               </DefaultView>
-            </DefaultView>
-          </Modal>
-        </DefaultView>
-        {/* FAB for adding a new list */}
-        <FAB.Group
-          visible={true}
-          open={fabOpen}
-          icon={fabOpen ? 'close' : 'plus'}
-          actions={[
-            {
-              icon: 'plus',
-              label: 'Add List',
-              onPress: () => setAddListModalVisible(true),
-              style: { backgroundColor: '#c084fc' },
-              labelStyle: { color: '#fff', backgroundColor: 'rgba(30,30,30,0.7)', paddingHorizontal: 8, borderRadius: 4 },
-            },
-          ]}
-          onStateChange={({ open }) => setFabOpen(open)}
-          fabStyle={{
-            position: 'absolute',
-            margin: 16,
-            right: 0,
-            bottom: 70, // leave space for tab bar
-            backgroundColor: '#c084fc',
-            borderRadius: 28,
-            width: 56,
-            height: 56,
-            justifyContent: 'center',
-            alignItems: 'center',
-            shadowColor: 'transparent',
-            elevation: 0,
-            borderWidth: 0,
-          }}
-          style={{ marginBottom: 90 }}
-          color="#FFFFFF"
-          backdropColor="transparent"
-        />
-        {/* Bottom Tab Bar Navigation */}
-        <View style={{
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-          alignItems: 'center',
-          height: 64,
-          backgroundColor: colors.card,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 10,
-        }}>
-          <Pressable onPress={() => router.push('/shows')} style={{ alignItems: 'center', flex: 1, paddingVertical: 8 }}>
-            <Ionicons name="list-circle-outline" size={28} color={colors.text} />
-            <DefaultText style={{ color: colors.text, fontSize: 12 }}>Shows</DefaultText>
-          </Pressable>
-          <Pressable onPress={() => router.push('/props')} style={{ alignItems: 'center', flex: 1, paddingVertical: 8 }}>
-            <Ionicons name="briefcase-outline" size={28} color={colors.text} />
-            <DefaultText style={{ color: colors.text, fontSize: 12 }}>Props</DefaultText>
-          </Pressable>
-          <Pressable onPress={() => router.push('/')} style={{ alignItems: 'center', flex: 1, paddingVertical: 8 }}>
-            <Ionicons name="home-outline" size={28} color={colors.text} />
-            <DefaultText style={{ color: colors.text, fontSize: 12 }}>Home</DefaultText>
-          </Pressable>
-          <Pressable onPress={() => router.push('/packing')} style={{ alignItems: 'center', flex: 1, paddingVertical: 8 }}>
-            <Ionicons name="archive-outline" size={28} color={colors.text} />
-            <DefaultText style={{ color: colors.text, fontSize: 12 }}>Packing</DefaultText>
-          </Pressable>
-          <Pressable onPress={() => router.push('/profile')} style={{ alignItems: 'center', flex: 1, paddingVertical: 8 }}>
-            <Ionicons name="person-circle-outline" size={28} color={colors.text} />
-            <DefaultText style={{ color: colors.text, fontSize: 12 }}>Profile</DefaultText>
-          </Pressable>
-        </View>
-      </DraxProvider>
-    </LinearGradient>
+            </Modal>
+            {/* Add Card Modal */}
+            <Modal
+              transparent
+              visible={isAddCardModalVisible}
+              onRequestClose={() => setAddCardModalVisible(false)}
+              animationType="slide"
+            >
+              <DefaultView style={styles.modalOverlay}>
+                <DefaultView style={[styles.modalContent, { backgroundColor: colors.card }]}>
+                  <ThemedText style={styles.modalTitle}>Add New Card</ThemedText>
+                  <TextInput
+                    placeholder="Card Title"
+                    value={newCardTitle}
+                    onChangeText={setNewCardTitle}
+                    style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+                    placeholderTextColor={colors.placeholder}
+                  />
+                  <TextInput
+                    placeholder="Card Description (optional)"
+                    value={newCardDescription}
+                    onChangeText={setNewCardDescription}
+                    style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, marginTop: 10 }]}
+                    placeholderTextColor={colors.placeholder}
+                    multiline
+                  />
+                  <DefaultView style={styles.modalButtonContainer}>
+                    <Pressable
+                      onPress={() => {
+                        setAddCardModalVisible(false);
+                        setNewCardListId(null);
+                      }}
+                      style={styles.modalButton}
+                    >
+                      <ThemedText>Cancel</ThemedText>
+                    </Pressable>
+                    <Pressable onPress={handleAddCard} style={styles.modalButton}>
+                      <ThemedText>Add</ThemedText>
+                    </Pressable>
+                  </DefaultView>
+                </DefaultView>
+              </DefaultView>
+            </Modal>
+          </DefaultView>
+          {/* FAB for adding a new list */}
+          <FAB.Group
+            visible={true}
+            open={fabOpen}
+            icon={fabOpen ? 'close' : 'plus'}
+            actions={[
+              {
+                icon: 'plus',
+                label: 'Add List',
+                onPress: () => setAddListModalVisible(true),
+                style: { backgroundColor: '#c084fc' },
+                labelStyle: { color: '#fff', backgroundColor: 'rgba(30,30,30,0.7)', paddingHorizontal: 8, borderRadius: 4 },
+              },
+            ]}
+            onStateChange={({ open }) => setFabOpen(open)}
+            fabStyle={{
+              position: 'absolute',
+              margin: 16,
+              right: 0,
+              bottom: 70, // leave space for tab bar
+              backgroundColor: '#c084fc',
+              borderRadius: 28,
+              width: 56,
+              height: 56,
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: 'transparent',
+              elevation: 0,
+              borderWidth: 0,
+            }}
+            style={{ marginBottom: 90 }}
+            color="#FFFFFF"
+            backdropColor="transparent"
+          />
+          {/* Bottom Tab Bar Navigation */}
+          <View style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
+            <Pressable onPress={() => router.push('/shows')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
+              <Ionicons name="list-circle-outline" size={28} color={colors.text} />
+              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Shows</DefaultText>
+            </Pressable>
+            <Pressable onPress={() => router.push('/props')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
+              <Ionicons name="briefcase-outline" size={28} color={colors.text} />
+              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Props</DefaultText>
+            </Pressable>
+            <Pressable onPress={() => router.push('/')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
+              <Ionicons name="home-outline" size={28} color={colors.text} />
+              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Home</DefaultText>
+            </Pressable>
+            <Pressable onPress={() => router.push('/packing')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
+              <Ionicons name="archive-outline" size={28} color={colors.text} />
+              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Packing</DefaultText>
+            </Pressable>
+            <Pressable onPress={() => router.push('/profile')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
+              <Ionicons name="person-circle-outline" size={28} color={colors.text} />
+              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Profile</DefaultText>
+            </Pressable>
+          </View>
+        </DraxProvider>
+      </LinearGradient>
+    </View>
   );
 };
 

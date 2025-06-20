@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, TextInput, View, Text, ActivityIndicator } from 'react-native';
+import { globalStyles } from '../../styles/globalStyles';
 
 interface RichTextEditorProps {
   value: string;
@@ -38,7 +39,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   if (Platform.OS === 'web') {
     if (isLoadingWebEditor || !WebEditorComponent) {
       return (
-        <View style={{ minHeight, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+        <View style={[globalStyles.justifyCenter, globalStyles.alignCenter, globalStyles.borderGray, globalStyles.borderRadius8, { minHeight }]}>
           {/* You can replace ActivityIndicator with a web-specific loader if preferred */}
           <ActivityIndicator />
           <Text>Loading Editor...</Text>

@@ -28,7 +28,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentShowId, setCurrentShowId] = useState<string | null>(null);
-  const { props, loading: propsLoading, error: propsError, /* addProp */ } = useProps(currentShowId || undefined); // addProp appears unused
+  const { props, loading: propsLoading, error: propsError, getUpcomingDeliveries } = useProps(currentShowId || undefined); // addProp appears unused
 
   const loadShowsAndSetFirst = useCallback(async () => {
     if (user && service && isInitialized) {
@@ -339,6 +339,31 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
           <Text className="text-center text-gray-600 dark:text-gray-400">
             {currentShowId ? 'No props found for this show.' : 'Select a show to view props.'}
           </Text>
+        )}
+      </View>
+
+      {/* Upcoming Deliveries Section */}
+      <View className="p-4">
+        <Text className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">Upcoming Deliveries (Next 7 Days)</Text>
+        {propsLoading ? (
+          <ActivityIndicator size="small" />
+        ) : getUpcomingDeliveries().length > 0 ? (
+          getUpcomingDeliveries().map((prop: Prop) => (
+            <View key={prop.id} style={{ backgroundColor: '#f3f4f6', borderRadius: 8, padding: 12, marginBottom: 10 }}>
+              <Text style={{ fontWeight: 'bold', fontSize: 16 }}>{prop.name}</Text>
+              <Text>Delivery Date: {prop.estimatedDeliveryDate ? new Date(prop.estimatedDeliveryDate).toLocaleString() : 'N/A'}</Text>
+              <Text>Courier: {prop.courier || 'N/A'}</Text>
+              <Text>Tracking #: {prop.trackingNumber || 'N/A'}</Text>
+              <TouchableOpacity
+                style={{ marginTop: 8, backgroundColor: '#6366F1', borderRadius: 6, padding: 8, alignSelf: 'flex-start' }}
+                onPress={() => router.push(`/props/${prop.id}`)}
+              >
+                <Text style={{ color: 'white', fontWeight: 'bold' }}>More Details</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        ) : (
+          <Text style={{ color: '#6b7280', textAlign: 'center' }}>No deliveries due in the next week.</Text>
         )}
       </View>
 

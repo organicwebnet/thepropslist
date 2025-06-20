@@ -24,6 +24,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
 import { propCategories as defaultPropCategories } from '../../../shared/types/props.ts';
 import { useShows } from '../../../contexts/ShowsContext';
+import { globalStyles } from '../../../styles/globalStyles';
 
 interface PropFormData {
   name: string;
@@ -360,41 +361,41 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
     switch (step) {
       case 0:
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Add Images</Text>
+          <View style={globalStyles.section}>
+            <Text style={globalStyles.sectionTitle}>Add Images</Text>
             {/* Camera button */}
-            <TouchableOpacity style={styles.addButton}>
+            <TouchableOpacity style={globalStyles.addButton}>
               <MaterialIcons name="camera-alt" size={24} color="white" />
-              <Text style={styles.buttonText}>Add Photo</Text>
+              <Text style={globalStyles.buttonText}>Add Photo</Text>
             </TouchableOpacity>
             {/* Gallery button */}
-            <TouchableOpacity style={styles.addButton} onPress={handlePickImage}>
+            <TouchableOpacity style={globalStyles.addButton} onPress={handlePickImage}>
               <MaterialIcons name="photo-library" size={24} color="white" />
-              <Text style={styles.buttonText}>Add from Gallery</Text>
+              <Text style={globalStyles.buttonText}>Add from Gallery</Text>
             </TouchableOpacity>
-            <View style={styles.imageGrid}>
+            <View style={globalStyles.imageGrid}>
               {form.images.map((uri, idx) => (
-                <View key={idx} style={styles.imageContainer}>
-                  <Image source={{ uri }} style={styles.image} />
-                  <TouchableOpacity style={styles.removeButton}>
+                <View key={idx} style={globalStyles.imageContainer}>
+                  <Image source={{ uri }} style={globalStyles.image} />
+                  <TouchableOpacity style={globalStyles.removeButton}>
                     <MaterialIcons name="close" size={20} color="white" />
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
-            <TouchableOpacity onPress={nextStep} style={styles.nextButton}>
-              <Text style={styles.nextButtonText}>Skip for now</Text>
+            <TouchableOpacity onPress={nextStep} style={globalStyles.nextButton}>
+              <Text style={globalStyles.nextButtonText}>Skip for now</Text>
             </TouchableOpacity>
           </View>
         );
       case 1:
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Basic Info</Text>
-            <TextInput style={styles.input} placeholder="Name*" placeholderTextColor="#e0e0e0" value={form.name} onChangeText={v => handleChange('name', v)} />
+          <View style={globalStyles.section}>
+            <Text style={globalStyles.sectionTitle}>Basic Info</Text>
+            <TextInput style={globalStyles.input} placeholder="Name*" placeholderTextColor="#e0e0e0" value={form.name} onChangeText={v => handleChange('name', v)} />
             {/* Category Dropdown */}
-            <View style={{ marginBottom: 16 }}>
-              <View style={styles.input}>
+            <View style={globalStyles.marginBottom16}>
+              <View style={globalStyles.input}>
                 <Picker
                   selectedValue={form.category}
                   onValueChange={v => {
@@ -405,7 +406,7 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                     }
                   }}
                   dropdownIconColor="#c084fc"
-                  style={styles.picker}
+                  style={globalStyles.picker}
                 >
                   <Picker.Item label="Select Category*" value="" />
                   {categories.map(cat => (
@@ -415,16 +416,16 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 </Picker>
               </View>
               {showAddCategory && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                <View style={[globalStyles.flexRow, globalStyles.alignCenter, globalStyles.marginTop8]}>
                   <TextInput
-                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    style={[globalStyles.input, { flex: 1, marginBottom: 0 }]}
                     placeholder="New Category"
                     placeholderTextColor="#e0e0e0"
                     value={newCategory}
                     onChangeText={setNewCategory}
                   />
                   <TouchableOpacity
-                    style={{ marginLeft: 8, backgroundColor: '#c084fc', padding: 10, borderRadius: 8 }}
+                    style={[globalStyles.margin8, globalStyles.bgPrimary, globalStyles.padding8, globalStyles.borderRadius8]}
                     onPress={() => {
                       if (newCategory.trim() && !categories.includes(newCategory.trim())) {
                         setCategories([...categories, newCategory.trim()]);
@@ -434,30 +435,30 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                       setNewCategory('');
                     }}
                   >
-                    <Text style={{ color: 'white', fontWeight: 'bold' }}>Add</Text>
+                    <Text style={[globalStyles.colorWhite, globalStyles.fontBold]}>Add</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={{ marginLeft: 4, backgroundColor: '#404040', padding: 10, borderRadius: 8 }}
+                    style={[globalStyles.margin8, { backgroundColor: '#404040' }, globalStyles.padding8, globalStyles.borderRadius8]}
                     onPress={() => {
                       setShowAddCategory(false);
                       setNewCategory('');
                     }}
                   >
-                    <Text style={{ color: 'white' }}>Cancel</Text>
+                    <Text style={globalStyles.colorWhite}>Cancel</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
             {/* Quantity */}
-            <TextInput style={styles.input} placeholder="Quantity*" placeholderTextColor="#e0e0e0" value={form.quantity} onChangeText={v => handleChange('quantity', v)} keyboardType="numeric" />
+            <TextInput style={globalStyles.input} placeholder="Quantity*" placeholderTextColor="#e0e0e0" value={form.quantity} onChangeText={v => handleChange('quantity', v)} keyboardType="numeric" />
             {/* Condition Dropdown */}
-            <View style={{ marginBottom: 16 }}>
-              <View style={styles.input}>
+            <View style={globalStyles.marginBottom16}>
+              <View style={globalStyles.input}>
                 <Picker
                   selectedValue={form.condition}
                   onValueChange={v => handleChange('condition', v)}
                   dropdownIconColor="#c084fc"
-                  style={styles.picker}
+                  style={globalStyles.picker}
                 >
                   <Picker.Item label="Select Condition" value="" />
                   {conditionOptions.map(opt => (
@@ -466,27 +467,27 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 </Picker>
               </View>
             </View>
-            <TextInput style={styles.input} placeholder="Materials (comma separated)" placeholderTextColor="#e0e0e0" value={form.materials} onChangeText={v => handleChange('materials', v)} />
+            <TextInput style={globalStyles.input} placeholder="Materials (comma separated)" placeholderTextColor="#e0e0e0" value={form.materials} onChangeText={v => handleChange('materials', v)} />
             {/* Act and Scene Dropdowns */}
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-              <View style={[styles.input, { flex: 1 }]}> 
+              <View style={[globalStyles.input, { flex: 1 }]}> 
                 <Picker
                   selectedValue={form.act?.toString() || actOptions[0].value}
                   onValueChange={v => handleChange('act', v)}
                   dropdownIconColor="#c084fc"
-                  style={styles.picker}
+                  style={globalStyles.picker}
                 >
                   {actOptions.map((opt: {label: string, value: string}) => (
                     <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
                   ))}
                 </Picker>
               </View>
-              <View style={[styles.input, { flex: 1 }]}> 
+              <View style={[globalStyles.input, { flex: 1 }]}> 
                 <Picker
                   selectedValue={form.scene?.toString() || sceneOptions[0].value}
                   onValueChange={v => handleChange('scene', v)}
                   dropdownIconColor="#c084fc"
-                  style={styles.picker}
+                  style={globalStyles.picker}
                 >
                   {sceneOptions.map((opt: {label: string, value: string}) => (
                     <Picker.Item key={opt.value} label={opt.label} value={opt.value} />
@@ -499,27 +500,27 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
               <Switch value={!!form.isMultiScene} onValueChange={v => handleChange('isMultiScene', v)} />
               <Text style={{ color: '#fff', marginLeft: 12 }}>Used in multiple scenes</Text>
             </View>
-            <View style={styles.stepperNav}>
-              <TouchableOpacity onPress={prevStep} disabled={Number(step) === 0}><Text style={styles.stepperNavText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity onPress={nextStep}><Text style={styles.stepperNavText}>Next</Text></TouchableOpacity>
+            <View style={globalStyles.stepperNav}>
+              <TouchableOpacity onPress={prevStep} disabled={Number(step) === 0}><Text style={globalStyles.stepperNavText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity onPress={nextStep}><Text style={globalStyles.stepperNavText}>Next</Text></TouchableOpacity>
             </View>
           </View>
         );
       case 2:
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Dimensions & Weight</Text>
-            <TextInput style={styles.input} placeholder="Length" placeholderTextColor="#e0e0e0" value={form.length} onChangeText={v => handleChange('length', v)} keyboardType="numeric" />
-            <TextInput style={styles.input} placeholder="Width" placeholderTextColor="#e0e0e0" value={form.width} onChangeText={v => handleChange('width', v)} keyboardType="numeric" />
-            <TextInput style={styles.input} placeholder="Height" placeholderTextColor="#e0e0e0" value={form.height} onChangeText={v => handleChange('height', v)} keyboardType="numeric" />
-            <TextInput style={styles.input} placeholder="Depth" placeholderTextColor="#e0e0e0" value={form.depth} onChangeText={v => handleChange('depth', v)} keyboardType="numeric" />
+          <View style={globalStyles.section}>
+            <Text style={globalStyles.sectionTitle}>Dimensions & Weight</Text>
+            <TextInput style={globalStyles.input} placeholder="Length" placeholderTextColor="#e0e0e0" value={form.length} onChangeText={v => handleChange('length', v)} keyboardType="numeric" />
+            <TextInput style={globalStyles.input} placeholder="Width" placeholderTextColor="#e0e0e0" value={form.width} onChangeText={v => handleChange('width', v)} keyboardType="numeric" />
+            <TextInput style={globalStyles.input} placeholder="Height" placeholderTextColor="#e0e0e0" value={form.height} onChangeText={v => handleChange('height', v)} keyboardType="numeric" />
+            <TextInput style={globalStyles.input} placeholder="Depth" placeholderTextColor="#e0e0e0" value={form.depth} onChangeText={v => handleChange('depth', v)} keyboardType="numeric" />
             {/* Unit Picker with border */}
-            <View style={styles.input}>
+            <View style={globalStyles.input}>
               <Picker
                 selectedValue={form.unit}
                 onValueChange={v => handleChange('unit', v)}
                 dropdownIconColor="#c084fc"
-                style={styles.picker}
+                style={globalStyles.picker}
               >
                 <Picker.Item label="cm" value="cm" />
                 <Picker.Item label="m" value="m" />
@@ -527,14 +528,14 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 <Picker.Item label="ft" value="ft" />
               </Picker>
             </View>
-            <TextInput style={styles.input} placeholder="Weight" placeholderTextColor="#e0e0e0" value={form.weight} onChangeText={v => handleChange('weight', v)} keyboardType="numeric" />
+            <TextInput style={globalStyles.input} placeholder="Weight" placeholderTextColor="#e0e0e0" value={form.weight} onChangeText={v => handleChange('weight', v)} keyboardType="numeric" />
             {/* Weight Unit Picker with border */}
-            <View style={styles.input}>
+            <View style={globalStyles.input}>
               <Picker
                 selectedValue={form.weightUnit}
                 onValueChange={v => handleChange('weightUnit', v)}
                 dropdownIconColor="#c084fc"
-                style={styles.picker}
+                style={globalStyles.picker}
               >
                 <Picker.Item label="kg" value="kg" />
                 <Picker.Item label="g" value="g" />
@@ -542,18 +543,18 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 <Picker.Item label="oz" value="oz" />
               </Picker>
             </View>
-            <View style={styles.stepperNav}>
-              <TouchableOpacity onPress={prevStep}><Text style={styles.stepperNavText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity onPress={nextStep}><Text style={styles.stepperNavText}>Next</Text></TouchableOpacity>
+            <View style={globalStyles.stepperNav}>
+              <TouchableOpacity onPress={prevStep}><Text style={globalStyles.stepperNavText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity onPress={nextStep}><Text style={globalStyles.stepperNavText}>Next</Text></TouchableOpacity>
             </View>
           </View>
         );
       case 3:
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Sourced From</Text>
+          <View style={globalStyles.section}>
+            <Text style={globalStyles.sectionTitle}>Sourced From</Text>
             {/* Source Type Dropdown */}
-            <View style={styles.input}>
+            <View style={globalStyles.input}>
               <Picker
                 selectedValue={form.source}
                 onValueChange={v => {
@@ -567,7 +568,7 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                   handleChange('rentalDueDate', '');
                 }}
                 dropdownIconColor="#c084fc"
-                style={styles.picker}
+                style={globalStyles.picker}
               >
                 <Picker.Item label="Select Source Type*" value="" />
                 <Picker.Item label="Bought" value="bought" />
@@ -580,19 +581,19 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
             {/* Conditional fields based on source */}
             {form.source === 'bought' && (
               <>
-                <TextInput style={styles.input} placeholder="Supplier" placeholderTextColor="#e0e0e0" value={form.sourceDetails} onChangeText={v => handleChange('sourceDetails', v)} />
-                <TextInput style={styles.input} placeholder="Purchase URL" placeholderTextColor="#e0e0e0" value={form.purchaseUrl} onChangeText={v => handleChange('purchaseUrl', v)} />
-                <TextInput style={styles.input} placeholder="Unit Price" placeholderTextColor="#e0e0e0" value={form.price} onChangeText={v => handleChange('price', v)} keyboardType="numeric" />
+                <TextInput style={globalStyles.input} placeholder="Supplier" placeholderTextColor="#e0e0e0" value={form.sourceDetails} onChangeText={v => handleChange('sourceDetails', v)} />
+                <TextInput style={globalStyles.input} placeholder="Purchase URL" placeholderTextColor="#e0e0e0" value={form.purchaseUrl} onChangeText={v => handleChange('purchaseUrl', v)} />
+                <TextInput style={globalStyles.input} placeholder="Unit Price" placeholderTextColor="#e0e0e0" value={form.price} onChangeText={v => handleChange('price', v)} keyboardType="numeric" />
               </>
             )}
             {form.source === 'rented' && (
               <>
-                <TextInput style={styles.input} placeholder="Rental Company Name" placeholderTextColor="#e0e0e0" value={form.rentalSource} onChangeText={v => handleChange('rentalSource', v)} />
-                <TextInput style={styles.input} placeholder="Order Reference Number" placeholderTextColor="#e0e0e0" value={form.rentalReferenceNumber} onChangeText={v => handleChange('rentalReferenceNumber', v)} />
+                <TextInput style={globalStyles.input} placeholder="Rental Company Name" placeholderTextColor="#e0e0e0" value={form.rentalSource} onChangeText={v => handleChange('rentalSource', v)} />
+                <TextInput style={globalStyles.input} placeholder="Order Reference Number" placeholderTextColor="#e0e0e0" value={form.rentalReferenceNumber} onChangeText={v => handleChange('rentalReferenceNumber', v)} />
                 {/* Date Picker for Return Date */}
                 <TouchableOpacity onPress={() => { /* Placeholder for future date picker */ }}>
                   <TextInput
-                    style={styles.input}
+                    style={globalStyles.input}
                     placeholder="Return Date (YYYY-MM-DD)"
                     placeholderTextColor="#e0e0e0"
                     value={form.rentalDueDate}
@@ -602,27 +603,27 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
               </>
             )}
             {form.source === 'made' && (
-              <TextInput style={styles.input} placeholder="Maker Name" placeholderTextColor="#e0e0e0" value={form.sourceDetails} onChangeText={v => handleChange('sourceDetails', v)} />
+              <TextInput style={globalStyles.input} placeholder="Maker Name" placeholderTextColor="#e0e0e0" value={form.sourceDetails} onChangeText={v => handleChange('sourceDetails', v)} />
             )}
             {form.source === 'borrowed' && (
-              <TextInput style={styles.input} placeholder="Borrowed From" placeholderTextColor="#e0e0e0" value={form.sourceDetails} onChangeText={v => handleChange('sourceDetails', v)} />
+              <TextInput style={globalStyles.input} placeholder="Borrowed From" placeholderTextColor="#e0e0e0" value={form.sourceDetails} onChangeText={v => handleChange('sourceDetails', v)} />
             )}
             {form.source === 'from_storage' && (
               <Text style={{ color: '#fff', marginBottom: 16 }}>Source set as "From Storage".</Text>
             )}
-            <View style={styles.stepperNav}>
-              <TouchableOpacity onPress={prevStep}><Text style={styles.stepperNavText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity onPress={nextStep}><Text style={styles.stepperNavText}>Next</Text></TouchableOpacity>
+            <View style={globalStyles.stepperNav}>
+              <TouchableOpacity onPress={prevStep}><Text style={globalStyles.stepperNavText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity onPress={nextStep}><Text style={globalStyles.stepperNavText}>Next</Text></TouchableOpacity>
             </View>
           </View>
         );
       case 4:
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Usage & Handling</Text>
+          <View style={globalStyles.section}>
+            <Text style={globalStyles.sectionTitle}>Usage & Handling</Text>
             {/* Usage Instructions Text Area */}
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[globalStyles.input, globalStyles.textArea]}
               placeholder="Usage Instructions"
               placeholderTextColor="#e0e0e0"
               value={form.usageInstructions}
@@ -632,7 +633,7 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
             />
             {/* Media Buttons */}
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-              <TouchableOpacity style={[styles.addButton, { flex: 1 }]} onPress={async () => {
+              <TouchableOpacity style={[globalStyles.addButton, { flex: 1 }]} onPress={async () => {
                 const result = await ImagePicker.launchImageLibraryAsync({
                   mediaTypes: ImagePicker.MediaTypeOptions.Images,
                   allowsEditing: true,
@@ -643,20 +644,20 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 }
               }}>
                 <MaterialIcons name="photo-library" size={24} color="white" />
-                <Text style={styles.buttonText}>Add Image</Text>
+                <Text style={globalStyles.buttonText}>Add Image</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.addButton, { flex: 1 }]} onPress={handlePickUsageVideo}>
+              <TouchableOpacity style={[globalStyles.addButton, { flex: 1 }]} onPress={handlePickUsageVideo}>
                 <MaterialIcons name="videocam" size={24} color="white" />
-                <Text style={styles.buttonText}>Add Usage Video</Text>
+                <Text style={globalStyles.buttonText}>Add Usage Video</Text>
               </TouchableOpacity>
             </View>
             {/* Show usage images */}
             {form.usageImages && form.usageImages.length > 0 && (
-              <View style={styles.imageGrid}>
+              <View style={globalStyles.imageGrid}>
                 {form.usageImages.map((uri, idx) => (
-                  <View key={idx} style={styles.imageContainer}>
-                    <Image source={{ uri }} style={styles.image} />
-                    <TouchableOpacity style={styles.removeButton} onPress={() => handleChange('usageImages', form.usageImages.filter((_, i) => i !== idx))}>
+                  <View key={idx} style={globalStyles.imageContainer}>
+                    <Image source={{ uri }} style={globalStyles.image} />
+                    <TouchableOpacity style={globalStyles.removeButton} onPress={() => handleChange('usageImages', form.usageImages.filter((_, i) => i !== idx))}>
                       <MaterialIcons name="close" size={20} color="white" />
                     </TouchableOpacity>
                   </View>
@@ -665,17 +666,17 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
             )}
             {/* Show usage video thumbnail */}
             {form.usageVideo && (
-              <View style={styles.imagePreviewContainer}>
-                <View style={styles.imageContainer}>
+              <View style={globalStyles.imagePreviewContainer}>
+                <View style={globalStyles.imageContainer}>
                   <Text style={{ color: '#fff', marginBottom: 4 }}>Video selected: {form.usageVideo}</Text>
-                  <TouchableOpacity style={styles.removeButton} onPress={() => handleChange('usageVideo', '')}>
+                  <TouchableOpacity style={globalStyles.removeButton} onPress={() => handleChange('usageVideo', '')}>
                     <MaterialIcons name="close" size={20} color="white" />
                   </TouchableOpacity>
                 </View>
               </View>
             )}
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[globalStyles.input, globalStyles.textArea]}
               placeholder="Maintenance Notes"
               placeholderTextColor="#e0e0e0"
               value={form.maintenanceNotes}
@@ -684,7 +685,7 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
               numberOfLines={4}
             />
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[globalStyles.input, globalStyles.textArea]}
               placeholder="Safety Notes"
               placeholderTextColor="#e0e0e0"
               value={form.safetyNotes}
@@ -711,26 +712,26 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 <Text style={{ color: '#fff', marginLeft: 12 }}>Has battery</Text>
               </View>
             </View>
-            <View style={styles.stepperNav}>
-              <TouchableOpacity onPress={prevStep}><Text style={styles.stepperNavText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity onPress={nextStep}><Text style={styles.stepperNavText}>Next</Text></TouchableOpacity>
+            <View style={globalStyles.stepperNav}>
+              <TouchableOpacity onPress={prevStep}><Text style={globalStyles.stepperNavText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity onPress={nextStep}><Text style={globalStyles.stepperNavText}>Next</Text></TouchableOpacity>
             </View>
           </View>
         );
       case 5:
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Status</Text>
+          <View style={globalStyles.section}>
+            <Text style={globalStyles.sectionTitle}>Status</Text>
             {/* Status Dropdown with label and help */}
             <Text style={{ color: '#fff', fontSize: 14, marginBottom: 4, fontWeight: '500' }}>
               Status <MaterialIcons name="help-outline" size={16} color="#c084fc" onPress={() => Alert.alert('Status', 'Select the current status of the prop.')} />
             </Text>
-            <View style={styles.input}>
+            <View style={globalStyles.input}>
               <Picker
                 selectedValue={form.status}
                 onValueChange={v => handleChange('status', v)}
                 dropdownIconColor="#c084fc"
-                style={styles.picker}
+                style={globalStyles.picker}
               >
                 <Picker.Item label="Select Status*" value="" />
                 <Picker.Item label="Part of the Show" value="confirmed" />
@@ -748,8 +749,8 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
             {/* Dynamic fields based on status */}
             {form.status === 'with_props' && (
               <>
-                <TextInput style={styles.input} placeholder="Notes (required)" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
-                <TextInput style={styles.input} placeholder="Due back date/time (required)" value={form.dueBackDate} onChangeText={v => handleChange('dueBackDate', v)} />
+                <TextInput style={globalStyles.input} placeholder="Notes (required)" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
+                <TextInput style={globalStyles.input} placeholder="Due back date/time (required)" value={form.dueBackDate} onChangeText={v => handleChange('dueBackDate', v)} />
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                   <Text style={{ color: '#fff', marginRight: 8 }}>Notify Props Dept</Text>
                   <Switch value={!!form.notifyPropsDept} onValueChange={v => handleChange('notifyPropsDept', v)} />
@@ -758,24 +759,24 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
             )}
             {form.status === 'with_maker' && (
               <>
-                <TextInput style={styles.input} placeholder="Maker Name (required)" value={form.makerName} onChangeText={v => handleChange('makerName', v)} />
-                <TextInput style={styles.input} placeholder="Due date (required)" value={form.dueBackDate} onChangeText={v => handleChange('dueBackDate', v)} />
+                <TextInput style={globalStyles.input} placeholder="Maker Name (required)" value={form.makerName} onChangeText={v => handleChange('makerName', v)} />
+                <TextInput style={globalStyles.input} placeholder="Due date (required)" value={form.dueBackDate} onChangeText={v => handleChange('dueBackDate', v)} />
               </>
             )}
             {(form.status === 'damaged_awaiting_repair' || form.status === 'damaged_awaiting_replacement') && (
               <>
-                <TextInput style={styles.input} placeholder="Note of damage (required)" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
-                <TouchableOpacity style={styles.addButton} onPress={handlePickDamagePhoto}>
+                <TextInput style={globalStyles.input} placeholder="Note of damage (required)" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
+                <TouchableOpacity style={globalStyles.addButton} onPress={handlePickDamagePhoto}>
                   <MaterialIcons name="photo-library" size={24} color="white" />
-                  <Text style={styles.buttonText}>Add Damage Photo</Text>
+                  <Text style={globalStyles.buttonText}>Add Damage Photo</Text>
                 </TouchableOpacity>
-                <View style={styles.imageGrid}>
+                <View style={globalStyles.imageGrid}>
                   {(() => {
                     const damagePhotos = form.damagePhoto ?? [];
                     return damagePhotos.map((uri, idx) => (
-                      <View key={idx} style={styles.imageContainer}>
-                        <Image source={{ uri }} style={styles.image} />
-                        <TouchableOpacity style={styles.removeButton} onPress={() => handleChange('damagePhoto', damagePhotos.filter((_, i) => i !== idx))}>
+                      <View key={idx} style={globalStyles.imageContainer}>
+                        <Image source={{ uri }} style={globalStyles.image} />
+                        <TouchableOpacity style={globalStyles.removeButton} onPress={() => handleChange('damagePhoto', damagePhotos.filter((_, i) => i !== idx))}>
                           <MaterialIcons name="close" size={20} color="white" />
                         </TouchableOpacity>
                       </View>
@@ -796,19 +797,19 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
             )}
             {form.status === 'on_delivery' && (
               <>
-                <TextInput style={styles.input} placeholder="Delivery date/time (required)" value={form.deliveryDate} onChangeText={v => handleChange('deliveryDate', v)} />
-                <TextInput style={styles.input} placeholder="Venue (required)" value={form.deliveryVenue} onChangeText={v => handleChange('deliveryVenue', v)} />
+                <TextInput style={globalStyles.input} placeholder="Delivery date/time (required)" value={form.deliveryDate} onChangeText={v => handleChange('deliveryDate', v)} />
+                <TextInput style={globalStyles.input} placeholder="Venue (required)" value={form.deliveryVenue} onChangeText={v => handleChange('deliveryVenue', v)} />
               </>
             )}
             {form.status === 'under_review' && (
-              <TextInput style={styles.input} placeholder="Notes (required)" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
+              <TextInput style={globalStyles.input} placeholder="Notes (required)" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
             )}
             {form.status === 'backup' && (
-              <TextInput style={styles.input} placeholder="Who has this? (required)" value={form.whoHasBackup} onChangeText={v => handleChange('whoHasBackup', v)} />
+              <TextInput style={globalStyles.input} placeholder="Who has this? (required)" value={form.whoHasBackup} onChangeText={v => handleChange('whoHasBackup', v)} />
             )}
             {form.status === 'cut' && (
               <>
-                <TextInput style={styles.input} placeholder="Note why it was cut (required)" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
+                <TextInput style={globalStyles.input} placeholder="Note why it was cut (required)" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                   <Text style={{ color: '#fff', marginRight: 8 }}>Has been disposed of</Text>
                   <Switch value={!!form.disposed} onValueChange={v => handleChange('disposed', v)} />
@@ -831,24 +832,24 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 <Text style={{ color: '#fff', fontSize: 14, marginBottom: 4, fontWeight: '500' }}>
                   Status Notes <MaterialIcons name="help-outline" size={16} color="#c084fc" onPress={() => Alert.alert('Status Notes', 'Enter any notes related to the current status of the prop.')} />
                 </Text>
-            <TextInput style={styles.input} placeholder="Status Notes" placeholderTextColor="#e0e0e0" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
+            <TextInput style={globalStyles.input} placeholder="Status Notes" placeholderTextColor="#e0e0e0" value={form.statusNotes} onChangeText={v => handleChange('statusNotes', v)} />
               </>
             )}
-            <View style={styles.stepperNav}>
-              <TouchableOpacity onPress={prevStep}><Text style={styles.stepperNavText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity onPress={nextStep}><Text style={styles.stepperNavText}>Next</Text></TouchableOpacity>
+            <View style={globalStyles.stepperNav}>
+              <TouchableOpacity onPress={prevStep}><Text style={globalStyles.stepperNavText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity onPress={nextStep}><Text style={globalStyles.stepperNavText}>Next</Text></TouchableOpacity>
             </View>
           </View>
         );
       case 6:
         return (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Location</Text>
+          <View style={globalStyles.section}>
+            <Text style={globalStyles.sectionTitle}>Location</Text>
             {/* Current Location with label and help */}
             <Text style={{ color: '#fff', fontSize: 14, marginBottom: 4, fontWeight: '500' }}>
               Current Location <MaterialIcons name="help-outline" size={16} color="#c084fc" onPress={() => Alert.alert('Current Location', 'Select the current location of the prop (e.g., Backstage Left, On Stage).')} />
             </Text>
-            <View style={styles.input}>
+            <View style={globalStyles.input}>
               <Picker
                 selectedValue={form.currentLocation && !locationOptions.find(opt => opt.value === form.currentLocation) ? 'custom' : form.currentLocation}
                 onValueChange={v => {
@@ -860,7 +861,7 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                   }
                 }}
                 dropdownIconColor="#c084fc"
-                style={styles.picker}
+                style={globalStyles.picker}
               >
                 <Picker.Item label="Select Location*" value="" />
                 {locationOptions.map(opt => (
@@ -870,7 +871,7 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
             </View>
             {form.currentLocation === 'custom' && (
               <TextInput
-                style={styles.input}
+                style={globalStyles.input}
                 placeholder="Enter custom location"
                 placeholderTextColor="#e0e0e0"
                 value={customLocation}
@@ -880,15 +881,15 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
                 }}
               />
             )}
-            <View style={styles.stepperNav}>
-              <TouchableOpacity onPress={prevStep}><Text style={styles.stepperNavText}>Back</Text></TouchableOpacity>
-              <TouchableOpacity onPress={nextStep}><Text style={styles.stepperNavText}>Next</Text></TouchableOpacity>
+            <View style={globalStyles.stepperNav}>
+              <TouchableOpacity onPress={prevStep}><Text style={globalStyles.stepperNavText}>Back</Text></TouchableOpacity>
+              <TouchableOpacity onPress={nextStep}><Text style={globalStyles.stepperNavText}>Next</Text></TouchableOpacity>
             </View>
           </View>
         );
       default:
         return (
-          <View style={styles.section}><Text>Step not implemented yet.</Text></View>
+          <View style={globalStyles.section}><Text>Step not implemented yet.</Text></View>
         );
     }
   };
@@ -910,14 +911,14 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
       end={{ x: 1, y: 1 }}
       style={{ flex: 1 }}
     >
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={globalStyles.container}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Stack.Screen options={{ title: initialValues?.name ? 'Edit Prop' : 'Create Prop' }} />
-          <ScrollView contentContainerStyle={styles.scrollContent}>
+          <ScrollView contentContainerStyle={globalStyles.scrollContent}>
             {/* Stepper header */}
-            <View style={styles.stepperHeader}>
+            <View style={globalStyles.stepperHeader}>
               {steps.map((label, idx) => (
-                <View key={label} style={[styles.stepperDot, step === idx && styles.stepperDotActive]} />
+                <View key={label} style={[globalStyles.stepperDot, step === idx && globalStyles.stepperDotActive]} />
               ))}
             </View>
             <View {...panResponder.panHandlers}>
@@ -925,12 +926,12 @@ export default function PropFormScreen({ initialValues, onSave, onSaveAndAddAnot
             </View>
           </ScrollView>
           {/* Sticky Save Bar */}
-          <View style={styles.saveBar}>
-            <TouchableOpacity style={styles.saveButton} onPress={() => handleSave(false)} disabled={saving}>
-              <Text style={styles.saveButtonText}>Save & Finish</Text>
+          <View style={globalStyles.saveBar}>
+            <TouchableOpacity style={globalStyles.saveButton} onPress={() => handleSave(false)} disabled={saving}>
+              <Text style={globalStyles.saveButtonText}>Save & Finish</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.saveButton} onPress={() => handleSave(true)} disabled={saving}>
-              <Text style={styles.saveButtonText}>Save & Add Another</Text>
+            <TouchableOpacity style={globalStyles.saveButton} onPress={() => handleSave(true)} disabled={saving}>
+              <Text style={globalStyles.saveButtonText}>Save & Add Another</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

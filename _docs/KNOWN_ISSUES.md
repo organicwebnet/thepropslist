@@ -554,3 +554,8 @@ And make sure all shows documents have the correct ownerId field set to the user
 - **Impact:** This is a harmless deprecation warning. The app continues to work normally.
 - **Suppression:** The warning is now suppressed in development using `LogBox.ignoreLogs` in `App.tsx`.
 - **Resolution:** The warning will disappear once the library maintainers update their code. No action is needed from users. 
+
+## New Statuses in Prop Lifecycle
+
+- **on_order**: Prop has been ordered but not yet received. Includes estimated delivery date, courier, and tracking number.
+- **to_buy**: Prop or material needs to be purchased. Appears in the shopping list. 

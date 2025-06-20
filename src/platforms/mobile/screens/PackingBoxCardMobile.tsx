@@ -4,6 +4,7 @@ import { PackingContainer } from '../../../shared/services/inventory/packListSer
 import { PrintLabelButton } from '../../../shared/components/PropCard/PrintLabelButton.tsx';
 import { PackingBoxCardBaseProps, PackingBoxState, generateContainerUrl, calculateIsHeavy } from '../../../shared/types/packing.ts';
 import LinearGradient from 'react-native-linear-gradient';
+import { globalStyles } from '../../../styles/globalStyles';
 
 export const PackingBoxCardMobile: React.FC<PackingBoxCardBaseProps> = ({
   container,
@@ -60,7 +61,7 @@ export const PackingBoxCardMobile: React.FC<PackingBoxCardBaseProps> = ({
       locations={[0, 0.2, 0.5, 0.8, 1]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={{ borderRadius: 8, marginVertical: 8, marginHorizontal: 16 }}
+      style={[globalStyles.borderRadius8, globalStyles.margin8]}
     >
       <View style={styles.container}>
         <View style={styles.header}>

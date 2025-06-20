@@ -4,7 +4,7 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Building } from 'lucide-react-native';
 
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../../src/styles/theme.ts';
+import { lightTheme, darkTheme } from '../../src/styles/theme';
 import { useLocations } from '../../src/hooks/useLocations.ts';
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import StyledText from '../../src/components/StyledText.tsx';

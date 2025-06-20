@@ -6,7 +6,7 @@ import type { Show } from '../../src/shared/services/firebase/types.ts';
 import { Ionicons } from '@expo/vector-icons';
 import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme.ts';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme';
 import { useAuth } from '../../src/contexts/AuthContext.tsx';
 import LinearGradient from 'react-native-linear-gradient';
 
