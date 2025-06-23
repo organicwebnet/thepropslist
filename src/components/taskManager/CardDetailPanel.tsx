@@ -21,7 +21,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext'; // NEW
 import { lightTheme, darkTheme } from '../../styles/theme.ts'; // Import theme objects
 
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DatePicker from 'react-native-date-picker';
 // import { Timestamp } from 'firebase/firestore'; // OLD - use string/CustomTimestamp
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker'; // Uncommented
@@ -655,8 +655,8 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
             }}]
         );
     };
-    const onDateChange = (event: DateTimePickerEvent, newDate?: Date) => {
-        setShowDatePicker(Platform.OS === 'ios');
+    const onDateChange = (newDate?: Date) => {
+        setShowDatePicker(false);
         if (newDate) setSelectedDueDate(newDate);
     };
     const handleOpenLabelEditor = () => {
@@ -1240,9 +1240,18 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                 </Modal>
             )}
             {/* Date picker modal still works as before */}
-            {showDatePicker && (
-                <DateTimePicker value={selectedDueDate || new Date()} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={onDateChange}/>
-            )}
+            <Modal visible={showDatePicker} transparent animationType="slide" onRequestClose={() => setShowDatePicker(false)}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
+                        <DatePicker
+                            date={selectedDueDate || new Date()}
+                            mode="date"
+                            onDateChange={date => onDateChange(date)}
+                        />
+                        <Button title="Cancel" onPress={() => setShowDatePicker(false)} />
+                    </View>
+                </View>
+            </Modal>
             {showMentionTypeMenu && renderMentionTypeMenu()}
         </Modal>
     );

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Button, Text, StyleSheet, ActivityIndicator, Platform, TouchableOpacity } from 'react-native';
-import { X, Download, Loader2 } from 'lucide-react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { Prop } from '../shared/types/props.ts';
 import type { Show } from '../types/index.ts';
 import { generatePDF } from '../lib/pdf.ts';
@@ -156,7 +156,7 @@ export function PdfPreview({ props, show, options, onClose }: PdfPreviewProps) {
         <View style={styles.mobileHeader}>
             <Text style={styles.mobileTitle}>{options.title || "PDF Output"}</Text>
             <TouchableOpacity onPress={onClose} style={styles.mobileCloseButton}>
-                <X size={24} color="#EAEAEA" />
+                <Feather name="x" size={24} color="#EAEAEA" />
             </TouchableOpacity>
         </View>
 
@@ -179,7 +179,7 @@ export function PdfPreview({ props, show, options, onClose }: PdfPreviewProps) {
                     Could not load PDF preview. Try downloading.
                 </Text>
                 <TouchableOpacity onPress={handleDownload} style={styles.mobileDownloadButton}>
-                    <Download size={20} color="#FFFFFF" />
+                    <Feather name="download" size={20} color="#FFFFFF" />
                     <Text style={styles.mobileDownloadButtonText}>Open/Share PDF</Text>
                 </TouchableOpacity>
             </View>
@@ -192,7 +192,7 @@ export function PdfPreview({ props, show, options, onClose }: PdfPreviewProps) {
                     PDF generated (URI: {pdfUrl.substring(0,100)}...). Use button to open/share.
                 </Text>
                 <TouchableOpacity onPress={handleDownload} style={styles.mobileDownloadButton}>
-                    <Download size={20} color="#FFFFFF" />
+                    <Feather name="download" size={20} color="#FFFFFF" />
                     <Text style={styles.mobileDownloadButtonText}>Open/Share PDF</Text>
                 </TouchableOpacity>
             </View>
@@ -215,7 +215,7 @@ export function PdfPreview({ props, show, options, onClose }: PdfPreviewProps) {
               className="text-gray-400 hover:text-gray-200 p-2"
               aria-label="Close"
             >
-              <X className="h-6 w-6" />
+              <Feather name="x" className="h-6 w-6" />
             </button>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -225,10 +225,10 @@ export function PdfPreview({ props, show, options, onClose }: PdfPreviewProps) {
               className="flex-1 sm:flex-none inline-flex items-center justify-center px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors disabled:opacity-50"
             >
               {loading && !error ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <MaterialCommunityIcons name="loading" className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <Download className="h-4 w-4 mr-2" />
+                  <Feather name="download" className="h-4 w-4 mr-2" />
                   Download PDF
                 </>
               )}
@@ -240,7 +240,7 @@ export function PdfPreview({ props, show, options, onClose }: PdfPreviewProps) {
           {loading ? (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
-                <Loader2 className="h-8 w-8 text-primary animate-spin mx-auto" />
+                <MaterialCommunityIcons name="loading" className="h-8 w-8 text-primary animate-spin mx-auto" />
                 <p className="mt-2 text-gray-400">Generating PDF preview...</p>
               </div>
             </div>

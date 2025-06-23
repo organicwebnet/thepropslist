@@ -1,6 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Home, List, Settings, BarChart2, Search } from 'lucide-react-native';
 
 interface TabNavigationProps {
   activeTab: 'props' | 'shows' | 'packing';

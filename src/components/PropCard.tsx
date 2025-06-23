@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { TouchableOpacity, View, Text, Image, StyleSheet, Platform } from 'react-native';
 import { Prop } from '../shared/types/props.ts';
-import { Clock, HandCoins, Edit, Trash } from 'lucide-react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 // Temporarily comment out unused import to suppress linter error
 // import defaultImage from '../assets/images/prop-placeholder.png'; 
 import { PropLifecycleStatus } from '../types/lifecycle.ts';
 import { Link } from 'expo-router';
 import { formatDistanceToNow } from 'date-fns';
-import { Edit3, Trash2, Link2, Tag, Calendar, Layers, Package, ImageIcon, DollarSign, Hash, MapPin, Info } from 'lucide-react-native';
 import { HelpTooltip } from './HelpTooltip.tsx';
 
 interface PropCardProps {
@@ -30,13 +29,13 @@ export const PropCard: React.FC<PropCardProps> = ({
     if (prop.source === 'rented') {
       return (
         <View style={styles.sourceIconContainer}>
-          <Clock size={16} color="#EAB308" />
+          <Feather name="clock" size={16} color="#EAB308" />
         </View>
       );
     } else if (prop.source === 'borrowed') {
       return (
         <View style={styles.sourceIconContainer}>
-          <HandCoins size={16} color="#3B82F6" />
+          <MaterialCommunityIcons name="hand-coin" size={16} color="#3B82F6" />
         </View>
       );
     }
@@ -126,12 +125,12 @@ export const PropCard: React.FC<PropCardProps> = ({
       <View style={styles.actions}>
         {onEdit && (
           <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
-            <Edit size={20} color="#9CA3AF" />
+            <Feather name="edit" size={20} color="#9CA3AF" />
           </TouchableOpacity>
         )}
         {onDelete && (
           <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
-            <Trash size={20} color="#9CA3AF" />
+            <Feather name="trash" size={20} color="#9CA3AF" />
           </TouchableOpacity>
         )}
       </View>

@@ -4,8 +4,8 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '../../../src/contexts/ThemeContext';
-import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme';
-import { usePacking } from '../../src/hooks/usePacking';
+import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../../src/styles/theme';
+import { usePacking } from '../../../src/hooks/usePacking';
 
 export default function CreateBoxScreen() {
   const router = useRouter();

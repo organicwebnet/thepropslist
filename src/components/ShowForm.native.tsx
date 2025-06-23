@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, ScrollView, Switch, Alert, Platform, TouchableOpacity, Image, PanResponder, Modal } from 'react-native';
-import { default as DateTimePicker, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DatePicker from 'react-native-date-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index.ts';
 import { Address } from '../shared/types/address.ts';
 import { Timestamp } from 'firebase/firestore';
 import { CustomTimestamp } from '../shared/services/firebase/types';
-import { PlusCircle, MinusCircle, HelpCircle, HomeIcon, CalendarIcon, BoxIcon, PackageIcon, UserIcon } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 
 interface ShowFormNativeProps {
   mode: 'create' | 'edit';
@@ -731,32 +731,23 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
   };
 
   // Date picker change handlers
-  const onStartDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowStartDatePicker(Platform.OS === 'ios'); // Keep open on iOS until dismissal
-    if (selectedDate) {
-        setStartDate(selectedDate);
-        // Update formData with the formatted string immediately
-        handleInputChange('startDate', formatDate(selectedDate)); 
-    }
+  const onStartDateChange = (date: Date) => {
+    setShowStartDatePicker(false);
+    setStartDate(date);
+    handleInputChange('startDate', formatDate(date));
   };
 
-  const onEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowEndDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-        setEndDate(selectedDate);
-        handleInputChange('endDate', formatDate(selectedDate));
-    }
+  const onEndDateChange = (date: Date) => {
+    setShowEndDatePicker(false);
+    setEndDate(date);
+    handleInputChange('endDate', formatDate(date));
   };
 
   // Venue Date picker change handler
-  const onVenueDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    const visiblePickerInfo = venueDatePickerVisible;
-    // Hide picker: on iOS, this might be handled by a dismiss button, for Android it's immediate after selection.
-    // For simplicity, we'll hide it. If iOS needs manual dismissal, this might need adjustment or a confirm button.
+  const onVenueDateChange = (date: Date) => {
     setVenueDatePickerVisible(null); 
-
-    if (selectedDate && visiblePickerInfo) {
-        handleVenueChange(visiblePickerInfo.index, visiblePickerInfo.field, formatDate(selectedDate));
+    if (date && venueDatePickerVisible) {
+        handleVenueChange(venueDatePickerVisible.index, venueDatePickerVisible.field, formatDate(date));
     }
   };
 
@@ -905,12 +896,12 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
   const renderStep = () => {
     switch (step) {
       case 0:
-  return (
+        return (
           <View style={sectionCardStyle}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Basic Info</Text>
               <TouchableOpacity onPress={() => Alert.alert('Basic Info', 'Enter the show name, description, and other basic details.')}> 
-                <HelpCircle size={20} color="#a78bfa" />
+                <Feather name="help-circle" size={20} color="#a78bfa" style={{ marginLeft: 8 }} />
               </TouchableOpacity>
             </View>
             {/* Name, Description, Logo, Production Company, etc. */}
@@ -986,7 +977,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Important Dates</Text>
               <TouchableOpacity onPress={() => Alert.alert('Important Dates', 'Enter the start of tech week, first preview, and press night.')}> 
-                <HelpCircle size={20} color="#a78bfa" />
+                <Feather name="help-circle" size={20} color="#a78bfa" style={{ marginLeft: 8 }} />
               </TouchableOpacity>
             </View>
             
@@ -996,16 +987,18 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                 <Text style={styles.dateText}>{formData.techWeekStart ? formatDate(formData.techWeekStart) : 'Select Date'}</Text>
               </TouchableOpacity>
               {showStartDatePicker && (
-                <DateTimePicker
-                  testID="techWeekStartPicker"
-                  value={formData.techWeekStart ? parseDateString(formData.techWeekStart) : new Date()}
+                <Modal visible={showStartDatePicker} transparent animationType="slide" onRequestClose={() => setShowStartDatePicker(false)}>
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
+                      <DatePicker
+                        date={formData.techWeekStart ? parseDateString(formData.techWeekStart) : new Date()}
                   mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowStartDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) handleInputChange('techWeekStart', formatDate(selectedDate));
-                  }}
-                />
+                        onDateChange={date => { setShowStartDatePicker(false); onStartDateChange(date); }}
+                      />
+                      <Button title="Cancel" onPress={() => setShowStartDatePicker(false)} />
+                    </View>
+                  </View>
+                </Modal>
               )}
       </FormField>
             {/* First Preview */}
@@ -1014,16 +1007,18 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                 <Text style={styles.dateText}>{formData.firstPreview ? formatDate(formData.firstPreview) : 'Select Date'}</Text>
               </TouchableOpacity>
               {showEndDatePicker && (
-                <DateTimePicker
-                  testID="firstPreviewPicker"
-                  value={formData.firstPreview ? parseDateString(formData.firstPreview) : new Date()}
+                <Modal visible={showEndDatePicker} transparent animationType="slide" onRequestClose={() => setShowEndDatePicker(false)}>
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
+                      <DatePicker
+                        date={formData.firstPreview ? parseDateString(formData.firstPreview) : new Date()}
                   mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowEndDatePicker(Platform.OS === 'ios');
-                    if (selectedDate) handleInputChange('firstPreview', formatDate(selectedDate));
-                  }}
-                />
+                        onDateChange={date => { setShowEndDatePicker(false); onEndDateChange(date); }}
+                      />
+                      <Button title="Cancel" onPress={() => setShowEndDatePicker(false)} />
+                    </View>
+                  </View>
+                </Modal>
               )}
       </FormField>
             {/* Press Night */}
@@ -1032,17 +1027,18 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                 <Text style={styles.dateText}>{formData.pressNight ? formatDate(formData.pressNight) : 'Select Date'}</Text>
               </TouchableOpacity>
               {showPressNightPicker && (
-                <DateTimePicker
-                  testID="pressNightPicker"
-                  value={formData.pressNight ? parseDateString(formData.pressNight) : new Date()}
+                <Modal visible={showPressNightPicker} transparent animationType="slide" onRequestClose={() => setShowPressNightPicker(false)}>
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
+                      <DatePicker
+                        date={formData.pressNight ? parseDateString(formData.pressNight) : new Date()}
                   mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowPressNightPicker(Platform.OS === 'ios');
-                    if (selectedDate) handleInputChange('pressNight', formatDate(selectedDate));
-                    if (Platform.OS !== 'ios') setShowPressNightPicker(false);
-                  }}
-                />
+                        onDateChange={date => { setShowPressNightPicker(false); handleInputChange('pressNight', formatDate(date)); }}
+                      />
+                      <Button title="Cancel" onPress={() => setShowPressNightPicker(false)} />
+                    </View>
+                  </View>
+                </Modal>
               )}
       </FormField>
             {(formData.additionalDates || []).map((item, idx) => (
@@ -1066,16 +1062,18 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                     <Text style={styles.dateText}>{item.date ? formatDate(item.date) : 'Select Date'}</Text>
                   </TouchableOpacity>
                   {openAdditionalDateIndex === idx && (
-                    <DateTimePicker
-                      testID={`additionalDatePicker-${idx}`}
-                      value={item.date ? parseDateString(item.date) : new Date()}
+                    <Modal visible={openAdditionalDateIndex === idx} transparent animationType="slide" onRequestClose={() => setOpenAdditionalDateIndex(null)}>
+                      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
+                          <DatePicker
+                            date={item.date ? parseDateString(item.date) : new Date()}
                       mode="date"
-                      display="default"
-                      onChange={(event, selectedDate) => {
-                        setOpenAdditionalDateIndex(null);
-                        if (selectedDate) handleUpdateAdditionalDate(idx, 'date', formatDate(selectedDate));
-                      }}
+                            onDateChange={date => { setOpenAdditionalDateIndex(null); handleUpdateAdditionalDate(idx, 'date', formatDate(date)); }}
                     />
+                          <Button title="Cancel" onPress={() => setOpenAdditionalDateIndex(null)} />
+                        </View>
+                      </View>
+                    </Modal>
                   )}
       </FormField>
               </View>
@@ -1102,7 +1100,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Acts & Scenes</Text>
               <TouchableOpacity onPress={() => Alert.alert('Acts & Scenes', 'Enter the acts and scenes for the show.')}> 
-                <HelpCircle size={20} color="#a78bfa" />
+                <Feather name="help-circle" size={20} color="#a78bfa" style={{ marginLeft: 8 }} />
               </TouchableOpacity>
             </View>
             {/* Acts, Scenes, Add/Remove, etc. */}
@@ -1130,19 +1128,19 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
       </FormField>
                     { (act.scenes || []).length > 1 &&
                       <TouchableOpacity onPress={() => removeScene(actIndex, sceneIndex)} style={styles.removeButton}>
-                <MinusCircle size={20} color="#FF3B30" />
+                <Feather name="minus-circle" size={20} color="#ef4444" />
               </TouchableOpacity>
                     }
             </View>
                 ))}
                 <TouchableOpacity onPress={() => addScene(actIndex)} style={styles.addButton}>
-                  <PlusCircle size={20} color="#007AFF" />
+                  <Feather name="plus-circle" size={22} color="#34d399" />
                   <Text style={styles.addButtonText}>Add Scene</Text>
                 </TouchableOpacity>
           </View>
         ))}
             <TouchableOpacity onPress={addAct} style={styles.addButton}>
-          <PlusCircle size={20} color="#007AFF" />
+          <Feather name="plus-circle" size={22} color="#34d399" />
               <Text style={styles.addButtonText}>Add Act</Text>
         </TouchableOpacity>
             </View>
@@ -1153,7 +1151,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Venues</Text>
               <TouchableOpacity onPress={() => Alert.alert('Venues', 'Enter the venues for the show.')}> 
-                <HelpCircle size={20} color="#a78bfa" />
+                <Feather name="help-circle" size={20} color="#a78bfa" style={{ marginLeft: 8 }} />
             </TouchableOpacity>
           </View>
             {(formData.venues || []).map((venue, venueIndex) => (
@@ -1187,16 +1185,18 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                     <Text style={styles.dateText}>{venue.startDate ? formatDate(venue.startDate) : 'Select Start Date'}</Text>
         </TouchableOpacity>
                   {venueDatePickerVisible && venueDatePickerVisible.index === venueIndex && venueDatePickerVisible.field === 'startDate' && (
-          <DateTimePicker
-                      testID={`venueStartDatePicker-${venueIndex}`}
-                      value={venue.startDate ? parseDateString(venue.startDate) : new Date()}
+                    <Modal visible={venueDatePickerVisible.index === venueIndex && venueDatePickerVisible.field === 'startDate'} transparent animationType="slide" onRequestClose={() => setVenueDatePickerVisible(null)}>
+                      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
+                          <DatePicker
+                            date={venue.startDate ? parseDateString(venue.startDate) : new Date()}
             mode="date"
-            display="default"
-                      onChange={(event, selectedDate) => {
-                        setVenueDatePickerVisible(null);
-                        if (selectedDate) handleVenueChange(venueIndex, 'startDate', formatDate(selectedDate));
-                      }}
+                            onDateChange={date => { setVenueDatePickerVisible(null); handleVenueChange(venueIndex, 'startDate', formatDate(date)); }}
           />
+                          <Button title="Cancel" onPress={() => setVenueDatePickerVisible(null)} />
+                        </View>
+                      </View>
+                    </Modal>
         )}
       </FormField>
       <FormField label="End Date">
@@ -1204,16 +1204,18 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                     <Text style={styles.dateText}>{venue.endDate ? formatDate(venue.endDate) : 'Select End Date'}</Text>
         </TouchableOpacity>
                   {venueDatePickerVisible && venueDatePickerVisible.index === venueIndex && venueDatePickerVisible.field === 'endDate' && (
-          <DateTimePicker
-                      testID={`venueEndDatePicker-${venueIndex}`}
-                      value={venue.endDate ? parseDateString(venue.endDate) : new Date()}
+                    <Modal visible={venueDatePickerVisible.index === venueIndex && venueDatePickerVisible.field === 'endDate'} transparent animationType="slide" onRequestClose={() => setVenueDatePickerVisible(null)}>
+                      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <View style={{ backgroundColor: 'white', borderRadius: 10, padding: 20 }}>
+                          <DatePicker
+                            date={venue.endDate ? parseDateString(venue.endDate) : new Date()}
             mode="date"
-            display="default"
-                      onChange={(event, selectedDate) => {
-                        setVenueDatePickerVisible(null);
-                        if (selectedDate) handleVenueChange(venueIndex, 'endDate', formatDate(selectedDate));
-                      }}
+                            onDateChange={date => { setVenueDatePickerVisible(null); handleVenueChange(venueIndex, 'endDate', formatDate(date)); }}
           />
+                          <Button title="Cancel" onPress={() => setVenueDatePickerVisible(null)} />
+                        </View>
+                      </View>
+                    </Modal>
         )}
       </FormField>
                 <FormField label="Notes">
@@ -1229,7 +1231,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
           </View>
         ))}
           <TouchableOpacity onPress={addVenue} style={styles.addButton}>
-            <PlusCircle size={20} color="#007AFF" />
+            <Feather name="plus-circle" size={22} color="#34d399" />
             <Text style={styles.addButtonText}>Add Venue</Text>
           </TouchableOpacity>
           </View>
@@ -1240,7 +1242,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Contacts</Text>
               <TouchableOpacity onPress={() => Alert.alert('Contacts', 'Enter the contacts for the show.')}> 
-                <HelpCircle size={20} color="#a78bfa" />
+                <Feather name="help-circle" size={20} color="#a78bfa" style={{ marginLeft: 8 }} />
           </TouchableOpacity>
             </View>
             <FormField label="Props Supervisor Name" required>
@@ -1300,7 +1302,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
            
             {/* Remove all contacts rendering, only show add contact button */}
             <TouchableOpacity onPress={addContact} style={styles.addButton}>
-              <PlusCircle size={20} color="#007AFF" />
+              <Feather name="plus-circle" size={22} color="#34d399" />
               <Text style={styles.addButtonText}>Add Contact</Text>
                 </TouchableOpacity>
             </View>
@@ -1311,11 +1313,11 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <Text style={[styles.sectionTitle, { flex: 1 }]}>Collaborators</Text>
               <TouchableOpacity onPress={() => setCollabModalVisible(true)} style={styles.addButtonSmallMargin}>
-                <PlusCircle size={20} color="#007AFF" />
+                <Feather name="plus-circle" size={22} color="#34d399" />
                 <Text style={styles.addButtonText}>Add Collaborator</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => Alert.alert('Collaborators', 'Enter the collaborators for the show.')}> 
-                <HelpCircle size={20} color="#a78bfa" />
+                <Feather name="help-circle" size={20} color="#a78bfa" style={{ marginLeft: 8 }} />
               </TouchableOpacity>
             </View>
             {/* Collaborators, Add/Remove, etc. */}
@@ -1336,7 +1338,7 @@ export default function ShowFormNative({ mode, initialData, onSubmit, onCancel }
                     </TouchableOpacity>
                   )}
                   <TouchableOpacity onPress={() => handleRemoveCollaborator(email)} style={styles.removeButtonSmall}>
-                    <MinusCircle size={18} color="#FF3B30" />
+                    <Feather name="minus-circle" size={18} color="#FF3B30" />
                   </TouchableOpacity>
                 </View>
               );

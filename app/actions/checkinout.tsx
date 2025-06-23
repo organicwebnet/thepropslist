@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { QrCode, Package, Building, ClipboardCheck, LogIn, LogOut, Edit3, Info, XCircle, Save } from 'lucide-react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
@@ -267,7 +267,7 @@ export default function CheckInOutScreen() {
   // --- Render Methods for different actions --- 
   const renderInitialScan = () => (
     <View style={s.stepContainer}>
-        <QrCode size={60} color={currentThemeColors.primary} />
+        <MaterialCommunityIcons name="qrcode-scan" size={60} color={currentThemeColors.primary} />
         <StyledText style={s.instructionText}>Scan a Prop QR Code to begin.</StyledText>
         <TouchableOpacity style={s.scanButton} onPress={() => { setError(null); setScannerPurpose('prop'); setShowScanner(true); }} disabled={isProcessing}>
             <StyledText style={s.scanButtonText}>Scan Prop</StyledText>
@@ -301,7 +301,7 @@ export default function CheckInOutScreen() {
                 {scannedProp.checkedOutDetails.notes && <StyledText>Notes: {scannedProp.checkedOutDetails.notes}</StyledText>}
                 {scannedProp.checkedOutDetails.checkedOutAt && <StyledText>At: {new Date(scannedProp.checkedOutDetails.checkedOutAt).toLocaleString()}</StyledText>}
                 <TouchableOpacity style={[s.actionButton, s.editButtonSmall, { alignSelf: 'flex-end'}]} onPress={() => setCurrentAction('editingCheckoutDetails')}>
-                    <Edit3 size={16} color={s.actionButtonText.color} />
+                    <Feather name="edit-3" size={16} color={s.actionButtonText.color} />
                     <StyledText style={[s.actionButtonText, {fontSize: 13, marginLeft: 5}]}>Edit Details</StyledText>
                 </TouchableOpacity>
             </View>
@@ -310,36 +310,36 @@ export default function CheckInOutScreen() {
         <StyledText style={s.sectionTitle}>Actions:</StyledText>
         {canCheckOut && (
             <TouchableOpacity style={s.actionButton} onPress={() => setCurrentAction('checkingOut')}>
-                <LogOut size={20} color={s.actionButtonText.color} style={s.buttonIcon}/>
+                <Feather name="log-out" size={20} color={s.actionButtonText.color} style={s.buttonIcon}/>
                 <StyledText style={s.actionButtonText}>Check Out Prop</StyledText>
             </TouchableOpacity>
         )}
         {canCheckIn && (
             <TouchableOpacity style={s.actionButton} onPress={() => { setError(null); setScannerPurpose('destination'); setCurrentAction('checkingIn_scanDestination'); setShowScanner(true);}}>
-                <LogIn size={20} color={s.actionButtonText.color} style={s.buttonIcon}/>
+                <Feather name="log-in" size={20} color={s.actionButtonText.color} style={s.buttonIcon}/>
                 <StyledText style={s.actionButtonText}>Check In / Return to Storage</StyledText>
             </TouchableOpacity>
         )}
         {showMarkInUseStd && (
             <TouchableOpacity style={s.actionButton} onPress={processMarkInUse} disabled={isProcessing}>
-                 <ClipboardCheck size={20} color={s.actionButtonText.color} style={s.buttonIcon}/>
+                 <MaterialCommunityIcons name="clipboard-check-outline" size={20} color={s.actionButtonText.color} style={s.buttonIcon}/>
                 <StyledText style={s.actionButtonText}>Mark In Use on Set</StyledText>
             </TouchableOpacity>
         )}
         {showMoveToSet && (
              <TouchableOpacity style={[s.actionButton, s.secondaryActionButton]} onPress={processMarkInUse} disabled={isProcessing}>
-                 <ClipboardCheck size={20} color={s.secondaryActionButtonText.color} style={s.buttonIcon}/>
+                 <MaterialCommunityIcons name="clipboard-check-outline" size={20} color={s.secondaryActionButtonText.color} style={s.buttonIcon}/>
                 <StyledText style={s.secondaryActionButtonText}>Move to Set (Mark as In Use)</StyledText>
             </TouchableOpacity>
         )}
 
         <TouchableOpacity style={[s.actionButton, s.minorButton]} onPress={() => setCurrentAction('updatingStatus')}>
-            <Info size={20} color={s.minorButtonText.color} style={s.buttonIcon}/>
+            <Feather name="info" size={20} color={s.minorButtonText.color} style={s.buttonIcon}/>
             <StyledText style={s.minorButtonText}>Update General Status</StyledText>
         </TouchableOpacity>
 
         <TouchableOpacity style={[s.actionButton, s.cancelButton, {marginTop: 20}]} onPress={resetAll}>
-            <XCircle size={20} color={s.cancelButtonText.color} style={s.buttonIcon}/>
+            <Feather name="x-circle" size={20} color={s.cancelButtonText.color} style={s.buttonIcon}/>
             <StyledText style={s.cancelButtonText}>Scan Different Prop</StyledText>
         </TouchableOpacity>
       </ScrollView>

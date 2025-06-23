@@ -7,18 +7,18 @@ import { useProps } from '@/contexts/PropsContext.tsx';
 import { type Prop } from '@/shared/types/props.ts';
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
-import { Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, ArrowLeft, Save, Loader2, X } from 'lucide-react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import PropCard from '../../../../../src/shared/components/PropCard';
 
 // Reuse status styles logic (consider moving to a shared location later)
 type StatusStyle = { bg: string; text: string; icon: React.ElementType };
 const statusStyles: Record<string, StatusStyle> = {
-  draft: { bg: 'bg-gray-700/30', text: 'text-gray-400', icon: Pencil },
-  packed: { bg: 'bg-blue-700/30', text: 'text-blue-300', icon: PackageCheck },
-  shipped: { bg: 'bg-purple-700/30', text: 'text-purple-300', icon: Box }, 
-  delivered: { bg: 'bg-green-700/30', text: 'text-green-300', icon: CheckCircle },
-  cancelled: { bg: 'bg-red-700/30', text: 'text-red-300', icon: PackageX },
-  unknown: { bg: 'bg-yellow-700/30', text: 'text-yellow-300', icon: AlertTriangle },
+  draft: { bg: 'bg-gray-700/30', text: 'text-gray-400', icon: (props) => <Feather name="edit-3" {...props} /> },
+  packed: { bg: 'bg-blue-700/30', text: 'text-blue-300', icon: (props) => <Feather name="check-square" {...props} /> },
+  shipped: { bg: 'bg-purple-700/30', text: 'text-purple-300', icon: (props) => <Feather name="box" {...props} /> }, 
+  delivered: { bg: 'bg-green-700/30', text: 'text-green-300', icon: (props) => <Feather name="check-circle" {...props} /> },
+  cancelled: { bg: 'bg-red-700/30', text: 'text-red-300', icon: (props) => <Feather name="x-square" {...props} /> },
+  unknown: { bg: 'bg-yellow-700/30', text: 'text-yellow-300', icon: (props) => <Feather name="alert-triangle" {...props} /> },
 };
 
 // Helper to format date safely
@@ -144,7 +144,7 @@ export default function BoxDetailPage() {
         
         {/* Back Button */}
          <button onClick={() => router.back()} className="mb-4 inline-flex items-center text-blue-400 hover:text-blue-300">
-           <ArrowLeft size={16} className="mr-1" />
+           <Feather name="arrow-left" size={16} className="mr-1" />
            Back to Packing List
          </button>
         
@@ -185,7 +185,7 @@ export default function BoxDetailPage() {
                   className="p-1.5 rounded-md text-gray-400 hover:text-blue-400 hover:bg-blue-900/30 transition-colors duration-150"
                   aria-label="Edit Notes"
                 >
-                  <Pencil size={16} />
+                  <Feather name="edit-3" size={16} />
                 </button>
              )}
            </View>
@@ -208,7 +208,7 @@ export default function BoxDetailPage() {
                     className="p-1.5 rounded-md text-gray-400 hover:text-red-400 hover:bg-red-900/30 transition-colors duration-150"
                     aria-label="Cancel Edit"
                   >
-                    <X size={18}/>
+                    <Feather name="x" size={18}/>
                   </button>
                   <button
                     onClick={handleSaveNote}
@@ -216,9 +216,9 @@ export default function BoxDetailPage() {
                     className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSavingNote ? (
-                      <><Loader2 size={14} className="animate-spin"/> Saving...</>
+                      <><MaterialCommunityIcons name="loading" size={14} className="animate-spin"/> Saving...</>
                     ) : (
-                      <><Save size={14}/> Save</>
+                      <><Feather name="save" size={14}/> Save</>
                     )}
                   </button>
                 </View>

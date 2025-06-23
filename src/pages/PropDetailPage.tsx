@@ -3,10 +3,10 @@ import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Ale
 import { useLocalSearchParams, useRouter, Link } from 'expo-router';
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { Check as CheckNative, Edit as EditNative, Trash2 as Trash2Native, Plus as PlusNative, Upload as UploadNative, Calendar as CalendarIconNative, X as XNative, ChevronDown as ChevronDownNative, ChevronUp as ChevronUpNative, AlertTriangle as AlertTriangleNative, MessageSquare as MessageSquareNative, LifeBuoy as LifeBuoyNative, Image as ImageIconNative, Paperclip as PaperclipNative } from 'lucide-react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Check, Edit, Trash2, Plus, Upload, Calendar, X, ChevronDown, ChevronUp, AlertTriangle, MessageSquare, LifeBuoy, Image as ImageIconWeb, Paperclip, ArrowLeft, Package, Info as InfoIcon, Activity, Wrench, Clock } from 'lucide-react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { TabView, SceneMap, TabBar } from 'react-native-tab-view';
 import { Prop, PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, DimensionUnit } from '../shared/types/props.ts';
 import { usePropLifecycle } from '../hooks/usePropLifecycle.ts';
@@ -664,10 +664,10 @@ export default function PropDetailPage() {
             <Text style={styles.titleMobile}>{prop.name}</Text>
             <View style={styles.actionsMobile}>
               <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <EditNative size={24} color="#BB86FC" />
+                <Feather name="edit" size={20} color={themeColors.text} />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleDeleteProp} style={{ marginLeft: 12 }}>
-                <Trash2Native size={24} color="#CF6679" />
+                <Feather name="trash-2" size={20} color={themeColors.error} />
               </TouchableOpacity>
             </View>
           </View>

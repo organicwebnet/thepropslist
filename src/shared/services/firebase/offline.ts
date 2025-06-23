@@ -1,19 +1,4 @@
 import { FirebaseService } from './types.ts';
-import { 
-  Firestore, 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  limit,
-  CollectionReference,
-  Query,
-  DocumentData,
-  QuerySnapshot
-} from 'firebase/firestore';
 import { FirebaseDocument } from './types.ts';
 
 interface SyncMetadata {
@@ -29,13 +14,8 @@ export class OfflineSyncService {
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
-
-    try {
-      await this.firebase.offline().enableSync();
-      this.isInitialized = true;
-    } catch (error) {
-      throw error;
-    }
+    await this.firebase.offline().enableSync();
+    this.isInitialized = true;
   }
 
   private async getSyncMetadata(): Promise<SyncMetadata> {
@@ -57,36 +37,23 @@ export class OfflineSyncService {
     const options = {
       where: [['updatedAt', '>', new Date(afterTimestamp)] as [string, any, any]]
     };
-    
-    try {
-      const documents = await this.firebase.getDocuments<any>(collectionName, options);
-      return documents;
-    } catch (error) {
-      throw error;
-    }
+    const documents = await this.firebase.getDocuments<any>(collectionName, options);
+    return documents;
   }
 
   async syncCollection(collectionName: string): Promise<void> {
     if (!this.isInitialized) {
       throw new Error('Offline sync not initialized');
     }
-
     const metadata = await this.getSyncMetadata();
-    
-    try {
-      // Get documents updated since last sync
-      const docs = await this.getCollectionDocs(collectionName, metadata.lastSyncTimestamp);
-
-      // Cache documents locally
-      for (const doc of docs) {
-        const data = await (doc as any).get();
-        if (data) {
-          await this.cacheDocument(collectionName, doc.id, data);
-        }
+    // Get documents updated since last sync
+    const docs = await this.getCollectionDocs(collectionName, metadata.lastSyncTimestamp);
+    // Cache documents locally
+    for (const doc of docs) {
+      const data = await (doc as any).get();
+      if (data) {
+        await this.cacheDocument(collectionName, doc.id, data);
       }
-
-    } catch (error) {
-      throw error;
     }
   }
 
@@ -116,23 +83,15 @@ export class OfflineSyncService {
     if (!this.isInitialized) {
       throw new Error('Offline sync not initialized');
     }
-
     const metadata = await this.getSyncMetadata();
-    
-    try {
-      for (const collectionName of metadata.collections) {
-        await this.syncCollection(collectionName);
-      }
-
-      // Update sync metadata
-      await this.updateSyncMetadata({
-        ...metadata,
-        lastSyncTimestamp: Date.now()
-      });
-
-    } catch (error) {
-      throw error;
+    for (const collectionName of metadata.collections) {
+      await this.syncCollection(collectionName);
     }
+    // Update sync metadata
+    await this.updateSyncMetadata({
+      ...metadata,
+      lastSyncTimestamp: Date.now()
+    });
   }
 
   async clearCache(): Promise<void> {

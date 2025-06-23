@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { PackingLabel } from '../inventory/packListService.ts';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { jsPDF } from "jspdf";
+// import { jsPDF } from "jspdf";
 
 export interface LabelPrintOptions {
   format?: 'A4' | 'Letter';

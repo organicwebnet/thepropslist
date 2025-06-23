@@ -46,13 +46,13 @@ export function NotificationHandler() {
       case 'PROP_STATUS_UPDATE':
         // Navigate to prop details
         if (data.propId) {
-          navigation.navigate<'PropForm'>('PropForm', { id: data.propId });
+          navigation.navigate('PropForm', { id: String(data.propId) });
         }
         break;
       case 'MAINTENANCE_REMINDER':
         // Navigate to maintenance screen
         if (data.propId) {
-          navigation.navigate<'PropForm'>('PropForm', { id: data.propId, tab: 'maintenance' });
+          navigation.navigate('PropForm', { id: String(data.propId), tab: 'maintenance' });
         }
         break;
       case 'SHOW_REMINDER':

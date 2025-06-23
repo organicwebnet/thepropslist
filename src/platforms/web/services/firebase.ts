@@ -72,7 +72,6 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   private app: FirebaseApp;
   public auth: Auth;
   public firestore: Firestore;
-  // @ts-expect-error: Cross-platform Firebase Storage type
   public storage: CustomStorage;
 
   constructor() {
@@ -95,8 +94,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     this.app = initializeApp(firebaseConfig);
     this.auth = getAuth(this.app);
     this.firestore = getFirestore(this.app);
-    // @ts-expect-error: Cross-platform Firebase Storage type
-    this.storage = getStorage(this.app) as any;
+    this.storage = getStorage(this.app);
   }
 
   async initialize(): Promise<void> {

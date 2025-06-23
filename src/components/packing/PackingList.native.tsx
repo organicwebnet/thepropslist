@@ -8,7 +8,7 @@ import { Prop } from '../../shared/types/props.ts';
 import { PackingBoxCard } from './PackingBoxCard.tsx';
 import { PropSelector } from './PropSelector.tsx';
 // For icons, we need to use lucide-react-native
-import { X, Clock, HandCoins, Package, PackageOpen, AlertTriangle } from 'lucide-react-native'; 
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Timestamp } from 'firebase/firestore';
 import { darkTheme, lightTheme } from '../../styles/theme';
 const theme = darkTheme;
@@ -140,13 +140,13 @@ export function PackingList({
     if (prop?.source === 'rented') {
       return (
         <View style={styles.sourceIconContainer}> 
-          <Clock size={iconSize} color={iconColor} />
+          <Feather name="clock" size={iconSize} color={iconColor} />
         </View>
       );
     } else if (prop?.source === 'borrowed') {
       return (
         <View style={styles.sourceIconContainer}>
-          <HandCoins size={iconSize} color={iconColor} />
+          <MaterialCommunityIcons name="hand-coin" size={iconSize} color={iconColor} />
         </View>
       );
     }
@@ -231,7 +231,7 @@ export function PackingList({
                   </View>
                 </View>
                 <TouchableOpacity onPress={() => handleRemoveProp(prop.instanceId)}>
-                  <X size={18} color={theme.colors.iconDanger} />
+                  <Feather name="x" size={18} color={theme.colors.iconDanger} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -241,7 +241,7 @@ export function PackingList({
             <Text style={styles.summaryText}>Total Weight: {totalWeight.toFixed(1)} kg</Text>
             {isBoxHeavy && (
                 <View style={styles.heavyBadge}>
-                    <AlertTriangle size={14} color={theme.colors.iconWarning} /> 
+                    <Feather name="alert-triangle" size={14} color={theme.colors.iconWarning} /> 
                     <Text style={styles.heavyBadgeText}>Heavy</Text>
                 </View>
             )}

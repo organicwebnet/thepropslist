@@ -7,7 +7,7 @@ import Shows from '../pages/Shows.tsx';
 import Packing from '../pages/Packing.tsx';
 import PropDetailPage from '../pages/PropDetailPage.tsx';
 import ShowDetailPage from '../pages/ShowDetailPage.tsx';
-import { Package, Theater, Box } from 'lucide-react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RootStackParamList } from './types.ts';
 import { Show } from '../types/index.ts';
 import { Prop } from '../shared/types/props.ts';
@@ -33,7 +33,7 @@ function MainTabs() {
         component={Props}
         options={{
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Package size={size} color={color} />
+            <MaterialCommunityIcons name="package-variant" size={size} color={color} />
           ),
         }}
       />
@@ -42,7 +42,7 @@ function MainTabs() {
         component={Shows}
         options={{
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Theater size={size} color={color} />
+            <MaterialCommunityIcons name="theater" size={size} color={color} />
           ),
         }}
       />
@@ -51,7 +51,7 @@ function MainTabs() {
         component={Packing}
         options={{
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Box size={size} color={color} />
+            <Feather name="box" size={size} color={color} />
           ),
         }}
       />

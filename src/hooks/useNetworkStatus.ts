@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 
-export function useNetworkStatus(syncing: boolean = false) {
+export function useNetworkStatus(syncing = false) {
   const [isConnected, setIsConnected] = useState(true);
   const [justCameOnline, setJustCameOnline] = useState(false);
   const [isSyncing, setIsSyncing] = useState(syncing);

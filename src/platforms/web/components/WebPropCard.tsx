@@ -6,8 +6,8 @@ import type { Prop } from '../../../shared/types/props.ts';
 
 // Import helpers from the new utility file
 import { statusColorMap, getStatusLabel, formatDateTime } from '../utils/propDisplayUtils.ts';
-import { Card, CardContent, CardActions, Typography, Button, Chip, Box, Grid } from '@mui/material';
-import { styled } from '@mui/material/styles';
+// import { Card, CardContent, CardActions, Typography, Button, Chip, Box, Grid } from '@mui/material';
+// import { styled } from '@mui/material/styles';
 import { Calendar as CalendarIcon, Image as ImageIcon } from 'lucide-react';
 
 // --- SVG Icons ---

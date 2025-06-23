@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
 import LinearGradient from 'react-native-linear-gradient';
 
 import { useShows } from '../../src/contexts/ShowsContext.tsx';
@@ -101,16 +100,11 @@ export default function PackingScreen() {
           <Text style={styles.messageText}>No packing boxes found for this show.</Text>
           <Text style={styles.messageTextSm}>You can create one using the '+' button.</Text>
         </View>
-        <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
-          radius: 4,
-          opacity: 0.3,
-          color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
-          offset: [0, 2],
-        })]}>
+        <View style={[styles.fabShadowContainer]}>
           <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
             <Ionicons name="add" size={30} color={currentThemeColors.text || currentThemeColors.text} />
           </TouchableOpacity>
-        </ShadowedView>
+        </View>
       </View>
     );
   }
@@ -158,16 +152,11 @@ export default function PackingScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContentContainer}
       />
-      <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
-        radius: 4,
-        opacity: 0.3,
-        color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
-        offset: [0, 2],
-      })]}>
+      <View style={[styles.fabShadowContainer]}>
         <TouchableOpacity style={styles.fab} onPress={handleCreateNewBox}>
           <Ionicons name="add" size={30} color={currentThemeColors.text || currentThemeColors.text} />
         </TouchableOpacity>
-      </ShadowedView>
+      </View>
     </View>
     </LinearGradient>
   );

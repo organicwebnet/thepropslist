@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link, useRouter } from 'expo-router';
-import { PlusCircle, Edit, Trash, Search, ChevronDown, ChevronUp, Eye, Users, CalendarCheck2, Palette, Theater, User, Building, Pencil, Trash2 } from 'lucide-react-native';
+import { FontAwesome, Feather } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, StyleSheet, GestureResponderEvent } from 'react-native';
 import type { Show, Act } from '../shared/services/firebase/types.ts';
 import type { ShowFormData } from '../types/index.ts';
@@ -114,7 +114,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                       accessibilityLabel="Edit show"
                       activeOpacity={0.7}
                     >
-                      <Pencil size={20} color="#F59E0B" />
+                      <FontAwesome name="pencil" size={20} color="#F59E0B" />
                     </TouchableOpacity>
                     {isShowOwner(show) && onEdit && onDelete ? (
                       <TouchableOpacity
@@ -126,7 +126,7 @@ export function ShowList({ shows, onDelete, onEdit, onSelect, selectedShowId, cu
                         accessibilityLabel="Delete show"
                         activeOpacity={0.7}
                       >
-                        <Trash2 size={20} color="#EF4444" />
+                        <Feather name="trash-2" size={20} color="#EF4444" />
                       </TouchableOpacity>
                     ) : null}
                   </View>

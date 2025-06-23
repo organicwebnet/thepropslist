@@ -81,17 +81,14 @@ export abstract class BaseFirebaseService implements FirebaseService {
     props.forEach(prop => {
         batch.delete(prop.ref as any);
     });
-    
     // 2. Delete all tasks related to the show (if tasks are not a subcollection)
     const tasks = await this.getDocuments('tasks', { where: [['showId', '==', showId]] });
     tasks.forEach(task => {
         batch.delete(task.ref as any);
     });
-
     // 3. Delete the show document itself
     const showRef = (this.firestore as any).collection('shows').doc(showId);
     batch.delete(showRef);
-
     await batch.commit();
     console.log(`Successfully deleted show ${showId} and all related data.`);
   }

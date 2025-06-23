@@ -4,7 +4,6 @@ import { useShows } from '../../src/contexts/ShowsContext.tsx';
 import { useRouter } from 'expo-router';
 import type { Show } from '../../src/shared/services/firebase/types.ts';
 import { Ionicons } from '@expo/vector-icons';
-import { ShadowedView, shadowStyle } from 'react-native-fast-shadow';
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
 import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../src/styles/theme';
 import { useAuth } from '../../src/contexts/AuthContext.tsx';
@@ -59,12 +58,7 @@ export default function ShowsScreen() {
           data={shows}
           keyExtractor={(item) => item.id ? String(item.id) : String(item.name)}
           renderItem={({ item }) => (
-            <ShadowedView style={[styles.showItemShadowContainer, shadowStyle({
-              radius: 2,
-              opacity: 0.2,
-              color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
-              offset: [0, 1],
-            })]}>
+            <View style={[styles.showItemShadowContainer]}>
               <TouchableOpacity style={styles.showItem} onPress={() => handleShowPress(item)} activeOpacity={0.85}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {item.imageUrl ? (
@@ -94,7 +88,7 @@ export default function ShowsScreen() {
                   </View>
                 </View>
               </TouchableOpacity>
-            </ShadowedView>
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.emptyListContainer}>
@@ -104,12 +98,7 @@ export default function ShowsScreen() {
           }
           contentContainerStyle={shows.length === 0 ? styles.listContentWhenEmpty : styles.listContent}
         />
-        <ShadowedView style={[styles.fabShadowContainer, shadowStyle({
-          radius: 5,
-          opacity: 0.3,
-          color: currentThemeColors.text === appLightTheme.colors.text ? '#000' : '#FFF',
-          offset: [0, 2],
-        })]}>
+        <View style={[styles.fabShadowContainer]}>
           <TouchableOpacity
             style={styles.fab}
             onPress={handleAddNewShow}
@@ -117,7 +106,7 @@ export default function ShowsScreen() {
           >
             <Ionicons name="add" size={30} color={currentThemeColors.card} />
           </TouchableOpacity>
-        </ShadowedView>
+        </View>
       </View>
     </LinearGradient>
   );

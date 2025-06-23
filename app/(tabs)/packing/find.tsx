@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, TextInput, ScrollView, Image, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useShows } from '../../src/contexts/ShowsContext.tsx';
-import { useProps } from '../../src/contexts/PropsContext.tsx';
-import { usePacking } from '../../src/hooks/usePacking';
-import type { Prop } from '../../src/shared/types/props.ts';
-import type { PackingBox, PackedProp } from '../../src/types/packing.ts';
-import { QRScannerScreen } from '../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
-import { useTheme } from '../../src/contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../../src/styles/theme';
-import StyledText from '../../src/components/StyledText.tsx';
-import { Search, Package, QrCode, AlertTriangle, Info } from 'lucide-react-native';
+import { useShows } from '../../../src/contexts/ShowsContext.tsx';
+import { useProps } from '../../../src/contexts/PropsContext.tsx';
+import { usePacking } from '../../../src/hooks/usePacking';
+import type { Prop } from '../../../src/shared/types/props.ts';
+import type { PackingBox, PackedProp } from '../../../src/types/packing.ts';
+import { QRScannerScreen } from '../../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
+import { useTheme } from '../../../src/contexts/ThemeContext.tsx';
+import { lightTheme, darkTheme } from '../../../src/styles/theme';
+import StyledText from '../../../src/components/StyledText.tsx';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface ScannedBoxResult {
   box: PackingBox;
@@ -117,7 +117,7 @@ export default function PropFinderScreen() {
   const renderScannedBoxItem = ({ item }: { item: ScannedBoxResult }) => (
     <View style={[s.scannedBoxItem, item.containsTargetProp ? s.boxFound : s.boxNotFound]}>
       <View style={s.boxItemHeader}>
-        <Package size={20} color={item.containsTargetProp ? currentThemeColors.primary : currentThemeColors.error} />
+        <Feather name="package" size={20} color={item.containsTargetProp ? currentThemeColors.primary : currentThemeColors.error} />
         <StyledText style={s.boxName}>{item.box.name || item.box.id}</StyledText>
       </View>
       <StyledText style={s.boxStatusText}>
@@ -137,7 +137,7 @@ export default function PropFinderScreen() {
         const assignment = targetProp.assignment;
         return (
             <View style={s.assignmentInfoContainer}>
-                <Info size={24} color={currentThemeColors.primary} style={{marginBottom: 8}} />
+                <Feather name="info" size={24} color={currentThemeColors.primary} style={{marginBottom: 8}} />
                 <StyledText style={s.assignmentTitle}>Current Assignment:</StyledText>
                 <StyledText style={s.assignmentText}>
                     Prop "<StyledText style={s.boldText}>{targetProp.name}</StyledText>" is assigned to:
@@ -154,7 +154,7 @@ export default function PropFinderScreen() {
                     </StyledText>
                 }
                 <TouchableOpacity style={s.scanButton} onPress={() => setFinderMode('scanBoxes')} >
-                    <QrCode size={20} color={currentThemeColors.card} style={{marginRight: 8}} />
+                    <MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{marginRight: 8}} />
                     <StyledText style={s.scanButtonText}>Verify or Scan Other Boxes</StyledText>
                 </TouchableOpacity>
             </View>
@@ -167,7 +167,7 @@ export default function PropFinderScreen() {
             <TouchableOpacity style={s.scanButton} onPress={() => { setError(null); setShowScanner(true); }} disabled={isProcessingScan}>
                 {isProcessingScan ? 
                 <ActivityIndicator color={currentThemeColors.card} /> : 
-                <><QrCode size={20} color={currentThemeColors.card} style={{marginRight: 8}} /><StyledText style={s.scanButtonText}>Scan Box QR Code</StyledText></>}
+                <><MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{marginRight: 8}} /><StyledText style={s.scanButtonText}>Scan Box QR Code</StyledText></>}
             </TouchableOpacity>
             <FlatList
                 data={scannedBoxes}
@@ -189,7 +189,7 @@ export default function PropFinderScreen() {
       <Stack.Screen options={{ title: 'Prop Finder' }} />
       
       <TouchableOpacity style={s.targetPropSelector} onPress={() => setShowPropSelectionModal(true)}>
-        <Search size={20} color={currentThemeColors.textSecondary} style={{marginRight: 8}}/>
+        <Feather name="search" size={20} color={currentThemeColors.textSecondary} style={{marginRight: 8}}/>
         <StyledText style={s.targetPropText}>
           {targetProp ? `Searching for: ${targetProp.name}` : 'Tap to select Prop to find'}
         </StyledText>
@@ -199,7 +199,7 @@ export default function PropFinderScreen() {
           <View style={s.targetPropDisplay}>
             {targetProp.primaryImageUrl ? 
                 <Image source={{uri: targetProp.primaryImageUrl}} style={s.targetPropImage} /> : 
-                <View style={s.targetPropImagePlaceholder}><Package size={30} color={currentThemeColors.textSecondary}/></View>
+                <View style={s.targetPropImagePlaceholder}><Feather name="package" size={30} color={currentThemeColors.textSecondary}/></View>
             }
             <StyledText style={s.targetPropName}>{targetProp.name}</StyledText>
           </View>
@@ -207,7 +207,7 @@ export default function PropFinderScreen() {
 
       {error && 
         <View style={s.errorContainer}>
-            <AlertTriangle size={20} color={currentThemeColors.error} style={{marginRight: 8}}/>
+            <Feather name="alert-triangle" size={20} color={currentThemeColors.error} style={{marginRight: 8}}/>
             <StyledText style={s.errorText}>{error}</StyledText>
         </View>
       }

@@ -1,6 +1,5 @@
 const { getDefaultConfig } = require('@expo/metro-config');
 const path = require('path');
-const { withNativeWind } = require('nativewind/metro');
 
 // Find the project root (directory containing package.json)
 const projectRoot = __dirname;
@@ -13,7 +12,7 @@ const config = getDefaultConfig(projectRoot);
 // Explicitly disable Package Exports
 config.resolver = {
   ...config.resolver,
-  // unstable_enablePackageExports: false, // Try removing or commenting out this line
+  // unstable_enablePackageExports: false, // Commented out as recommended
 };
 
 // --- Remove all custom alias logic --- 
@@ -27,15 +26,8 @@ if (!config.resolver.extraNodeModules) {
 }
 config.resolver.extraNodeModules.buffer = require.resolve('buffer/');
 
-
 // --- SVG Transformer Configuration (Remains commented out) --- 
 // ...
 
-// Restore withNativeWind wrapper
-module.exports = withNativeWind(config, {
-  input: './global.css',
-  projectRoot: projectRoot,
-});
-
-// Remove the direct export used for testing
-// module.exports = config; 
+// Export the default config only
+module.exports = config; 

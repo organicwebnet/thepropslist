@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { Building } from 'lucide-react-native';
+import { FontAwesome } from '@expo/vector-icons';
 
 import { useTheme } from '../../src/contexts/ThemeContext.tsx';
 import { lightTheme, darkTheme } from '../../src/styles/theme';
@@ -111,7 +111,7 @@ export default function CreateLocationScreen() {
               <ActivityIndicator color={s.saveButtonText.color} />
             ) : (
               <>
-                <Building size={20} color={s.saveButtonText.color} style={s.buttonIcon} />
+                <FontAwesome name="building-o" size={20} color={s.saveButtonText.color} style={s.buttonIcon} />
                 <StyledText style={s.saveButtonText}>Save Location</StyledText>
               </>
             )}

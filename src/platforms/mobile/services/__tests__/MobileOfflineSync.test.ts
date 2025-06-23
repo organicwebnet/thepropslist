@@ -82,6 +82,9 @@ describe('MobileOfflineSync', () => {
       const mockOperations = [
         {
           id: '1',
+          type: 'add',
+          collection: 'testCollection',
+          data: {},
           timestamp: Date.now()
         }
       ];
@@ -104,10 +107,16 @@ describe('MobileOfflineSync', () => {
       const mockOperations: PendingOperation[] = [
         {
           id: '1',
+          type: 'add',
+          collection: 'testCollection',
+          data: {},
           timestamp: Date.now()
         },
         {
           id: '2',
+          type: 'add',
+          collection: 'testCollection',
+          data: {},
           timestamp: Date.now()
         }
       ];
@@ -125,10 +134,16 @@ describe('MobileOfflineSync', () => {
       const mockOperations: PendingOperation[] = [
         {
           id: '1',
+          type: 'add',
+          collection: 'testCollection',
+          data: {},
           timestamp: Date.now()
         },
         {
           id: '2',
+          type: 'add',
+          collection: 'testCollection',
+          data: {},
           timestamp: Date.now()
         }
       ];
@@ -151,6 +166,9 @@ describe('MobileOfflineSync', () => {
     it('should retry failed operations', async () => {
       const mockOperation: PendingOperation = {
         id: '1',
+        type: 'add',
+        collection: 'testCollection',
+        data: {},
         timestamp: Date.now()
       } as any;
 
@@ -169,6 +187,9 @@ describe('MobileOfflineSync', () => {
     it('should mark operation as failed after max retries', async () => {
       const mockOperation: PendingOperation = {
         id: '1',
+        type: 'add',
+        collection: 'testCollection',
+        data: {},
         timestamp: Date.now()
       } as any;
 
@@ -190,6 +211,9 @@ describe('MobileOfflineSync', () => {
     it('should process pending operations when network is restored', async () => {
       const mockOperation: PendingOperation = {
         id: '1',
+        type: 'add',
+        collection: 'testCollection',
+        data: {},
         timestamp: Date.now()
       } as any;
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Modal } from 'react-native';
 import { Stack, useRouter, Link } from 'expo-router';
-import { Building, QrCode, PlusCircle } from 'lucide-react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 // import * as QRCodeSvg from 'react-native-qrcode-svg'; // Reverting to original import for clarity with ts-ignore
 import QRCode from 'react-native-qrcode-svg';
 
@@ -32,7 +32,7 @@ export default function LocationsListScreen() {
         style={s.qrButton}
         onPress={() => setSelectedLocationForQR(item)}
       >
-        <QrCode size={24} color={currentThemeColors.primary} />
+        <MaterialCommunityIcons name="qrcode-scan" size={24} color={currentThemeColors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -69,7 +69,7 @@ export default function LocationsListScreen() {
           headerRight: () => (
             <Link href="/locations/create" asChild>
               <TouchableOpacity style={{ marginRight: 15 }}>
-                <PlusCircle size={28} color={currentThemeColors.primary} />
+                <Feather name="plus-circle" size={28} color={currentThemeColors.primary} />
               </TouchableOpacity>
             </Link>
           ),

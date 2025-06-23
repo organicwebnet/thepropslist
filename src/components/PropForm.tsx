@@ -159,7 +159,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
         const board = boards[0];
         // 2. Find the first list (order 0) or a list named 'To Do'
         const listDocs = await service.getDocuments('todo_boards/' + board.id + '/lists', { orderBy: [['order', 'asc']] });
-        let list = listDocs.find((l: any) => l.data?.name?.toLowerCase().includes('to do')) || listDocs[0];
+        const list = listDocs.find((l: any) => l.data?.name?.toLowerCase().includes('to do')) || listDocs[0];
         if (!list) return; // No list found
         // 3. Create the card
         await service.addCard(board.id, list.id, {

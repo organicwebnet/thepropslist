@@ -43,7 +43,7 @@ const initialFilters: Filters = {
 const firebaseService = new WebFirebaseService();
 // Get auth and db instances (assuming firestore() returns the db instance)
 // let auth: ReturnType<typeof firebaseService.auth> | null = null; // Old: CustomAuth | null
-let webAuthInstance: import('firebase/auth').Auth | null = null; // New: Firebase JS Auth | null
+const webAuthInstance: import('firebase/auth').Auth | null = null; // New: Firebase JS Auth | null
 // let db: ReturnType<typeof firebaseService.firestore> | null = null;
 
 function App() {

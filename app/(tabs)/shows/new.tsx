@@ -1,9 +1,9 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
 import { StyleSheet, View, ScrollView, Text, Alert, Platform } from 'react-native';
-import ShowFormNative from '../../src/components/ShowForm.native.tsx'; // Changed import
-import { useFirebase } from '../../src/contexts/FirebaseContext.tsx';
-import type { Show } from '../../src/shared/services/firebase/types.ts'; // Changed import
+import ShowFormNative from '../../../src/components/ShowForm.native.tsx'; // Changed import
+import { useFirebase } from '../../../src/contexts/FirebaseContext.tsx';
+import type { Show } from '../../../src/shared/services/firebase/types.ts'; // Changed import
 // Removed ShowLogo import as it's an inline type in Show interface
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { v4 as uuidv4 } from 'uuid'; // For generating logo ID

@@ -5,9 +5,8 @@ import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/ind
 import { Prop } from '../shared/types/props.ts';
 import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
-import { Edit, Package } from 'lucide-react-native';
-import { Pencil, ArrowLeft, UserMinus, Plus, Trash2 } from 'lucide-react';
-import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { Pencil, UserMinus, Plus, Trash2 } from 'lucide-react';
+import { FontAwesome5, MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
 import { darkTheme, lightTheme } from '../styles/theme.ts';
 import type { FirebaseDocument } from '../shared/services/firebase/types.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
@@ -164,7 +163,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
         onClick={() => router.back()}
         className="flex items-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6"
       >
-        <ArrowLeft className="h-5 w-5 mr-2" />
+        <Feather name="arrow-left" className="h-5 w-5 mr-2" />
         Back to Shows
       </button>
 

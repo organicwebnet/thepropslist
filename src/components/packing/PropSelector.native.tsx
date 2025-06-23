@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { PropInstance } from './PackingList.native.tsx';
-import { CheckSquare, Square } from 'lucide-react-native'; // For selection indication
+import { Feather } from '@expo/vector-icons';
 
 interface PropSelectorNativeProps {
   props: PropInstance[];
@@ -63,9 +63,9 @@ export function PropSelector({
                 {item.isPacked && <Text style={[styles.propSubDetail, styles.packedText]}> (Already Packed)</Text>}
               </View>
               {isCurrentlySelected ? (
-                <CheckSquare size={24} color="#2563eb" />
+                <Feather name="check-square" size={24} color="#2563eb" />
               ) : (
-                <Square size={24} color={item.isPacked || disabled ? "#9CA3AF" : "#6B7280"} /> // gray-400 or gray-500
+                <Feather name="square" size={24} color={item.isPacked || disabled ? "#9CA3AF" : "#6B7280"} />
               )}
             </View>
           </TouchableOpacity>

@@ -167,7 +167,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       ownedShowsQuery
     );
 
-    let teamUnsubscribe = () => {};
+    let teamUnsubscribe = () => { /* no-op */ };
     if (!isAdmin) {
       const teamShowsQuery: QueryOptions = { where: [[`team.${user.uid}`, '>=', '']] };
       teamUnsubscribe = firebaseService.listenToCollection<Show>(

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, Image } from 'react-native';
 import { Link, useRouter } from 'expo-router';
-import { Menu, Moon, Sun, UserCircle, LogOut, HelpCircle, MessageSquare } from 'lucide-react-native';
 import { useTheme } from '../../contexts/ThemeContext.tsx';
 import { useAuth } from '../../contexts/AuthContext.tsx';
 const appConfigFunction = require('../../../app.config.js'); // Corrected import for app.config.js

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Document, Page, View, Text, StyleSheet, Image, Font } from '@react-pdf/renderer';
+// import { Document, Page, View, Text, StyleSheet, Image, Font } from '@react-pdf/renderer';
 import QRCode from 'qrcode';
 import type { Prop } from '../../../shared/types/props.ts';
 import { Show } from '../../../types/index.ts'; // Corrected path for Show type

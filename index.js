@@ -4,7 +4,11 @@ import 'buffer';
 import 'text-encoding-polyfill';
 import { registerRootComponent } from 'expo';
 import React from 'react';
-import './global.css';
+import { Platform } from 'react-native';
+// Only import global.css on web
+if (Platform.OS === 'web') {
+  require('./global.css');
+}
 // import { LogBox } from 'react-native'; // Comment out original imports if not needed for test
 import { ExpoRoot } from 'expo-router'; // Uncomment Expo Router
 import { FirebaseProvider } from './src/contexts/FirebaseContext'; // Uncomment FirebaseProvider
@@ -18,13 +22,15 @@ import { FirebaseProvider } from './src/contexts/FirebaseContext'; // Uncomment 
 
 // Render the main app with Expo Router and Firebase Provider
 function App() {
-  // Expo Router uses a require context to dynamically load routes
-  // Adjust the path './app' if your routes directory is different
-  const ctx = require.context('./app'); 
+  let expoRootProps = {};
+  // Only use require.context for web (Webpack)
+  if (Platform.OS === 'web' && typeof require.context === 'function') {
+    expoRootProps.context = require.context('./app');
+  }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <FirebaseProvider>
-        <ExpoRoot context={ctx} />
+        <ExpoRoot {...expoRootProps} />
       </FirebaseProvider>
     </GestureHandlerRootView>
   );

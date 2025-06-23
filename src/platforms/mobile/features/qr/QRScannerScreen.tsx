@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
+import { CameraView, BarcodeScanningResult } from 'expo-camera';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { QRScannerService } from './QRScannerService.ts';
 import { useRouter } from 'expo-router';
-import { Package, X } from 'lucide-react-native';
 
 interface QRScannerScreenProps {
   onScan: (data: Record<string, any>) => void;
@@ -24,7 +23,7 @@ export function QRScannerScreen({ onScan, onClose }: QRScannerScreenProps) {
     })();
   }, [qrService]);
 
-  const handleBarCodeScanned = ({ type, data }: BarCodeScannerResult) => {
+  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult) => {
     setScanned(true);
     const parsedData = qrService.parseQRData(data);
     onScan(parsedData);
@@ -48,9 +47,12 @@ export function QRScannerScreen({ onScan, onClose }: QRScannerScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <BarCodeScanner
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+      <CameraView
+        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         style={StyleSheet.absoluteFillObject}
+        barcodeScannerSettings={{
+          barcodeTypes: ['qr'],
+        }}
       />
       <View style={styles.overlay}>
         <View style={styles.scanArea} />

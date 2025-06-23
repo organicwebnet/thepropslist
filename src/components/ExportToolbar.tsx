@@ -136,6 +136,11 @@ export function ExportToolbar({ props, show, onMergeProps, onDeleteProp, onEditP
       publicNotes: false,
       assignment: false, 
       checkedOutDetails: false,
+      assignedTo: false,
+      assignedUserDetails: false,
+      estimatedDeliveryDate: false,
+      courier: false,
+      trackingNumber: false,
     };
 
     const defaultPdfOptions: PdfGenerationOptions = {

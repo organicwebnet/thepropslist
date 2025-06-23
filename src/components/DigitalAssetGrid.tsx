@@ -2,7 +2,7 @@ import React from 'react';
 import { FileText, ExternalLink, DownloadCloud, Edit3, Trash2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import type { DigitalAsset } from '../shared/types/props.ts';
-import { Grid, Card, CardMedia, CardContent, Typography, IconButton, Box, CircularProgress } from '@mui/material';
+// import { Grid, Card, CardMedia, CardContent, Typography, IconButton, Box, CircularProgress } from '@mui/material';
 import { bytesToSize } from '../lib/utils.ts';
 
 interface DigitalAssetGridProps {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { PackingContainer } from '../../shared/services/inventory/packListService.ts';
-import { XCircle } from 'lucide-react-native'; // Using XCircle for remove icon
+import { Feather } from '@expo/vector-icons';
 
 interface ContainerLabelsProps {
   container: PackingContainer;
@@ -76,7 +76,7 @@ export const ContainerLabels: React.FC<ContainerLabelsProps> = ({
               onPress={() => handleRemoveLabel(label)}
               style={styles.removeButton}
             >
-              <XCircle color="#9CA3AF" size={16} />
+              <Feather name="x-circle" color="#9CA3AF" size={16} />
             </TouchableOpacity>
           </View>
         ))}

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { PackingBox, PackedProp } from '../../types/packing.ts';
-import { Trash2, Pencil, Box, AlertTriangle, CheckCircle, PackageCheck, PackageX, LucideIcon } from 'lucide-react'; // Will change to lucide-react-native
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { useRouter, Link } from 'expo-router';
-import { TouchableOpacity, Text, View, StyleSheet, Image, ActivityIndicator } from 'react-native'; // Added View, StyleSheet, Image, ActivityIndicator for native version
+import { TouchableOpacity, Text, View, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface PackingBoxCardProps {
   box: PackingBox & { showId?: string };
@@ -12,16 +12,13 @@ interface PackingBoxCardProps {
   onDelete: (boxId: string) => Promise<void>;
 }
 
-// We'll need to use lucide-react-native for native icons
-import { Trash2 as Trash2Native, Pencil as PencilNative, Box as BoxNative, AlertTriangle as AlertTriangleNative, CheckCircle as CheckCircleNative, PackageCheck as PackageCheckNative, PackageX as PackageXNative } from 'lucide-react-native';
-
 type StatusStyle = { bg: string; text: string; icon: React.ElementType }; // Icon type for React Native components
 const statusStyles: Record<string, StatusStyle> = {
-  draft: { bg: '#374151', text: '#9CA3AF', icon: PencilNative }, // gray-700, gray-400
-  packed: { bg: '#1D4ED8', text: '#93C5FD', icon: PackageCheckNative }, // blue-700, blue-300
-  shipped: { bg: '#7E22CE', text: '#C4B5FD', icon: BoxNative }, // purple-700, purple-300
-  delivered: { bg: '#16A34A', text: '#86EFAC', icon: CheckCircleNative }, // green-700, green-300
-  cancelled: { bg: '#DC2626', text: '#F87171', icon: PackageXNative }, // red-700, red-300
+  draft: { bg: '#374151', text: '#9CA3AF', icon: (props) => <Feather name="edit-3" {...props} /> },
+  packed: { bg: '#1D4ED8', text: '#93C5FD', icon: (props) => <MaterialCommunityIcons name="package-variant-closed-check" {...props} /> },
+  shipped: { bg: '#7E22CE', text: '#C4B5FD', icon: (props) => <Feather name="box" {...props} /> },
+  delivered: { bg: '#16A34A', text: '#86EFAC', icon: (props) => <Feather name="check-circle" {...props} /> },
+  cancelled: { bg: '#DC2626', text: '#F87171', icon: (props) => <MaterialCommunityIcons name="package-variant-closed-remove" {...props} /> },
 };
 
 export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
@@ -65,7 +62,7 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
   
   const totalWeightKg = box.props?.reduce((sum, p) => sum + (p.weight || 0), 0) ?? 0;
   const status = box.status ?? 'draft';
-  const currentStatusStyle = statusStyles[status] || { bg: '#F59E0B', text: '#FCD34D', icon: AlertTriangleNative }; // yellow-500, yellow-300
+  const currentStatusStyle = statusStyles[status] || { bg: '#F59E0B', text: '#FCD34D', icon: (props) => <Feather name="alert-triangle" {...props} /> };
   const StatusIcon = currentStatusStyle.icon;
 
   // const handleNavigateToLabel = () => { // Commenting out for simplification
@@ -85,12 +82,12 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
           </TouchableOpacity>
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity onPress={() => onEdit(box)} style={styles.iconButton}>
-              <PencilNative size={18} color="#9CA3AF" />
+              <Feather name="edit-3" size={18} color="#9CA3AF" />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleDelete} disabled={isDeleting} style={styles.iconButton}>
               {isDeleting ? 
                 <ActivityIndicator size="small" color="#EF4444" /> : 
-                <Trash2Native size={18} color="#9CA3AF" />
+                <Feather name="trash-2" size={18} color="#9CA3AF" />
               }
             </TouchableOpacity>
           </View>

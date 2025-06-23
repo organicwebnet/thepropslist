@@ -25,13 +25,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (Platform.OS === 'web' && !WebEditorComponent && !isLoadingWebEditor) {
       setIsLoadingWebEditor(true);
       // Dynamically import the web editor only on the web platform
-      import('react-simple-wysiwyg').then(module => {
-        setWebEditorComponent(module.default as unknown as React.ComponentType<any>);
-        setIsLoadingWebEditor(false);
-      }).catch(err => {
-        setIsLoadingWebEditor(false);
-        // Handle error state if needed
-      });
+      // import('react-simple-wysiwyg').then(module => {
+      //   setEditorComponent(() => module.ReactSimpleWysiwyg);
+      // });
+      setIsLoadingWebEditor(false);
     }
   }, [WebEditorComponent, isLoadingWebEditor]);
 

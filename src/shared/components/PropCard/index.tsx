@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
 import { formatDistanceToNow } from 'date-fns';
-import { Edit3, Trash2, Package, CalendarDays, UserCircle, Building, Palette, Paperclip } from 'lucide-react';
 import type { Prop } from '../../types';
 import { lifecycleStatusLabels } from '../../../types/lifecycle.ts';
-import { Image as ImageIcon } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import { PrintLabelButton } from './PrintLabelButton.tsx';
 
 interface PropCardProps {
@@ -40,7 +39,7 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
     if (imageError || typeof imageUrl !== 'string' || imageUrl.trim() === '') {
       return (
         <View style={styles.placeholderImage}>
-          <ImageIcon size={40} color="#FFFFFF" />
+          <Feather name="image" size={40} color="#FFFFFF" />
         </View>
       );
     }

@@ -141,6 +141,8 @@ export function PropStatusUpdate({
     available_in_storage: { notes: true },
     checked_out: { notes: true },
     in_use_on_set: { notes: true },
+    on_order: { notes: true },
+    to_buy: { notes: true },
   };
   const showAssignment = !!(newStatus && statusFieldMap[newStatus]?.assignment);
   const showRepair = !!(newStatus && statusFieldMap[newStatus]?.repair);

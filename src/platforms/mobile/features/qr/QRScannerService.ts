@@ -1,4 +1,4 @@
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { Camera } from 'expo-camera';
 
 export interface QRScanResult {
   type: string;
@@ -20,12 +20,12 @@ export class QRScannerService {
   }
 
   async requestPermissions(): Promise<boolean> {
-    const { status } = await BarCodeScanner.requestPermissionsAsync();
+    const { status } = await Camera.requestCameraPermissionsAsync();
     return status === 'granted';
   }
 
   async hasPermissions(): Promise<boolean> {
-    const { status } = await BarCodeScanner.getPermissionsAsync();
+    const { status } = await Camera.getCameraPermissionsAsync();
     return status === 'granted';
   }
 
