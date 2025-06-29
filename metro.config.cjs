@@ -29,5 +29,23 @@ config.resolver.extraNodeModules.buffer = require.resolve('buffer/');
 // --- SVG Transformer Configuration (Remains commented out) --- 
 // ...
 
+// Add resolver configuration for better global handling
+config.resolver.alias = {
+  ...config.resolver.alias,
+  'react-native': path.resolve(__dirname, 'node_modules/react-native'),
+};
+
+// Ensure global polyfills are loaded first
+config.resolver.platforms = ['native', 'android', 'ios', 'web'];
+
+// Add transform configuration for better compatibility
+config.transformer = {
+  ...config.transformer,
+  minifierConfig: {
+    ...config.transformer.minifierConfig,
+    keep_fnames: true,
+  },
+};
+
 // Export the default config only
 module.exports = config; 
