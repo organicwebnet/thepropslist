@@ -16,6 +16,7 @@ import { NativeAuthScreen } from '../src/components/NativeAuthScreen.tsx';
 import { View, ActivityIndicator, Platform, StyleSheet, Text } from 'react-native';
 import { useFonts } from 'expo-font';
 import { FirebaseProvider } from '@/contexts/FirebaseContext.tsx';
+import { AuthForm } from '../src/components/AuthForm.tsx';
 // import * as SplashScreen from 'expo-splash-screen'; // Commented out
 
 // SplashScreen.preventAutoHideAsync(); // Commented out
@@ -122,10 +123,17 @@ function AppContent({ currentFont }: { currentFont: FontChoice }) {
         return <View style={{flex: 1, backgroundColor: 'transparent'}}><RootLayoutNav /></View>;
       }
   } else {
-    // No user, show NativeAuthScreen for mobile. For web, you might have a different auth form.
-    // Assuming this path is for mobile as per previous context.
-    console.log("--- AppContent: Showing NativeAuthScreen (Mobile) --- ");
-    return <NativeAuthScreen />;
+    // No user, show NativeAuthScreen for mobile. For web, show AuthForm.
+    console.log("--- AppContent: Showing AuthForm (Web) or NativeAuthScreen (Mobile) --- ");
+    if (Platform.OS === 'web') {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
+          <AuthForm onClose={() => {}} />
+        </View>
+      );
+    } else {
+      return <NativeAuthScreen />;
+    }
   }
 }
 
