@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "A comprehensive Props management system for theatrical productions",
-  "main": "index.js",
+  "main": "expo-router/entry",
   "type": "module",
   "scripts": {
     "lint": "eslint src --ext ts,tsx",

@@ -1,90 +1,80 @@
 /**
- * Global Polyfills for React Native
- * This file must be imported FIRST before any other modules
+ * CRITICAL Global Setup for React Native Bridge
+ * This must run FIRST before any React Native initialization
  */
 
-// CRITICAL: Set up global object immediately
-(function() {
-  // Ensure global exists in all contexts
-  if (typeof global === 'undefined') {
-    if (typeof globalThis !== 'undefined') {
-      // @ts-ignore
-      global = globalThis;
-    } else if (typeof window !== 'undefined') {
-      // @ts-ignore
-      global = window;
-    } else if (typeof self !== 'undefined') {
-      // @ts-ignore
-      global = self;
-    } else {
-      // @ts-ignore
-      global = this || {};
-    }
+// Immediately setup global object - no function wrapper to avoid any execution delays
+if (typeof global === 'undefined') {
+  if (typeof globalThis !== 'undefined') {
+    // eslint-disable-next-line no-global-assign
+    global = globalThis;
+  } else if (typeof window !== 'undefined') {
+    // eslint-disable-next-line no-global-assign
+    global = window;
+    window.global = window;
+  } else if (typeof self !== 'undefined') {
+    // eslint-disable-next-line no-global-assign
+    global = self;
+    self.global = self;
+  } else {
+    // eslint-disable-next-line no-global-assign
+    global = {};
   }
+}
 
-  // Ensure globalThis is available
-  if (typeof globalThis === 'undefined') {
-    // @ts-ignore
-    globalThis = global;
-  }
+// Ensure globalThis exists
+if (typeof globalThis === 'undefined') {
+  // eslint-disable-next-line no-global-assign
+  globalThis = global;
+}
 
-  // Make sure global is actually global
-  if (typeof window !== 'undefined') {
-    window.global = global;
-  }
-})();
+// Make absolutely sure global is accessible everywhere
+global.global = global;
 
-// React Native global polyfills
-import 'react-native-get-random-values';
-import { Buffer } from 'buffer';
-import 'text-encoding-polyfill';
+// For React Native bridge compatibility - critical setup
+if (typeof window !== 'undefined') {
+  window.global = global;
+  window.globalThis = global;
+}
 
-// Ensure Buffer is available globally
-global.Buffer = global.Buffer || Buffer;
-
-// Critical React Native globals
+// Critical React Native globals that MUST exist before bridge initialization
 global.__DEV__ = global.__DEV__ || (typeof __DEV__ !== 'undefined' ? __DEV__ : false);
 global.HermesInternal = global.HermesInternal || (typeof HermesInternal !== 'undefined' ? HermesInternal : undefined);
 
-// Polyfill for process.env if needed
-if (typeof global.process === 'undefined') {
-  global.process = { 
-    env: process?.env || {},
-    platform: 'react-native'
-  };
-}
+// React Native bridge expects these to exist
+global.nativePerformanceNow = global.nativePerformanceNow || (typeof nativePerformanceNow !== 'undefined' ? nativePerformanceNow : undefined);
+global.nativeCallSyncHook = global.nativeCallSyncHook || (typeof nativeCallSyncHook !== 'undefined' ? nativeCallSyncHook : undefined);
 
-// Ensure console is available
-if (typeof global.console === 'undefined') {
-  global.console = console;
-}
+// Basic process setup for React Native
+global.process = global.process || { 
+  env: { NODE_ENV: 'development' },
+  platform: 'react-native',
+  version: '1.0.0'
+};
 
-// Polyfill for URL if needed
-if (typeof global.URL === 'undefined' && typeof URL !== 'undefined') {
-  global.URL = URL;
-}
+// Ensure console exists
+global.console = global.console || console;
 
-// Polyfill for URLSearchParams if needed  
-if (typeof global.URLSearchParams === 'undefined' && typeof URLSearchParams !== 'undefined') {
-  global.URLSearchParams = URLSearchParams;
-}
+// React Native navigator setup
+global.navigator = global.navigator || { product: 'ReactNative' };
 
-// Ensure fetch is available globally
-if (typeof global.fetch === 'undefined' && typeof fetch !== 'undefined') {
-  global.fetch = fetch;
-  global.Headers = Headers;
-  global.Request = Request;
-  global.Response = Response;
-}
+// Basic timers - React Native should have these but just in case
+global.setTimeout = global.setTimeout || (typeof setTimeout !== 'undefined' ? setTimeout : function() {});
+global.clearTimeout = global.clearTimeout || (typeof clearTimeout !== 'undefined' ? clearTimeout : function() {});
+global.setInterval = global.setInterval || (typeof setInterval !== 'undefined' ? setInterval : function() {});
+global.clearInterval = global.clearInterval || (typeof clearInterval !== 'undefined' ? clearInterval : function() {});
 
-// React Native specific setup
-global.navigator = global.navigator || {};
-global.navigator.product = 'ReactNative';
+console.log('CRITICAL: Global setup complete for React Native bridge');
 
-// Ensure setTimeout/setInterval are available
-global.setTimeout = global.setTimeout || setTimeout;
-global.setInterval = global.setInterval || setInterval;
-global.clearTimeout = global.clearTimeout || clearTimeout;
-global.clearInterval = global.clearInterval || clearInterval;
-
-console.log('Global polyfills loaded successfully - global object:', typeof global); 
+// Only import additional polyfills AFTER global is established
+if (typeof require !== 'undefined') {
+  try {
+    require('react-native-get-random-values');
+    const { Buffer } = require('buffer');
+    global.Buffer = global.Buffer || Buffer;
+    require('text-encoding-polyfill');
+    console.log('Additional polyfills loaded successfully');
+  } catch (error) {
+    console.warn('Could not load additional polyfills:', error.message);
+  }
+} 

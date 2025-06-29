@@ -167,7 +167,86 @@ project/
 2. For native changes, you may need to rebuild: `npx expo run:android`
 3. Use `r` in the terminal to reload the app manually
 
+## Transferring Project to New Machine
+
+If you need to move the project to a more powerful machine (recommended for Android emulator performance), follow these steps:
+
+### 📦 Preparing for Transfer
+
+1. **Commit your current changes:**
+   ```bash
+   git add .
+   git commit -m "WIP: Latest development changes"
+   git push
+   ```
+
+### 🖥️ Setting Up New Machine
+
+1. **Clone the repository:**
+   ```bash
+   git clone [your-repo-url]
+   cd props-bible
+   ```
+
+2. **Install dependencies with pnpm (recommended):**
+   ```bash
+   # Install pnpm globally
+   npm install -g pnpm
+   
+   # Install project dependencies
+   pnpm install
+   ```
+
+3. **Install global development tools:**
+   ```bash
+   # Modern Expo CLI
+   pnpm add -g @expo/cli
+   
+   # EAS CLI for cloud builds
+   pnpm add -g eas-cli
+   
+   # Firebase CLI
+   pnpm add -g firebase-tools
+   ```
+
+4. **Set up Android Studio and emulator** (follow Android Development Setup above)
+
+5. **Copy environment files:**
+   - Transfer your `.env` file
+   - Transfer `google-services.json`
+   - Transfer any other config files
+
+### 🔄 Post-Transfer Steps
+
+1. **Clean installation:**
+   ```bash
+   pnpm install --frozen-lockfile
+   npx expo prebuild --clean
+   ```
+
+2. **Test the setup:**
+   ```bash
+   npx expo start --clear
+   ```
+
+3. **If needed, re-enable Firebase** (if temporarily disabled for testing):
+   - Uncomment FirebaseProvider in `app/_layout.tsx`
+
 ### Common Issues & Solutions
+
+#### "Global was not installed" Error
+This React Native bridge initialization error is fixed by polyfills loaded in `app/_layout.tsx`. If you encounter this:
+
+```bash
+# Clear all caches
+npx expo start --clear
+cd android && ./gradlew clean && cd ..
+
+# Rebuild completely
+npx expo run:android
+```
+
+The project includes polyfills in `polyfills.js` that are loaded early in the app initialization to prevent this issue.
 
 #### Build Failures
 ```bash
@@ -194,6 +273,12 @@ npx expo install --fix
 # Use limited workers for Gradle builds
 cd android && ./gradlew assembleDebug --max-workers=2
 ```
+
+#### Emulator Connection Issues
+If the emulator can't connect to Metro bundler:
+- Ensure emulator and Metro are on the same network
+- Try restarting both emulator and Metro server
+- Check Windows firewall settings for Metro (port 8081)
 
 ## Environment Variables
 

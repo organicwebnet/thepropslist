@@ -1,3 +1,7 @@
+// CRITICAL: Load polyfills FIRST to fix React Native bridge initialization
+import '../polyfills.js';
+import 'react-native-gesture-handler';
+
 // import '../global.css'; // REMOVE THIS LINE - Incorrect for native
 // Conditionally import global CSS for web
 // if (Platform.OS === 'web') {
@@ -15,7 +19,8 @@ import { FontProvider, useFont, FontChoice } from '../src/contexts/FontContext.t
 import { NativeAuthScreen } from '../src/components/NativeAuthScreen.tsx';
 import { View, ActivityIndicator, Platform, StyleSheet, Text } from 'react-native';
 import { useFonts } from 'expo-font';
-import { FirebaseProvider } from '@/contexts/FirebaseContext.tsx';
+// Temporarily disable Firebase to test bridge initialization
+// import { FirebaseProvider } from '../src/contexts/FirebaseContext.tsx';
 import { AuthForm } from '../src/components/AuthForm.tsx';
 // import * as SplashScreen from 'expo-splash-screen'; // Commented out
 
@@ -185,19 +190,18 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
-        <FirebaseProvider>
-          <ThemeProvider>
-            <ShowsProvider>
-              <PropsProvider>
-                <FontProvider>
-                  <ErrorBoundary>
-                    <MainApp />
-                  </ErrorBoundary>
-                </FontProvider>
-              </PropsProvider>
-            </ShowsProvider>
-          </ThemeProvider>
-        </FirebaseProvider>
+        {/* Temporarily disable Firebase to test bridge initialization */}
+        <ThemeProvider>
+          <ShowsProvider>
+            <PropsProvider>
+              <FontProvider>
+                <ErrorBoundary>
+                  <MainApp />
+                </ErrorBoundary>
+              </FontProvider>
+            </PropsProvider>
+          </ShowsProvider>
+        </ThemeProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );
