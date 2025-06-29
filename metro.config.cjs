@@ -45,6 +45,21 @@ config.transformer = {
     ...config.transformer.minifierConfig,
     keep_fnames: true,
   },
+  // Add global setup
+  getTransformOptions: async () => ({
+    transform: {
+      experimentalImportSupport: false,
+      inlineRequires: false,
+    },
+  }),
+};
+
+// Add serializer configuration to inject global setup
+config.serializer = {
+  ...config.serializer,
+  getModulesRunBeforeMainModule: () => [
+    require.resolve('./polyfills.js'),
+  ],
 };
 
 // Export the default config only

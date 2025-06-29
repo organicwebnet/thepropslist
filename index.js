@@ -1,3 +1,13 @@
+// CRITICAL: Fix global object IMMEDIATELY before any imports
+if (typeof global === 'undefined') {
+  var global = this;
+}
+if (typeof globalThis === 'undefined') {
+  globalThis = global;
+}
+// Ensure global object is properly set up for React Native
+global.global = global;
+
 // CRITICAL: Load polyfills FIRST before anything else
 import './polyfills.js';
 
