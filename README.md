@@ -1,6 +1,16 @@
 # Props Bible
 
-A comprehensive, production-ready props management system for theatrical productions.
+A comprehensive, production-ready props management system for theatrical productions built with React Native and Expo.
+
+## Tech Stack
+
+- **Framework**: Expo SDK 53 with React Native 0.79.4
+- **Language**: TypeScript 5.8.3
+- **Backend**: Firebase (Auth, Firestore, Storage)
+- **UI**: React Native Paper, Material UI (web), NativeWind/Tailwind CSS
+- **State Management**: React Context API
+- **Navigation**: Expo Router 5.1.1
+- **Development**: Metro bundler, Jest testing
 
 ## Features
 
@@ -13,97 +23,251 @@ A comprehensive, production-ready props management system for theatrical product
 - Robust offline support (mobile)
 - Role-based access control
 - Task board (Trello-like) for show and prop management
+- QR code generation and scanning
+- Camera integration for prop photos
+- PDF generation and printing
+
+## Prerequisites
+
+Before setting up the project, ensure you have:
+
+- **Node.js**: Version 18 or higher
+- **npm**: Version 8 or higher (comes with Node.js)
+- **Git**: For version control
+- **Android Studio**: For Android development (includes Android SDK and emulator)
+- **Java Development Kit (JDK)**: Version 17 (required for Android builds)
+
+### Android Development Setup
+
+1. **Install Android Studio**: Download from [developer.android.com](https://developer.android.com/studio)
+2. **Set up Android SDK**: Install SDK platforms 24-35 (minimum SDK 24, target SDK 35)
+3. **Configure environment variables**:
+   ```bash
+   # Add to your system PATH or .bashrc/.zshrc
+   export ANDROID_HOME=$HOME/Android/Sdk  # or C:\Users\USERNAME\AppData\Local\Android\Sdk on Windows
+   export PATH=$PATH:$ANDROID_HOME/emulator
+   export PATH=$PATH:$ANDROID_HOME/platform-tools
+   ```
+4. **Create an AVD**: Set up an Android Virtual Device in Android Studio
+
+## Setup Instructions
+
+### 1. Clone and Install
+
+```bash
+git clone <your-repo-url>
+cd props-bible
+npm install
+```
+
+### 2. Environment Configuration
+
+Create a `.env` file in the root directory:
+
+```env
+# Firebase Configuration
+EXPO_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+EXPO_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Optional APIs
+EXPO_PUBLIC_TICKETMASTER_API_KEY=your_ticketmaster_key
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloudinary_name
+```
+
+### 3. Firebase Setup
+
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable Authentication (Email/Password, Google)
+3. Create a Firestore database
+4. Enable Storage
+5. Download `google-services.json` and place it in the root directory
+6. Add your domain to Firebase Auth authorized domains
+
+### 4. Development Commands
+
+```bash
+# Start Expo development server
+npm start
+
+# Run on Android emulator
+npm run android
+
+# Run on iOS simulator (macOS only)
+npm run ios
+
+# Run tests
+npm test
+
+# Lint code
+npm run lint
+```
+
+## Building for Production
+
+### Android Build
+
+```bash
+# Clean previous builds (if needed)
+cd android
+./gradlew clean
+cd ..
+
+# Build APK
+npx expo run:android --variant release
+
+# Or build with limited parallel workers (Windows fix)
+cd android
+./gradlew assembleRelease --max-workers=2
+```
+
+**Note for Windows users**: If you encounter build issues with file locking, use the `--max-workers=2` flag to limit parallel processes.
 
 ## Project Structure
 
 ```
 project/
-  app/                # Main app folder (navigation, screens, features)
-  src/                # Source code (components, contexts, services, types, hooks, etc.)
-  assets/             # Images, fonts, and other static assets
-  public/             # Public assets (web)
-  _docs/              # Project documentation
-  package.json        # Project dependencies and scripts
-  tsconfig.json       # TypeScript configuration
-  App.tsx             # Main app entry point
-  index.js            # Main web entry point
-  README.md           # Project documentation
-  yarn.lock           # Dependency lock (if using yarn)
-  ...
+├── app/                    # Expo Router app directory
+│   ├── (tabs)/            # Tab navigation screens
+│   ├── (web)/             # Web-specific screens
+│   └── _layout.tsx        # Root layout
+├── src/                   # Source code
+│   ├── components/        # Reusable UI components
+│   ├── contexts/          # React Context providers
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # External service integrations
+│   ├── platforms/         # Platform-specific code
+│   ├── services/          # Business logic services
+│   ├── shared/            # Shared utilities and types
+│   ├── styles/            # Global styles and themes
+│   └── types/             # TypeScript type definitions
+├── android/               # Android native code
+├── assets/                # Static assets (images, fonts)
+├── public/                # Web public assets
+├── _docs/                 # Project documentation
+└── package.json           # Dependencies and scripts
 ```
 
-## Setup
+## Development Workflow
 
-1. Clone the repository:
-   ```bash
-   git clone <your-repo-url>
-   cd props-bible
-   ```
+### Starting Development
 
-2. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+1. Start the development server: `npm start`
+2. Choose your platform:
+   - Press `a` for Android
+   - Press `w` for web
+   - Press `i` for iOS (macOS only)
 
-3. Create a `.env` file:
-   - Copy `.env.example` to `.env`
-   - Fill in your Firebase and API configuration details
+### Making Changes
 
-4. Start the development server:
-   ```bash
-   npm run dev # For web
-   npm start   # For mobile (Expo)
-   ```
+1. Code changes are hot-reloaded automatically
+2. For native changes, you may need to rebuild: `npx expo run:android`
+3. Use `r` in the terminal to reload the app manually
+
+### Common Issues & Solutions
+
+#### Build Failures
+```bash
+# Clean and rebuild
+npx expo prebuild --clean
+cd android && ./gradlew clean && cd ..
+npm run android
+```
+
+#### Metro Bundle Issues
+```bash
+# Clear Metro cache
+npx expo start --clear
+```
+
+#### Dependency Issues
+```bash
+# Fix Expo SDK compatibility
+npx expo install --fix
+```
+
+#### Windows File Locking Issues
+```bash
+# Use limited workers for Gradle builds
+cd android && ./gradlew assembleDebug --max-workers=2
+```
 
 ## Environment Variables
 
-The following environment variables are required (see `.env.example`):
+Required environment variables (see `.env.example`):
 
-- `EXPO_PUBLIC_FIREBASE_API_KEY`: Your Firebase API key
-- `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`: Your Firebase auth domain
-- `EXPO_PUBLIC_FIREBASE_PROJECT_ID`: Your Firebase project ID
-- `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`: Your Firebase storage bucket
-- `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`: Your Firebase messaging sender ID
-- `EXPO_PUBLIC_FIREBASE_APP_ID`: Your Firebase app ID
-- `EXPO_PUBLIC_TICKETMASTER_API_KEY`: (Optional) Ticketmaster API key
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `EXPO_PUBLIC_FIREBASE_API_KEY` | Firebase API key | Yes |
+| `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | Yes |
+| `EXPO_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID | Yes |
+| `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | Yes |
+| `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID | Yes |
+| `EXPO_PUBLIC_FIREBASE_APP_ID` | Firebase app ID | Yes |
+| `EXPO_PUBLIC_TICKETMASTER_API_KEY` | Ticketmaster API key | No |
+| `EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | No |
 
-## Centralized Styling & Theme
+## Styling & Theming
 
-- All global and shared styles are in `src/styles/`.
-- Use `src/styles/theme.ts` for theme variables and color palettes.
-- For web, use CSS variables from `src/styles/index.css`.
-- See `src/styles/README.md` for details.
+- **Global Styles**: `src/styles/`
+- **Theme Configuration**: `src/styles/theme.ts`
+- **Web Styles**: CSS variables in `src/styles/index.css`
+- **Mobile Styles**: NativeWind (Tailwind CSS for React Native)
 
-## Code Cleanliness & Best Practices
-
-- No commented-out code or debug logs in production.
-- All context/providers are minimal and clear.
-- Only one source of truth for each feature.
-- Consistent formatting (Prettier/ESLint).
-- Centralized error handling and type-safe APIs.
-- See `_docs/REFACTORING_CLEANUP_PLAN.md` for ongoing cleanup progress.
+See `src/styles/README.md` for detailed styling guidelines.
 
 ## Testing
 
-Run tests with:
 ```bash
+# Run all tests
 npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
 ```
 
-## Troubleshooting
+## Code Quality
 
-- For build errors: `expo start -c` (mobile), check environment setup, see logs.
-- For TypeScript errors: `npm run lint`, verify imports and types.
-- For emulator issues: Ensure Android Studio/Xcode is configured, ANDROID_HOME is set.
-- For Firebase issues: Check `.env` and Firebase Console settings.
+- **Linting**: ESLint with TypeScript support
+- **Formatting**: Prettier (configured in `.prettierrc`)
+- **Type Safety**: Strict TypeScript configuration
+- **Code Standards**: See `_docs/REFACTORING_CLEANUP_PLAN.md`
 
 ## Contributing
 
-- Please read `_docs/REFACTORING_PLAN.md` and `_docs/KNOWN_ISSUES.md` before contributing.
-- Follow the code cleanliness and best practices outlined above.
-- Open issues or pull requests for bugs, features, or documentation improvements.
+1. Read `_docs/REFACTORING_PLAN.md` and `_docs/KNOWN_ISSUES.md`
+2. Follow the established code patterns and styling guidelines
+3. Write tests for new features
+4. Ensure all linting passes before committing
+5. Open issues or pull requests for bugs, features, or documentation improvements
+
+## Troubleshooting
+
+### Common Build Issues
+
+1. **CMake/Native Build Failures**: Run `npx expo prebuild --clean`
+2. **Dependency Conflicts**: Run `npx expo install --fix`
+3. **Metro Bundle Errors**: Clear cache with `npx expo start --clear`
+4. **Android Emulator Issues**: Ensure Android SDK is properly configured
+
+### Platform-Specific Issues
+
+- **Windows**: Use `--max-workers=2` for Gradle builds to avoid file locking
+- **macOS**: Ensure Xcode is installed for iOS development
+- **Linux**: Install required build tools (`build-essential`, `python3`)
+
+### Getting Help
+
+- Check `_docs/KNOWN_ISSUES.md` for documented issues
+- Review build logs for specific error messages
+- Ensure all environment variables are properly set
+- Verify Firebase configuration and permissions
 
 ## License
 
