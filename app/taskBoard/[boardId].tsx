@@ -536,6 +536,30 @@ const TaskBoardDetailScreen = () => {
       alignItems: 'center',
       marginLeft: 10,
     },
+    bottomNavigation: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 60,
+      backgroundColor: '#18181b',
+      borderTopWidth: 1,
+      borderTopColor: '#c084fc',
+      flexDirection: 'row',
+      paddingBottom: 8,
+      paddingTop: 8,
+    },
+    navItem: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    navText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#c084fc',
+      marginTop: 4,
+    },
   });
 
   if (loading || !isFirebaseInitialized) {
@@ -705,7 +729,7 @@ const TaskBoardDetailScreen = () => {
               position: 'absolute',
               margin: 16,
               right: 0,
-              bottom: 70, // leave space for tab bar
+              bottom: 20,
               backgroundColor: '#c084fc',
               borderRadius: 28,
               width: 56,
@@ -716,34 +740,35 @@ const TaskBoardDetailScreen = () => {
               elevation: 0,
               borderWidth: 0,
             }}
-            style={{ marginBottom: 90 }}
+                        style={{ marginBottom: 90 }}
             color="#FFFFFF"
             backdropColor="transparent"
           />
-          {/* Bottom Tab Bar Navigation */}
-          <View style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
-            <Pressable onPress={() => router.push('/shows')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
-              <Ionicons name="list-circle-outline" size={28} color={colors.text} />
-              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Shows</DefaultText>
-            </Pressable>
-            <Pressable onPress={() => router.push('/props')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
-              <Ionicons name="briefcase-outline" size={28} color={colors.text} />
-              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Props</DefaultText>
-            </Pressable>
-            <Pressable onPress={() => router.push('/')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
-              <Ionicons name="home-outline" size={28} color={colors.text} />
-              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Home</DefaultText>
-            </Pressable>
-            <Pressable onPress={() => router.push('/packing')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
-              <Ionicons name="archive-outline" size={28} color={colors.text} />
-              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Packing</DefaultText>
-            </Pressable>
-            <Pressable onPress={() => router.push('/profile')} style={[centralStyles.alignCenter, centralStyles.flex1, centralStyles.paddingVertical8]}>
-              <Ionicons name="person-circle-outline" size={28} color={colors.text} />
-              <DefaultText style={[centralStyles.font12, { color: colors.text }]}>Profile</DefaultText>
-            </Pressable>
-          </View>
         </DraxProvider>
+        
+        {/* Always visible bottom navigation */}
+        <View style={styles.bottomNavigation}>
+          <Pressable onPress={() => router.navigate('/(tabs)')} style={styles.navItem}>
+            <Ionicons name="home" size={24} color="#c084fc" />
+            <DefaultText style={styles.navText}>Home</DefaultText>
+          </Pressable>
+          <Pressable onPress={() => router.navigate('/(tabs)/props')} style={styles.navItem}>
+            <Ionicons name="cube" size={24} color="#a3a3a3" />
+            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Props</DefaultText>
+          </Pressable>
+          <Pressable onPress={() => router.navigate('/(tabs)/shows')} style={styles.navItem}>
+            <Ionicons name="film" size={24} color="#a3a3a3" />
+            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Shows</DefaultText>
+          </Pressable>
+          <Pressable onPress={() => router.navigate('/(tabs)/packing')} style={styles.navItem}>
+            <Ionicons name="cube-outline" size={24} color="#a3a3a3" />
+            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Packing</DefaultText>
+          </Pressable>
+          <Pressable onPress={() => router.navigate('/(tabs)/profile')} style={styles.navItem}>
+            <Ionicons name="person" size={24} color="#a3a3a3" />
+            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Profile</DefaultText>
+          </Pressable>
+        </View>
       </LinearGradient>
     </View>
   );

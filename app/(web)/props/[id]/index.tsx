@@ -146,7 +146,7 @@ export default function WebPropDetailScreen() {
           await firebaseService.deleteDocument('props', id);
           console.log('Prop deleted:', id);
           alert('Success: Prop deleted successfully.');
-          router.push('/props');
+          router.navigate('/props');
         } catch (err) {
           console.error('Error deleting prop:', err);
           alert('Error: Failed to delete prop.');

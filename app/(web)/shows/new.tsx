@@ -35,7 +35,7 @@ export default function NewShowPage() {
       await service.addDocument('shows', dataToSave); 
       console.log("Show added successfully");
       Alert.alert('Success', 'Show created successfully!');
-      router.push('/shows'); // Navigate back to the shows list
+      router.navigate('/shows'); // Navigate back to the shows list
     } catch (error) {
       console.error('Error adding show:', error);
       Alert.alert('Error', `Failed to create show: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -43,7 +43,7 @@ export default function NewShowPage() {
   };
 
   const handleCancel = () => {
-    router.back(); // Or router.push('/shows');
+    router.back(); // Or router.navigate('/shows');
   };
 
   if (firebaseError) {

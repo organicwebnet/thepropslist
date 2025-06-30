@@ -61,7 +61,7 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
     : (prop.status || 'Unknown');
 
   const handleNavigate = () => {
-    router.push(`/props/${prop.id}` as any);
+    router.navigate(`/props/${prop.id}` as any);
   };
 
   return (

@@ -90,7 +90,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
     const confirmDelete = async () => {
         try {
           await firebaseService.deleteShow(id); 
-          router.push('/shows');
+          router.navigate('/shows');
         } catch (err) {
           if (onEdit && show) {
             onEdit(show);
@@ -133,7 +133,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
               Go back to Shows
             </Link>
         ) : (
-            <TouchableOpacity onPress={() => router.push('/shows')}>
+            <TouchableOpacity onPress={() => router.navigate('/shows')}>
                 <Text style={{ color: 'blue'}}>Go back to Shows</Text>
             </TouchableOpacity>
         )}
@@ -410,7 +410,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
 
         <div className="mt-12 flex justify-end space-x-4">
           <button
-            onClick={() => router.push(`/props/add?showId=${id}`)}
+            onClick={() => router.navigate(`/props/add?showId=${id}`)}
             className="px-6 py-2.5 bg-[var(--highlight-color)] text-white font-semibold rounded-lg shadow-md hover:bg-opacity-90 transition-colors flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />

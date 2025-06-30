@@ -43,7 +43,7 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "module": "esnext",
+    "module": "commonjs",
     "noEmit": true,
     "jsx": "react-native",
     "esModuleInterop": true,

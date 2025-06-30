@@ -88,7 +88,7 @@ export default function WebPropsListPage() {
       return;
     }
     // Navigation remains the same
-    router.push({ pathname: '/props/new', params: { showId: selectedShow.id } });
+    router.navigate({ pathname: '/props/new', params: { showId: selectedShow.id } });
   };
 
   // --- Placeholder Handlers for New Buttons ---
@@ -161,7 +161,7 @@ export default function WebPropsListPage() {
       setComponentError("Please select a show first.");
       return;
     }
-    router.push({
+    router.navigate({
       pathname: '/props/pdf-preview',
       params: { showId: selectedShow.id }
     });

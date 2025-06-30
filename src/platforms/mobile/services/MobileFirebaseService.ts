@@ -29,10 +29,36 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
 
   constructor() {
     super();
-    // Ensure default app is initialized
+    // Ensure default app is initialized with real Firebase config
     if (firebase.apps.length === 0) {
-      // Pass required options for initializeApp (dummy object for test/mocks)
-      firebase.initializeApp({ projectId: 'dummy', appId: 'dummy', apiKey: 'dummy' } as any);
+      // Get Firebase config from environment variables
+      const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY;
+      const authDomain = process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN;
+      const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
+      const storageBucket = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET;
+      const messagingSenderId = process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+      const appId = process.env.EXPO_PUBLIC_FIREBASE_APP_ID;
+      
+      if (!apiKey || !authDomain || !projectId || !storageBucket || !messagingSenderId || !appId) {
+        throw new Error('Missing Firebase configuration. Please check your environment variables.');
+      }
+      
+      const firebaseConfig = {
+        apiKey,
+        authDomain,
+        projectId,
+        storageBucket,
+        messagingSenderId,
+        appId,
+      };
+      
+      console.log('Initializing Firebase with config:', {
+        projectId,
+        authDomain,
+        hasApiKey: !!apiKey
+      });
+      
+      firebase.initializeApp(firebaseConfig);
     }
     this.auth = getAuth();
     this.firestore = getFirestore();

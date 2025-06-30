@@ -1,18 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { AuthForm } from './AuthForm.tsx';
 
 interface NativeAuthScreenProps {
-  // Add necessary props like onSignIn, onSignUp etc. later
-  // We might need a navigation prop here eventually
   onAuthSuccess?: () => void; // Example prop for handling success
 }
 
 export function NativeAuthScreen({ onAuthSuccess }: NativeAuthScreenProps) {
-  // Placeholder function for onClose needed by AuthForm
+  // Handle successful authentication
   const handleClose = () => {
-    console.log("AuthForm closed/succeeded.");
-    // TODO: Implement navigation logic here, e.g., navigate to tabs
+    console.log("AuthForm succeeded - navigating to app");
+    // Navigate to the main app (tabs)
+    router.replace('/(tabs)');
     onAuthSuccess?.(); 
   };
 

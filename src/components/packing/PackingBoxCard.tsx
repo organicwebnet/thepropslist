@@ -69,7 +69,7 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
   const statusText = currentStatusStyle.text;
 
   const handleNavigateToLabel = () => {
-    router.push({
+    router.navigate({
       pathname: '/(web)/packing/label/[id]' as any,
       params: { id: box.id, showId: box.showId }
     });

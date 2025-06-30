@@ -95,11 +95,11 @@ export function PropsListScreen() {
   }, []);
 
   const handleAddProp = () => {
-    router.push({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } });
+    router.navigate({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } });
   };
 
   const handlePropPress = (propId: string) => {
-    router.push(`/props/${propId}`);
+    router.navigate(`/props/${propId}`);
   };
 
   const handleDeleteProp = useCallback(async (propId: string) => {

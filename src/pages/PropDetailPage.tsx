@@ -232,7 +232,7 @@ export default function PropDetailPage() {
     return (
       <div className="space-y-8">
         <button
-          onClick={() => router.push('/props')}
+          onClick={() => router.navigate('/props')}
           className="inline-flex items-center text-[var(--highlight-color)] hover:text-[var(--highlight-color)]/80"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -644,7 +644,7 @@ export default function PropDetailPage() {
       >
         <View style={styles.containerMobile}>
           <View style={styles.backButtonMobile}>
-            <TouchableOpacity onPress={() => router.push('/props')}>
+            <TouchableOpacity onPress={() => router.navigate('/props')}>
               <Text style={styles.backButtonTextMobile}>Back to Props</Text>
             </TouchableOpacity>
           </View>

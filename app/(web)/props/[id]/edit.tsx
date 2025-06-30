@@ -116,7 +116,7 @@ export default function WebEditPropScreen() {
       console.log("Submitting update with data:", propDataToUpdate);
       await firebaseService.updateDocument('props', propId, propDataToUpdate);
       console.log("Prop updated with ID:", propId);
-      router.push(`/props/${propId}`); // Go back to the detail view for this prop
+      router.navigate(`/props/${propId}`); // Go back to the detail view for this prop
 
     } catch (err) {
       console.error('Error updating prop via service:', err);

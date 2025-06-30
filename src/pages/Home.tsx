@@ -332,7 +332,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
         ) : props && props.length > 0 ? (
           <PropList
             props={props}
-            onEdit={(prop) => router.push(`/props/${prop.id}/edit`)}
+            onEdit={(prop) => router.navigate(`/props/${prop.id}/edit`)}
             onDelete={(id) => console.log('Delete prop', id)}
           />
         ) : (
@@ -356,7 +356,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
               <Text>Tracking #: {prop.trackingNumber || 'N/A'}</Text>
               <TouchableOpacity
                 style={{ marginTop: 8, backgroundColor: '#6366F1', borderRadius: 6, padding: 8, alignSelf: 'flex-start' }}
-                onPress={() => router.push(`/props/${prop.id}`)}
+                onPress={() => router.navigate(`/props/${prop.id}`)}
               >
                 <Text style={{ color: 'white', fontWeight: 'bold' }}>More Details</Text>
               </TouchableOpacity>
@@ -371,7 +371,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
         className="absolute bottom-6 right-6 bg-blue-500 p-4 rounded-full shadow-lg"
         onPress={() => {
           if (currentShowId) {
-            router.push('/props/create');
+            router.navigate('/props/create');
           } else {
             Alert.alert("No Show Selected", "Please select a show before adding a prop.");
           }

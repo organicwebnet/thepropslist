@@ -82,7 +82,7 @@ export default function WebNewPropPage() {
       const newDoc = await firebaseService.addDocument('props', finalData);
       console.log('Prop created successfully with ID:', newDoc.id);
       
-      router.push(`/(web)/props?showId=${showId}`); 
+      router.navigate(`/(web)/props?showId=${showId}`); 
 
     } catch (err: any) {
       console.error('Failed to create prop:', err);

@@ -67,7 +67,7 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
 
   // const handleNavigateToLabel = () => { // Commenting out for simplification
   //   console.log("Navigate to label (Native) - ID:", box.id, "Show ID:", box.showId);
-  //   router.push({ pathname: '/(web)/packing/label/[id]' as any, params: { id: box.id, showId: box.showId } });
+  //   router.navigate({ pathname: '/(web)/packing/label/[id]' as any, params: { id: box.id, showId: box.showId } });
   // };
 
   return (
@@ -75,7 +75,7 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
       <View style={styles.cardContent}>
         <View style={styles.headerRow}>
           <TouchableOpacity 
-            onPress={() => router.push({ pathname: '/props_shared_details/[id]' as any, params: { id: box.id, showId: box.showId, entityType: 'box' }})} 
+            onPress={() => router.navigate({ pathname: '/props_shared_details/[id]' as any, params: { id: box.id, showId: box.showId, entityType: 'box' }})} 
             style={styles.titleContainer}
           >
             <Text style={styles.titleText} numberOfLines={1}>{box.name ?? 'Unnamed Box'}</Text>

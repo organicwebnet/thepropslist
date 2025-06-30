@@ -57,7 +57,7 @@ const TaskBoardsListScreen = () => {
       renderItem={({ item }) => (
         <Pressable
           style={styles.itemContainer}
-          onPress={() => router.push(`/taskBoard/${item.id}`)}
+          onPress={() => router.navigate(`/taskBoard/${item.id}`)}
         >
           <Text style={styles.itemText}>{item.name}</Text>
         </Pressable>

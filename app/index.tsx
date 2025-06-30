@@ -1,16 +1,45 @@
 import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
-import { Platform } from 'react-native';
-// import { View, Text } from 'react-native';
+import { useAuth } from '../src/contexts/AuthContext';
 
 export default function Index() {
-  if (Platform.OS === 'web') {
-    // Redirect to the main web props list page
-    return <Redirect href="/(web)/props/" />;
-  } else {
-    // Redirect to the root of the native tabs navigator
+  const { user, loading, status } = useAuth();
+
+  // Show loading while authentication is being determined
+  if (loading || status === 'pending') {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Props Bible</Text>
+        <Text style={styles.loading}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // If user is authenticated, redirect to tabs
+  if (user && status === 'in') {
     return <Redirect href="/(tabs)" />;
   }
-  // Test redirect:
-  // return <Redirect href="/props/new" />; 
-} 
+
+  // If not authenticated, redirect to auth screen
+  return <Redirect href="/auth" />;
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#18181b',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#c084fc',
+    marginBottom: 16,
+  },
+  loading: {
+    fontSize: 16,
+    color: '#a3a3a3',
+  },
+}); 

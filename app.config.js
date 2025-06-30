@@ -27,13 +27,13 @@ module.exports = ({ config }) => {
         backgroundColor: "#ffffff"
       },
       package: "com.propsbible",
-      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json'
+      // googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json' // Temporarily disabled
     },
     web: {
       bundler: "metro",
       favicon: "./public/icon.png"
     },
-    jsEngine: "jsc",
+    jsEngine: "hermes",
     hooks: {
       postPublish: [
         {
@@ -48,7 +48,7 @@ module.exports = ({ config }) => {
     },
     scheme: "propsbible",
     plugins: [
-      "@react-native-firebase/app",
+      // "@react-native-firebase/app", // Temporarily disabled
       "expo-router"
     ],
     experiments: {

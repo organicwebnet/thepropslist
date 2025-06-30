@@ -1,1 +1,0 @@
-export { PropsListScreen as default } from '../../src/platforms/mobile/screens/PropsListScreen'; 

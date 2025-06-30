@@ -458,8 +458,8 @@ export function HomeScreen() {
                   data: filteredBoards,
                   loading: loadingBoards,
                   error: errorBoards,
-                  onCardPress: (boardId) => router.push(`/taskBoard/${boardId}`),
-                  onSeeAllPress: () => router.push('/(tabs)/todos'),
+                  onCardPress: (boardId) => router.navigate(`/taskBoard/${boardId}`),
+                  onSeeAllPress: () => router.navigate('/(tabs)/todos'),
                   renderItem: (item) => item.data?.name || 'Untitled Board',
                   emptyText: "No boards found for this show. Creating one...",
                 })}
@@ -468,8 +468,8 @@ export function HomeScreen() {
                   data: upcomingTasks,
                   loading: loadingTasks,
                   error: errorTasks,
-                  onCardPress: (item) => router.push(`/tasks/${item.id}` as any),
-                  onSeeAllPress: () => router.push('/(tabs)/tasks' as any),
+                  onCardPress: (item) => router.navigate(`/tasks/${item.id}` as any),
+                  onSeeAllPress: () => router.navigate('/(tabs)/tasks' as any),
                   renderItem: (item) => item.data?.title || 'Untitled Task',
                   emptyText: "No upcoming tasks for this show."
                 })}
@@ -495,7 +495,7 @@ export function HomeScreen() {
                    </View>
                  ),
                  label: 'Add Show',
-                 onPress: () => router.push('/(tabs)/shows/create' as any),
+                 onPress: () => router.navigate('/(tabs)/shows/create' as any),
                  style: styles.fabAction,
                  labelStyle: [styles.fabLabel, { marginLeft: 0, paddingLeft: 0, minWidth: 0 }],
                },
@@ -512,7 +512,7 @@ export function HomeScreen() {
                    </View>
                  ),
                  label: 'Add Prop',
-                 onPress: () => router.push({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } }),
+                 onPress: () => router.navigate({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } }),
                  style: [styles.fabAction, { marginBottom: 0}],
                  labelStyle: [styles.fabLabel, { marginLeft: 0, paddingLeft: 0, minWidth: 0 }],
                },
