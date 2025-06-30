@@ -75,6 +75,24 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="todos"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="packing/createBox"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="packing/find"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
     </Tabs>
   );
 } 
