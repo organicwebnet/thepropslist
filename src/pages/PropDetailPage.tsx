@@ -77,7 +77,12 @@ export default function PropDetailPage() {
   useEffect(() => {
     let isMounted = true;
     const fetchProp = async () => {
+      console.log('PropDetailPage: useEffect triggered with id:', id);
+      console.log('PropDetailPage: service available:', !!service);
+      console.log('PropDetailPage: user available:', !!user);
+      
       if (!id || !service || !user) {
+        console.log('PropDetailPage: Missing requirements - id:', !!id, 'service:', !!service, 'user:', !!user);
         setError('Prop ID missing or service/user not available.');
         setLoading(false);
         return;
@@ -85,10 +90,13 @@ export default function PropDetailPage() {
 
       try {
         setLoading(true);
+        console.log('PropDetailPage: Fetching prop with ID:', id);
         const propDoc = await service.getDocument<Prop>('props', id);
+        console.log('PropDetailPage: getDocument result:', propDoc);
 
         if (isMounted) {
           if (propDoc && propDoc.data) {
+            console.log('PropDetailPage: Found prop data:', propDoc.data.name);
             const firestoreData = propDoc.data;
             const propData = { 
               ...firestoreData,
@@ -106,6 +114,7 @@ export default function PropDetailPage() {
             setProp(propData);
             setError(null);
           } else {
+            console.log('PropDetailPage: Prop not found - propDoc:', propDoc, 'has data:', !!propDoc?.data);
             setError('Prop not found.');
             setProp(null);
           }
