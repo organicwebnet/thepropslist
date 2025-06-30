@@ -4,20 +4,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-// Temporarily disable complex context dependencies for debugging
-// import { useFirebase } from '../../../contexts/FirebaseContext.tsx';
-// import { useProps } from '../../../hooks/useProps.ts';
+import { useFirebase } from '../../../contexts/FirebaseContext.tsx';
 import { ActivityIndicator, IconButton } from 'react-native-paper';
 import { FAB } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
-// import PropCard from '../../../shared/components/PropCard/index.tsx';
+import PropCard from '../../../shared/components/PropCard/index.tsx';
 import { Filters } from '../../../types/props.ts';
 import { Prop } from '../../../shared/types/props.ts';
 import { FirebaseDocument } from '../../../shared/services/firebase/types.ts';
 import { Stack, useRouter } from 'expo-router';
-// import { useShows } from '../../../contexts/ShowsContext';
-// Temporarily disable LinearGradient for debugging
-// import LinearGradient from 'react-native-linear-gradient';
+import { useShows } from '../../../contexts/ShowsContext';
+import LinearGradient from 'react-native-linear-gradient';
 import { globalStyles } from '../../../styles/globalStyles';
 
 type RootStackParamList = {
@@ -32,21 +29,22 @@ export function PropsListScreen() {
   console.log('PropsListScreen: Component starting to render');
   
   const navigation = useNavigation<PropsListScreenNavigationProp>();
-  // const { service } = useFirebase();
-  // const { selectedShow } = useShows();
+  const { service } = useFirebase();
+  const { selectedShow } = useShows();
   const [props, setProps] = useState<FirebaseDocument<Prop>[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // Changed to false for debugging
+  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filteredProps, setFilteredProps] = useState<Prop[]>([]);
   const router = useRouter();
 
   console.log('PropsListScreen: State initialized');
+  console.log('PropsListScreen: service available:', !!service);
+  console.log('PropsListScreen: selectedShow:', selectedShow ? { id: selectedShow.id, name: selectedShow.name } : 'null');
 
-  // Temporarily disable complex useEffect for debugging
-  /*
   useEffect(() => {
     if (!service || !selectedShow?.id || typeof selectedShow.id !== 'string' || !selectedShow.id.trim()) {
+      console.log('PropsListScreen: Missing requirements - service:', !!service, 'selectedShow:', !!selectedShow?.id);
       setProps([]);
       setFilteredProps([]);
       setIsLoading(false);
@@ -79,6 +77,7 @@ export function PropsListScreen() {
     const unsubscribe = service.listenToCollection<Prop>(
       'props',
       (documents: FirebaseDocument<Prop>[]) => {
+        console.log('PropsListScreen: Received props from Firebase:', documents.length);
         const propsData = documents.map(normalizeProp);
         setProps(documents);
         setFilteredProps(propsData);
@@ -96,18 +95,16 @@ export function PropsListScreen() {
     );
     return () => unsubscribe();
   }, [service, selectedShow?.id]);
-  */
 
   const onRefresh = useCallback(() => {
     console.log('PropsListScreen: onRefresh called');
     setRefreshing(true);
-    // Simulate refresh completion
-    setTimeout(() => setRefreshing(false), 1000);
+    // The refresh will be handled by the listener
   }, []);
 
   const handleAddProp = () => {
     console.log('PropsListScreen: handleAddProp called');
-    router.navigate({ pathname: '/(tabs)/props/create', params: { showId: 'debug-show' } });
+    router.navigate({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } });
   };
 
   const handlePropPress = (propId: string) => {
@@ -128,14 +125,21 @@ export function PropsListScreen() {
         {
           text: 'Delete',
           onPress: async () => {
-            console.log('Delete confirmed for propId:', propId);
+            try {
+              await service.deleteDocument('props', propId);
+              console.log(`Prop ${propId} deleted successfully`);
+            } catch (err) {
+              console.error('Error deleting prop:', err);
+              setError('Failed to delete prop. Please try again.');
+              Alert.alert('Error', 'Could not delete prop. Please try again.');
+            }
           },
           style: 'destructive',
         },
       ],
       { cancelable: true }
     );
-  }, []);
+  }, [service]);
 
   console.log('PropsListScreen: About to render, isLoading:', isLoading, 'error:', error);
 
@@ -157,7 +161,7 @@ export function PropsListScreen() {
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity 
           style={styles.retryButton} 
-          onPress={() => console.log('Retry pressed')}
+          onPress={() => service.offline().enableSync().catch(console.error)}
         >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
@@ -170,71 +174,6 @@ export function PropsListScreen() {
 
   console.log('PropsListScreen: Rendering main UI');
 
-  // Simplified render without LinearGradient for debugging
-  return (
-    <View style={[globalStyles.flex1, { backgroundColor: '#1a1a2e' }]}>
-      <View style={styles.container}>
-        <Text style={styles.debugText}>Props List Screen - Debug Mode</Text>
-        <Text style={styles.debugText}>Props count: {filteredProps?.length || 0}</Text>
-        
-        <FlatList
-          data={filteredProps}
-          keyExtractor={(item, index) => item?.id || `item-${index}`}
-          renderItem={({ item, index }: { item: Prop; index: number }) => {
-            console.log('PropsListScreen: Rendering item at index:', index, 'item:', item?.name);
-            if (!item) {
-              console.warn(`Prop data missing for item at index ${index}`);
-              return (
-                <View style={styles.propItem}>
-                  <Text style={styles.propName}>Missing prop data</Text>
-                </View>
-              );
-            }
-            return (
-              <TouchableOpacity 
-                style={styles.propItem}
-                onPress={() => handlePropPress(item.id)}
-              >
-                <Text style={styles.propName}>{item.name || 'Unnamed Prop'}</Text>
-                <Text style={styles.propCategory}>{item.category || 'No category'}</Text>
-                <TouchableOpacity 
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteProp(item.id)}
-                >
-                  <Text style={styles.deleteButtonText}>Delete</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
-            );
-          }}
-          contentContainerStyle={styles.listContentContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#2563eb']}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <MaterialIcons name="inventory" size={48} color="#94a3b8" />
-              <Text style={styles.emptyText}>No props found</Text>
-              <Text style={styles.emptySubtext}>Add your first prop to get started</Text>
-            </View>
-          }
-        />
-        
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={handleAddProp}
-        >
-          <MaterialIcons name="add" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  // Original complex render commented out for debugging
-  /*
   return (
     <LinearGradient
       colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
@@ -265,7 +204,6 @@ export function PropsListScreen() {
               refreshing={refreshing}
               onRefresh={onRefresh}
               colors={['#2563eb']}
-             
             />
           }
           ListEmptyComponent={
@@ -284,7 +222,6 @@ export function PropsListScreen() {
       </View>
     </LinearGradient>
   );
-  */
 }
 
 const styles = StyleSheet.create({
@@ -335,71 +272,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
   },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#64748b',
-  },
   emptySubtext: {
     marginTop: 8,
     fontSize: 14,
     color: '#94a3b8',
-  },
-  addButton: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2563eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modal: { backgroundColor: 'rgba(30,30,30,0.7)' },
-  button: { backgroundColor: 'rgba(30,30,30,0.7)' },
-  addButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  debugText: {
-    marginTop: 16,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  propItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  propName: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  propCategory: {
-    fontSize: 14,
-    color: '#94a3b8',
-  },
-  deleteButton: {
-    padding: 8,
-    backgroundColor: '#dc2626',
-    borderRadius: 4,
-  },
-  deleteButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
   },
   fab: {
     position: 'absolute',
