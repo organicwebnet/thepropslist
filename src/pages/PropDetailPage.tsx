@@ -633,7 +633,7 @@ export default function PropDetailPage() {
       >
         <View style={styles.containerMobile}>
           <View style={styles.backButtonMobile}>
-            <TouchableOpacity onPress={() => router.navigate('/props')}>
+            <TouchableOpacity onPress={() => router.back()}>
               <Text style={styles.backButtonTextMobile}>Back to Props</Text>
             </TouchableOpacity>
           </View>

@@ -106,6 +106,7 @@ export default function TabLayout() {
         name="props/[id]/index"
         options={{
           href: null,
+          headerShown: false,
         }}
       />
       <Tabs.Screen
