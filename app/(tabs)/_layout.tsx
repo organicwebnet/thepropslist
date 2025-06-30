@@ -40,21 +40,23 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="props"
+        name="props/index"
         options={{
           title: 'Props',
           tabBarIcon: ({ color }) => (
             <Ionicons name="cube" size={24} color={color} />
           ),
+          href: '/props',
         }}
       />
       <Tabs.Screen
-        name="shows"
+        name="shows/index"
         options={{
           title: 'Shows',
           tabBarIcon: ({ color }) => (
             <Ionicons name="film" size={24} color={color} />
           ),
+          href: '/shows',
         }}
       />
       <Tabs.Screen
@@ -75,22 +77,59 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Hide all nested routes from tab bar */}
       <Tabs.Screen
-        name="todos"
+        name="todos/index"
         options={{
-          href: null, // Hide from tab bar
+          href: null,
         }}
       />
       <Tabs.Screen
         name="packing/createBox"
         options={{
-          href: null, // Hide from tab bar
+          href: null,
         }}
       />
       <Tabs.Screen
         name="packing/find"
         options={{
-          href: null, // Hide from tab bar
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="props/create"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="props/[id]/index"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="props/[id]/edit"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="shows/create"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="shows/new"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="shows/[id]/index"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

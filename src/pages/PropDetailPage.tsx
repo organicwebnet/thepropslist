@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Linking, Platform, useWindowDimensions, FlatList } from 'react-native';
 import { useLocalSearchParams, useRouter, Link } from 'expo-router';
-import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp, deleteDoc, query, where, getDocs } from 'firebase/firestore';
+
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Check, Edit, Trash2, Plus, Upload, Calendar, X, ChevronDown, ChevronUp, AlertTriangle, MessageSquare, LifeBuoy, Image as ImageIconWeb, Paperclip, ArrowLeft, Package, Info as InfoIcon, Activity, Wrench, Clock } from 'lucide-react';
@@ -49,10 +49,9 @@ export default function PropDetailPage() {
     if (!id || !lifecycle?.updatePropStatus) return;
     try {
       await lifecycle.updatePropStatus(status, notes);
-      const propRef = doc(service.getFirestoreJsInstance(), 'props', id);
-      const propSnap = await getDoc(propRef);
-      if (propSnap.exists()) {
-        setProp({ ...(propSnap.data() as Prop), id: propSnap.id });
+      const propDoc = await service.getDocument<Prop>('props', id);
+      if (propDoc && propDoc.data) {
+        setProp({ ...propDoc.data, id: propDoc.id });
       }
       setIsAddingStatus(false);
     } catch (err: any) {
@@ -64,10 +63,9 @@ export default function PropDetailPage() {
     if (!id || !lifecycle?.addMaintenanceRecord) return;
     try {
       await lifecycle.addMaintenanceRecord(record);
-      const propRef = doc(service.getFirestoreJsInstance(), 'props', id);
-      const propSnap = await getDoc(propRef);
-      if (propSnap.exists()) {
-        setProp({ ...(propSnap.data() as Prop), id: propSnap.id });
+      const propDoc = await service.getDocument<Prop>('props', id);
+      if (propDoc && propDoc.data) {
+        setProp({ ...propDoc.data, id: propDoc.id });
       }
       setIsAddingMaintenance(false);
     } catch (err: any) {
@@ -79,12 +77,11 @@ export default function PropDetailPage() {
   useEffect(() => {
     let isMounted = true;
     const fetchProp = async () => {
-      if (!id || !service?.getFirestoreJsInstance || !user) {
+      if (!id || !service || !user) {
         setError('Prop ID missing or service/user not available.');
         setLoading(false);
         return;
       }
-      const firestore = service.getFirestoreJsInstance();
 
       try {
         setLoading(true);
@@ -108,14 +105,6 @@ export default function PropDetailPage() {
 
             setProp(propData);
             setError(null);
-
-            if (propData.showId) {
-              const showRef = doc(firestore, 'shows', propData.showId);
-              const showSnap = await getDoc(showRef);
-              if (showSnap.exists()) {
-                // setShow({ ...(showSnap.data() as Show), id: showSnap.id });
-              }
-            }
           } else {
             setError('Prop not found.');
             setProp(null);
@@ -141,7 +130,7 @@ export default function PropDetailPage() {
   const handleEditSubmit = async (data: PropFormData) => {
     if (!prop) return;
     try {
-      await updateDoc(doc(service.getFirestoreJsInstance(), 'props', prop.id), {
+      await service.updateDocument('props', prop.id, {
          ...data,
          lastModifiedAt: new Date().toISOString()
        });
@@ -664,10 +653,10 @@ export default function PropDetailPage() {
             <Text style={styles.titleMobile}>{prop.name}</Text>
             <View style={styles.actionsMobile}>
               <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <Feather name="edit" size={20} color={themeColors.text} />
+                <Feather name="edit" size={20} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity onPress={handleDeleteProp} style={{ marginLeft: 12 }}>
-                <Feather name="trash-2" size={20} color={themeColors.error} />
+                <Feather name="trash-2" size={20} color="#ff6b6b" />
               </TouchableOpacity>
             </View>
           </View>
