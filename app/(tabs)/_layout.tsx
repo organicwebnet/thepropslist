@@ -34,7 +34,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Ionicons name="home" size={24} color={color} />
           ),
         }}
@@ -43,7 +43,7 @@ export default function TabLayout() {
         name="props"
         options={{
           title: 'Props',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Ionicons name="cube" size={24} color={color} />
           ),
         }}
@@ -52,7 +52,7 @@ export default function TabLayout() {
         name="shows"
         options={{
           title: 'Shows',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Ionicons name="film" size={24} color={color} />
           ),
         }}
@@ -61,7 +61,7 @@ export default function TabLayout() {
         name="packing"
         options={{
           title: 'Packing',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Ionicons name="cube-outline" size={24} color={color} />
           ),
         }}
@@ -70,7 +70,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color }) => (
             <Ionicons name="person" size={24} color={color} />
           ),
         }}
