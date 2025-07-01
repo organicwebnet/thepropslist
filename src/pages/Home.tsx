@@ -81,7 +81,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
             //   updatedAt: data.updatedAt || new Date().toISOString(),
             // } as Show);
           } else {
-            console.log("No such document for showId:", showId);
+            console.error("No such document for showId:", showId);
             // setShowData(null);
           }
         } catch (e) {
@@ -97,13 +97,11 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
 
   // Placeholder handlers for PropList (implement properly if needed)
   const handleNavigateToEditProp = (prop: Prop) => {
-    console.log("Navigate to edit prop:", prop.id);
     // Example navigation:
     // navigation.navigate('EditProp', { prop });
   };
 
   const handleDeleteProp = (propId: string) => {
-    console.log("Delete prop:", propId);
     // Example deletion logic (needs service method):
     // Alert.alert('Delete Prop', 'Are you sure?', [
     //   { text: 'Cancel', style: 'cancel' },
@@ -170,7 +168,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
         } },
       ]);
     } else {
-      console.warn("Attempted to delete show without service or showId/Name");
+              console.error("Attempted to delete show without service or showId/Name");
     }
   };
 
@@ -333,7 +331,7 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
           <PropList
             props={props}
             onEdit={(prop) => router.navigate(`/props/${prop.id}/edit`)}
-            onDelete={(id) => console.log('Delete prop', id)}
+                          onDelete={(id) => { /* TODO: Implement delete */ }}
           />
         ) : (
           <Text className="text-center text-gray-600 dark:text-gray-400">

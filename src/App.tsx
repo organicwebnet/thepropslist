@@ -75,7 +75,7 @@ function App() {
         // webAuthInstance = firebaseService.getFirestoreJsInstance(); // Removed invalid assignment
         // db = firebaseService.firestore(); 
         setFirebaseInitialized(true);
-        console.log('Firebase initialized in App.tsx');
+    
       } catch (error) {
         console.error("Failed to initialize Firebase:", error);
         // Handle initialization error (e.g., show error message)
@@ -149,15 +149,11 @@ function App() {
       return;
     }
 
-    console.log('Loading props for show:', selectedShow.id);
-
     // Use firebaseService.listenToCollection for props
     const propsUnsubscribe = firebaseService.listenToCollection<Prop>(
       'props',
       (docs: FirebaseDocument<Prop>[]) => {
-        console.log('Props snapshot received, document count:', docs.length);
         const propsData = docs.map((doc: FirebaseDocument<Prop>) => ({ ...doc.data, id: doc.id } as Prop));
-        console.log('Loaded props:', propsData.length);
         setProps(propsData);
         setLoading(false);
       },
@@ -184,12 +180,10 @@ function App() {
       try {
         const result = await getRedirectResult(currentAuth);
         if (result && user) { // ensure user is not null
-          console.log('Redirect authentication result:', result);
           const shouldLink = localStorage.getItem('linkGoogleAccount') === 'true';
           const linkEmail = localStorage.getItem('linkEmail');
           
           if (shouldLink && linkEmail) {
-            console.log(`Attempting to link Google account to ${linkEmail}`);
             const googleEmail = result.user.email;
             if (googleEmail !== linkEmail) {
               console.error('Email mismatch:', { googleEmail, linkEmail });
@@ -202,7 +196,6 @@ function App() {
               
               // Use firebaseService.setDocument
               const firebaseUserForSet = user as FirebaseUserJs;
-              console.log('[App.tsx] Attempting to setDoc for user:', firebaseUserForSet?.uid);
               try {
                 await firebaseService.setDocument('userProfiles', firebaseUserForSet.uid, { 
                   googleLinked: true,
@@ -210,7 +203,6 @@ function App() {
                   displayName: result.user.displayName || firebaseUserForSet.displayName,
                   lastUpdated: new Date().toISOString()
                 }, { merge: true });
-                console.log('Successfully linked Google account');
                 window.alert('Successfully linked your Google account!');
               } catch (e) {
                 console.error("Error updating user profile after link:", e);
@@ -275,24 +267,7 @@ function App() {
     checkOnboarding();
   }, [user, firebaseInitialized, firebaseService]); // Depend on initialization state
 
-  // Add effect to log computed styles after mount & init
-  useEffect(() => {
-    if (firebaseInitialized) {
-      const appContainer = document.getElementById('app-container');
-      if (appContainer) {
-        const styles = window.getComputedStyle(appContainer);
-        console.log('--- Computed Styles for #app-container ---');
-        console.log('Display:', styles.display); 
-        console.log('Flex Direction:', styles.flexDirection); 
-        console.log('Min Height:', styles.minHeight);
-        console.log('Background Color:', styles.backgroundColor);
-        console.log('Color:', styles.color);
-        console.log('-----------------------------------------');
-      } else {
-        console.error('#app-container element not found');
-      }
-    }
-  }, [firebaseInitialized]); // Rerun if firebase init state changes (primarily for first true)
+
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters);
@@ -504,7 +479,6 @@ function App() {
   });
 
   const handleExport = (format: 'pdf' | 'csv') => {
-    console.log(`Exporting props in ${format} format...`);
     // Placeholder for export functionality
   };
 

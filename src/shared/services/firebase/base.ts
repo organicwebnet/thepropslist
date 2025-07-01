@@ -74,7 +74,7 @@ export abstract class BaseFirebaseService implements FirebaseService {
   // TODO: These should likely be moved to their own dedicated services (e.g., ShowService)
   // For now, we make them abstract to satisfy the interface.
   public async deleteShow(showId: string): Promise<void> {
-    console.log(`Deleting show ${showId}`);
+    // Deleting show and related data
     // 1. Delete all props in the show
     const props = await this.getDocuments(`shows/${showId}/props`);
     const batch = this.batch();
@@ -90,7 +90,7 @@ export abstract class BaseFirebaseService implements FirebaseService {
     const showRef = (this.firestore as any).collection('shows').doc(showId);
     batch.delete(showRef);
     await batch.commit();
-    console.log(`Successfully deleted show ${showId} and all related data.`);
+    // Successfully deleted show and all related data
   }
 
   // Stubs to satisfy FirebaseService interface

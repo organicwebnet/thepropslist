@@ -88,8 +88,8 @@ export function PropsPage() {
         <View style={globalStyles.content}>
           <PropList
             props={filteredProps}
-            onEdit={(prop: Prop) => console.log('Edit prop', prop)}
-            onDelete={(id: string) => console.log('Delete prop', id)}
+                            onEdit={(prop: Prop) => {/* TODO: Implement edit prop */ }}
+                onDelete={(id: string) => {/* TODO: Implement delete prop */ }}
           />
         </View>
         <Link href={{ pathname: '/props/new' }} style={globalStyles.addButton}>

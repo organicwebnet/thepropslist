@@ -10,7 +10,7 @@ interface NativeAuthScreenProps {
 export function NativeAuthScreen({ onAuthSuccess }: NativeAuthScreenProps) {
   // Handle successful authentication
   const handleClose = () => {
-    console.log("AuthForm succeeded - navigating to app");
+
     // Navigate to the main app (tabs)
     router.replace('/(tabs)');
     onAuthSuccess?.(); 

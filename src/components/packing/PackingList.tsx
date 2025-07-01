@@ -174,7 +174,7 @@ export function PackingList({
 
   // --- Update handler for Edit Box ---
   const handleEditBox = (box: PackingBox) => {
-    console.log("Editing box:", box.id, box.name);
+            // Editing box
     setEditingBoxId(box.id);
     setCurrentBoxName(box.name ?? '');
 
@@ -192,7 +192,7 @@ export function PackingList({
              propsToSelect.push(instanceToAdd);
           }
         } else {
-          console.warn(`Could not find matching instance for packed prop: ${packedProp.propId}, instance ${instanceId}`);
+          // Could not find matching instance for packed prop
         }
       }
     });

@@ -89,8 +89,7 @@ const MemberPicker: React.FC<MemberPickerProps> = ({
   // Placeholder for adding a new member UI/functionality
   const handleAddNewMember = () => {
     // This would likely open another modal or inline form
-    // For now, just a console log
-    console.log("Placeholder: Add new member functionality");
+    // TODO: Implement add new member functionality
     // If a new member is created, it should be added to allUsers
     // and potentially selected. This might involve a callback to the parent.
   };

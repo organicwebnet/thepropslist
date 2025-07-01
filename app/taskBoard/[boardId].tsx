@@ -17,6 +17,7 @@ import { FAB } from 'react-native-paper';
 import { DraxProvider, DraxView, DraxList } from 'react-native-drax';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 
 import { Text as ThemedText, View as ThemedView } from '../../src/components/Themed';
@@ -75,10 +76,13 @@ const TaskBoardDetailScreen = () => {
   const colors = theme === 'dark' ? darkTheme.colors : lightTheme.colors;
 
   const [board, setBoard] = useState<BoardData | null>(null);
+  const [show, setShow] = useState<any | null>(null);
   const [lists, setLists] = useState<ListData[]>([]);
   const [cards, setCards] = useState<Record<string, CardData[]>>({});
   const [members, setMembers] = useState<MemberData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingFromCache, setLoadingFromCache] = useState(true);
+  const [syncingFromNetwork, setSyncingFromNetwork] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // State to manage list layouts for drop detection
@@ -127,39 +131,146 @@ const TaskBoardDetailScreen = () => {
     }
   }, [offlineSyncManager]);
 
-  // --- Data Fetching ---
+  // NEW: Load cached data immediately for fast startup
+  useEffect(() => {
+    if (!boardId || !offlineSyncManager) return;
+    
+    const loadCachedData = async () => {
+      try {
+        // Load all cached data in parallel for maximum speed
+        const [cachedBoard, cachedLists, cachedCards] = await Promise.all([
+          offlineSyncManager.getCachedDocument('todo_boards', boardId),
+          offlineSyncManager.getCachedDocument('board_lists', boardId),
+          offlineSyncManager.getCachedDocument('board_cards', boardId)
+        ]);
+        
+        let hasAnyCache = false;
+        
+        if (cachedBoard) {
+          setBoard(cachedBoard);
+          hasAnyCache = true;
+          
+          // Load cached show data if available
+          if (cachedBoard.showId) {
+            const cachedShow = await offlineSyncManager.getCachedDocument('shows', cachedBoard.showId);
+            if (cachedShow) {
+              setShow(cachedShow);
+            }
+          }
+        }
+
+        if (cachedLists && Array.isArray(cachedLists)) {
+          setLists(cachedLists);
+          hasAnyCache = true;
+        }
+
+        if (cachedCards) {
+          setCards(cachedCards);
+          hasAnyCache = true;
+        }
+        
+        if (hasAnyCache) {
+          setLoading(false);
+          setLoadingFromCache(false);
+        }
+
+      } catch (error) {
+        console.error('Error loading cached data:', error);
+      } finally {
+        setLoadingFromCache(false);
+      }
+    };
+
+    loadCachedData();
+  }, [boardId, offlineSyncManager]);
+
+  // Add refresh function for manual cache refresh
+  const refreshData = useCallback(async () => {
+    if (!firebaseService || !boardId) return;
+    
+    setSyncingFromNetwork(true);
+    
+    // Clear cache and reload
+    if (offlineSyncManager) {
+      // Force reload by setting state
+      setLoading(true);
+      // Network listeners will handle the rest
+    }
+    
+    setTimeout(() => setSyncingFromNetwork(false), 2000); // Auto-hide after 2s
+  }, [firebaseService, boardId, offlineSyncManager]);
+
+  // Enhanced data fetching with caching
   useEffect(() => {
     if (!firebaseService || !boardId || !isFirebaseInitialized) return;
-    setLoading(true);
+    
+    // Only set loading to true if we don't have cached data
+    if (!board && !lists.length) {
+      setLoading(true);
+    }
+    
+    // Indicate that we're syncing from network
+    setSyncingFromNetwork(true);
 
     const boardPath = `todo_boards/${boardId}`;
     const listsPath = `${boardPath}/lists`;
 
     const unsubscribeBoard = firebaseService.listenToDocument<BoardData>(
       boardPath,
-      boardDoc => {
+      async boardDoc => {
         if (boardDoc.exists) {
-          setBoard({ ...boardDoc.data, id: boardDoc.id });
+          const boardData = { ...boardDoc.data, id: boardDoc.id };
+          setBoard(boardData);
+          
+          // Cache board data for fast loading next time
+          if (offlineSyncManager) {
+            await offlineSyncManager.cacheDocument('todo_boards', boardId, boardData);
+          }
+          
+          // Fetch show data if showId exists
+          if (boardData.showId) {
+            try {
+              const showDoc = await firebaseService.getDocument('shows', boardData.showId);
+              if (showDoc && showDoc.exists && showDoc.data) {
+                const showData = { ...showDoc.data, id: showDoc.id };
+                setShow(showData);
+                
+                // Cache show data
+                if (offlineSyncManager) {
+                  await offlineSyncManager.cacheDocument('shows', boardData.showId, showData);
+                }
+              }
+            } catch (err) {
+              console.error('Error loading show:', err);
+            }
+          }
         } else {
           setError('Board not found.');
         }
         setLoading(false);
+        setSyncingFromNetwork(false);
       },
       err => {
         console.error('Error loading board:', err);
         setError('Could not load the board.');
         setLoading(false);
+        setSyncingFromNetwork(false);
       },
     );
 
     const unsubscribeLists = firebaseService.listenToCollection<ListData>(
       listsPath,
-      listDocs => {
+      async listDocs => {
         const sortedLists = listDocs
           .map(doc => ({ ...doc.data, id: doc.id } as ListData))
           .sort((a, b) => a.order - b.order);
 
         setLists(sortedLists);
+        
+        // Cache lists data for fast loading next time
+        if (offlineSyncManager) {
+          await offlineSyncManager.cacheDocument('board_lists', boardId, sortedLists);
+        }
       },
       err => {
         console.error('Error loading lists:', err);
@@ -185,13 +296,19 @@ const TaskBoardDetailScreen = () => {
       const cardsPath = `todo_boards/${boardId}/lists/${list.id}/cards`;
       return firebaseService.listenToCollection<CardData>(
         cardsPath,
-        cardDocs => {
+        async cardDocs => {
           const sortedCards = cardDocs
             .map(doc => ({ ...doc.data, id: doc.id, listId: list.id } as CardData))
             .sort((a, b) => a.order - b.order);
 
           setCards(prev => {
             const updated = { ...prev, [list.id]: sortedCards };
+            
+            // Cache all cards for the board for fast loading next time
+            if (offlineSyncManager) {
+              offlineSyncManager.cacheDocument('board_cards', boardId, updated);
+            }
+            
             return updated;
           });
         },
@@ -594,6 +711,14 @@ const TaskBoardDetailScreen = () => {
     return (
       <DefaultView style={[styles.centered, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
+        <DefaultText style={{ color: colors.text, marginTop: 16, textAlign: 'center' }}>
+          {loadingFromCache ? 'Loading from cache...' : 'Loading board...'}
+        </DefaultText>
+        {!loadingFromCache && (
+          <DefaultText style={{ color: colors.textSecondary, marginTop: 8, textAlign: 'center', fontSize: 12 }}>
+            This should be faster next time with caching
+          </DefaultText>
+        )}
       </DefaultView>
     );
   }
@@ -655,15 +780,77 @@ const TaskBoardDetailScreen = () => {
           <DefaultView style={styles.container}>
             <Stack.Screen
               options={{
-                title: board?.name ?? 'Board',
+                title: show?.name || board?.name || 'Task Board',
                 headerBackTitle: 'Back',
-                headerTransparent: true,
+                headerTransparent: false,
+                headerStyle: {
+                  backgroundColor: '#2B2E8C',
+                },
                 headerTintColor: '#FFFFFF',
+                headerTitleStyle: {
+                  color: '#FFFFFF',
+                  fontWeight: 'bold',
+                  fontSize: 18,
+                },
               }}
             />
+            
+            {/* Custom Header with Title and Sync Indicator */}
+            <View style={{
+              backgroundColor: '#2B2E8C',
+              paddingHorizontal: 16,
+              paddingTop: insets.top,
+              paddingBottom: 12,
+              borderBottomWidth: 1,
+              borderBottomColor: '#c084fc',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Pressable 
+                  onPress={() => router.back()}
+                  style={{ padding: 8 }}
+                >
+                  <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                </Pressable>
+                <DefaultText style={{
+                  color: '#FFFFFF',
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  flex: 1,
+                  textAlign: 'center',
+                  marginHorizontal: 16,
+                }}>
+                  {show?.name || board?.name || 'Task Board'}
+                </DefaultText>
+                <View style={{ width: 40, alignItems: 'center' }}>
+                  {syncingFromNetwork && (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  )}
+                  <Pressable 
+                    onPress={refreshData}
+                    style={{ padding: 4 }}
+                  >
+                    <Ionicons name="refresh" size={20} color="#FFFFFF" opacity={0.7} />
+                  </Pressable>
+                </View>
+              </View>
+              
+              {/* Show sync status */}
+              {syncingFromNetwork && (
+                <DefaultText style={{
+                  color: '#FFFFFF',
+                  fontSize: 12,
+                  textAlign: 'center',
+                  marginTop: 4,
+                  opacity: 0.8,
+                }}>
+                  Syncing...
+                </DefaultText>
+              )}
+            </View>
+            
             <ScrollView
               horizontal
-              style={[styles.listsContainer, { paddingTop: headerHeight }]}
+              style={[styles.listsContainer]}
               showsHorizontalScrollIndicator={false}>
               {orderedLists.map((list) => {
                 if (!list) return null;

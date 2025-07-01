@@ -386,7 +386,7 @@ export default function WebPropDetailScreen() {
   );
 }
 
-const DetailItem = ({ label, value }: { label: string; value: React.ReactNode | string | number | undefined | null }): JSX.Element | null => {
+const DetailItem = ({ label, value }: { label: string; value: React.ReactNode | string | number | undefined | null }): React.JSX.Element | null => {
   if (value === undefined || value === null || value === '') {
     return null;
   }
@@ -428,7 +428,7 @@ const TabButton = ({ label, activeTab, setActiveTab, icon: Icon }: {
   );
 };
 
-const FlagItem = ({ label, value }: { label: string; value: boolean }): JSX.Element => {
+const FlagItem = ({ label, value }: { label: string; value: boolean }): React.JSX.Element => {
   return (
     <View className="flex flex-row items-center gap-2">
       {value ? (

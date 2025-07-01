@@ -96,14 +96,9 @@ function RequiredLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, show, disabled = false }: PropFormProps): JSX.Element {
+  export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, show, disabled = false }: PropFormProps): React.JSX.Element {
   // Log received show prop at the start of the component execution
-  console.log('[PropForm Execution] Received show prop:', JSON.stringify(show, null, 2));
-
-  console.log('=== PROP FORM MOUNT DEBUG ===');
-  console.log('1. PropForm mounted with mode:', mode);
-  console.log('2. Initial data received:', initialData);
-  console.log('3. Show data received:', show);
+  
 
   const [formData, setFormData] = useState<PropFormData>(() => {
     if (initialData) {

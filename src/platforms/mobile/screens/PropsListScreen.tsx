@@ -26,8 +26,6 @@ type RootStackParamList = {
 type PropsListScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PropsList'>;
 
 export function PropsListScreen() {
-  console.log('PropsListScreen: Component starting to render');
-  
   const navigation = useNavigation<PropsListScreenNavigationProp>();
   const { service } = useFirebase();
   const { selectedShow } = useShows();
@@ -38,13 +36,8 @@ export function PropsListScreen() {
   const [filteredProps, setFilteredProps] = useState<Prop[]>([]);
   const router = useRouter();
 
-  console.log('PropsListScreen: State initialized');
-  console.log('PropsListScreen: service available:', !!service);
-  console.log('PropsListScreen: selectedShow:', selectedShow ? { id: selectedShow.id, name: selectedShow.name } : 'null');
-
   useEffect(() => {
     if (!service || !selectedShow?.id || typeof selectedShow.id !== 'string' || !selectedShow.id.trim()) {
-      console.log('PropsListScreen: Missing requirements - service:', !!service, 'selectedShow:', !!selectedShow?.id);
       setProps([]);
       setFilteredProps([]);
       setIsLoading(false);
@@ -78,12 +71,7 @@ export function PropsListScreen() {
     const unsubscribe = service.listenToCollection<Prop>(
       'props',
       (documents: FirebaseDocument<Prop>[]) => {
-        console.log('PropsListScreen: Received props from Firebase:', documents.length);
-        console.log('PropsListScreen: Raw Firebase document IDs:', documents.map(doc => doc.id).join(', '));
-        console.log('PropsListScreen: Sample raw document:', documents[0] ? { id: documents[0].id, name: documents[0].data?.name } : 'none');
         const propsData = documents.map(normalizeProp);
-        console.log('PropsListScreen: Normalized prop IDs:', propsData.map(prop => prop.id).join(', '));
-        console.log('PropsListScreen: Sample normalized prop:', propsData[0] ? { id: propsData[0].id, name: propsData[0].name } : 'none');
         setProps(documents);
         setFilteredProps(propsData);
         setError(null);
@@ -102,23 +90,19 @@ export function PropsListScreen() {
   }, [service, selectedShow?.id]);
 
   const onRefresh = useCallback(() => {
-    console.log('PropsListScreen: onRefresh called');
     setRefreshing(true);
     // The refresh will be handled by the listener
   }, []);
 
   const handleAddProp = () => {
-    console.log('PropsListScreen: handleAddProp called');
     router.navigate({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } });
   };
 
   const handlePropPress = (propId: string) => {
-    console.log('PropsListScreen: handlePropPress called with propId:', propId);
     router.navigate(`/(tabs)/props/${propId}`);
   };
 
   const handleDeleteProp = useCallback(async (propId: string) => {
-    console.log('PropsListScreen: handleDeleteProp called with propId:', propId);
     Alert.alert(
       'Confirm Deletion',
       'Are you sure you want to delete this prop?',
@@ -132,7 +116,6 @@ export function PropsListScreen() {
           onPress: async () => {
             try {
               await service.deleteDocument('props', propId);
-              console.log(`Prop ${propId} deleted successfully`);
             } catch (err) {
               console.error('Error deleting prop:', err);
               setError('Failed to delete prop. Please try again.');
@@ -146,10 +129,7 @@ export function PropsListScreen() {
     );
   }, [service]);
 
-  console.log('PropsListScreen: About to render, isLoading:', isLoading, 'error:', error);
-
   if (isLoading) {
-    console.log('PropsListScreen: Rendering loading state');
     return (
       <View style={styles.centerContainer}>
         <MaterialIcons name="hourglass-empty" size={48} color="#2563eb" />
@@ -159,7 +139,6 @@ export function PropsListScreen() {
   }
 
   if (error) {
-    console.log('PropsListScreen: Rendering error state');
     return (
       <View style={styles.centerContainer}>
         <MaterialIcons name="error-outline" size={48} color="#dc2626" />
@@ -173,11 +152,6 @@ export function PropsListScreen() {
       </View>
     );
   }
-
-  console.log('PropsListScreen: filteredProps count:', filteredProps?.length || 0);
-  console.log('PropsListScreen: first few props:', filteredProps?.slice(0, 3)?.map(p => ({ id: p.id, name: p.name })));
-
-  console.log('PropsListScreen: Rendering main UI');
 
   return (
     <LinearGradient

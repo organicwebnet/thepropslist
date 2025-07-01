@@ -405,6 +405,103 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const [attachmentValidatingId, setAttachmentValidatingId] = useState<string | null>(null);
     const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
+    // Mention system states - complete
+    const [showMentionMenu, setShowMentionMenu] = useState(false);
+    const [showPropSearch, setShowPropSearch] = useState(false);
+    const [showUserSearch, setShowUserSearch] = useState(false);
+    const [showContainerSearch, setShowContainerSearch] = useState(false);
+    const [propSearchText, setPropSearchText] = useState('');
+    const [userSearchText, setUserSearchText] = useState('');
+    const [containerSearchText, setContainerSearchText] = useState('');
+    const [propSuggestions, setPropSuggestions] = useState<{id: string, name: string}[]>([]);
+    const [userSuggestions, setUserSuggestions] = useState<MemberData[]>([]);
+    const [containerSuggestions, setContainerSuggestions] = useState<{id: string, name: string}[]>([]);
+
+    // Get real props and containers data
+    const { service: firebaseService } = useFirebase();
+    const [allProps, setAllProps] = useState<{id: string, name: string}[]>([]);
+    const [allContainers, setAllContainers] = useState<{id: string, name: string}[]>([]);
+
+    // Fetch real props data - with error handling
+    useEffect(() => {
+        if (!firebaseService || !isVisible) return;
+        
+        // Get props for the current board's show
+        firebaseService.getDocument('todo_boards', boardId).then((doc: any) => {
+            if (doc?.exists && doc.data?.showId) {
+                const showId = doc.data.showId;
+                
+                // Fetch props for this show with proper error handling
+                firebaseService.getCollection('props')
+                    .then((snapshot: any) => {
+                        if (snapshot?.docs) {
+                            const props = snapshot.docs
+                                .filter((doc: any) => doc.data?.showId === showId)
+                                .map((doc: any) => ({
+                                    id: doc.id,
+                                    name: doc.data?.name || 'Unnamed Prop'
+                                }));
+                            setAllProps(props);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Could not fetch props:', error);
+                        // Use mock data as fallback
+                        setAllProps([
+                            { id: 'prop1', name: 'Crystal Ball' },
+                            { id: 'prop2', name: 'Magic Sword' },
+                            { id: 'prop3', name: 'Ancient Book' }
+                        ]);
+                    });
+
+                // Fetch packing boxes/containers for this show with proper error handling
+                firebaseService.getCollection('packing_boxes')
+                    .then((snapshot: any) => {
+                        if (snapshot?.docs) {
+                            const containers = snapshot.docs
+                                .filter((doc: any) => doc.data?.showId === showId)
+                                .map((doc: any) => ({
+                                    id: doc.id,
+                                    name: doc.data?.name || 'Unnamed Container'
+                                }));
+                            setAllContainers(containers);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Could not fetch containers:', error);
+                        // Use mock data as fallback
+                        setAllContainers([
+                            { id: 'cont1', name: 'Props Box A' },
+                            { id: 'cont2', name: 'Storage Container B' }
+                        ]);
+                    });
+            } else {
+                // No show ID found, use mock data
+                setAllProps([
+                    { id: 'prop1', name: 'Crystal Ball' },
+                    { id: 'prop2', name: 'Magic Sword' },
+                    { id: 'prop3', name: 'Ancient Book' }
+                ]);
+                setAllContainers([
+                    { id: 'cont1', name: 'Props Box A' },
+                    { id: 'cont2', name: 'Storage Container B' }
+                ]);
+            }
+        }).catch((error) => {
+            console.error('Could not fetch board data for mentions:', error);
+            // Use mock data as fallback
+            setAllProps([
+                { id: 'prop1', name: 'Crystal Ball' },
+                { id: 'prop2', name: 'Magic Sword' },
+                { id: 'prop3', name: 'Ancient Book' }
+            ]);
+            setAllContainers([
+                { id: 'cont1', name: 'Props Box A' },
+                { id: 'cont2', name: 'Storage Container B' }
+            ]);
+        });
+    }, [firebaseService, boardId, isVisible]);
+
 
     const editorRef = useRef<any>(null); // MODIFIED: Editor to any for ref type
 
@@ -584,6 +681,11 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const handleSaveDescription = async () => {
         if (!internalCard) return;
         
+        // Don't close editing mode if mention system is active
+        if (showMentionMenu || showPropSearch || showUserSearch || showContainerSearch) {
+            return;
+        }
+        
         // Only save if description actually changed
         if (editedDescription !== (internalCard.description || '')) {
             try {
@@ -602,9 +704,27 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const handleDescriptionChange = (text: string) => {
         setEditedDescription(text);
         
-        // Simple @ detection
-        if (text.endsWith('@') && !showMentionMenu && !showPropSearch) {
-            setShowMentionMenu(true);
+        // Enhanced mention detection - check for @user, @prop, @box patterns
+        if (!showMentionMenu && !showPropSearch) {
+            if (text.endsWith('@user ') || text.endsWith('@user')) {
+                // Trigger user search directly
+                setShowUserSearch(true);
+                setUserSearchText('');
+                setUserSuggestions(allShowMembers || []);
+            } else if (text.endsWith('@prop ') || text.endsWith('@prop')) {
+                // Trigger prop search directly
+                setShowPropSearch(true);
+                setPropSearchText('');
+                setPropSuggestions(allProps);
+            } else if (text.endsWith('@box ') || text.endsWith('@box')) {
+                // Trigger box/container search directly
+                setShowContainerSearch(true);
+                setContainerSearchText('');
+                setContainerSuggestions(allContainers);
+            } else if (text.endsWith('@') && !text.endsWith('@@')) {
+                // Show menu for ambiguous @ mentions
+                setShowMentionMenu(true);
+            }
         }
     };
 
@@ -612,14 +732,14 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         setShowMentionMenu(false);
         setShowPropSearch(true);
         setPropSearchText('');
-        setPropSuggestions(mockProps); // Show all props initially
+        setPropSuggestions(allProps); // Show all props initially
     };
 
     const handlePropSearchChange = (searchText: string) => {
         setPropSearchText(searchText);
         
-        // Filter props based on search
-        const filtered = mockProps.filter(prop => 
+        // Filter props based on search - with null check
+        const filtered = (allProps || []).filter((prop: {id: string, name: string}) => 
             prop.name.toLowerCase().includes(searchText.toLowerCase())
         );
         setPropSuggestions(filtered);
@@ -627,7 +747,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
 
     const handleSelectPropFromList = (prop: {id: string, name: string}) => {
         // Remove the @ from the end of the description and add the prop as a clickable link
-        const propLink = `[${prop.name}](prop:${prop.id})`;
+        const propLink = `[@${prop.name}](prop:${prop.id})`;
         const newDescription = editedDescription.slice(0, -1) + propLink + ' ';
         setEditedDescription(newDescription);
         
@@ -638,52 +758,190 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         setPropSuggestions([]);
     };
 
+    // User search handlers
+    const handleSelectUser = () => {
+        setShowMentionMenu(false);
+        setShowUserSearch(true);
+        setUserSearchText('');
+        setUserSuggestions(allShowMembers || []);
+    };
+
+    const handleUserSearchChange = (searchText: string) => {
+        setUserSearchText(searchText);
+        const filtered = (allShowMembers || []).filter((user: any) => 
+            user?.name?.toLowerCase().includes(searchText.toLowerCase())
+        );
+        setUserSuggestions(filtered);
+    };
+
+    const handleSelectUserFromList = (user: MemberData) => {
+        // Remove the @ from the end and add user mention
+        const userMention = `@${user.name}`;
+        const newDescription = editedDescription.slice(0, -1) + userMention + ' ';
+        setEditedDescription(newDescription);
+        
+        // Close everything
+        setShowUserSearch(false);
+        setShowMentionMenu(false);
+        setUserSearchText('');
+        setUserSuggestions([]);
+    };
+
+    // Container search handlers
+    const handleSelectContainer = () => {
+        setShowMentionMenu(false);
+        setShowContainerSearch(true);
+        setContainerSearchText('');
+        setContainerSuggestions(allContainers);
+    };
+
+    const handleContainerSearchChange = (searchText: string) => {
+        setContainerSearchText(searchText);
+        const filtered = (allContainers || []).filter((container: {id: string, name: string}) => 
+            container?.name?.toLowerCase().includes(searchText.toLowerCase())
+        );
+        setContainerSuggestions(filtered);
+    };
+
+    const handleSelectContainerFromList = (container: {id: string, name: string}) => {
+        // Remove the @ from the end and add container reference
+        const containerRef = `[@${container.name}](container:${container.id})`;
+        const newDescription = editedDescription.slice(0, -1) + containerRef + ' ';
+        setEditedDescription(newDescription);
+        
+        // Close everything
+        setShowContainerSearch(false);
+        setShowMentionMenu(false);
+        setContainerSearchText('');
+        setContainerSuggestions([]);
+    };
+
     const closeMentionSystem = () => {
         setShowMentionMenu(false);
         setShowPropSearch(false);
+        setShowUserSearch(false);
+        setShowContainerSearch(false);
         setPropSearchText('');
+        setUserSearchText('');
+        setContainerSearchText('');
         setPropSuggestions([]);
+        setUserSuggestions([]);
+        setContainerSuggestions([]);
     };
 
-    // Function to render description with clickable prop links
+    // Function to render description with clickable links and mentions
     const renderDescriptionWithLinks = (description: string): React.ReactNode[] => {
-        const linkRegex = /\[([^\]]+)\]\(prop:([^)]+)\)/g;
+        const propLinkRegex = /\[(@[^\]]+)\]\(prop:([^)]+)\)/g;
+        const containerLinkRegex = /\[(@[^\]]+)\]\(container:([^)]+)\)/g;
+        const userMentionRegex = /@(\w+)/g;
+        
         const parts = [];
         let lastIndex = 0;
-        let match;
+        const allMatches = [];
 
-        while ((match = linkRegex.exec(description)) !== null) {
-            // Add text before the link
-            if (match.index > lastIndex) {
+        // Find all prop links
+        let match;
+        propLinkRegex.lastIndex = 0;
+        while ((match = propLinkRegex.exec(description)) !== null) {
+            allMatches.push({
+                type: 'prop',
+                index: match.index,
+                length: match[0].length,
+                name: match[1],
+                id: match[2]
+            });
+        }
+
+        // Find all container links
+        containerLinkRegex.lastIndex = 0;
+        while ((match = containerLinkRegex.exec(description)) !== null) {
+            allMatches.push({
+                type: 'container',
+                index: match.index,
+                length: match[0].length,
+                name: match[1],
+                id: match[2]
+            });
+        }
+
+        // Find all user mentions
+        userMentionRegex.lastIndex = 0;
+        while ((match = userMentionRegex.exec(description)) !== null) {
+            allMatches.push({
+                type: 'user',
+                index: match.index,
+                length: match[0].length,
+                name: match[1],
+                id: match[1]
+            });
+        }
+
+        // Sort all matches by position
+        allMatches.sort((a, b) => a.index - b.index);
+
+        // Process each match
+        allMatches.forEach((currentMatch) => {
+            // Add text before the current match
+            if (currentMatch.index > lastIndex) {
                 parts.push(
                     <Text key={`text-${lastIndex}`} style={{ color: '#fff', fontSize: 14, lineHeight: 20 }}>
-                        {description.slice(lastIndex, match.index)}
+                        {description.slice(lastIndex, currentMatch.index)}
                     </Text>
                 );
             }
 
-            // Add the clickable link
-            const propName = match[1];
-            const propId = match[2];
-            parts.push(
-                <Pressable
-                    key={`link-${propId}`}
-                    onPress={() => {
-                        Alert.alert("Prop Link", `Navigate to ${propName} (ID: ${propId})`);
-                        // TODO: Add actual navigation logic here
-                    }}
-                    style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}
-                >
-                    <Text style={{ color: '#3B82F6', fontSize: 14, fontWeight: '600' }}>
-                        {propName}
-                    </Text>
-                </Pressable>
-            );
+            // Add the clickable element based on type
+            if (currentMatch.type === 'prop') {
+                parts.push(
+                    <Pressable
+                        key={`prop-${currentMatch.id}-${currentMatch.index}`}
+                        onPress={() => {
+                            Alert.alert("Prop Link", `Navigate to ${currentMatch.name.replace('@', '')} (ID: ${currentMatch.id})`);
+                            // TODO: Add actual navigation logic here
+                        }}
+                        style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}
+                    >
+                        <Text style={{ color: '#3B82F6', fontSize: 14, fontWeight: '600' }}>
+                            {currentMatch.name}
+                        </Text>
+                    </Pressable>
+                );
+            } else if (currentMatch.type === 'container') {
+                parts.push(
+                    <Pressable
+                        key={`container-${currentMatch.id}-${currentMatch.index}`}
+                        onPress={() => {
+                            Alert.alert("Container Link", `Navigate to ${currentMatch.name.replace('@', '')} (ID: ${currentMatch.id})`);
+                            // TODO: Add actual navigation logic here
+                        }}
+                        style={{ backgroundColor: 'rgba(168, 85, 247, 0.2)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}
+                    >
+                        <Text style={{ color: '#A855F7', fontSize: 14, fontWeight: '600' }}>
+                            {currentMatch.name}
+                        </Text>
+                    </Pressable>
+                );
+            } else if (currentMatch.type === 'user') {
+                parts.push(
+                    <Pressable
+                        key={`user-${currentMatch.id}-${currentMatch.index}`}
+                        onPress={() => {
+                            Alert.alert("User Mention", `View ${currentMatch.name}'s profile`);
+                            // TODO: Add actual navigation logic here
+                        }}
+                        style={{ backgroundColor: 'rgba(34, 197, 94, 0.2)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}
+                    >
+                        <Text style={{ color: '#22C55E', fontSize: 14, fontWeight: '600' }}>
+                            @{currentMatch.name}
+                        </Text>
+                    </Pressable>
+                );
+            }
 
-            lastIndex = match.index + match[0].length;
-        }
+            lastIndex = currentMatch.index + currentMatch.length;
+        });
 
-        // Add remaining text after the last link
+        // Add remaining text after the last match
         if (lastIndex < description.length) {
             parts.push(
                 <Text key={`text-${lastIndex}`} style={{ color: '#fff', fontSize: 14, lineHeight: 20 }}>
@@ -791,7 +1049,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const handleMemberPickerSave = (newSelectedMembers: MemberData[]) => {
         if (!internalCard) return;
 
-        console.log('Saving members:', newSelectedMembers);
+
         const updatedCard = { ...internalCard, members: newSelectedMembers };
         setInternalCard(updatedCard);
 
@@ -803,7 +1061,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         // This function would typically update the source of allShowMembers,
         // e.g., by calling a prop function passed down from the screen that fetches/manages all users.
         // For now, let's assume allShowMembers is managed externally or doesn't need immediate update here.
-        console.log('New member created (placeholder):', newMember);
+
         // setAllAvailableMembersForPicker(prev => [...prev, newMember]); // If managing a local copy for picker
     };
     const handleAddComment = async () => {
@@ -962,22 +1220,6 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
 
     // Add state for contextual menu
 
-
-    // Mention system states - simplified
-    const [showMentionMenu, setShowMentionMenu] = useState(false);
-    const [showPropSearch, setShowPropSearch] = useState(false);
-    const [propSearchText, setPropSearchText] = useState('');
-    const [propSuggestions, setPropSuggestions] = useState<{id: string, name: string}[]>([]);
-
-    // Mock props data
-    const mockProps = [
-        { id: 'prop1', name: 'Antique Vase' },
-        { id: 'prop2', name: 'Magic Sword' },
-        { id: 'prop3', name: 'Crystal Ball' },
-        { id: 'prop4', name: 'Ancient Book' },
-        { id: 'prop5', name: 'Golden Chalice' }
-    ];
-
     if (!internalCard) return null;
 
     const currentList = lists.find(l => l.id === internalCard.listId);
@@ -1051,58 +1293,18 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             )}
                         </View>
                     )}
-                    <View style={[styles.modalHeader, { borderBottomColor: 'rgba(255,255,255,0.08)',padding:6 }]}> 
-                        <Pressable
-                            onPress={async () => {
-                                const newCompleted = !completed;
-                                setCompleted(newCompleted);
-                                if (internalCard) {
-                                    const currentUser = user;
-                                    const activity: ActivityData = {
-                                        id: uuidv4(),
-                                        text: newCompleted ? 'marked this card as complete' : 'marked this card as incomplete',
-                                        date: new Date().toISOString(),
-                                    };
-                                    const updatedActivity = [...(internalCard.activity || []), activity];
-                                    await onUpdateCard(internalCard.id, internalCard.listId, { completed: newCompleted, activity: updatedActivity });
-                                    setInternalCard(prev => prev ? { ...prev, completed: newCompleted, activity: updatedActivity } : null);
-                                    // --- Prop status sync ---
-                                    if (newCompleted && internalCard.propId && service) {
-                                        try {
-                                            await service.updateDocument('props', internalCard.propId, { status: 'repaired_back_in_show' });
-                                        } catch (err) {
-                                            console.error('Failed to update prop status from card completion:', err);
-                                        }
-                                    }
-                                }
-                            }}
-                            style={{ marginRight: 12 }}
-                            accessibilityLabel={completed ? 'Mark incomplete' : 'Mark complete'}
-                            accessibilityRole="button"
-                        >
-                            <Ionicons name={completed ? 'checkmark-circle' : 'ellipse-outline'} size={28} color={completed ? '#4caf50' : '#bdbdbd'} />
+                    {/* Top Right Controls - FIXED POSITION */}
+                    <View style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 8, zIndex: 10 }}>
+                        <Pressable onPress={handleDelete} style={{ marginRight: 8 }}>
+                            <Ionicons name="trash" size={22} color="#e57373" style={{ textShadowColor: '#000', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
                         </Pressable>
-                        {editingTitleState ? (
-                            <TextInput style={[styles.input, { color: '#fff', fontWeight: 'bold', fontSize: 24, flex: 1 }]} value={editedTitle} onChangeText={setEditedTitle} placeholder="Card Title" onBlur={handleSaveTitle} autoFocus placeholderTextColor={currentThemeColors.textSecondary}/>
-                        ) : (
-                            <Pressable onPress={handleEditTitle} style={{flex:1}}>
-                                <Text style={[styles.title, completed && { textDecorationLine: 'line-through', color: currentThemeColors.textSecondary }]}>{internalCard.title}</Text>
-                            </Pressable>
-                        )}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Pressable onPress={handleEditTitle} style={{ marginRight: 8 }}>
-                                <Ionicons name="pencil" size={22} color="#bdbdbd" />
-                            </Pressable>
-                            <Pressable onPress={handleDelete} style={{ marginRight: 20 }}>
-                                <Ionicons name="trash" size={22} color="#e57373" style={{ textShadowColor: '#000', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
-                            </Pressable>
-                            <Pressable onPress={onClose} style={{ padding: 4 }}>
-                                <Ionicons name="close" size={22} color="#bdbdbd" />
-                            </Pressable>
-                        </View>
+                        <Pressable onPress={onClose} style={{ padding: 4 }}>
+                            <Ionicons name="close" size={22} color="#bdbdbd" />
+                        </Pressable>
                     </View>
-                    {/* Action buttons row */}
-                    <View style={{ marginBottom: 18, paddingHorizontal: 10 }}>
+
+                    {/* Action buttons row - REMOVED CHECKLIST AND MEMBERS */}
+                    <View style={{ marginBottom: 18, paddingHorizontal: 10, paddingTop: 6 }}>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                             <Pressable onPress={() => setAddMenuVisible(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#374151', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
                                 <Ionicons name="add" size={16} color="#fff" style={{ marginRight: 4 }} />
@@ -1118,30 +1320,68 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                 <Ionicons name="calendar" size={16} color="#fff" style={{ marginRight: 4 }} />
                                 <Text style={{ color: '#fff', fontSize: 14 }}>Dates</Text>
                             </Pressable>
-                            
-                            <Pressable onPress={handleAddChecklist} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#374151', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
-                                <Ionicons name="checkbox" size={16} color="#fff" style={{ marginRight: 4 }} />
-                                <Text style={{ color: '#fff', fontSize: 14 }}>Checklist</Text>
-                            </Pressable>
-                            
-                            <Pressable onPress={handleOpenMemberEditor} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#374151', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
-                                <Ionicons name="person" size={16} color="#fff" style={{ marginRight: 4 }} />
-                                <Text style={{ color: '#fff', fontSize: 14 }}>Members</Text>
-                            </Pressable>
                         </View>
-                        
-                        {/* Due date display */}
-                        {selectedDueDate && (
-                            <View style={{ marginTop: 12, alignItems: 'flex-start' }}>
-                                <Text style={{ color: currentThemeColors.textSecondary, fontSize: 13, marginBottom: 4 }}>Due date</Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#23272f', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
-                                    <Text style={{ color: '#fff', fontSize: 14, marginRight: 4 }}>
-                                        {selectedDueDate.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                                    </Text>
-                                    <Ionicons name="chevron-down" size={16} color="#bdbdbd" />
-                                </View>
+                    </View>
+
+                    {/* Line separator - MOVED ABOVE DUE DATE */}
+                    <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 0, marginHorizontal: 10 }} />
+
+                    {/* Due date display - INLINE WITH LABEL */}
+                    {selectedDueDate && (
+                        <View style={{ paddingHorizontal: 10, paddingVertical: 12 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#23272f', borderRadius: 6, paddingVertical: 8, paddingHorizontal: 12, width: '100%' }}>
+                                <Text style={{ color: currentThemeColors.textSecondary, fontSize: 12, marginRight: 8 }}>Due date</Text>
+                                <Text style={{ color: '#fff', fontSize: 14, marginRight: 4 }}>
+                                    {selectedDueDate.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                                </Text>
+                                <Ionicons name="chevron-down" size={16} color="#bdbdbd" />
                             </View>
-                        )}
+                        </View>
+                    )}
+
+                    {/* Card Title Header - CIRCLE INLINE WITH FIRST ROW */}
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 12, paddingRight: 40 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                            <Pressable
+                                onPress={async () => {
+                                    const newCompleted = !completed;
+                                    setCompleted(newCompleted);
+                                    if (internalCard) {
+                                        const currentUser = user;
+                                        const activity: ActivityData = {
+                                            id: uuidv4(),
+                                            text: newCompleted ? 'marked this card as complete' : 'marked this card as incomplete',
+                                            date: new Date().toISOString(),
+                                        };
+                                        const updatedActivity = [...(internalCard.activity || []), activity];
+                                        await onUpdateCard(internalCard.id, internalCard.listId, { completed: newCompleted, activity: updatedActivity });
+                                        setInternalCard(prev => prev ? { ...prev, completed: newCompleted, activity: updatedActivity } : null);
+                                        // --- Prop status sync ---
+                                        if (newCompleted && internalCard.propId && service) {
+                                            try {
+                                                await service.updateDocument('props', internalCard.propId, { status: 'repaired_back_in_show' });
+                                            } catch (err) {
+                                                console.error('Failed to update prop status from card completion:', err);
+                                            }
+                                        }
+                                    }
+                                }}
+                                style={{ marginRight: 12, marginTop: 2 }}
+                                accessibilityLabel={completed ? 'Mark incomplete' : 'Mark complete'}
+                                accessibilityRole="button"
+                            >
+                                <Ionicons name={completed ? 'checkmark-circle' : 'ellipse-outline'} size={32} color={completed ? '#4caf50' : '#bdbdbd'} />
+                            </Pressable>
+                            <View style={{ flex: 1 }}>
+                                {editingTitleState ? (
+                                    <TextInput style={[styles.input, { color: '#fff', fontWeight: 'bold', fontSize: 20, lineHeight: 26, width: '100%' }]} value={editedTitle} onChangeText={setEditedTitle} placeholder="Card Title" onBlur={handleSaveTitle} autoFocus placeholderTextColor={currentThemeColors.textSecondary}/>
+                                ) : (
+                                    <Pressable onPress={handleEditTitle} style={{ width: '100%' }}>
+                                        <Text style={[styles.title, { fontSize: 20, lineHeight: 26, fontWeight: 'bold' }, completed && { textDecorationLine: 'line-through', color: currentThemeColors.textSecondary }]}>{internalCard.title}</Text>
+                                    </Pressable>
+                                )}
+                            </View>
+                        </View>
                     </View>
                     
                         {/* Labels display */}
@@ -1173,8 +1413,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                         {/* Description section */}
                         <View style={[styles.section,{paddingHorizontal:10}]}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                                <Ionicons name="document-text" size={18} color="#fff" style={{ marginRight: 8 }} />
-                                <Text style={[styles.sectionTitle, { fontSize: 16, fontWeight: '600' }]}>Description</Text>
+                                <Ionicons name="book-outline" size={16} color={currentThemeColors.textSecondary} style={{ marginRight: 8 }} />
                             </View>
                             {editingDescription ? (
                                 <TextInput
@@ -1256,7 +1495,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                         <Text style={{ fontSize: 15, color: '#000' }}>Prop</Text>
                                     </Pressable>
                                     <Pressable
-                                        onPress={closeMentionSystem}
+                                        onPress={handleSelectContainer}
                                         style={{ 
                                             padding: 12, 
                                             borderBottomWidth: 1, 
@@ -1266,7 +1505,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                         <Text style={{ fontSize: 15, color: '#000' }}>Box/Container</Text>
                                     </Pressable>
                                     <Pressable
-                                        onPress={closeMentionSystem}
+                                        onPress={handleSelectUser}
                                         style={{ padding: 12 }}
                                     >
                                         <Text style={{ fontSize: 15, color: '#000' }}>User</Text>
@@ -1338,6 +1577,154 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                                             <Ionicons name="cube" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
                                                             <Text style={{ color: '#fff', fontSize: 14 }}>
                                                                 {prop.name}
+                                                            </Text>
+                                                        </View>
+                                                    </Pressable>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+                            
+                            {/* User Search Interface */}
+                            {showUserSearch && (
+                                <View style={{
+                                    marginTop: 8,
+                                    backgroundColor: '#374151',
+                                    borderRadius: 6,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                    padding: 12
+                                }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                        <Ionicons name="person" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+                                        <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>
+                                            Search Users:
+                                        </Text>
+                                        <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
+                                            <Ionicons name="close" size={16} color="#9CA3AF" />
+                                        </Pressable>
+                                    </View>
+                                    <TextInput
+                                        style={{
+                                            backgroundColor: '#2D3748',
+                                            borderRadius: 4,
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 8,
+                                            color: '#fff',
+                                            fontSize: 14,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            marginBottom: 8
+                                        }}
+                                        placeholder="Type to search users..."
+                                        placeholderTextColor="#9CA3AF"
+                                        value={userSearchText}
+                                        onChangeText={handleUserSearchChange}
+                                        autoFocus
+                                    />
+                                    
+                                    {/* User Suggestions */}
+                                    {userSuggestions.length > 0 && (
+                                        <View style={{
+                                            backgroundColor: '#2D3748',
+                                            borderRadius: 4,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            maxHeight: 150
+                                        }}>
+                                            <ScrollView style={{ maxHeight: 150 }}>
+                                                {userSuggestions.map((user) => (
+                                                    <Pressable
+                                                        key={user.id}
+                                                        onPress={() => handleSelectUserFromList(user)}
+                                                        style={({ pressed }) => ({
+                                                            paddingHorizontal: 12,
+                                                            paddingVertical: 8,
+                                                            backgroundColor: pressed ? '#4B5563' : 'transparent',
+                                                            borderBottomWidth: user.id !== userSuggestions[userSuggestions.length - 1].id ? 1 : 0,
+                                                            borderBottomColor: 'rgba(255,255,255,0.05)'
+                                                        })}
+                                                    >
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Ionicons name="person" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
+                                                            <Text style={{ color: '#fff', fontSize: 14 }}>
+                                                                {user.name}
+                                                            </Text>
+                                                        </View>
+                                                    </Pressable>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+                            
+                            {/* Container Search Interface */}
+                            {showContainerSearch && (
+                                <View style={{
+                                    marginTop: 8,
+                                    backgroundColor: '#374151',
+                                    borderRadius: 6,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                    padding: 12
+                                }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                        <Ionicons name="archive" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+                                        <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>
+                                            Search Containers:
+                                        </Text>
+                                        <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
+                                            <Ionicons name="close" size={16} color="#9CA3AF" />
+                                        </Pressable>
+                                    </View>
+                                    <TextInput
+                                        style={{
+                                            backgroundColor: '#2D3748',
+                                            borderRadius: 4,
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 8,
+                                            color: '#fff',
+                                            fontSize: 14,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            marginBottom: 8
+                                        }}
+                                        placeholder="Type to search containers..."
+                                        placeholderTextColor="#9CA3AF"
+                                        value={containerSearchText}
+                                        onChangeText={handleContainerSearchChange}
+                                        autoFocus
+                                    />
+                                    
+                                    {/* Container Suggestions */}
+                                    {containerSuggestions.length > 0 && (
+                                        <View style={{
+                                            backgroundColor: '#2D3748',
+                                            borderRadius: 4,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            maxHeight: 150
+                                        }}>
+                                            <ScrollView style={{ maxHeight: 150 }}>
+                                                {containerSuggestions.map((container) => (
+                                                    <Pressable
+                                                        key={container.id}
+                                                        onPress={() => handleSelectContainerFromList(container)}
+                                                        style={({ pressed }) => ({
+                                                            paddingHorizontal: 12,
+                                                            paddingVertical: 8,
+                                                            backgroundColor: pressed ? '#4B5563' : 'transparent',
+                                                            borderBottomWidth: container.id !== containerSuggestions[containerSuggestions.length - 1].id ? 1 : 0,
+                                                            borderBottomColor: 'rgba(255,255,255,0.05)'
+                                                        })}
+                                                    >
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Ionicons name="archive" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
+                                                            <Text style={{ color: '#fff', fontSize: 14 }}>
+                                                                {container.name}
                                                             </Text>
                                                         </View>
                                                     </Pressable>

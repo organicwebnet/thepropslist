@@ -16,7 +16,7 @@ export function Footer() {
     if (service) {
       try {
         await service.signOut();
-        console.log('User signed out');
+    
       } catch (error) {
         console.error("Error signing out: ", error);
       }
@@ -59,7 +59,7 @@ export function Footer() {
         <FeedbackForm 
           onClose={() => setShowFeedbackForm(false)} 
           userEmail={user?.email || undefined}
-          onSubmit={() => {console.log("Feedback submitted")}}
+          onSubmit={() => {/* TODO: Handle feedback submission */}}
         />
       )}
       

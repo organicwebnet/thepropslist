@@ -100,7 +100,7 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       setSuccess('Password reset email sent! Please check your inbox.');
       setEmail('');
     } catch (error: any) {
-      console.log('[AuthForm Forgot Password Error]', error);
+              console.error('[AuthForm Forgot Password Error]', error);
       
       let message = 'Failed to send reset email. Please try again.';
       
@@ -156,7 +156,7 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       }
       onClose();
     } catch (error: any) {
-      console.log('[AuthForm Error]', error);
+      console.error('[AuthForm Error]', error);
       
       let message = 'An error occurred. Please try again.';
       

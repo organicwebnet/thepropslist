@@ -100,15 +100,15 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   async initialize(): Promise<void> {
     try {
         await enableIndexedDbPersistence(this.firestore);
-        console.log('[Firebase Init] Firestore persistence enabled.');
+        // Firestore persistence enabled
     } catch (err: any) {
         if (err.code === 'failed-precondition') {
-            console.warn('[Firebase Init] Firestore Persistence failed precondition. Multiple tabs open?');
+            // Firestore Persistence failed precondition. Multiple tabs open?
         } else if (err.code === 'unimplemented') {
-            console.warn('[Firebase Init] Firestore Persistence is not available in this browser environment.');
+            // Firestore Persistence is not available in this browser environment
         }
     }
-    console.log('Firebase Web initialized successfully.');
+    // Firebase Web initialized successfully
   }
 
   getFirestoreJsInstance(): Firestore {

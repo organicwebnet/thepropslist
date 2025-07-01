@@ -80,21 +80,13 @@ export default function PropDetailPage() {
   useEffect(() => {
     let isMounted = true;
     const fetchProp = async () => {
-      console.log('PropDetailPage: useEffect triggered with id:', id);
-      console.log('PropDetailPage: service available:', !!service);
-      console.log('PropDetailPage: user available:', !!user);
-      console.log('PropDetailPage: selectedShow available:', !!selectedShow);
-      console.log('PropDetailPage: selectedShow details:', selectedShow ? { id: selectedShow.id, name: selectedShow.name } : 'null');
-      
       if (!id || !service || !user) {
-        console.log('PropDetailPage: Missing requirements - id:', !!id, 'service:', !!service, 'user:', !!user);
         setError('Prop ID missing or service/user not available.');
         setLoading(false);
         return;
       }
 
       if (!selectedShow?.id) {
-        console.log('PropDetailPage: No selectedShow available, cannot filter props');
         setError('Please select a show to view prop details.');
         setLoading(false);
         return;
@@ -102,20 +94,16 @@ export default function PropDetailPage() {
 
       try {
         setLoading(true);
-        console.log('PropDetailPage: Fetching prop with ID:', id);
         
         // Try collection query approach (same as props list) with same show filter
-        console.log('PropDetailPage: Using selectedShow:', selectedShow?.id, selectedShow?.name);
         const propDocs = await service.getDocuments<Prop>('props', {
           where: [['showId', '==', selectedShow?.id]]
         });
-        console.log('PropDetailPage: getDocuments result:', propDocs?.length || 0, 'documents');
 
         if (isMounted) {
           // Find the specific prop by ID
           const propDoc = propDocs?.find(doc => doc.id === id);
           if (propDoc) {
-            console.log('PropDetailPage: Found prop data:', propDoc.data.name);
             const firestoreData = propDoc.data;
             const propData = { 
               ...firestoreData,
@@ -134,14 +122,10 @@ export default function PropDetailPage() {
             setError(null);
             setImageLoadError(false);
           } else {
-            console.log('PropDetailPage: Prop not found in collection - trying direct approach...');
-            console.log('PropDetailPage: Available prop IDs:', propDocs?.map(doc => doc.id).join(', ') || 'none');
             // Fallback to getDocument
             const propDoc = await service.getDocument<Prop>('props', id);
-            console.log('PropDetailPage: getDocument fallback result:', propDoc);
             
             if (propDoc && propDoc.data) {
-              console.log('PropDetailPage: Found prop via fallback:', propDoc.data.name);
               const firestoreData = propDoc.data;
               const propData = { 
                 ...firestoreData,
@@ -159,7 +143,6 @@ export default function PropDetailPage() {
               setProp(propData);
               setError(null);
             } else {
-              console.log('PropDetailPage: Prop not found in both attempts');
               setError('Prop not found.');
               setProp(null);
             }
@@ -272,9 +255,6 @@ export default function PropDetailPage() {
     );
   }
 
-  console.log('PropDetailPage: Platform.OS =', Platform.OS);
-  console.log('PropDetailPage: Rendering mobile UI for prop:', prop.name);
-  
   if (Platform.OS === 'web') {
     return (
       <div className="space-y-8">

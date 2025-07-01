@@ -52,11 +52,7 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
         appId,
       };
       
-      console.log('Initializing Firebase with config:', {
-        projectId,
-        authDomain,
-        hasApiKey: !!apiKey
-      });
+
       
       firebase.initializeApp(firebaseConfig);
     }
@@ -65,11 +61,10 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
     this.storage = getStorage();
     this._offlineSync = new MobileOfflineSync(this.firestore);
     this.firestore.settings({ persistence: true });
-    console.log('Mobile Firebase initialized with persistence.');
   }
 
   async initialize(): Promise<void> {
-    console.log('Mobile Firebase initialized.');
+    // Mobile Firebase initialized
   }
 
   private getApp(): ReactNativeFirebase.FirebaseApp {
@@ -323,13 +318,11 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
   
   async deleteShow(showId: string): Promise<void> {
     // This is a placeholder and should be implemented based on your Firestore structure for shows
-    console.warn(`deleteShow(${showId}) not fully implemented in MobileFirebaseService.`);
     // Example: await this.deleteDocument('shows', showId);
     throw new FirebaseError('deleteShow method not implemented', 'unimplemented');
   }
 
   async getPropsByShowId(showId: string): Promise<FirebaseDocument<Prop>[]> {
-    console.warn(`getPropsByShowId(${showId}) not implemented in MobileFirebaseService.`);
     // Example: return this.getDocuments<Prop>(`shows/${showId}/props`);
     throw new FirebaseError('getPropsByShowId method not implemented', 'unimplemented');
   }
@@ -423,10 +416,8 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
       const cardRef = fbDoc(this.firestore, `todo_boards/${boardId}/lists/${listId}/cards/${card.id}`);
       batch.update(cardRef, { order: index });
     });
-    console.log('[reorderCardsInList] Committing batch for boardId:', boardId, 'listId:', listId, 'cardIds:', orderedCards.map(c => c.id));
     try {
       await batch.commit();
-      console.log('[reorderCardsInList] Batch commit successful');
     } catch (err) {
       console.error('[reorderCardsInList] Batch commit failed:', err);
       throw err;
@@ -436,8 +427,6 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
   async moveCardToList(boardId: string, cardId: string, fromListId: string, toListId: string, newOrder: number): Promise<void> {
     const fromRef = fbDoc(this.firestore, `todo_boards/${boardId}/lists/${fromListId}/cards`, cardId);
     const toRef = fbDoc(this.firestore, `todo_boards/${boardId}/lists/${toListId}/cards`, cardId);
-
-    console.log('[moveCardToList] Moving card', cardId, 'from', fromListId, 'to', toListId, 'with newOrder', newOrder);
 
     try {
       await rnRunTransaction(this.firestore, async transaction => {
@@ -449,7 +438,6 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
         transaction.set(toRef, { ...cardData, listId: toListId, order: newOrder });
         transaction.delete(fromRef);
       });
-      console.log('[moveCardToList] Move successful');
     } catch (err) {
       console.error('[moveCardToList] Move failed:', err);
       throw err;

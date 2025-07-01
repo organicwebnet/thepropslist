@@ -35,7 +35,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // if (isLoading) {
   //    return null; 
   // }
-  console.log("--- ThemeProvider: Rendering children (SIMPLIFIED, NO LOADING STATE) ---");
+
 
   return (
     // Use the state-managed currentTheme here to allow setTheme to reflect visually if possible

@@ -27,11 +27,14 @@ export function PropList({
   const [currentImageIndices, setCurrentImageIndices] = useState<{ [key: string]: number }>({});
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    // Debug scroll event (disabled)
+    /*
     console.log('Scroll Event:', {
         contentOffset: event.nativeEvent.contentOffset,
         contentSize: event.nativeEvent.contentSize,
         layoutMeasurement: event.nativeEvent.layoutMeasurement,
     });
+    */
   };
 
   const handleEditPress = (prop: Prop) => {

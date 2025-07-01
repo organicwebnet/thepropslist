@@ -105,7 +105,7 @@ const getInitialConfig = (): ConfigFormData => {
   };
 };
 
-export function ConfigForm(): JSX.Element {
+export function ConfigForm(): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('show');
   const [isTesting, setIsTesting] = useState(false);

@@ -61,13 +61,9 @@ const PropCard: React.FC<PropCardProps> = ({ prop, compact = false, onEditPress,
     : (prop.status || 'Unknown');
 
   const handleNavigate = () => {
-    console.log('PropCard handleNavigate called for prop:', prop.id);
-    console.log('onEditPress provided:', !!onEditPress);
     if (onEditPress) {
-      console.log('Using onEditPress callback');
       onEditPress(prop.id);
     } else {
-      console.log('Using router navigation to:', `/(tabs)/props/${prop.id}`);
       router.navigate(`/(tabs)/props/${prop.id}` as any);
     }
   };

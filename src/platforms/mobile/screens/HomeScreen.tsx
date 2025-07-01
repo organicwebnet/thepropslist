@@ -376,7 +376,7 @@ export function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => item.id || index.toString()}
             renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => { console.log('Navigating to board:', item.id); onCardPress(item.id); }} style={styles.itemCard}>
+                <TouchableOpacity onPress={() => { onCardPress(item.id); }} style={styles.itemCard}>
                     {title === 'To-Do Boards' ? (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={[styles.itemText, { fontSize: 18, fontWeight: 'bold' }]}>{renderItem(item)}</Text>
