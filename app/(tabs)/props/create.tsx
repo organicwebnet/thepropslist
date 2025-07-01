@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { PropForm } from '../../../src/components/PropForm';
+import { NativePropForm } from '../../../src/components/NativePropForm';
 import { PropFormData } from '../../../src/shared/types/props';
 import { useFirebase } from '../../../src/contexts/FirebaseContext';
 import { useAuth } from '../../../src/contexts/AuthContext';
@@ -12,10 +12,10 @@ export default function CreatePropScreen() {
   const { service } = useFirebase();
   const { user } = useAuth();
 
-  const handleSubmit = async (data: PropFormData) => {
+  const handleSubmit = async (data: PropFormData): Promise<boolean> => {
     if (!service || !user) {
       console.error('Service or user not available');
-      return;
+      return false;
     }
 
     try {
@@ -27,14 +27,12 @@ export default function CreatePropScreen() {
       };
       
       await service.addDocument('props', propData);
-      router.navigate('/props');
+      router.navigate('/(tabs)/props');
+      return true;
     } catch (error) {
       console.error('Error creating prop:', error);
+      return false;
     }
-  };
-
-  const handleCancel = () => {
-    router.back();
   };
 
   return (
@@ -46,9 +44,10 @@ export default function CreatePropScreen() {
       style={{ flex: 1 }}
     >
       <View style={{ flex: 1 }}>
-        <PropForm 
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
+        <NativePropForm 
+          onFormSubmit={handleSubmit}
+          submitButtonText="Create Prop"
+          showAddAnotherButton={true}
         />
       </View>
     </LinearGradient>

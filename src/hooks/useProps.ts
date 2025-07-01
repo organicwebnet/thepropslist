@@ -76,8 +76,8 @@ export function useProps(showId: string | undefined) {
     const dataToSave = { 
         ...propData, 
         userId: user.uid, 
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+              createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     if (offlineSyncManager) {
       await offlineSyncManager.queueOperation('create', 'props', dataToSave);
@@ -92,7 +92,7 @@ export function useProps(showId: string | undefined) {
      if (!service?.updateDocument) throw new Error('Service not available');
      const dataToUpdate = { 
        ...updates, 
-       updatedAt: serverTimestamp()
+       updatedAt: new Date().toISOString()
       };
      if (offlineSyncManager) {
        await offlineSyncManager.queueOperation('update', 'props', { ...dataToUpdate, id: propId });

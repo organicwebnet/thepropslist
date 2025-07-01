@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType, ScrollView, TextInput, Switch, Alert } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { motion } from 'framer-motion';
-import { HelpCircle, Upload, Trash2, AlertTriangle, CheckCircle, Video } from 'lucide-react';
-import { PlusCircle, Save, Loader2 } from 'lucide-react';
+import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { ImageUpload } from './ImageUpload.tsx';
 import { DigitalAssetForm } from './DigitalAssetForm.tsx';
 import { VideoAssetForm } from './VideoAssetForm.tsx';
@@ -442,7 +441,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                   className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   disabled={disabled}
                 >
-                  <Trash2 size={16} />
+                  <Feather name="trash-2" size={16} />
                 </TouchableOpacity>
                 <TextInput
                   value={image.caption || ''}
@@ -903,7 +902,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                 <Text className="text-xs text-gray-400">{asset.type} - <a href={asset.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">View</a></Text>
               </View>
               <TouchableOpacity onPress={() => handleRemoveDigitalAsset(asset.id)} disabled={disabled}>
-                <Trash2 size={18} className="text-red-500 hover:text-red-400" />
+                <Feather name="trash-2" size={18} color="#EF4444" />
               </TouchableOpacity>
             </View>
           ))}
@@ -926,7 +925,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
                 <Text className="text-xs text-gray-400"><a href={video.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Watch Video</a></Text>
               </View>
               <TouchableOpacity onPress={() => handleRemoveVideoAsset(video.id)} disabled={disabled}>
-                <Trash2 size={18} className="text-red-500 hover:text-red-400" />
+                <Feather name="trash-2" size={18} color="#EF4444" />
               </TouchableOpacity>
             </View>
           ))}
@@ -1059,7 +1058,7 @@ export function PropForm({ onSubmit, initialData, mode = 'create', onCancel, sho
           className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50 flex items-center justify-center"
           disabled={disabled}
         >
-          <Save size={18} className="mr-2" />
+          <Feather name="save" size={18} style={{ marginRight: 8 }} />
           {mode === 'create' ? 'Create Prop' : 'Save Changes'}
         </TouchableOpacity>
       </View>

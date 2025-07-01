@@ -22,6 +22,7 @@ import { StatusHistory } from '../components/lifecycle/StatusHistory.tsx';
 import { MaintenanceHistory } from '../components/lifecycle/MaintenanceHistory.tsx';
 import { useFirebase } from '../contexts/FirebaseContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
+import { useShows } from '../contexts/ShowsContext';
 import { User } from 'firebase/auth';
 import { lightTheme, darkTheme } from '../styles/theme.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
@@ -33,12 +34,14 @@ export default function PropDetailPage() {
   const router = useRouter();
   const { service } = useFirebase();
   const { user } = useAuth();
+  const { selectedShow } = useShows();
   const [prop, setProp] = useState<Prop | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingStatus, setIsAddingStatus] = useState(false);
   const [isAddingMaintenance, setIsAddingMaintenance] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   const firebaseJsUser = user as User | null;
   const lifecycle = usePropLifecycle({ propId: id || undefined, currentUser: firebaseJsUser });
@@ -80,6 +83,8 @@ export default function PropDetailPage() {
       console.log('PropDetailPage: useEffect triggered with id:', id);
       console.log('PropDetailPage: service available:', !!service);
       console.log('PropDetailPage: user available:', !!user);
+      console.log('PropDetailPage: selectedShow available:', !!selectedShow);
+      console.log('PropDetailPage: selectedShow details:', selectedShow ? { id: selectedShow.id, name: selectedShow.name } : 'null');
       
       if (!id || !service || !user) {
         console.log('PropDetailPage: Missing requirements - id:', !!id, 'service:', !!service, 'user:', !!user);
@@ -88,14 +93,28 @@ export default function PropDetailPage() {
         return;
       }
 
+      if (!selectedShow?.id) {
+        console.log('PropDetailPage: No selectedShow available, cannot filter props');
+        setError('Please select a show to view prop details.');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         console.log('PropDetailPage: Fetching prop with ID:', id);
-        const propDoc = await service.getDocument<Prop>('props', id);
-        console.log('PropDetailPage: getDocument result:', propDoc);
+        
+        // Try collection query approach (same as props list) with same show filter
+        console.log('PropDetailPage: Using selectedShow:', selectedShow?.id, selectedShow?.name);
+        const propDocs = await service.getDocuments<Prop>('props', {
+          where: [['showId', '==', selectedShow?.id]]
+        });
+        console.log('PropDetailPage: getDocuments result:', propDocs?.length || 0, 'documents');
 
         if (isMounted) {
-          if (propDoc && propDoc.data) {
+          // Find the specific prop by ID
+          const propDoc = propDocs?.find(doc => doc.id === id);
+          if (propDoc) {
             console.log('PropDetailPage: Found prop data:', propDoc.data.name);
             const firestoreData = propDoc.data;
             const propData = { 
@@ -113,10 +132,37 @@ export default function PropDetailPage() {
 
             setProp(propData);
             setError(null);
+            setImageLoadError(false);
           } else {
-            console.log('PropDetailPage: Prop not found - propDoc:', propDoc, 'has data:', !!propDoc?.data);
-            setError('Prop not found.');
-            setProp(null);
+            console.log('PropDetailPage: Prop not found in collection - trying direct approach...');
+            console.log('PropDetailPage: Available prop IDs:', propDocs?.map(doc => doc.id).join(', ') || 'none');
+            // Fallback to getDocument
+            const propDoc = await service.getDocument<Prop>('props', id);
+            console.log('PropDetailPage: getDocument fallback result:', propDoc);
+            
+            if (propDoc && propDoc.data) {
+              console.log('PropDetailPage: Found prop via fallback:', propDoc.data.name);
+              const firestoreData = propDoc.data;
+              const propData = { 
+                ...firestoreData,
+                id: propDoc.id, 
+                createdAt: firestoreData.createdAt,
+                updatedAt: firestoreData.updatedAt,
+                lastModifiedAt: firestoreData.lastModifiedAt,
+                lastUsedAt: firestoreData.lastUsedAt,
+                purchaseDate: firestoreData.purchaseDate,
+                rentalDueDate: firestoreData.rentalDueDate,
+                nextMaintenanceDue: firestoreData.nextMaintenanceDue,
+                lastUpdated: firestoreData.lastUpdated,
+              } as Prop;
+
+              setProp(propData);
+              setError(null);
+            } else {
+              console.log('PropDetailPage: Prop not found in both attempts');
+              setError('Prop not found.');
+              setProp(null);
+            }
           }
           setLoading(false);
         }
@@ -134,7 +180,7 @@ export default function PropDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [id, user, service]);
+  }, [id, user, service, selectedShow]);
 
   const handleEditSubmit = async (data: PropFormData) => {
     if (!prop) return;
@@ -226,6 +272,9 @@ export default function PropDetailPage() {
     );
   }
 
+  console.log('PropDetailPage: Platform.OS =', Platform.OS);
+  console.log('PropDetailPage: Rendering mobile UI for prop:', prop.name);
+  
   if (Platform.OS === 'web') {
     return (
       <div className="space-y-8">
@@ -640,24 +689,33 @@ export default function PropDetailPage() {
         end={{ x: 1, y: 1 }}
         style={{ flex: 1 }}
       >
-        <View style={styles.containerMobile}>
+        <ScrollView style={styles.containerMobile} contentContainerStyle={styles.scrollContentMobile}>
           <View style={styles.backButtonMobile}>
             <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.backButtonTextMobile}>Back to Props</Text>
+              <Text style={styles.backButtonTextMobile}>← Back to Props</Text>
             </TouchableOpacity>
           </View>
-          {prop.images && prop.images.length > 0 ? (
+
+          {/* Image Section */}
+          {prop.images && prop.images.length > 0 && !imageLoadError ? (
             <Image 
               source={{ uri: prop.images[0].url }} 
               style={styles.imageMobile} 
               resizeMode="contain"
-              onError={(e) => console.error("Mobile Image Load Error:", e.nativeEvent.error)}
+              onError={(e) => {
+                console.log("Image failed to load, showing placeholder");
+                setImageLoadError(true);
+              }}
             />
           ) : (
             <View style={styles.imagePlaceholderMobile}>
-              <Text>No Image</Text>
+              <Text style={styles.placeholderTextMobile}>
+                {imageLoadError ? 'Image failed to load' : 'No Image'}
+              </Text>
             </View>
           )}
+
+          {/* Header Section */}
           <View style={styles.headerMobile}>
             <Text style={styles.titleMobile}>{prop.name}</Text>
             <View style={styles.actionsMobile}>
@@ -669,15 +727,208 @@ export default function PropDetailPage() {
               </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.detailsSectionMobile}>
-            <Text style={styles.detailLabelMobile}>Category:</Text>
-            <Text style={styles.detailValueMobile}>{prop.category}</Text>
-            {/* Dimensions */}
-            {dimensionsText ? <Text style={styles.detailValueMobile}>Dimensions: {dimensionsText}</Text> : null}
-            {/* Price */}
-            {prop.price != null ? <Text style={styles.detailValueMobile}>Price: £{prop.price.toFixed(2)}</Text> : null}
+
+          {/* Status Badge */}
+          {prop.status && (
+            <View style={styles.statusBadgeMobile}>
+              <Text style={styles.statusTextMobile}>
+                {prop.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </Text>
+            </View>
+          )}
+
+          {/* Basic Information Section */}
+          <View style={styles.sectionMobile}>
+            <Text style={styles.sectionTitleMobile}>Basic Information</Text>
+            <View style={styles.sectionContentMobile}>
+              <View style={styles.detailRowMobile}>
+                <Text style={styles.detailLabelMobile}>Category</Text>
+                <Text style={styles.detailValueMobile}>{prop.category}</Text>
+              </View>
+              {prop.description && (
+                <View style={styles.detailRowMobile}>
+                  <Text style={styles.detailLabelMobile}>Description</Text>
+                  <Text style={styles.detailValueMobile}>{prop.description}</Text>
+                </View>
+              )}
+              <View style={styles.detailRowMobile}>
+                <Text style={styles.detailLabelMobile}>Quantity</Text>
+                <Text style={styles.detailValueMobile}>{prop.quantity}</Text>
+              </View>
+              {prop.price != null && (
+                <View style={styles.detailRowMobile}>
+                  <Text style={styles.detailLabelMobile}>Price</Text>
+                  <Text style={styles.detailValueMobile}>£{prop.price.toFixed(2)}</Text>
+                </View>
+              )}
+              {prop.quantity > 1 && prop.price && (
+                <View style={styles.detailRowMobile}>
+                  <Text style={styles.detailLabelMobile}>Total Value</Text>
+                  <Text style={styles.detailValueMobile}>£{(prop.price * prop.quantity).toFixed(2)}</Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
+
+          {/* Physical Properties Section */}
+          {(prop.length || prop.width || prop.height || prop.depth || prop.weight || prop.travelWeight) && (
+            <View style={styles.sectionMobile}>
+              <Text style={styles.sectionTitleMobile}>Physical Properties</Text>
+              <View style={styles.sectionContentMobile}>
+                {dimensionsText && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Dimensions</Text>
+                    <Text style={styles.detailValueMobile}>{dimensionsText}</Text>
+                  </View>
+                )}
+                {prop.weight && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Weight</Text>
+                    <Text style={styles.detailValueMobile}>{prop.weight} {prop.weightUnit}</Text>
+                  </View>
+                )}
+                {prop.travelWeight && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Travel Weight</Text>
+                    <Text style={styles.detailValueMobile}>{prop.travelWeight} {prop.weightUnit}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Usage Information Section */}
+          {(prop.act || prop.scene || prop.usageInstructions || prop.maintenanceNotes || prop.safetyNotes) && (
+            <View style={styles.sectionMobile}>
+              <Text style={styles.sectionTitleMobile}>Usage Information</Text>
+              <View style={styles.sectionContentMobile}>
+                {(prop.act || prop.scene) && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Scene Usage</Text>
+                    <Text style={styles.detailValueMobile}>
+                      {prop.isMultiScene ? 'Used in multiple scenes' : `Act ${prop.act}, Scene ${prop.scene}`}
+                    </Text>
+                  </View>
+                )}
+                {prop.usageInstructions && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Usage Instructions</Text>
+                    <Text style={styles.detailValueMobile}>{prop.usageInstructions}</Text>
+                  </View>
+                )}
+                {prop.maintenanceNotes && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Maintenance Notes</Text>
+                    <Text style={styles.detailValueMobile}>{prop.maintenanceNotes}</Text>
+                  </View>
+                )}
+                {prop.safetyNotes && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Safety Notes</Text>
+                    <Text style={styles.detailValueMobile}>{prop.safetyNotes}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Source Information Section */}
+          <View style={styles.sectionMobile}>
+            <Text style={styles.sectionTitleMobile}>Source Information</Text>
+            <View style={styles.sectionContentMobile}>
+              <View style={styles.detailRowMobile}>
+                <Text style={styles.detailLabelMobile}>Source</Text>
+                <Text style={styles.detailValueMobile}>
+                  {prop.source === 'bought' ? `Purchased from ${prop.sourceDetails}` :
+                   prop.source === 'made' ? `Made by ${prop.sourceDetails}` :
+                   prop.source === 'rented' ? `Rented from ${prop.sourceDetails}` :
+                   `${prop.source.charAt(0).toUpperCase() + prop.source.slice(1)} from ${prop.sourceDetails}`}
+                </Text>
+              </View>
+              {prop.rentalDueDate && (
+                <View style={styles.detailRowMobile}>
+                  <Text style={styles.detailLabelMobile}>Rental Due Date</Text>
+                  <Text style={styles.detailValueMobile}>{new Date(prop.rentalDueDate).toLocaleDateString()}</Text>
+                </View>
+              )}
+              {prop.purchaseDate && (
+                <View style={styles.detailRowMobile}>
+                  <Text style={styles.detailLabelMobile}>Purchase Date</Text>
+                  <Text style={styles.detailValueMobile}>{new Date(prop.purchaseDate).toLocaleDateString()}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Setup Information Section */}
+          {prop.requiresPreShowSetup && (
+            <View style={styles.sectionMobile}>
+              <Text style={styles.sectionTitleMobile}>Setup Information</Text>
+              <View style={styles.sectionContentMobile}>
+                {prop.preShowSetupDuration && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Setup Duration</Text>
+                    <Text style={styles.detailValueMobile}>{prop.preShowSetupDuration} minutes</Text>
+                  </View>
+                )}
+                {prop.preShowSetupNotes && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Setup Instructions</Text>
+                    <Text style={styles.detailValueMobile}>{prop.preShowSetupNotes}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Transport Information Section */}
+          {(prop.hasOwnShippingCrate || prop.requiresSpecialTransport) && (
+            <View style={styles.sectionMobile}>
+              <Text style={styles.sectionTitleMobile}>Transport Information</Text>
+              <View style={styles.sectionContentMobile}>
+                {prop.hasOwnShippingCrate && prop.shippingCrateDetails && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Shipping Crate</Text>
+                    <Text style={styles.detailValueMobile}>{prop.shippingCrateDetails}</Text>
+                  </View>
+                )}
+                {prop.requiresSpecialTransport && prop.transportNotes && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Transport Notes</Text>
+                    <Text style={styles.detailValueMobile}>{prop.transportNotes}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Additional Information Section */}
+          {(prop.notes || prop.location || prop.condition) && (
+            <View style={styles.sectionMobile}>
+              <Text style={styles.sectionTitleMobile}>Additional Information</Text>
+              <View style={styles.sectionContentMobile}>
+                {prop.location && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Location</Text>
+                    <Text style={styles.detailValueMobile}>{prop.location}</Text>
+                  </View>
+                )}
+                {prop.condition && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Condition</Text>
+                    <Text style={styles.detailValueMobile}>{prop.condition}</Text>
+                  </View>
+                )}
+                {prop.notes && (
+                  <View style={styles.detailRowMobile}>
+                    <Text style={styles.detailLabelMobile}>Notes</Text>
+                    <Text style={styles.detailValueMobile}>{prop.notes}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+        </ScrollView>
       </LinearGradient>
     );
   }
@@ -685,16 +936,66 @@ export default function PropDetailPage() {
 
 const styles = StyleSheet.create({
   containerMobile: { flex: 1, padding: 16, backgroundColor: 'rgba(30,30,30,0.7)' },
+  scrollContentMobile: { paddingBottom: 20 },
   backButtonMobile: { marginBottom: 16, padding: 8, alignSelf: 'flex-start' },
   backButtonTextMobile: { color: '#BB86FC', fontSize: 16 },
   imageMobile: { width: '100%', height: 250, marginBottom: 16, backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 8 },
   imagePlaceholderMobile: { width: '100%', height: 250, marginBottom: 16, backgroundColor: 'rgba(30,30,30,0.7)', alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
+  placeholderTextMobile: { color: '#aaa', fontSize: 16 },
   headerMobile: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   titleMobile: { fontSize: 24, fontWeight: 'bold', color: '#fff', flexShrink: 1, marginRight: 8 },
   actionsMobile: { flexDirection: 'row' },
   actionButtonMobile: { marginLeft: 12, padding: 8 },
   actionButtonTextMobile: { color: '#BB86FC', fontSize: 16 },
+  statusBadgeMobile: { 
+    backgroundColor: 'rgba(139, 69, 19, 0.3)', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 16, 
+    alignSelf: 'flex-start', 
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 69, 19, 0.5)'
+  },
+  statusTextMobile: { color: '#D2B48C', fontSize: 14, fontWeight: '600' },
+  sectionMobile: { 
+    backgroundColor: 'rgba(40,40,40,0.8)', 
+    borderRadius: 8, 
+    padding: 16, 
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)'
+  },
+  sectionTitleMobile: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#BB86FC', 
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(187, 134, 252, 0.3)',
+    paddingBottom: 8
+  },
+  sectionContentMobile: { marginTop: 8 },
+  detailRowMobile: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)'
+  },
   detailsSectionMobile: { paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#333', marginTop: 16 },
-  detailLabelMobile: { fontSize: 14, color: '#aaa', marginBottom: 4 },
-  detailValueMobile: { fontSize: 16, color: '#fff' },
+  detailLabelMobile: { 
+    fontSize: 14, 
+    color: '#aaa', 
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 12
+  },
+  detailValueMobile: { 
+    fontSize: 14, 
+    color: '#fff', 
+    flex: 2,
+    textAlign: 'right'
+  },
 });

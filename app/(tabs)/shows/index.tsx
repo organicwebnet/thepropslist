@@ -17,6 +17,8 @@ export default function ShowsScreen() {
 
   const handleShowSelect = (show: Show) => {
     setSelectedShow(show);
+    // Navigate to show detail page
+    router.navigate(`/(tabs)/shows/${show.id}`);
   };
 
   const handleShowDelete = (showId: string) => {

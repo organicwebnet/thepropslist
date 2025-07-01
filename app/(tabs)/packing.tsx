@@ -12,7 +12,11 @@ export default function PackingScreen() {
 
   const handleShowPress = (show: Show) => {
     setSelectedShow(show);
-    router.navigate(`/(tabs)/packing/find?showId=${show.id}`);
+    // Navigate to packing list for the selected show  
+    router.navigate({
+      pathname: '/(tabs)/packing/list',
+      params: { showId: show.id }
+    } as any);
   };
 
   const handleCreateBox = () => {

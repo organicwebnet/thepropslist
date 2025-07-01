@@ -158,6 +158,7 @@ const TaskBoardDetailScreen = () => {
         const sortedLists = listDocs
           .map(doc => ({ ...doc.data, id: doc.id } as ListData))
           .sort((a, b) => a.order - b.order);
+
         setLists(sortedLists);
       },
       err => {
@@ -188,6 +189,7 @@ const TaskBoardDetailScreen = () => {
           const sortedCards = cardDocs
             .map(doc => ({ ...doc.data, id: doc.id, listId: list.id } as CardData))
             .sort((a, b) => a.order - b.order);
+
           setCards(prev => {
             const updated = { ...prev, [list.id]: sortedCards };
             return updated;
@@ -265,6 +267,7 @@ const TaskBoardDetailScreen = () => {
     }
   }, [boardId, firebaseService, newListName, user, lists]);
 
+  // Handle adding card from modal
   const handleAddCard = useCallback(async () => {
     if (!newCardTitle.trim() || !user || !newCardListId) return;
     const cardData = {
@@ -290,6 +293,31 @@ const TaskBoardDetailScreen = () => {
       Alert.alert('Error', 'Could not add the new card.');
     }
   }, [boardId, firebaseService, newCardListId, newCardTitle, newCardDescription, user, cards, offlineSyncManager]);
+
+  // Handle adding card from inline input in BoardList
+  const handleAddCardFromList = useCallback(async (listId: string, cardTitle: string) => {
+    if (!cardTitle.trim() || !user || !boardId) return;
+    const cardData = {
+      title: cardTitle.trim(),
+      description: '',
+      order: cards[listId]?.length || 0,
+      assignedTo: [user.uid],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+
+      if (offlineSyncManager) {
+        await offlineSyncManager.queueOperation('create', `todo_boards/${boardId}/lists/${listId}/cards`, cardData);
+      } else {
+        await firebaseService.addCard(boardId, listId, cardData);
+      }
+    } catch (error) {
+      console.error('Error adding card from list:', error);
+      Alert.alert('Error', 'Could not add the new card.');
+      throw error; // Re-throw so BoardList can handle the error state
+    }
+  }, [boardId, firebaseService, user, cards, offlineSyncManager]);
 
   const handleMoveCard = useCallback(
     async (cardId: string, originalListId: string, targetListId: string) => {
@@ -570,8 +598,48 @@ const TaskBoardDetailScreen = () => {
     );
   }
 
-  // Instead of just mapping lists, map STANDARD_LISTS in order, and for each, find the matching list and filter cards by the filter
-  const orderedLists = STANDARD_LISTS.map(stdList => lists.find(l => l.name === stdList.name)).filter(Boolean);
+  // Prioritize lists with cards first, then avoid duplicates
+  const listsWithCards = lists.filter(l => cards[l.id] && cards[l.id].length > 0);
+  const listsWithoutCards = lists.filter(l => !cards[l.id] || cards[l.id].length === 0);
+  
+  // Group lists by standard category to avoid duplicates
+  const usedListIds = new Set<string>();
+  const orderedLists: ListData[] = [];
+  
+  // 1. First, add all lists that have cards (these are most important)
+  listsWithCards.forEach(list => {
+    orderedLists.push(list);
+    usedListIds.add(list.id);
+  });
+  
+  // 2. Then add one representative for each standard list type (if not already added)
+  STANDARD_LISTS.forEach(stdList => {
+    const matchingList = lists.find(l => {
+      if (usedListIds.has(l.id)) return false; // Skip if already added
+      
+      // Check exact match or variations
+      if (l.name === stdList.name) return true;
+      const variations = [
+        stdList.name.replace(/-/g, ' '), // "To-Do" -> "To Do"
+        stdList.name.replace(/ /g, '-'), // "To Do" -> "To-Do"
+      ];
+      return variations.includes(l.name);
+    });
+    
+    if (matchingList) {
+      orderedLists.push(matchingList);
+      usedListIds.add(matchingList.id);
+    }
+  });
+  
+  // 3. Finally, add any remaining unique lists
+  lists.forEach(list => {
+    if (!usedListIds.has(list.id)) {
+      orderedLists.push(list);
+      usedListIds.add(list.id);
+    }
+  });
+
 
   return (
     <View style={centralStyles.flex1}>
@@ -597,24 +665,49 @@ const TaskBoardDetailScreen = () => {
               horizontal
               style={[styles.listsContainer, { paddingTop: headerHeight }]}
               showsHorizontalScrollIndicator={false}>
-              {orderedLists.map((list) => (
-                list ? (
+              {orderedLists.map((list) => {
+                if (!list) return null;
+                
+                const allCards = cards[list.id] || [];
+                
+                const filteredCards = allCards.filter(card => {
+                  // Find matching standard list using name variations
+                  const stdList = STANDARD_LISTS.find(sl => {
+                    if (sl.name === list?.name) return true;
+                    const variations = [
+                      sl.name.replace(/-/g, ' '),
+                      sl.name.replace(/ /g, '-'),
+                      sl.name.toLowerCase(),
+                      sl.name.toUpperCase(),
+                    ];
+                    return list?.name && (
+                      variations.includes(list.name) ||
+                      variations.includes(list.name.replace(/-/g, ' ')) ||
+                      variations.includes(list.name.replace(/ /g, '-'))
+                    );
+                  });
+                  
+                  // If card is linked to a prop, filter by prop status
+                  if (card.propId) {
+                    const prop = allProps.find(p => p.id === card.propId);
+                    return prop && stdList && stdList.filter(prop);
+                  }
+                  // Otherwise, show all cards that don't have propId (regular todo cards)
+                  return true;
+                });
+                
+
+                
+
+                
+                return (
                   <BoardList
                     key={list.id}
                     listId={list.id}
                     listName={list.name}
                     boardId={boardId}
-                    cards={cards[list.id]?.filter(card => {
-                      const stdList = STANDARD_LISTS.find(l => l.name === list?.name);
-                      // If card is linked to a prop, filter by prop status
-                      if (card.propId) {
-                        const prop = allProps.find(p => p.id === card.propId);
-                        return prop && stdList && stdList.filter(prop);
-                      }
-                      // Otherwise, show in To-Do by default
-                      return list?.name === 'To-Do';
-                    }) || []}
-                    onAddCard={handleAddCard}
+                    cards={filteredCards}
+                    onAddCard={handleAddCardFromList}
                     onDeleteCard={handleDeleteCard}
                     onOpenCardDetail={(card: any) => router.setParams({ selectedCardId: card.id })}
                     onReorderCards={handleReorderCards}
@@ -624,8 +717,8 @@ const TaskBoardDetailScreen = () => {
                       }
                     }}
                   />
-                ) : null
-              ))}
+                );
+              })}
             </ScrollView>
             <CardDetailPanel
               isVisible={!!selectedCard}
@@ -634,6 +727,8 @@ const TaskBoardDetailScreen = () => {
               lists={lists}
               allShowMembers={memoizedMembers}
               availableLabels={availableLabels}
+              allCards={selectedCard ? cards[selectedCard.listId] || [] : []}
+              onNavigateToCard={(card) => router.setParams({ selectedCardId: card.id })}
               onClose={() => router.replace(`/taskBoard/${boardId}`)}
               onUpdateCard={handleUpdateCard}
               onDeleteCard={handleDeleteCard}

@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 import { FirebaseProvider } from '../src/contexts/FirebaseContext';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
+import { FontProvider } from '../src/contexts/FontContext';
 import { ShowsProvider } from '../src/contexts/ShowsContext';
 import { PropsProvider } from '../src/contexts/PropsContext';
 
@@ -20,15 +21,17 @@ export default function RootLayout() {
       <FirebaseProvider>
         <AuthProvider>
           <ThemeProvider>
-            <ShowsProvider>
-              <PropsProvider>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="auth" options={{ headerShown: false }} />
-                </Stack>
-              </PropsProvider>
-            </ShowsProvider>
+            <FontProvider>
+              <ShowsProvider>
+                <PropsProvider>
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth" options={{ headerShown: false }} />
+                  </Stack>
+                </PropsProvider>
+              </ShowsProvider>
+            </FontProvider>
           </ThemeProvider>
         </AuthProvider>
       </FirebaseProvider>

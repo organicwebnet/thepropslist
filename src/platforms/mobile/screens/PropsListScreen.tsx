@@ -56,7 +56,6 @@ export function PropsListScreen() {
     function normalizeProp(doc: FirebaseDocument<any>) {
       const data = doc.data || {};
       return {
-        id: doc.id,
         userId: data.userId || '',
         showId: data.showId || (selectedShow ? selectedShow.id : ''),
         name: data.name || 'Unnamed Prop',
@@ -72,13 +71,19 @@ export function PropsListScreen() {
         updatedAt: data.updatedAt || '',
         // Add any other fields from src/shared/types/props.ts as needed, with sensible defaults
         ...data,
+        // Ensure the real Firebase ID is always used (never overwritten by data.id)
+        id: doc.id,
       };
     }
     const unsubscribe = service.listenToCollection<Prop>(
       'props',
       (documents: FirebaseDocument<Prop>[]) => {
         console.log('PropsListScreen: Received props from Firebase:', documents.length);
+        console.log('PropsListScreen: Raw Firebase document IDs:', documents.map(doc => doc.id).join(', '));
+        console.log('PropsListScreen: Sample raw document:', documents[0] ? { id: documents[0].id, name: documents[0].data?.name } : 'none');
         const propsData = documents.map(normalizeProp);
+        console.log('PropsListScreen: Normalized prop IDs:', propsData.map(prop => prop.id).join(', '));
+        console.log('PropsListScreen: Sample normalized prop:', propsData[0] ? { id: propsData[0].id, name: propsData[0].name } : 'none');
         setProps(documents);
         setFilteredProps(propsData);
         setError(null);

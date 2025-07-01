@@ -115,15 +115,15 @@ export function useLocations(showId?: string): {
         showId: currentShowId,
         description,
         qrData: '',
-        createdAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp(),
-        updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       try {
         const docRef = await service.addDocument<Location>('locations', newLocationData as any);
         if (docRef && docRef.id) {
           const qrDataString = qrScannerServiceInstance.generateQRData({ type: 'location', id: docRef.id, name, showId: currentShowId });
-          await service.updateDocument('locations', docRef.id, { qrData: qrDataString, updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp() as any });
+          await service.updateDocument('locations', docRef.id, { qrData: qrDataString, updatedAt: new Date().toISOString() });
           return docRef.id;
         }
         return undefined;
@@ -139,7 +139,7 @@ export function useLocations(showId?: string): {
       }
       const dataToUpdate = {
         ...updates,
-        updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp() as any,
+        updatedAt: new Date().toISOString(),
       };
       try {
         await service.updateDocument('locations', locationId, dataToUpdate);

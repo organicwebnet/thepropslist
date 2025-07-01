@@ -167,7 +167,7 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
         status,
         notes,
         images: imageUrls,
-        timestamp: serverTimestamp(), // FieldValue
+        timestamp: new Date().toISOString(),
         updatedBy: currentUser.uid,
       };
       // Type for addDocument will be Omit<PropStatusFirestoreData, 'id'>, which expects 'timestamp: FirebaseTimestamp'
@@ -191,7 +191,7 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
       const dataToSave = {
         ...recordData,
         propId: propId, // Ensure propId is part of the record if it's not in recordData
-        date: serverTimestamp(),
+        date: new Date().toISOString(),
         performedBy: currentUser.uid,
         createdBy: currentUser.uid,
         createdAt: serverTimestamp(),

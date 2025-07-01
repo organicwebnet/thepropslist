@@ -147,16 +147,144 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
   const venues = Array.isArray(show.venues) ? show.venues : [];
   const contacts = Array.isArray(show.contacts) ? show.contacts : [];
 
-  if (Platform.OS !== 'web') {
+  // Enable mobile access to show detail page
+  const isMobile = Platform.OS !== 'web';
+
+  if (isMobile) {
+    // Mobile React Native version
     return (
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-            <Text style={{color: 'orange', fontSize: 16, textAlign: 'center'}}>
-                Show Detail Page is currently available on web only.
+      <View style={{ flex: 1, backgroundColor: '#000' }}>
+        <Stack.Screen options={{ title: show.name }} />
+        <ScrollView style={{ flex: 1, padding: 16 }}>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            style={{ marginBottom: 24, padding: 8 }}
+          >
+            <Text style={{ color: '#BB86FC', fontSize: 16 }}>← Back to Shows</Text>
+          </TouchableOpacity>
+
+          {/* Header */}
+          <View style={{ backgroundColor: '#2D2D2D', borderRadius: 8, padding: 20, marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              {show.imageUrl ? (
+                <Image
+                  source={{ uri: show.imageUrl }}
+                  style={{ width: 80, height: 80, borderRadius: 8, marginRight: 16 }}
+                />
+              ) : (
+                <View style={{ 
+                  width: 80, 
+                  height: 80, 
+                  borderRadius: 8, 
+                  backgroundColor: '#404040', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  marginRight: 16 
+                }}>
+                  <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>
+                    {show.name[0]}
+                  </Text>
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 }}>
+                  {show.name}
+                </Text>
+                <Text style={{ color: '#CCCCCC', fontSize: 16 }}>
+                  {show.description}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Production Details */}
+          <View style={{ backgroundColor: '#2D2D2D', borderRadius: 8, padding: 20, marginBottom: 20 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#BB86FC', marginBottom: 16 }}>
+              Production Details
             </Text>
-        </View>
-    )
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ color: '#CCCCCC', fontSize: 14, marginBottom: 4 }}>Stage Manager</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 16 }}>{show.stageManager || 'Not specified'}</Text>
+            </View>
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ color: '#CCCCCC', fontSize: 14, marginBottom: 4 }}>Props Supervisor</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 16 }}>{show.propsSupervisor || 'Not specified'}</Text>
+            </View>
+            <View>
+              <Text style={{ color: '#CCCCCC', fontSize: 14, marginBottom: 4 }}>Production Company</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 16 }}>{show.productionCompany || 'Not specified'}</Text>
+            </View>
+          </View>
+
+          {/* Props Overview */}
+          <View style={{ backgroundColor: '#2D2D2D', borderRadius: 8, padding: 20, marginBottom: 20 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#BB86FC', marginBottom: 16 }}>
+              Props Overview
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, alignItems: 'center', marginRight: 8 }}>
+                <Text style={{ color: '#CCCCCC', fontSize: 12 }}>Total Props</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' }}>
+                  {propStats.totalProps}
+                </Text>
+              </View>
+              <View style={{ flex: 1, alignItems: 'center', marginHorizontal: 8 }}>
+                <Text style={{ color: '#CCCCCC', fontSize: 12 }}>Total Value</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' }}>
+                  ${propStats.totalValue.toFixed(2)}
+                </Text>
+              </View>
+              <View style={{ flex: 1, alignItems: 'center', marginLeft: 8 }}>
+                <Text style={{ color: '#CCCCCC', fontSize: 12 }}>Total Weight</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' }}>
+                  {propStats.totalWeight.toFixed(2)} kg
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Acts and Scenes */}
+          <View style={{ backgroundColor: '#2D2D2D', borderRadius: 8, padding: 20, marginBottom: 20 }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#BB86FC', marginBottom: 16 }}>
+              Acts and Scenes
+            </Text>
+            {acts.length > 0 ? (
+              acts.map((act: Act) => (
+                <View key={act.id} style={{ marginBottom: 16, backgroundColor: '#404040', borderRadius: 8, padding: 16 }}>
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 }}>
+                    Act {act.id as string | number}
+                    {act.name && <Text style={{ color: '#CCCCCC' }}> - {act.name}</Text>}
+                  </Text>
+                  {act.description && (
+                    <Text style={{ color: '#CCCCCC', marginBottom: 12 }}>{act.description}</Text>
+                  )}
+                  {Array.isArray(act.scenes) && act.scenes.map((scene: Scene) => (
+                    <View key={scene.id} style={{ backgroundColor: '#505050', borderRadius: 8, padding: 12, marginBottom: 8 }}>
+                      <Text style={{ fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4 }}>
+                        Scene {scene.id as string | number}: {scene.name || 'Untitled Scene'}
+                      </Text>
+                      {scene.setting && (
+                        <Text style={{ fontSize: 14, color: '#CCCCCC', marginBottom: 2 }}>
+                          Setting: {scene.setting}
+                        </Text>
+                      )}
+                      {scene.description && (
+                        <Text style={{ fontSize: 14, color: '#CCCCCC' }}>{scene.description}</Text>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: '#CCCCCC', textAlign: 'center' }}>No acts defined yet</Text>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    );
   }
 
+  // Web version continues below
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <button

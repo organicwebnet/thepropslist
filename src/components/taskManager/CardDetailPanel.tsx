@@ -14,7 +14,9 @@ import {
     Modal,
     TouchableOpacity,
     FlatList,
-    Button
+    Button,
+    PanResponder,
+    Dimensions
 } from 'react-native';
 
 // import Colors from '../constants/Colors'; // OLD
@@ -74,6 +76,9 @@ interface CardDetailPanelProps {
     availableLabels?: CardLabel[]; 
     onCreateNewLabel?: (name: string, color: string) => Promise<CardLabel | null>;
     boardId: string;
+    // For swipe navigation
+    allCards?: CardData[]; // All cards in the current list for navigation
+    onNavigateToCard?: (card: CardData) => void; // Callback to navigate to another card
 }
 
 const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
@@ -87,7 +92,9 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     onDeleteCard,
     availableLabels: propAvailableLabels = [], // MODIFIED: Renamed prop to avoid conflict
     onCreateNewLabel,
-    boardId
+    boardId,
+    allCards = [], // For swipe navigation
+    onNavigateToCard
 }) => {
     const { theme: themeName } = useTheme();
     const currentThemeColors = themeName === 'dark' ? darkTheme.colors : lightTheme.colors;
@@ -106,9 +113,9 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
             shadowRadius: 4,
             elevation: 5,
             width: '90%',
-            maxHeight: '90%',
+            maxHeight: '85%',
             alignSelf: 'center',
-            marginTop: 50,
+            marginTop: 20,
         },
         modalContent: {
             padding: 20,
@@ -398,18 +405,62 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const [attachmentValidatingId, setAttachmentValidatingId] = useState<string | null>(null);
     const [attachmentError, setAttachmentError] = useState<string | null>(null);
 
-    const [mentionTrigger, setMentionTrigger] = useState<'@' | '#' | null>(null);
-    const [mentionSearchTerm, setMentionSearchTerm] = useState('');
-    const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
+
     const editorRef = useRef<any>(null); // MODIFIED: Editor to any for ref type
 
     const propRegex = /@@PROP\[([a-zA-Z0-9_-]+):([^#@\]]+)\]@@/g;
     const containerRegex = /##CONT\[([a-zA-Z0-9_-]+):([^#@\]]+)\]##/g;
 
+    // Swipe navigation logic
+    const currentCardIndex = useMemo(() => {
+        if (!card || !allCards.length) return -1;
+        return allCards.findIndex(c => c.id === card.id);
+    }, [card, allCards]);
+
+    const canSwipeLeft = currentCardIndex > 0;
+    const canSwipeRight = currentCardIndex < allCards.length - 1;
+
+    const navigateToPreviousCard = useCallback(() => {
+        if (canSwipeLeft && onNavigateToCard) {
+            const previousCard = allCards[currentCardIndex - 1];
+            onNavigateToCard(previousCard);
+        }
+    }, [canSwipeLeft, currentCardIndex, allCards, onNavigateToCard]);
+
+    const navigateToNextCard = useCallback(() => {
+        if (canSwipeRight && onNavigateToCard) {
+            const nextCard = allCards[currentCardIndex + 1];
+            onNavigateToCard(nextCard);
+        }
+    }, [canSwipeRight, currentCardIndex, allCards, onNavigateToCard]);
+
+    // Pan responder for swipe gestures
+    const panResponder = useMemo(() => PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+            // Only respond to horizontal swipes with sufficient movement
+            return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 20;
+        },
+        onPanResponderMove: () => {
+            // Could add visual feedback here if desired
+        },
+        onPanResponderRelease: (_, gestureState) => {
+            const { dx } = gestureState;
+            const swipeThreshold = Dimensions.get('window').width * 0.25; // 25% of screen width
+            
+            if (dx > swipeThreshold) {
+                // Swipe right - go to previous card
+                navigateToPreviousCard();
+            } else if (dx < -swipeThreshold) {
+                // Swipe left - go to next card  
+                navigateToNextCard();
+            }
+        },
+    }), [navigateToPreviousCard, navigateToNextCard]);
+
     const parsedDescription = useMemo(() => {
         if (!internalCard?.description) return null;
         const description = internalCard.description;
-        const parts: JSX.Element[] = []; // Ensure parts is explicitly typed
+        const parts: React.ReactElement[] = []; // Ensure parts is explicitly typed
         let lastIndex = 0;
         const allMatches = [];
         let match;
@@ -465,9 +516,6 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         }
         setEditingTitleState(false);
         setEditingDescription(false);
-        setMentionTrigger(null);
-        setMentionSearchTerm('');
-        setMentionSuggestions([]);
     };
 
     useEffect(() => {
@@ -533,75 +581,125 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         setEditingDescription(true);
     };
 
-    const fetchPropSuggestions = async (searchTerm: string): Promise<MentionSuggestion[]> => {
-        await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
-        const mockProps: Pick<Prop, 'id' | 'name'>[] = [
-            { id: 'prop123', name: 'AntiqueVase' }, { id: 'prop456', name: 'MagicSword' },
-        ];
-        return mockProps
-            .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(p => ({ id: p.id, username: p.name, type: 'prop' }));
-    };
-    const fetchContainerSuggestions = async (searchTerm: string): Promise<MentionSuggestion[]> => {
-        console.log("Fetching container suggestions for:", searchTerm);
-        await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
-        const mockContainers: Pick<PackingBox, 'id' | 'name'>[] = [
-            { id: 'box789', name: 'PropsBoxA' }, { id: 'box012', name: 'CostumeCrate1' },
-        ];
-        return mockContainers
-            .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(c => ({ id: c.id, username: c.name, type: 'container' }));
-    };
-    const fetchUserSuggestions = async (searchTerm: string): Promise<MentionSuggestion[]> => {
-        // Replace with real user/member search
-        const mockUsers = allShowMembers || [];
-        return mockUsers
-            .filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(u => ({ id: u.id, username: u.name, type: 'user' }));
-    };
-    const handleMentionSearch = async (keyword: string | null, entityType: MentionEntityType | null) => {
-        if (!entityType || keyword === null || keyword === undefined) { setMentionSuggestions([]); return; }
-        if (entityType === 'prop') {
-            const suggestions = await fetchPropSuggestions(keyword);
-            setMentionSuggestions(suggestions);
-        } else if (entityType === 'container') {
-            const suggestions = await fetchContainerSuggestions(keyword);
-            setMentionSuggestions(suggestions);
-        } else if (entityType === 'user') {
-            const suggestions = await fetchUserSuggestions(keyword);
-            setMentionSuggestions(suggestions);
-        }
-    };
-    // ADDED: onDescriptionChange for Editor
-    const onDescriptionChange = (data: { displayText: string, text: string }) => {
-        setEditedDescription(data.text);
-        // If user just typed '@', show the menu
-        if (data.displayText.endsWith('@')) {
-            setShowMentionTypeMenu(true);
-            setPendingMentionTrigger('@');
-            setMentionEntityType(null);
-            setMentionSuggestions([]);
-            return;
-        }
-        // If a mention type is selected, proceed as before
-        if (mentionEntityType) {
-            let currentKeyword: string | null = null;
-            const match = data.displayText.match(/@(\w*)$/);
-            if (match && data.displayText.endsWith(match[0])) {
-                currentKeyword = match[1];
+    const handleSaveDescription = async () => {
+        if (!internalCard) return;
+        
+        // Only save if description actually changed
+        if (editedDescription !== (internalCard.description || '')) {
+            try {
+                await onUpdateCard(internalCard.id, internalCard.listId, { description: editedDescription });
+                setInternalCard(prev => prev ? { ...prev, description: editedDescription } : null);
+            } catch (error) {
+                Alert.alert("Error", "Failed to update description.");
             }
-            if(currentKeyword !== null) handleMentionSearch(currentKeyword, mentionEntityType);
-            else setMentionSuggestions([]);
-        } else {
-            setMentionSuggestions([]);
+        }
+        
+        setEditingDescription(false);
+        // Clear mention states when saving
+        closeMentionSystem();
+    };
+
+    const handleDescriptionChange = (text: string) => {
+        setEditedDescription(text);
+        
+        // Simple @ detection
+        if (text.endsWith('@') && !showMentionMenu && !showPropSearch) {
+            setShowMentionMenu(true);
         }
     };
 
-    const onMentionSuggestionTap = (mention: MentionSuggestion) => {
-        console.log("Suggestion tapped:", mention); 
-        setMentionSuggestions([]);
-        editorRef.current?.focus();
+    const handleSelectProp = () => {
+        setShowMentionMenu(false);
+        setShowPropSearch(true);
+        setPropSearchText('');
+        setPropSuggestions(mockProps); // Show all props initially
     };
+
+    const handlePropSearchChange = (searchText: string) => {
+        setPropSearchText(searchText);
+        
+        // Filter props based on search
+        const filtered = mockProps.filter(prop => 
+            prop.name.toLowerCase().includes(searchText.toLowerCase())
+        );
+        setPropSuggestions(filtered);
+    };
+
+    const handleSelectPropFromList = (prop: {id: string, name: string}) => {
+        // Remove the @ from the end of the description and add the prop as a clickable link
+        const propLink = `[${prop.name}](prop:${prop.id})`;
+        const newDescription = editedDescription.slice(0, -1) + propLink + ' ';
+        setEditedDescription(newDescription);
+        
+        // Close everything
+        setShowPropSearch(false);
+        setShowMentionMenu(false);
+        setPropSearchText('');
+        setPropSuggestions([]);
+    };
+
+    const closeMentionSystem = () => {
+        setShowMentionMenu(false);
+        setShowPropSearch(false);
+        setPropSearchText('');
+        setPropSuggestions([]);
+    };
+
+    // Function to render description with clickable prop links
+    const renderDescriptionWithLinks = (description: string): React.ReactNode[] => {
+        const linkRegex = /\[([^\]]+)\]\(prop:([^)]+)\)/g;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+
+        while ((match = linkRegex.exec(description)) !== null) {
+            // Add text before the link
+            if (match.index > lastIndex) {
+                parts.push(
+                    <Text key={`text-${lastIndex}`} style={{ color: '#fff', fontSize: 14, lineHeight: 20 }}>
+                        {description.slice(lastIndex, match.index)}
+                    </Text>
+                );
+            }
+
+            // Add the clickable link
+            const propName = match[1];
+            const propId = match[2];
+            parts.push(
+                <Pressable
+                    key={`link-${propId}`}
+                    onPress={() => {
+                        Alert.alert("Prop Link", `Navigate to ${propName} (ID: ${propId})`);
+                        // TODO: Add actual navigation logic here
+                    }}
+                    style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4 }}
+                >
+                    <Text style={{ color: '#3B82F6', fontSize: 14, fontWeight: '600' }}>
+                        {propName}
+                    </Text>
+                </Pressable>
+            );
+
+            lastIndex = match.index + match[0].length;
+        }
+
+        // Add remaining text after the last link
+        if (lastIndex < description.length) {
+            parts.push(
+                <Text key={`text-${lastIndex}`} style={{ color: '#fff', fontSize: 14, lineHeight: 20 }}>
+                    {description.slice(lastIndex)}
+                </Text>
+            );
+        }
+
+        return parts.length > 0 ? parts : [
+            <Text key="full-text" style={{ color: '#fff', fontSize: 14, lineHeight: 20 }}>
+                {description}
+            </Text>
+        ];
+    };
+
+
 
     const pickImage = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -809,8 +907,8 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
 
     const listName = useMemo(() => lists.find(l => l.id === internalCard?.listId)?.name || 'Unknown List', [lists, internalCard?.listId]);
 
-    const isAnyFieldEditing = editingTitleState || editingDescription; 
-    const showEditControlsForOtherSections = isAnyFieldEditing; // Simplified: if title or desc is editing, other edit controls show.
+        const isAnyFieldEditing = editingTitleState || editingDescription;
+    const showEditControlsForOtherSections = editingTitleState; // Only show other edit controls when editing title, not description
 
     // Ensure members is an array before using .find()
     const safeMembers = allShowMembers || [];
@@ -863,9 +961,22 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const [showActivity, setShowActivity] = useState(true);
 
     // Add state for contextual menu
-    const [showMentionTypeMenu, setShowMentionTypeMenu] = useState(false);
-    const [pendingMentionTrigger, setPendingMentionTrigger] = useState<'@' | null>(null);
-    const [mentionEntityType, setMentionEntityType] = useState<MentionEntityType | null>(null);
+
+
+    // Mention system states - simplified
+    const [showMentionMenu, setShowMentionMenu] = useState(false);
+    const [showPropSearch, setShowPropSearch] = useState(false);
+    const [propSearchText, setPropSearchText] = useState('');
+    const [propSuggestions, setPropSuggestions] = useState<{id: string, name: string}[]>([]);
+
+    // Mock props data
+    const mockProps = [
+        { id: 'prop1', name: 'Antique Vase' },
+        { id: 'prop2', name: 'Magic Sword' },
+        { id: 'prop3', name: 'Crystal Ball' },
+        { id: 'prop4', name: 'Ancient Book' },
+        { id: 'prop5', name: 'Golden Chalice' }
+    ];
 
     if (!internalCard) return null;
 
@@ -880,23 +991,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     ];
 
     // Add contextual menu component
-    const renderMentionTypeMenu = () => (
-        <View style={{ position: 'absolute', top: 60, left: 20, right: 20, backgroundColor: '#fff', borderRadius: 8, elevation: 5, zIndex: 1000 }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, margin: 10 }}>Mention Type</Text>
-            {['prop', 'container', 'user'].map(type => (
-                <Pressable
-                    key={type}
-                    style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}
-                    onPress={() => {
-                        setMentionEntityType(type as MentionEntityType);
-                        setShowMentionTypeMenu(false);
-                    }}
-                >
-                    <Text style={{ fontSize: 15 }}>{type === 'prop' ? 'Prop' : type === 'container' ? 'Box/Container' : 'User'}</Text>
-                </Pressable>
-            ))}
-        </View>
-    );
+
 
     return (
         <Modal transparent={true} visible={isVisible} animationType="fade" onRequestClose={onClose}>
@@ -905,9 +1000,21 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                 locations={[0, 0.2, 0.5, 0.8, 1]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+                style={{ flex: 1, justifyContent: 'flex-start', alignItems: 'center', paddingTop: 20 }}
             >
-                <View style={[styles.panel, { backgroundColor: 'rgba(20,22,30,0.98)' }]}> 
+                <View style={[styles.panel, { backgroundColor: 'rgba(20,22,30,0.98)' }]} {...panResponder.panHandlers}>
+                    {/* Navigation indicators */}
+                    {allCards.length > 1 && (
+                        <View style={{ position: 'absolute', top: -35, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 15, paddingHorizontal: 12, paddingVertical: 6 }}>
+                                <Ionicons name="chevron-back" size={16} color={canSwipeLeft ? "#fff" : "#666"} />
+                                <Text style={{ color: '#fff', fontSize: 14, marginHorizontal: 8 }}>
+                                    {currentCardIndex + 1} of {allCards.length}
+                                </Text>
+                                <Ionicons name="chevron-forward" size={16} color={canSwipeRight ? "#fff" : "#666"} />
+                            </View>
+                        </View>
+                    )} 
                 <ScrollView style={[styles.modalContent,{padding:0}]}>
                     {cardImages.length > 0 && (
                         <View style={{ position: 'relative', marginBottom: 6,padding:0 }}>
@@ -986,7 +1093,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             <Pressable onPress={handleEditTitle} style={{ marginRight: 8 }}>
                                 <Ionicons name="pencil" size={22} color="#bdbdbd" />
                             </Pressable>
-                            <Pressable onPress={handleDelete} style={{ marginRight: 8 }}>
+                            <Pressable onPress={handleDelete} style={{ marginRight: 20 }}>
                                 <Ionicons name="trash" size={22} color="#e57373" style={{ textShadowColor: '#000', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }} />
                             </Pressable>
                             <Pressable onPress={onClose} style={{ padding: 4 }}>
@@ -994,60 +1101,65 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             </Pressable>
                         </View>
                     </View>
-                    <View style={{ marginBottom: 18, marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}>
-                        <Pressable onPress={() => setAddMenuVisible(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#23272f', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 18, marginTop: 2, marginBottom: 2 }}>
-                            <Ionicons name="add" size={22} color="#fff" style={{ marginRight: 6 }} />
-                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Add</Text>
-                        </Pressable>
-                        {/* Due date pill to the right of Add button */}
+                    {/* Action buttons row */}
+                    <View style={{ marginBottom: 18, paddingHorizontal: 10 }}>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                            <Pressable onPress={() => setAddMenuVisible(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#374151', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
+                                <Ionicons name="add" size={16} color="#fff" style={{ marginRight: 4 }} />
+                                <Text style={{ color: '#fff', fontSize: 14 }}>Add</Text>
+                            </Pressable>
+                            
+                            <Pressable onPress={handleOpenLabelEditor} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#374151', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
+                                <Ionicons name="pricetag" size={16} color="#fff" style={{ marginRight: 4 }} />
+                                <Text style={{ color: '#fff', fontSize: 14 }}>Labels</Text>
+                            </Pressable>
+                            
+                            <Pressable onPress={() => setShowDatePicker(true)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#374151', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
+                                <Ionicons name="calendar" size={16} color="#fff" style={{ marginRight: 4 }} />
+                                <Text style={{ color: '#fff', fontSize: 14 }}>Dates</Text>
+                            </Pressable>
+                            
+                            <Pressable onPress={handleAddChecklist} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#374151', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
+                                <Ionicons name="checkbox" size={16} color="#fff" style={{ marginRight: 4 }} />
+                                <Text style={{ color: '#fff', fontSize: 14 }}>Checklist</Text>
+                            </Pressable>
+                            
+                            <Pressable onPress={handleOpenMemberEditor} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#374151', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
+                                <Ionicons name="person" size={16} color="#fff" style={{ marginRight: 4 }} />
+                                <Text style={{ color: '#fff', fontSize: 14 }}>Members</Text>
+                            </Pressable>
+                        </View>
+                        
+                        {/* Due date display */}
                         {selectedDueDate && (
-                            <View style={{ marginLeft: 12, alignItems: 'flex-start' }}>
-                                <Text style={{ color: currentThemeColors.textSecondary, fontSize: 13, marginBottom: 2 }}>Due date</Text>
-                                <Pressable
-                                    onPress={() => setShowDatePicker(true)}
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        backgroundColor: '#23272f',
-                                        borderRadius: 8,
-                                        paddingVertical: 7,
-                                        paddingHorizontal: 14,
-                                    }}
-                                >
-                                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15, marginRight: 4 }}>
+                            <View style={{ marginTop: 12, alignItems: 'flex-start' }}>
+                                <Text style={{ color: currentThemeColors.textSecondary, fontSize: 13, marginBottom: 4 }}>Due date</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#23272f', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 12 }}>
+                                    <Text style={{ color: '#fff', fontSize: 14, marginRight: 4 }}>
                                         {selectedDueDate.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                                     </Text>
-                                    <Ionicons name="chevron-down" size={18} color="#bdbdbd" />
-                                </Pressable>
+                                    <Ionicons name="chevron-down" size={16} color="#bdbdbd" />
+                                </View>
                             </View>
                         )}
                     </View>
                     
-                        {(internalCard.labels?.length || showEditControlsForOtherSections || true) && (
-                            <View style={styles.section}>
-                                <View style={[styles.labelsContainer, { flexDirection: 'row', alignItems: 'center',paddingHorizontal:6 }]}> 
+                        {/* Labels display */}
+                        {internalCard.labels && internalCard.labels.length > 0 && (
+                            <View style={[styles.section, {paddingHorizontal:10}]}>
+                                <View style={[styles.labelsContainer, { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }]}> 
                                     {internalCard.labels?.map(label => (
-                                        <View key={label.id} style={[styles.labelChip, { backgroundColor: label.color || currentThemeColors.primary }]}> 
+                                        <View key={label.id} style={[styles.labelChip, { backgroundColor: label.color || currentThemeColors.primary, marginRight: 8, marginBottom: 4 }]}> 
                                             <Text style={styles.labelText}>{label.name}</Text>
                                         </View>
                                     ))}
-                                    {/* Always show the + button beside the labels */}
-                                    <Pressable onPress={handleOpenLabelEditor} style={{ marginLeft: 4, borderWidth: 1, borderColor: '#fff', borderRadius: 6, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' }}>
-                                        <Ionicons name="add" size={20} color="#fff" />
-                                    </Pressable>
                                 </View>
                             </View>
                         )}
 
-                        {(internalCard.members?.length || showEditControlsForOtherSections) && (
+                        {/* Members display - only show if there are members */}
+                        {internalCard.members && internalCard.members.length > 0 && (
                             <View style={[styles.section,{paddingHorizontal:10}]}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8,padding:6 }}>
-                                    <Text style={styles.sectionTitle}>Members</Text>
-                                    {/* + button for adding members */}
-                                    <Pressable onPress={handleOpenMemberEditor} style={{ marginLeft: 4, borderWidth: 1, borderColor: '#fff', borderRadius: 6, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' }}>
-                                        <Ionicons name="add" size={20} color="#fff" />
-                                    </Pressable>
-                                </View>
                                 <View style={styles.membersContainer}>
                                     {internalCard.members?.map(member => (
                                         <View key={member.id} style={styles.memberChip}>
@@ -1058,56 +1170,197 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             </View>
                         )}
                         
+                        {/* Description section */}
                         <View style={[styles.section,{paddingHorizontal:10}]}>
-                            <Text style={styles.sectionTitle}>Description</Text>
-                            <View style={styles.sectionContentRow}>
-                                {(!internalCard?.description && !editedDescription) ? (
-                                    <TextInput
-                                        style={[styles.input, { flex: 1, minHeight: 40, color: '#fff' }]}
-                                        placeholder="Add description..."
-                                        value={editedDescription}
-                                        onChangeText={setEditedDescription}
-                                        onBlur={handleSaveAll}
-                                        placeholderTextColor={currentThemeColors.textSecondary}
-                                    />
-                                ) : editingDescription ? (
-                                    <View style={{ flex: 1 }}>
-                                        <Editor
-                                            ref={editorRef}
-                                            list={mentionSuggestions}
-                                            initialValue={editedDescription}
-                                            onChange={onDescriptionChange}
-                                            placeholder="Add description... @prop #container"
-                                            editorStyles={{
-                                                input: { ...styles.input, color: currentThemeColors.text, padding: 8 },
-                                                mainContainer: { },
-                                                mentionsListWrapper: { backgroundColor: currentThemeColors.cardBg, borderRadius: 5, borderWidth: 1, borderColor: currentThemeColors.border, maxHeight: 150, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 1.41 },
-                                                mentionListItemWrapper: { padding: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: currentThemeColors.border },
-                                                mentionListItemTitle: { color: currentThemeColors.text, fontSize: 14 },
-                                            }}
-                                            onSuggestionTap={onMentionSuggestionTap}
-                                        />
-                                    </View>
-                                ) : (
-                                    <Pressable onPress={handleEditDescription} style={{ flex: 1 }}>
-                                        {parsedDescription && parsedDescription.length > 0 ?
-                                            <View>{parsedDescription}</View> :
-                                            <Text style={styles.descriptionText}>{internalCard?.description || 'Add description...'}</Text>}
-                                    </Pressable>
-                                )}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                                <Ionicons name="document-text" size={18} color="#fff" style={{ marginRight: 8 }} />
+                                <Text style={[styles.sectionTitle, { fontSize: 16, fontWeight: '600' }]}>Description</Text>
                             </View>
-                        </View>
-
-                        <View style={[styles.section,{paddingHorizontal:10}]}>
-                            <Text style={styles.sectionTitle}><Ionicons name="link" size={18} color="#fff" /> Link</Text>
-                            {showEditControlsForOtherSections ? (
-                                <TextInput style={styles.linkInput} value={editedLinkUrl} onChangeText={setEditedLinkUrl} placeholder="https://..." keyboardType="url" autoCapitalize="none" placeholderTextColor={currentThemeColors.textSecondary}/>
+                            {editingDescription ? (
+                                <TextInput
+                                    style={[{ 
+                                        minHeight: 80, 
+                                        color: '#fff', 
+                                        fontSize: 14,
+                                        backgroundColor: '#374151',
+                                        borderRadius: 6,
+                                        paddingHorizontal: 12,
+                                        paddingVertical: 10,
+                                        borderWidth: 2,
+                                        borderColor: '#3B82F6',
+                                        textAlignVertical: 'top'
+                                    }]}
+                                                                            placeholder="Add a more detailed description..."
+                                        value={editedDescription}
+                                        onChangeText={handleDescriptionChange}
+                                        onBlur={handleSaveDescription}
+                                    multiline
+                                    autoFocus
+                                    placeholderTextColor={currentThemeColors.textSecondary}
+                                />
                             ) : (
-                                internalCard.linkUrl ? (
-                                    <Pressable onPress={async () => { if (internalCard.linkUrl) { try { if(await Linking.canOpenURL(internalCard.linkUrl)) await Linking.openURL(internalCard.linkUrl); else Alert.alert("Error", `Cannot open: ${internalCard.linkUrl}`); } catch (e) { Alert.alert("Error", "Link error."); } } }}><Text style={{color: currentThemeColors.primary}}>{internalCard.linkUrl}</Text></Pressable>
-                                ) : null
+                                <Pressable 
+                                    onPress={handleEditDescription} 
+                                    style={({ pressed }) => ({ 
+                                        paddingHorizontal: 12,
+                                        paddingVertical: 10,
+                                        borderRadius: 6,
+                                        backgroundColor: pressed ? '#374151' : '#2D3748',
+                                        borderWidth: 1,
+                                        borderColor: 'rgba(255,255,255,0.1)',
+                                        minHeight: 80
+                                    })}
+                                >
+                                    {internalCard?.description ? (
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+                                            {renderDescriptionWithLinks(internalCard.description)}
+                                        </View>
+                                    ) : (
+                                        <Text style={[styles.descriptionText, { color: currentThemeColors.textSecondary, fontStyle: 'italic', fontSize: 14 }]}>
+                                            Add a more detailed description...
+                                        </Text>
+                                    )}
+                                </Pressable>
+                            )}
+                            
+
+
+                            {/* Mention Menu - Simple white menu */}
+                            {showMentionMenu && (
+                                <View style={{
+                                    position: 'absolute',
+                                    top: 80,
+                                    left: 12,
+                                    right: 12,
+                                    backgroundColor: '#fff',
+                                    borderRadius: 8,
+                                    padding: 12,
+                                    elevation: 5,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 2 },
+                                    shadowOpacity: 0.2,
+                                    shadowRadius: 4,
+                                    zIndex: 1000
+                                }}>
+                                    <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#000', marginBottom: 8 }}>
+                                        Mention Type
+                                    </Text>
+                                    <Pressable
+                                        onPress={handleSelectProp}
+                                        style={{ 
+                                            padding: 12, 
+                                            borderBottomWidth: 1, 
+                                            borderBottomColor: '#eee' 
+                                        }}
+                                    >
+                                        <Text style={{ fontSize: 15, color: '#000' }}>Prop</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={closeMentionSystem}
+                                        style={{ 
+                                            padding: 12, 
+                                            borderBottomWidth: 1, 
+                                            borderBottomColor: '#eee' 
+                                        }}
+                                    >
+                                        <Text style={{ fontSize: 15, color: '#000' }}>Box/Container</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        onPress={closeMentionSystem}
+                                        style={{ padding: 12 }}
+                                    >
+                                        <Text style={{ fontSize: 15, color: '#000' }}>User</Text>
+                                    </Pressable>
+                                </View>
+                            )}
+                            
+                            {/* Prop Search Interface */}
+                            {showPropSearch && (
+                                <View style={{
+                                    marginTop: 8,
+                                    backgroundColor: '#374151',
+                                    borderRadius: 6,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255,255,255,0.2)',
+                                    padding: 12
+                                }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                        <Ionicons name="cube" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+                                        <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>
+                                            Search Props:
+                                        </Text>
+                                        <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
+                                            <Ionicons name="close" size={16} color="#9CA3AF" />
+                                        </Pressable>
+                                    </View>
+                                    <TextInput
+                                        style={{
+                                            backgroundColor: '#2D3748',
+                                            borderRadius: 4,
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 8,
+                                            color: '#fff',
+                                            fontSize: 14,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            marginBottom: 8
+                                        }}
+                                        placeholder="Type to search props..."
+                                        placeholderTextColor="#9CA3AF"
+                                        value={propSearchText}
+                                        onChangeText={handlePropSearchChange}
+                                        autoFocus
+                                    />
+                                    
+                                    {/* Prop Suggestions */}
+                                    {propSuggestions.length > 0 && (
+                                        <View style={{
+                                            backgroundColor: '#2D3748',
+                                            borderRadius: 4,
+                                            borderWidth: 1,
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            maxHeight: 150
+                                        }}>
+                                            <ScrollView style={{ maxHeight: 150 }}>
+                                                {propSuggestions.map((prop) => (
+                                                    <Pressable
+                                                        key={prop.id}
+                                                        onPress={() => handleSelectPropFromList(prop)}
+                                                        style={({ pressed }) => ({
+                                                            paddingHorizontal: 12,
+                                                            paddingVertical: 8,
+                                                            backgroundColor: pressed ? '#4B5563' : 'transparent',
+                                                            borderBottomWidth: prop.id !== propSuggestions[propSuggestions.length - 1].id ? 1 : 0,
+                                                            borderBottomColor: 'rgba(255,255,255,0.05)'
+                                                        })}
+                                                    >
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                            <Ionicons name="cube" size={14} color="#9CA3AF" style={{ marginRight: 8 }} />
+                                                            <Text style={{ color: '#fff', fontSize: 14 }}>
+                                                                {prop.name}
+                                                            </Text>
+                                                        </View>
+                                                    </Pressable>
+                                                ))}
+                                            </ScrollView>
+                                        </View>
+                                    )}
+                                </View>
                             )}
                         </View>
+
+                        {(internalCard.linkUrl || showEditControlsForOtherSections) && (
+                            <View style={[styles.section,{paddingHorizontal:10}]}>
+                                <Text style={styles.sectionTitle}><Ionicons name="link" size={18} color="#fff" /> Link</Text>
+                                {showEditControlsForOtherSections ? (
+                                    <TextInput style={styles.linkInput} value={editedLinkUrl} onChangeText={setEditedLinkUrl} placeholder="https://..." keyboardType="url" autoCapitalize="none" placeholderTextColor={currentThemeColors.textSecondary}/>
+                                ) : (
+                                    internalCard.linkUrl ? (
+                                        <Pressable onPress={async () => { if (internalCard.linkUrl) { try { if(await Linking.canOpenURL(internalCard.linkUrl)) await Linking.openURL(internalCard.linkUrl); else Alert.alert("Error", `Cannot open: ${internalCard.linkUrl}`); } catch (e) { Alert.alert("Error", "Link error."); } } }}><Text style={{color: currentThemeColors.primary}}>{internalCard.linkUrl}</Text></Pressable>
+                                    ) : null
+                                )}
+                            </View>
+                        )}
 
                         {showEditControlsForOtherSections && (
                             <View style={[styles.section, styles.pickerSection,{paddingHorizontal:10}]}>
@@ -1133,35 +1386,35 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             </View>
                         )}
 
-                        <View style={[styles.section,{paddingHorizontal:10}]}>
-                            <Text style={styles.sectionTitle}>Checklists</Text>
-                            {showEditControlsForOtherSections && (<View style={styles.checklistInputContainer}><TextInput style={styles.checklistInput} placeholder="New Checklist" value={newChecklistTitle} onChangeText={setNewChecklistTitle} placeholderTextColor={currentThemeColors.textSecondary}/><TouchableOpacity onPress={handleAddChecklist} style={styles.checklistAddButton}><Text style={styles.checklistAddButtonText}>Add</Text></TouchableOpacity></View>)}
-                            {(internalCard?.checklists || []).map(cl => { const comp = cl.items.filter(i=>i.completed).length; const tot = cl.items.length; const prog = tot>0?(comp/tot)*100:0; return (
-                                <View key={cl.id} style={styles.checklistContainer}>
-                                    <Text style={[styles.sectionTitle, {textTransform:'none', fontSize:16, marginBottom:4}]}>{cl.title}</Text>
-                                    {tot>0 && (<View style={styles.checklistProgressBarContainer}><View style={[styles.checklistProgressBar, {width:`${prog}%`}]} /></View>)}
-                                    {cl.items.map(item => (<TouchableOpacity key={item.id} onPress={()=>showEditControlsForOtherSections && handleToggleChecklistItem(cl.id,item.id)} disabled={!showEditControlsForOtherSections} style={styles.checklistItem}><Ionicons name={item.completed?"checkbox-outline":"square-outline"} size={24} color={showEditControlsForOtherSections?currentThemeColors.primary:currentThemeColors.textSecondary} /><Text style={[styles.checklistItemText,item.completed&&styles.checklistItemTextCompleted]}>{item.text}</Text></TouchableOpacity>))}
-                                    {showEditControlsForOtherSections && (<View style={styles.checklistInputContainer}><TextInput style={styles.checklistInput} placeholder="Add item" value={newChecklistItemTexts[cl.id]|| ''} onChangeText={t=>setNewChecklistItemTexts(p=>({...p,[cl.id]:t}))} placeholderTextColor={currentThemeColors.textSecondary}/><TouchableOpacity onPress={()=>handleAddChecklistItem(cl.id)} style={styles.checklistAddButton} disabled={!newChecklistItemTexts[cl.id]?.trim()}><Text style={styles.checklistAddButtonText}>Add Item</Text></TouchableOpacity></View>)}
-                                </View>
-                            );})}
-                            {!internalCard?.checklists?.length && <Text style={styles.imagePlaceholderText}>{showEditControlsForOtherSections ? 'No checklists.': 'No checklists.'}</Text>}
-                        </View>
+                        {/* Checklists display - only show if there are checklists */}
+                        {internalCard?.checklists && internalCard.checklists.length > 0 && (
+                            <View style={[styles.section,{paddingHorizontal:10}]}>
+                                {(internalCard?.checklists || []).map(cl => { const comp = cl.items.filter(i=>i.completed).length; const tot = cl.items.length; const prog = tot>0?(comp/tot)*100:0; return (
+                                    <View key={cl.id} style={styles.checklistContainer}>
+                                        <Text style={[styles.sectionTitle, {textTransform:'none', fontSize:16, marginBottom:4}]}>{cl.title}</Text>
+                                        {tot>0 && (<View style={styles.checklistProgressBarContainer}><View style={[styles.checklistProgressBar, {width:`${prog}%`}]} /></View>)}
+                                        {cl.items.map(item => (<TouchableOpacity key={item.id} onPress={()=>showEditControlsForOtherSections && handleToggleChecklistItem(cl.id,item.id)} disabled={!showEditControlsForOtherSections} style={styles.checklistItem}><Ionicons name={item.completed?"checkbox-outline":"square-outline"} size={24} color={showEditControlsForOtherSections?currentThemeColors.primary:currentThemeColors.textSecondary} /><Text style={[styles.checklistItemText,item.completed&&styles.checklistItemTextCompleted]}>{item.text}</Text></TouchableOpacity>))}
+                                    </View>
+                                );})}
+                            </View>
+                        )}
 
-                        <View style={[styles.section,{paddingHorizontal:10}]}>
-                            <Text style={styles.sectionTitle}><Ionicons name="attach-outline" size={20} color="#fff" />Attachments</Text>
-                            {showEditControlsForOtherSections && (<TouchableOpacity onPress={handleAddAttachment} style={styles.addAttachmentButton}><Ionicons name="attach-outline" size={20} color={currentThemeColors.text} /><Text style={styles.addAttachmentButtonText}>Add Link</Text></TouchableOpacity>)}
-                             {attachmentError && showEditControlsForOtherSections && <Text style={styles.attachmentErrorText}>{attachmentError}</Text>}
-                            {(internalCard?.attachments || []).map(att => { const stat=attachmentValidationStatus[att.id]|| 'idle'; let icon:any='document-text-outline'; if(att.type==='image')icon='image-outline';else if(att.type==='video')icon='film-outline';else if(att.url?.match(/youtube|youtu.be|vimeo/))icon='logo-youtube'; return (
-                                <View key={att.id} style={styles.attachmentItem}>
-                                    {showEditControlsForOtherSections ? (<React.Fragment><TextInput style={styles.attachmentInput} placeholder="Name" value={att.name} onChangeText={t=>handleAttachmentChange(att.id,'name',t)} /><TextInput style={styles.attachmentInput} placeholder="URL" value={att.url} onChangeText={t=>handleAttachmentChange(att.id,'url',t)} keyboardType="url" autoCapitalize="none"/></React.Fragment>)
-                                    : (<Pressable onPress={async()=>{if(att.url){try{if(await Linking.canOpenURL(att.url))await Linking.openURL(att.url);else Alert.alert("Error",`Cannot open: ${att.url}`);}catch(e){Alert.alert("Error","Link error.");}}else Alert.alert("No URL");}} style={styles.attachmentLinkRow}><Ionicons name={icon} size={22} color={currentThemeColors.text} style={styles.attachmentTypeIcon}/><Text style={styles.attachmentNameText} numberOfLines={1}>{att.name||att.url}</Text>{att.url&&<Ionicons name="open-outline" size={20} color={currentThemeColors.primary}/>}</Pressable>)}
-                                    {showEditControlsForOtherSections&&stat==='pending'&&attachmentValidatingId===att.id&&<ActivityIndicator size="small" color={currentThemeColors.primary}/>}
-                                    {showEditControlsForOtherSections&&stat==='invalid'&&<Text style={styles.attachmentErrorText}>Invalid URL.</Text>}
-                                    {showEditControlsForOtherSections&&(<Pressable onPress={()=>handleRemoveAttachment(att.id)} style={{alignSelf:'flex-end',padding:5}}><Ionicons name="trash-bin-outline" size={20} color={currentThemeColors.error}/></Pressable>)}
-                                </View>
-                            );})}
-
-                        </View>
+                        {((internalCard?.attachments && internalCard.attachments.length > 0) || showEditControlsForOtherSections) && (
+                            <View style={[styles.section,{paddingHorizontal:10}]}>
+                                <Text style={styles.sectionTitle}><Ionicons name="attach-outline" size={20} color="#fff" />Attachments</Text>
+                                {showEditControlsForOtherSections && (<TouchableOpacity onPress={handleAddAttachment} style={styles.addAttachmentButton}><Ionicons name="attach-outline" size={20} color={currentThemeColors.text} /><Text style={styles.addAttachmentButtonText}>Add Link</Text></TouchableOpacity>)}
+                                 {attachmentError && showEditControlsForOtherSections && <Text style={styles.attachmentErrorText}>{attachmentError}</Text>}
+                                {(internalCard?.attachments || []).map(att => { const stat=attachmentValidationStatus[att.id]|| 'idle'; let icon:any='document-text-outline'; if(att.type==='image')icon='image-outline';else if(att.type==='video')icon='film-outline';else if(att.url?.match(/youtube|youtu.be|vimeo/))icon='logo-youtube'; return (
+                                    <View key={att.id} style={styles.attachmentItem}>
+                                        {showEditControlsForOtherSections ? (<React.Fragment><TextInput style={styles.attachmentInput} placeholder="Name" value={att.name} onChangeText={t=>handleAttachmentChange(att.id,'name',t)} /><TextInput style={styles.attachmentInput} placeholder="URL" value={att.url} onChangeText={t=>handleAttachmentChange(att.id,'url',t)} keyboardType="url" autoCapitalize="none"/></React.Fragment>)
+                                        : (<Pressable onPress={async()=>{if(att.url){try{if(await Linking.canOpenURL(att.url))await Linking.openURL(att.url);else Alert.alert("Error",`Cannot open: ${att.url}`);}catch(e){Alert.alert("Error","Link error.");}}else Alert.alert("No URL");}} style={styles.attachmentLinkRow}><Ionicons name={icon} size={22} color={currentThemeColors.text} style={styles.attachmentTypeIcon}/><Text style={styles.attachmentNameText} numberOfLines={1}>{att.name||att.url}</Text>{att.url&&<Ionicons name="open-outline" size={20} color={currentThemeColors.primary}/>}</Pressable>)}
+                                        {showEditControlsForOtherSections&&stat==='pending'&&attachmentValidatingId===att.id&&<ActivityIndicator size="small" color={currentThemeColors.primary}/>}
+                                        {showEditControlsForOtherSections&&stat==='invalid'&&<Text style={styles.attachmentErrorText}>Invalid URL.</Text>}
+                                        {showEditControlsForOtherSections&&(<Pressable onPress={()=>handleRemoveAttachment(att.id)} style={{alignSelf:'flex-end',padding:5}}><Ionicons name="trash-bin-outline" size={20} color={currentThemeColors.error}/></Pressable>)}
+                                    </View>
+                                );})}
+                            </View>
+                        )}
 
                         <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginVertical: 18,paddingHorizontal:10 }} />
                         <View style={[styles.section,{paddingHorizontal:10}]}>
@@ -1252,7 +1505,90 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                     </View>
                 </View>
             </Modal>
-            {showMentionTypeMenu && renderMentionTypeMenu()}
+
+            
+            {/* Main Navigation */}
+            <View style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 70,
+                backgroundColor: 'rgba(35, 39, 47, 0.95)',
+                borderTopWidth: 1,
+                borderTopColor: 'rgba(255, 255, 255, 0.1)',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-around',
+                paddingBottom: 10
+            }}>
+                <Pressable onPress={() => {
+                    onClose();
+                    // Navigate to home after closing
+                    setTimeout(() => {
+                        require('expo-router').router.navigate('/(tabs)');
+                    }, 100);
+                }} style={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1
+                }}>
+                    <Ionicons name="home" size={24} color="#c084fc" />
+                    <Text style={{ color: '#c084fc', fontSize: 12, marginTop: 2 }}>Home</Text>
+                </Pressable>
+                <Pressable onPress={() => {
+                    onClose();
+                    setTimeout(() => {
+                        require('expo-router').router.navigate('/(tabs)/props');
+                    }, 100);
+                }} style={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1
+                }}>
+                    <Ionicons name="cube" size={24} color="#a3a3a3" />
+                    <Text style={{ color: '#a3a3a3', fontSize: 12, marginTop: 2 }}>Props</Text>
+                </Pressable>
+                <Pressable onPress={() => {
+                    onClose();
+                    setTimeout(() => {
+                        require('expo-router').router.navigate('/(tabs)/shows');
+                    }, 100);
+                }} style={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1
+                }}>
+                    <Ionicons name="film" size={24} color="#a3a3a3" />
+                    <Text style={{ color: '#a3a3a3', fontSize: 12, marginTop: 2 }}>Shows</Text>
+                </Pressable>
+                <Pressable onPress={() => {
+                    onClose();
+                    setTimeout(() => {
+                        require('expo-router').router.navigate('/(tabs)/packing');
+                    }, 100);
+                }} style={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1
+                }}>
+                    <Ionicons name="cube-outline" size={24} color="#a3a3a3" />
+                    <Text style={{ color: '#a3a3a3', fontSize: 12, marginTop: 2 }}>Packing</Text>
+                </Pressable>
+                <Pressable onPress={() => {
+                    onClose();
+                    setTimeout(() => {
+                        require('expo-router').router.navigate('/(tabs)/profile');
+                    }, 100);
+                }} style={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1
+                }}>
+                    <Ionicons name="person" size={24} color="#a3a3a3" />
+                    <Text style={{ color: '#a3a3a3', fontSize: 12, marginTop: 2 }}>Profile</Text>
+                </Pressable>
+            </View>
         </Modal>
     );
 };

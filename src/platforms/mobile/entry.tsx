@@ -1,9 +1,9 @@
 import 'expo-router/entry';
 import React from 'react';
 import { AppRegistry } from 'react-native';
-import App from '../../../App.tsx'; // Adjust path if needed
+import App from '../../App.tsx'; // Fixed path
 import { AuthProvider } from '../../contexts/AuthContext.tsx';
-// import { FontProvider } from '../../contexts/FontContext'; // Commented out
+import { FontProvider } from '../../contexts/FontContext.tsx'; // Re-enabled for StyledText compatibility
 import { ThemeProvider } from '../../contexts/ThemeContext.tsx';
 import { FirebaseProvider } from '../../contexts/FirebaseContext.tsx';
 // import { useFonts } from '../../shared/hooks/useFonts'; // Assuming font loading hook is separate
@@ -27,9 +27,9 @@ const MainApp = () => {
     <AuthProvider>
       <ThemeProvider>
         <FirebaseProvider>
-          {/* <FontProvider> */}
+          <FontProvider>
             <App />
-          {/* </FontProvider> */}
+          </FontProvider>
         </FirebaseProvider>
       </ThemeProvider>
     </AuthProvider>

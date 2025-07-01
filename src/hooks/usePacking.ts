@@ -129,9 +129,9 @@ export function usePacking(showId?: string): {
          weightUnit: 'kg' as WeightUnit, 
          isHeavy: propsToPack.reduce((sum, p) => sum + (p.weight || 0), 0) > 20, 
          notes: '',
-         // Timestamps are handled by casting to 'any' to allow FieldValue
-         createdAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp(),
-         updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp(),
+         // Use service-level timestamp handling instead of direct FieldValue
+         createdAt: new Date().toISOString(),
+         updatedAt: new Date().toISOString(),
          labels: [], 
          status: 'draft' as const,
        };
@@ -151,8 +151,8 @@ export function usePacking(showId?: string): {
       }
        const dataToUpdateForFirestore = { 
          ...updates, 
-         // Cast to 'any' because PackingBox expects Date, but we send FieldValue for timestamps
-         updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp() as any
+         // Use ISO string for timestamp
+         updatedAt: new Date().toISOString()
         };
        if (offlineSyncManager) {
          await offlineSyncManager.queueOperation('update', 'packingBoxes', { ...dataToUpdateForFirestore, id: boxId });
@@ -178,8 +178,8 @@ export function usePacking(showId?: string): {
       }
       const dataToUpdate = {
         ...settings,
-        // Cast to 'any' because PackingBox expects Date, but we send FieldValue for timestamps
-        updatedAt: Platform.OS === 'web' ? webServerTimestamp() : FirebaseFirestoreTypes.FieldValue.serverTimestamp() as any,
+        // Use ISO string for timestamp
+        updatedAt: new Date().toISOString(),
       };
       if (offlineSyncManager) {
         await offlineSyncManager.queueOperation('update', 'packingBoxes', { ...dataToUpdate, id: boxId });

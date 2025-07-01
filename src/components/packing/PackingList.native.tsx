@@ -6,7 +6,7 @@ import { PackingBox, PackedProp } from '../../types/packing.ts';
 import { Show } from '../../types/index.ts'; 
 import { Prop } from '../../shared/types/props.ts'; 
 import { PackingBoxCard } from './PackingBoxCard.tsx';
-import { PropSelector } from './PropSelector.tsx';
+import { PropSelector } from './PropSelector.native.tsx';
 // For icons, we need to use lucide-react-native
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Timestamp } from 'firebase/firestore';
