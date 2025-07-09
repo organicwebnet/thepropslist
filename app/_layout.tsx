@@ -4,7 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 // Context Providers
-import { FirebaseProvider } from '../src/contexts/FirebaseContext';
+import { FirebaseProvider } from '../../web-app/src/contexts/FirebaseContext';
 import { AuthProvider } from '../src/contexts/AuthContext';
 import { ThemeProvider } from '../src/contexts/ThemeContext';
 import { FontProvider } from '../src/contexts/FontContext';

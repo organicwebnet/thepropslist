@@ -1,5 +1,4 @@
 {
-  "extends": "@tsconfig/react-native/tsconfig.json",
   "compilerOptions": {
     "strict": true,
     "skipLibCheck": true,
@@ -42,12 +41,12 @@
         "src/types/*"
       ]
     },
-    "allowImportingTsExtensions": true,
-    "module": "commonjs",
+    "module": "esnext",
     "noEmit": true,
-    "jsx": "react-native",
+    "jsx": "react-jsx",
     "esModuleInterop": true,
-    "lib": ["esnext", "dom"]
+    "lib": ["esnext", "dom"],
+    "moduleResolution": "bundler"
   },
   "exclude": [
     "node_modules"

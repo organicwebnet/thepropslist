@@ -4,6 +4,8 @@ import { DraxView } from 'react-native-drax';
 import { useTheme } from '../../contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
+import LinearGradient from 'react-native-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
 
 // Type definitions (assuming they are defined elsewhere, simplified here for clarity)
 interface CustomTimestamp {
@@ -59,8 +61,12 @@ const BoardList: React.FC<BoardListProps> = ({
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Always show add card input for debugging
+  const showAddCardInput = true;
+
   const handleAddCardInternal = async () => {
     if (!newCardTitle.trim()) return;
+    Alert.alert('DEBUG', `Add Card button pressed for list ${listId} with title: ${newCardTitle}`);
     setIsAddingCard(true);
     try {
       await onAddCard(listId, newCardTitle.trim());
@@ -76,12 +82,14 @@ const BoardList: React.FC<BoardListProps> = ({
   const listStyles = StyleSheet.create({
     listContainer: {
       width: 280,
-      backgroundColor: '#1d2125',
+      backgroundColor: 'transparent',
       borderRadius: 8,
       marginHorizontal: 10,
       paddingHorizontal: 14,
       paddingVertical: 0,
       alignSelf: 'flex-start',
+      borderWidth: 2,
+      borderColor: 'rgba(80,80,200,0.3)',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.18,
@@ -106,7 +114,7 @@ const BoardList: React.FC<BoardListProps> = ({
     cardContainer: {
       marginBottom: 10,
       padding: 0,
-      backgroundColor: '#111111',
+      backgroundColor: 'rgb(24, 11, 102)',
       borderRadius: 8,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
@@ -160,101 +168,146 @@ const BoardList: React.FC<BoardListProps> = ({
   });
 
   if (isCollapsed) {
+    // Use the same background color as the expanded list (do not use pastel)
+    const bgColor = listStyles.listContainer.backgroundColor || '#1d2125';
     return (
-      <View style={{
-        width: 44,
-        height: 220,
-        backgroundColor: '#1d2125',
-        borderRadius: 22,
-        marginHorizontal: 10,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.18,
-        shadowRadius: 12,
-        elevation: 8,
-      }}>
-        <Pressable onPress={() => setIsCollapsed(false)} style={{ alignItems: 'center' }}>
-          <Ionicons name="chevron-back-outline" size={22} color={currentThemeColors.textSecondary} style={{ transform: [{ rotate: '90deg' }] }} />
+      <View style={{ alignItems: 'center', marginHorizontal: 6 }}>
+        {/* Icon above the pill */}
+        <Pressable onPress={() => setIsCollapsed(false)} style={{ marginBottom: 4 }}>
+          <MaterialIcons name="unfold-more-horizontal" size={28} color="#888" />
         </Pressable>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{
-            color: '#fff',
-            fontWeight: 'bold',
-            fontSize: 16,
-            transform: [{ rotate: '-90deg' }],
-            width: 160,
-            textAlign: 'center',
-          }}>{listName}</Text>
-        </View>
-        <View style={{
-          backgroundColor: '#222',
-          borderRadius: 12,
-          paddingHorizontal: 8,
-          paddingVertical: 2,
-          marginBottom: 2,
-        }}>
-          <Text style={{ color: '#bdbdbd', fontWeight: 'bold', fontSize: 16 }}>{cards.length}</Text>
+        {/* The pill */}
+        <View
+          style={{
+            width: 40,
+            height: 180,
+            backgroundColor: bgColor,
+            borderRadius: 16,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderColor: 'rgba(80,80,200,0.15)',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.10,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+        >
+          {/* Rotated label */}
+          <Pressable onPress={() => setIsCollapsed(false)} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{
+              color: '#fff',
+              fontWeight: 'bold',
+              fontSize: 15,
+              transform: [{ rotate: '-90deg' }],
+              textAlign: 'center',
+              letterSpacing: 1,
+              width: 140,
+            }}>{listName}</Text>
+          </Pressable>
+          {/* Rotated card count at the bottom */}
+          <View style={{ position: 'absolute', bottom: 10, left: 0, right: 0, alignItems: 'center' }}>
+            <Text style={{
+              color: '#fff',
+              fontWeight: 'bold',
+              fontSize: 14,
+              transform: [{ rotate: '-90deg' }],
+              textAlign: 'center',
+              letterSpacing: 1,
+            }}>{cards.length}</Text>
+          </View>
         </View>
       </View>
     );
   }
 
+  // Use the same pastel color as collapsed
+  const pastelColors = [
+    '#e3fcef', // Green
+    '#fffbe6', // Yellow
+    '#ffe2cc', // Orange
+    '#ffd6e5', // Red
+    '#eae6ff', // Purple
+    '#deebff', // Blue
+    '#e6fcff', // Teal
+    '#e4f7d2', // Lime
+    '#f9eaff', // Magenta
+    '#f4f5f7', // Default
+  ];
+  function pickPastelColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return pastelColors[Math.abs(hash) % pastelColors.length];
+  }
+  const bgColor = pickPastelColor(listId || listName || 'default');
   return (
-    <DraxView
-      style={listStyles.listContainer}
-      receivingStyle={{ borderColor: currentThemeColors.primary, borderWidth: 2 }}
-      onReceiveDragDrop={({ dragged: { payload } }) => {
-        if (payload && payload.listId !== listId) {
-          onCardDrop(payload, listId);
-        }
-      }}>
-      <View style={listStyles.listHeader}>
-        <Text style={listStyles.listTitle}>{listName}</Text>
-        <Pressable onPress={() => setIsCollapsed((prev) => !prev)}>
-          <Ionicons name="chevron-forward-outline" size={24} color={currentThemeColors.textSecondary} style={{ transform: [{ scaleX: -1 }] }} />
-        </Pressable>
-      </View>
-      <View style={listStyles.cardList}>
-        {cards.length === 0 ? (
-          <Text style={listStyles.emptyListText}>No cards in this list.</Text>
-        ) : (
-          cards.map((card, idx) => (
-            <Pressable key={card.id} onPress={() => onOpenCardDetail(card)}>
-              <DraxView
-                style={listStyles.cardContainer}
-                draggingStyle={listStyles.cardDragging}
-                dragPayload={{ ...card }}
-                longPressDelay={150}
-                draggable>
-                {card.imageUrl ? (
-                  <Image
-                    source={{ uri: card.imageUrl }}
-                    style={{
-                      width: '100%',
-                      height: 110,
-                      borderTopLeftRadius: 8,
-                      borderTopRightRadius: 8,
-                      borderBottomLeftRadius: 0,
-                      borderBottomRightRadius: 0,
-                      marginBottom: 0,
-                      resizeMode: 'cover',
-                    }}
-                  />
-                ) : null}
-                <View style={{ padding: 8, paddingTop: card.imageUrl ? 6 : 0 }}>
-                  <Text style={listStyles.cardTitle}>{card.title}</Text>
-                  {/* Details row (icons, numbers) can go here if needed */}
-                </View>
-              </DraxView>
-            </Pressable>
-          ))
-        )}
-      </View>
-      {/* Add Card Input */}
-      {showAddCardInput ? (
+    <View
+      style={{
+        ...listStyles.listContainer,
+        backgroundColor: bgColor,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(80,80,200,0.15)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.10,
+        shadowRadius: 8,
+        elevation: 4,
+      }}
+    >
+      <DraxView
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+        receivingStyle={{ borderColor: currentThemeColors.primary, borderWidth: 2 }}
+        onReceiveDragDrop={({ dragged: { payload } }) => {
+          if (payload && payload.listId !== listId) {
+            onCardDrop(payload, listId);
+          }
+        }}
+      >
+        <View style={listStyles.listHeader}>
+          <Text style={listStyles.listTitle}>{listName}</Text>
+          <Pressable onPress={() => setIsCollapsed((prev) => !prev)}>
+            <Ionicons name="chevron-forward-outline" size={24} color={currentThemeColors.textSecondary} style={{ transform: [{ scaleX: -1 }] }} />
+          </Pressable>
+        </View>
+        <View style={listStyles.cardList}>
+          {cards.length === 0 ? (
+            <Text style={listStyles.emptyListText}>No cards in this list.</Text>
+          ) : (
+            cards.map((card, idx) => (
+              <Pressable key={card.id} onPress={() => onOpenCardDetail(card)}>
+                <DraxView
+                  style={listStyles.cardContainer}
+                  draggingStyle={listStyles.cardDragging}
+                  dragPayload={{ ...card }}
+                  longPressDelay={150}
+                  draggable>
+                  {card.imageUrl ? (
+                    <Image
+                      source={{ uri: card.imageUrl }}
+                      style={{
+                        width: '100%',
+                        height: 110,
+                        borderTopLeftRadius: 8,
+                        borderTopRightRadius: 8,
+                        borderBottomLeftRadius: 0,
+                        borderBottomRightRadius: 0,
+                        marginBottom: 0,
+                        resizeMode: 'cover',
+                      }}
+                    />
+                  ) : null}
+                  <View style={{ padding: 8, paddingTop: card.imageUrl ? 6 : 0 }}>
+                    <Text style={listStyles.cardTitle}>{card.title}</Text>
+                    {/* Details row (icons, numbers) can go here if needed */}
+                  </View>
+                </DraxView>
+              </Pressable>
+            ))
+          )}
+        </View>
+        {/* Add Card Input */}
         <View style={{ paddingHorizontal: 4 }}>
           <TextInput
             style={listStyles.textInput}
@@ -262,8 +315,7 @@ const BoardList: React.FC<BoardListProps> = ({
             placeholderTextColor="#8B949E"
             value={newCardTitle}
             onChangeText={setNewCardTitle}
-            autoFocus
-            onBlur={() => !newCardTitle && setShowAddCardInput(false)}
+            autoFocus={false}
           />
           <View style={listStyles.addCardActions}>
             <Pressable
@@ -283,18 +335,17 @@ const BoardList: React.FC<BoardListProps> = ({
                 {isAddingCard ? 'Adding...' : 'Add Card'}
               </Text>
             </Pressable>
-            <Pressable onPress={() => setShowAddCardInput(false)}>
-              <Ionicons name="close" size={28} color="#8B949E" />
-            </Pressable>
           </View>
         </View>
-      ) : (
-        <Pressable style={listStyles.addCardButton} onPress={() => setShowAddCardInput(true)}>
-          <Ionicons name="add" size={22} color="#E0E0E0" />
-          <Text style={listStyles.addCardButtonText}>Add a card</Text>
-        </Pressable>
-      )}
-    </DraxView>
+      </DraxView>
+      {/* TEST BUTTON: Always visible, bright red */}
+      <Pressable
+        style={{ backgroundColor: 'red', padding: 16, margin: 8, borderRadius: 8, alignItems: 'center' }}
+        onPress={() => Alert.alert('Test', 'Button pressed!')}
+      >
+        <Text style={{ color: 'white', fontWeight: 'bold' }}>TEST BUTTON</Text>
+      </Pressable>
+    </View>
   );
 };
 

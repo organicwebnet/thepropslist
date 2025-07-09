@@ -1,0 +1,300 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import type { User } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
+  sendPasswordResetEmail
+} from 'firebase/auth';
+import { doc, setDoc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { auth, db } from '../firebase';
+// If you implement caching, import your webCache here
+// import { webCache } from '../services/webCache';
+
+interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  role: 'admin' | 'user' | 'viewer' | 'god';
+  organizations: string[];
+  preferences: {
+    theme: 'light' | 'dark';
+    notifications: boolean;
+    defaultView: 'grid' | 'list' | 'card';
+  };
+  lastLogin: Date;
+  createdAt: Date;
+  groups?: { [key: string]: boolean };
+}
+
+interface WebAuthContextType {
+  user: User | null;
+  userProfile: UserProfile | null;
+  loading: boolean;
+  error: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  getCurrentOrganization: () => string | null;
+  setCurrentOrganization: (orgId: string) => void;
+  clearError: () => void;
+  refreshProfile: () => Promise<void>;
+}
+
+const WebAuthContext = createContext<WebAuthContextType | undefined>(undefined);
+
+interface WebAuthProviderProps {
+  children: ReactNode;
+}
+
+export function WebAuthProvider({ children }: WebAuthProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentOrganization, setCurrentOrganization] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      try {
+        if (firebaseUser) {
+          setUser(firebaseUser);
+          await loadUserProfile(firebaseUser.uid);
+          await updateLastLogin(firebaseUser.uid);
+        } else {
+          setUser(null);
+          setUserProfile(null);
+          setCurrentOrganization(null);
+          // If using cache: await webCache.clear();
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
+        setError('Failed to load user profile');
+      } finally {
+        setLoading(false);
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  const loadUserProfile = async (uid: string) => {
+    try {
+      // If using cache, try cache first
+      // const cached = await webCache.get<UserProfile>(`user-profile-${uid}`);
+      // if (cached) { setUserProfile(cached); return cached; }
+      const userDocRef = doc(db, 'users', uid);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        const rawCreatedAt = userDoc.data().createdAt;
+        let createdAt: Date | null = null;
+        if (rawCreatedAt && typeof rawCreatedAt.toDate === 'function') {
+          createdAt = rawCreatedAt.toDate();
+        } else if (typeof rawCreatedAt === 'string' || typeof rawCreatedAt === 'number') {
+          createdAt = new Date(rawCreatedAt);
+        } else {
+          createdAt = null;
+        }
+        const rawLastLogin = userDoc.data().lastLogin;
+        let lastLogin: Date | null = null;
+        if (rawLastLogin && typeof rawLastLogin.toDate === 'function') {
+          lastLogin = rawLastLogin.toDate();
+        } else if (typeof rawLastLogin === 'string' || typeof rawLastLogin === 'number') {
+          lastLogin = new Date(rawLastLogin);
+        } else {
+          lastLogin = null;
+        }
+        const profileData = {
+          ...userDoc.data(),
+          lastLogin,
+          createdAt
+        } as UserProfile;
+        setUserProfile(profileData);
+        // If using cache: await webCache.set(`user-profile-${uid}`, profileData, 60 * 60 * 1000);
+        if (Array.isArray(profileData.organizations) && profileData.organizations.length > 0) {
+          setCurrentOrganization(profileData.organizations[0]);
+        }
+        return profileData;
+      } else {
+        // Create default profile for new users
+        const defaultProfile: UserProfile = {
+          uid,
+          email: user?.email || '',
+          displayName: user?.displayName || 'User',
+          role: 'user',
+          organizations: [],
+          preferences: {
+            theme: 'light',
+            notifications: true,
+            defaultView: 'grid'
+          },
+          lastLogin: new Date(),
+          createdAt: new Date()
+        };
+        await setDoc(userDocRef, {
+          ...defaultProfile,
+          lastLogin: Timestamp.now(),
+          createdAt: Timestamp.now()
+        });
+        setUserProfile(defaultProfile);
+        return defaultProfile;
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      setError('Failed to load user profile');
+      return null;
+    }
+  };
+
+  const updateLastLogin = async (uid: string) => {
+    try {
+      const userDocRef = doc(db, 'users', uid);
+      await updateDoc(userDocRef, { lastLogin: Timestamp.now() });
+    } catch (error) {
+      console.error('Error updating last login:', error);
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUp = async (email: string, password: string, displayName: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(result.user, { displayName });
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const provider = new GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      if (error.code !== 'auth/popup-closed-by-user') {
+        setError(error.message);
+        throw error;
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await signOut(auth);
+      setUser(null);
+      setUserProfile(null);
+      setCurrentOrganization(null);
+      // If using cache: await webCache.clear();
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateUserProfile = async (updates: Partial<UserProfile>) => {
+    try {
+      setLoading(true);
+      setError(null);
+      if (!user) throw new Error('No user');
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, updates);
+      await loadUserProfile(user.uid);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getCurrentOrganization = () => currentOrganization;
+  const setCurrentOrganizationState = (orgId: string) => {
+    setCurrentOrganization(orgId);
+  };
+
+  const clearError = () => setError(null);
+
+  const refreshProfile = async () => {
+    if (user) {
+      await loadUserProfile(user.uid);
+    }
+  };
+
+  return (
+    <WebAuthContext.Provider
+      value={{
+        user,
+        userProfile,
+        loading,
+        error,
+        signIn,
+        signUp,
+        signInWithGoogle,
+        signOut: handleSignOut,
+        resetPassword,
+        updateUserProfile,
+        getCurrentOrganization,
+        setCurrentOrganization: setCurrentOrganizationState,
+        clearError,
+        refreshProfile
+      }}
+    >
+      {children}
+    </WebAuthContext.Provider>
+  );
+}
+
+export function useWebAuth(): WebAuthContextType {
+  const context = useContext(WebAuthContext);
+  if (context === undefined) {
+    throw new Error('useWebAuth must be used within a WebAuthProvider');
+  }
+  return context;
+} 

@@ -3,7 +3,7 @@ import { View, Text, Image, ScrollView, ActivityIndicator, Alert, TouchableOpaci
 import { Link, useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index.ts';
 import { Prop } from '../shared/types/props.ts';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../../platforms/mobile/contexts/FirebaseContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { Pencil, UserMinus, Plus, Trash2 } from 'lucide-react';
 import { FontAwesome5, MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';

@@ -5,7 +5,7 @@ import App from '../../App.tsx'; // Fixed path
 import { AuthProvider } from '../../contexts/AuthContext.tsx';
 import { FontProvider } from '../../contexts/FontContext.tsx'; // Re-enabled for StyledText compatibility
 import { ThemeProvider } from '../../contexts/ThemeContext.tsx';
-import { FirebaseProvider } from '../../contexts/FirebaseContext.tsx';
+import { FirebaseProvider } from './contexts/FirebaseContext.tsx';
 // import { useFonts } from '../../shared/hooks/useFonts'; // Assuming font loading hook is separate
 
 // Main application component wrapper

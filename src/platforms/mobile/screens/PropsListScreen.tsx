@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useFirebase } from '../../../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../../platforms/mobile/contexts/FirebaseContext.tsx';
 import { ActivityIndicator, IconButton } from 'react-native-paper';
 import { FAB } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';

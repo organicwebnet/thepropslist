@@ -1,29 +1,16 @@
-import { initializeApp, FirebaseApp } from 'firebase/app';
+import { FirebaseApp, initializeApp } from 'firebase/app';
 import {
+  Auth,
+  User,
+  UserCredential,
   getAuth,
   signInWithEmailAndPassword as webSignIn,
   signOut as webSignOut,
   createUserWithEmailAndPassword as webCreateUser,
   sendPasswordResetEmail as webSendPasswordReset,
-  onAuthStateChanged,
-  Auth,
-  User,
-  UserCredential
+  onAuthStateChanged
 } from 'firebase/auth';
 import {
-  getFirestore,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  setDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  limit,
   Firestore,
   CollectionReference as WebCollectionReference,
   DocumentReference as WebDocumentReference,
@@ -35,8 +22,22 @@ import {
   onSnapshot,
   DocumentSnapshot,
   QuerySnapshot,
+  QueryDocumentSnapshot,
   type DocumentData as WebDocumentData,
-  Timestamp as WebTimestamp
+  Timestamp as WebTimestamp,
+  Transaction as WebTransaction,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -74,26 +75,11 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   public firestore: Firestore;
   public storage: CustomStorage;
 
-  constructor() {
+  constructor(app: FirebaseApp, auth: Auth, firestore: Firestore) {
     super();
-    // Initialize properties in the constructor, but call initialize to set them up
-    // This satisfies TypeScript's requirement for initializing abstract properties
-    const firebaseConfig = {
-      apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
-    };
-
-    if (!firebaseConfig.apiKey) {
-      throw new FirebaseError('Firebase configuration is missing. Ensure environment variables are set.', 'config-missing');
-    }
-
-    this.app = initializeApp(firebaseConfig);
-    this.auth = getAuth(this.app);
-    this.firestore = getFirestore(this.app);
+    this.app = app;
+    this.auth = auth;
+    this.firestore = firestore;
     this.storage = getStorage(this.app);
   }
 
@@ -171,7 +157,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     }
 
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docSnap => this._createDocumentWrapper(docSnap));
+    return querySnapshot.docs.map((docSnap: QueryDocumentSnapshot<T>) => this._createDocumentWrapper(docSnap));
   }
 
   async addDocument<T extends DocumentData>(collectionPath: string, data: Omit<T, 'id'>): Promise<FirebaseDocument<T>> {
@@ -200,7 +186,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   listenToDocument<T extends DocumentData>(path: string, onNext: (doc: FirebaseDocument<T>) => void, onError?: (error: Error) => void): () => void {
     const docRef = doc(this.firestore, path) as WebDocumentReference<T>;
     return onSnapshot(docRef, 
-      (docSnap) => {
+      (docSnap: DocumentSnapshot<T>) => {
         onNext(this._createDocumentWrapper(docSnap));
       },
       onError
@@ -223,7 +209,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     }
 
     return onSnapshot(q, 
-      (querySnapshot) => {
+      (querySnapshot: QuerySnapshot<T>) => {
         const docs = querySnapshot.docs.map(docSnap => this._createDocumentWrapper(docSnap));
         onNext(docs);
       },
@@ -233,7 +219,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
 
   // --- Transaction and Batch ---
   async runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T> {
-    return webRunTransaction(this.firestore, (transaction) => updateFunction(transaction as CustomTransaction));
+    return webRunTransaction(this.firestore, (transaction: WebTransaction) => updateFunction(transaction as CustomTransaction));
   }
 
   batch(): CustomWriteBatch {
@@ -248,10 +234,14 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   async uploadFile(path: string, file: string | File, metadata?: any): Promise<string> {
     const storageRef = ref(this.storage as any, path);
     if (typeof file === 'string') {
-        // This is a base64 string or data URL
-        await uploadBytes(storageRef, new Blob([file]), metadata);
+      // For web, if `file` is a string, assume it's a base64 string or a URL
+      // For simplicity, we'll assume it's a base64 string for now. Adjust if needed.
+      const base64String = file.split(',')[1]; // Get base64 part
+      const bytes = Uint8Array.from(atob(base64String), c => c.charCodeAt(0));
+      await uploadBytes(storageRef, bytes, metadata);
     } else {
-        await uploadBytes(storageRef, file, metadata);
+      // If `file` is a File object (from input[type="file"]), upload directly
+      await uploadBytes(storageRef, file, metadata);
     }
     return getStorageDownloadURL(storageRef);
   }
@@ -261,48 +251,35 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     await deleteObject(storageRef);
   }
 
-  // --- Offline ---
   offline(): OfflineSync {
-    return {
-      enableSync: async () => {
-        console.log('Web Firestore persistence is enabled by default during initialization.');
-      },
-      disableSync: async () => {
-        console.warn('Disabling network is not supported in the web SDK.');
-      },
-      getSyncStatus: async (): Promise<SyncStatus> => ({
-        lastSync: new Date(), // Placeholder
-        isSyncing: navigator.onLine,
-        pendingOperations: 0, // Not tracked in web sdk this way
-      }),
-      getQueueStatus: async (): Promise<QueueStatus> => ({
-        total: 0,
-        pending: 0,
-        inProgress: 0,
-        completed: 0,
-        failed: 0,
-      }),
-      retryFailedOperations: async () => console.log('Not applicable for web'),
-      clearQueue: async () => console.log('Not applicable for web'),
-    };
+    throw new Error('Offline synchronization is not implemented for web.');
   }
 
-  // Stubs to satisfy FirebaseService interface
+  // --- App-specific methods (Not implemented in WebFirebaseService for now) ---
+  // These methods are typically specific to the mobile platform or require different web implementations
   async updateCard(boardId: string, listId: string, cardId: string, updates: Partial<any>): Promise<void> { throw new Error('Not implemented'); }
   async deleteCard(boardId: string, listId: string, cardId: string): Promise<void> { throw new Error('Not implemented'); }
   async reorderCardsInList(boardId: string, listId: string, orderedCards: any[]): Promise<void> { throw new Error('Not implemented'); }
   async getBoardMembers(boardId: string): Promise<any[]> { return []; }
   async addBoardMember(boardId: string, userId: string, role: string): Promise<void> { throw new Error('Not implemented'); }
   async removeBoardMember(boardId: string, userId: string): Promise<void> { throw new Error('Not implemented'); }
-  async addList(boardId: string, listData: any): Promise<any> { return Promise.resolve({} as any); }
+  async addList(boardId: string, listData: Omit<ListData, 'id'>): Promise<ListData> {
+    // Add a new list to the board's lists subcollection
+    const collRef = collection(this.firestore, `boards/${boardId}/lists`);
+    const docRef = await addDoc(collRef, {
+      ...listData,
+      createdAt: new Date(),
+    });
+    return { ...listData, id: docRef.id };
+  }
   async addCard(boardId: string, listId: string, cardData: any): Promise<any> { return Promise.resolve({} as any); }
   async moveCardToList(boardId: string, fromListId: string, toListId: string, cardId: string): Promise<void> { throw new Error('Not implemented'); }
-  async reorderLists(boardId: string, orderedLists: ListData[]): Promise<void> {
-    // TODO: Implement or mock for web
-    return Promise.resolve();
+  async reorderLists(boardId: string, orderedLists: ListData[]): Promise<void> { throw new Error('Not implemented'); }
+
+  getCollection<T extends DocumentData>(collectionName: string): any {
+    throw new Error("Method not implemented.");
   }
-  getCollection<T>(collectionName: string): any {
-    // TODO: Implement or mock for web
-    return null;
+  deleteShow(showId: string): Promise<void> {
+    throw new Error("Method not implemented.");
   }
 }
