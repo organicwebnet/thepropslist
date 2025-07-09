@@ -150,7 +150,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               {[
                 { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/' },
                 { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props' },
-                { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props' },
+                { icon: FileText, text: 'Export Props', subtext: 'create a custom PDF or csv of all props', link: '/props' },
                 { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists' },
                 { icon: Theater, text: 'Show Management', subtext: 'Manage productions and venues', link: '/shows' },
                 { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards' },

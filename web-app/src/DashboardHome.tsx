@@ -15,7 +15,9 @@ import {
   BarChart3,
   Crown,
   Scroll,
-  Star
+  Star,
+  Home,
+  Calendar
 } from 'lucide-react';
 
 const containerVariants = {
@@ -135,15 +137,15 @@ const DashboardHome: React.FC = () => {
                     key={index}
                     variants={cardVariants}
                     whileHover="hover"
-                    className={`bg-gradient-to-br ${item.color} rounded-2xl p-6 cursor-pointer group`}
+                    className={`bg-gradient-to-br from-pb-primary to-pb-secondary rounded-2xl p-6 cursor-pointer group`}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
                         <item.icon className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-white">{item.title}</h4>
-                        <p className="text-sm text-white/80">{item.subtitle}</p>
+                        <h4 className="font-semibold text-white">{item.text}</h4>
+                        <p className="text-sm text-white/80">{item.subtext}</p>
                       </div>
                     </div>
                   </motion.div>
