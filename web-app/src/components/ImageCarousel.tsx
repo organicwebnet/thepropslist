@@ -1,52 +1,37 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Maximize } from 'lucide-react';
-import { Platform, View, Text, StyleSheet } from 'react-native';
-import type { PropImage } from '../shared/types/props.ts';
-
+// import { Platform, View, Text, StyleSheet } from 'react-native';
 interface ImageCarouselProps {
-  images: PropImage[];
+  images: string[];
   altText?: string;
 }
 
 export function ImageCarousel({ images, altText = "Image" }: ImageCarouselProps) {
-  if (Platform.OS !== 'web') {
-    console.warn('ImageCarousel: Attempted to render web component on native platform. Rendering placeholder instead.');
-    return (
-      <View style={styles.nativePlaceholder}>
-        <Text style={styles.nativePlaceholderText}>Image Carousel (Web Only)</Text>
-      </View>
-    );
-  }
-
   const [currentIndex, setCurrentIndex] = useState(0);
   const [fullScreenMode, setFullScreenMode] = useState(false);
-  
   if (!images || images.length === 0) return null;
 
   const navigateToImage = (index: number) => {
     setCurrentIndex((images.length + index) % images.length);
   };
-  
   const handlePrevious = () => {
     navigateToImage(currentIndex - 1);
   };
-  
   const handleNext = () => {
     navigateToImage(currentIndex + 1);
   };
-  
+
   return (
     <div className="space-y-3">
       {/* Main carousel image */}
       <div className="relative rounded-lg overflow-hidden bg-[#1A1A1A] border border-gray-800">
         <div className="aspect-video w-full">
           <img
-            src={images[currentIndex].url}
-            alt={images[currentIndex].caption || altText}
+            src={images[currentIndex]}
+            alt={altText}
             className="w-full h-full object-contain"
           />
         </div>
-        
         {/* Navigation buttons */}
         {images.length > 1 && (
           <>
@@ -66,7 +51,6 @@ export function ImageCarousel({ images, altText = "Image" }: ImageCarouselProps)
             </button>
           </>
         )}
-        
         {/* Fullscreen button */}
         <button
           onClick={() => setFullScreenMode(true)}
@@ -75,47 +59,38 @@ export function ImageCarousel({ images, altText = "Image" }: ImageCarouselProps)
         >
           <Maximize className="h-4 w-4" />
         </button>
-        
-        {/* Caption */}
-        {images[currentIndex].caption && (
-          <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/70">
-            <p className="text-sm text-white">{images[currentIndex].caption}</p>
-          </div>
-        )}
+        {/* No caption for simple string array */}
       </div>
-      
       {/* Thumbnails */}
       {images.length > 1 && (
         <div className="flex space-x-2 overflow-x-auto pb-2">
           {images.map((image, index) => (
             <button
-              key={image.id}
+              key={index}
               onClick={() => setCurrentIndex(index)}
               className={`relative flex-shrink-0 w-16 h-16 rounded overflow-hidden border-2 transition-all ${
                 index === currentIndex ? 'border-primary' : 'border-gray-800 opacity-70 hover:opacity-100'
               }`}
             >
               <img
-                src={image.url}
-                alt={image.caption || `Thumbnail ${index + 1}`}
+                src={image}
+                alt={`Thumbnail ${index + 1}`}
                 className="w-full h-full object-cover"
               />
             </button>
           ))}
         </div>
       )}
-      
       {/* Fullscreen modal */}
       {fullScreenMode && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col items-center justify-center">
           <div className="relative w-full max-w-5xl max-h-screen p-4">
             <div className="relative">
               <img
-                src={images[currentIndex].url}
-                alt={images[currentIndex].caption || altText}
+                src={images[currentIndex]}
+                alt={altText}
                 className="max-w-full max-h-[80vh] object-contain mx-auto"
               />
-              
               {/* Fullscreen navigation */}
               {images.length > 1 && (
                 <>
@@ -136,14 +111,7 @@ export function ImageCarousel({ images, altText = "Image" }: ImageCarouselProps)
                 </>
               )}
             </div>
-            
-            {/* Caption in fullscreen */}
-            {images[currentIndex].caption && (
-              <div className="text-center mt-2">
-                <p className="text-white">{images[currentIndex].caption}</p>
-              </div>
-            )}
-            
+            {/* No caption for simple string array */}
             {/* Close button */}
             <button
               onClick={() => setFullScreenMode(false)}
@@ -157,23 +125,4 @@ export function ImageCarousel({ images, altText = "Image" }: ImageCarouselProps)
       )}
     </div>
   );
-}
-
-const styles = StyleSheet.create({
-  nativePlaceholder: {
-    aspectRatio: 16 / 9,
-    width: '100%',
-    backgroundColor: '#333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#555',
-    marginBottom: 8,
-  },
-  nativePlaceholderText: {
-    color: '#aaa',
-    fontSize: 14,
-  },
-  container: { backgroundColor: 'transparent' },
-}); 
+} 

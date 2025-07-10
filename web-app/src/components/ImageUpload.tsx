@@ -3,7 +3,7 @@ import { ImagePlus, Link, X, Loader2, Image as ImageIcon, Star, Trash2, AlertTri
 import { useFirebase } from '../contexts/FirebaseContext';
 import type { PropImage } from '../types/props';
 import { v4 as uuidv4 } from 'uuid';
-import { useDropzone } from 'react-dropzone';
+import { uploadImages } from '../../shared/services/firebase/firebase';
 
 interface ImageUploadProps {
   onImagesChange: (images: PropImage[]) => void;
@@ -29,23 +29,21 @@ export function ImageUpload({ onImagesChange, currentImages = [], disabled = fal
     const newImages: PropImage[] = [...currentImages];
 
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const storagePath = `props-images/${Date.now()}-${file.name}`;
-        const url = await firebase.service.storage.uploadFile(storagePath, file);
-        
+      const { successful, failed } = await uploadImages(Array.from(files), 'props-images');
+      if (failed.length > 0) {
+        alert('Some images failed to upload: ' + failed.map(f => `${f.file}: ${f.error}`).join(', '));
+      }
+      for (const img of successful) {
         newImages.push({
           id: uuidv4(),
-          url: url,
+          url: img.url,
           isMain: newImages.length === 0,
           caption: ''
         });
       }
-
       if (newImages.length > 0 && !newImages.some(img => img.isMain) && !currentImages.some(img => img.isMain)) {
         newImages[0].isMain = true;
       }
-
       onImagesChange(newImages);
     } catch (error) {
       console.error('Error uploading images:', error);

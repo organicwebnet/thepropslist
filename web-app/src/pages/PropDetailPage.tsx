@@ -4,7 +4,7 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import DashboardLayout from '../PropsBibleHomepage';
 import { motion } from 'framer-motion';
 import { Prop } from '../../shared/types/props';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Pencil } from 'lucide-react';
 
 function formatDate(value: any): string {
   if (!value) return 'N/A';
@@ -67,15 +67,17 @@ const PropDetailPage: React.FC = () => {
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-pb-primary hover:text-pb-accent">
             <ArrowLeft className="w-5 h-5" /> Back
           </button>
+        </div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="bg-pb-darker/60 rounded-xl shadow-lg p-8 space-y-8 relative">
+          {/* Edit Icon Button */}
           <button
             onClick={handleEdit}
-            className="inline-flex items-center px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-semibold shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary"
+            className="absolute top-4 right-4 bg-pb-primary hover:bg-pb-accent text-white rounded-full p-2 shadow focus:outline-none focus:ring-2 focus:ring-pb-primary transition"
             aria-label="Edit Prop"
+            title="Edit Prop"
           >
-            Edit
+            <Pencil className="w-5 h-5" />
           </button>
-        </div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="bg-pb-darker/60 rounded-xl shadow-lg p-8 space-y-8">
           {/* Header & Main Info */}
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-shrink-0 w-48 h-48 rounded-lg overflow-hidden bg-pb-gray flex items-center justify-center">
@@ -99,6 +101,17 @@ const PropDetailPage: React.FC = () => {
               {prop.description && <p className="text-pb-gray mb-4 whitespace-pre-line">{prop.description}</p>}
             </div>
           </div>
+          {/* Gallery under main image */}
+          {prop.images && prop.images.length > 1 && (
+            <div className="mt-4 flex flex-col items-start">
+              <div className="font-semibold text-pb-primary mb-2">Gallery</div>
+              <div className="flex gap-2 flex-wrap">
+                {prop.images.filter(img => !img.isMain && img.url !== mainImage).map(img => (
+                  <img key={img.id} src={img.url} alt={img.caption || prop.name} className="w-20 h-20 object-cover rounded border border-pb-primary/30" />
+                ))}
+              </div>
+            </div>
+          )}
           {/* Assignment & Show Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-pb-darker/40 rounded-lg p-4">
             {renderField('Show', prop.showId)}
@@ -208,16 +221,6 @@ const PropDetailPage: React.FC = () => {
                 ))}
               </ul>
             ) : <div className="text-pb-gray">N/A</div>}
-            {prop.images && prop.images.length > 1 && (
-              <div className="mt-4">
-                <div className="font-semibold text-pb-primary mb-2">Gallery</div>
-                <div className="flex gap-2 flex-wrap">
-                  {prop.images.filter(img => !img.isMain).map(img => (
-                    <img key={img.id} src={img.url} alt={img.caption || prop.name} className="w-20 h-20 object-cover rounded border border-pb-primary/30" />
-                  ))}
-                </div>
-              </div>
-            )}
             {prop.videos && prop.videos.length > 0 && (
               <div className="mt-4">
                 <div className="font-semibold text-pb-primary mb-2">Videos</div>

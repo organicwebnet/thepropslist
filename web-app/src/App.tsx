@@ -18,6 +18,8 @@ import EditPropPage from './pages/EditPropPage';
 import BoardsPage from './pages/BoardsPage';
 import PackingListPage from './pages/PackingListPage';
 import PackingListDetailPage from './pages/PackingListDetailPage';
+import PropsPdfExportPage from './pages/PropsPdfExportPage';
+import ShoppingListPage from './pages/ShoppingListPage';
 
 function App() {
   const { user, loading } = useWebAuth();
@@ -31,6 +33,7 @@ function App() {
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
           <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
+          <Route path="/props/pdf-export" element={user ? <PropsPdfExportPage /> : <Navigate to="/login" replace />} />
           <Route path="/props/:id/edit" element={user ? <EditPropPage /> : <Navigate to="/login" replace />} />
           <Route path="/props/:id" element={user ? <PropDetailPage /> : <Navigate to="/login" replace />} />
           <Route path="/props" element={user ? <PropsListPage /> : <Navigate to="/login" replace />} />
@@ -42,6 +45,7 @@ function App() {
           <Route path="/boards" element={user ? <BoardsPage /> : <Navigate to="/login" replace />} />
           <Route path="/packing-lists" element={user ? <PackingListPage /> : <Navigate to="/login" replace />} />
           <Route path="/packing-lists/:packListId" element={user ? <PackingListDetailPage /> : <Navigate to="/login" replace />} />
+          <Route path="/shopping" element={user ? <ShoppingListPage /> : <Navigate to="/login" replace />} />
           <Route path="/*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

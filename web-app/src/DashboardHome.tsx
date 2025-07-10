@@ -127,25 +127,25 @@ const DashboardHome: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                 { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/' },
-                 { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props' },
-                 { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists' },
-                 { icon: Theater, text: 'Show Management', subtext: 'Manage productions and venues', link: '/shows' },
-                 { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards' },
+                 { icon: Home, color: 'from-pb-primary to-pb-secondary', title: 'Home', subtitle: 'Dashboard overview', link: '/' },
+                 { icon: Package, color: 'from-pb-blue to-pb-primary', title: 'Props Inventory', subtitle: 'Manage all production props', link: '/props' },
+                 { icon: Box, color: 'from-pb-green to-pb-primary', title: 'Packing Lists', subtitle: 'Packing & storage management', link: '/packing-lists' },
+                 { icon: Theater, color: 'from-pb-purple to-pb-primary', title: 'Show Management', subtitle: 'Manage productions and venues', link: '/shows' },
+                 { icon: Calendar, color: 'from-pb-orange to-pb-primary', title: 'Task Boards', subtitle: 'Kanban-style to-do boards', link: '/boards' },
                ].map((item, index) => (
                   <motion.div
                     key={index}
                     variants={cardVariants}
                     whileHover="hover"
-                    className={`bg-gradient-to-br from-pb-primary to-pb-secondary rounded-2xl p-6 cursor-pointer group`}
+                    className={`bg-gradient-to-br ${item.color} rounded-2xl p-6 cursor-pointer group`}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
                         <item.icon className="w-6 h-6 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-white">{item.text}</h4>
-                        <p className="text-sm text-white/80">{item.subtext}</p>
+                        <h4 className="font-semibold text-white">{item.title}</h4>
+                        <p className="text-sm text-white/80">{item.subtitle}</p>
                       </div>
                     </div>
                   </motion.div>

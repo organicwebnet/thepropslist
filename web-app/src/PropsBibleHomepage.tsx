@@ -150,10 +150,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               {[
                 { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/' },
                 { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props' },
-                { icon: FileText, text: 'Export Props', subtext: 'create a custom PDF or csv of all props', link: '/props' },
+                { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export' },
                 { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists' },
                 { icon: Theater, text: 'Show Management', subtext: 'Manage productions and venues', link: '/shows' },
                 { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards' },
+                { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping' },
               ].map((item, index) => (
                 item.link ? (
                   <Link to={item.link} key={index} className="block">
@@ -191,33 +192,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     </div>
                   </motion.div>
                 )
-              ))}
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div>
-            <h3 className="text-sm font-semibold text-pb-gray uppercase tracking-wider mb-3">
-              Navigation
-            </h3>
-            <div className="space-y-2">
-              {[
-                { icon: Calendar, text: 'Task Boards' },
-                { icon: BarChart3, text: 'Analytics' },
-                { icon: Users, text: 'Collaboration' },
-                { icon: FileBarChart, text: 'Reports' }
-              ].map((item, index) => (
-                <motion.div
-                  key={index}
-                  variants={itemVariants}
-                  initial="hidden"
-                  animate="visible"
-                  transition={{ delay: (index + 4) * 0.1 }}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-pb-primary/10 transition-colors cursor-pointer text-pb-gray hover:text-white"
-                >
-                  <item.icon className="w-4 h-4" />
-                  <span className="text-sm">{item.text}</span>
-                </motion.div>
               ))}
             </div>
           </div>
