@@ -4,7 +4,7 @@ import { MessageSquare, HelpCircle, Github, Twitter, Linkedin, LogOut } from 'lu
 import { FeedbackForm } from './FeedbackForm.tsx';
 import { HelpCenter } from './HelpCenter.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 
 export function Footer() {
   const { user } = useAuth();
@@ -27,7 +27,7 @@ export function Footer() {
     <footer className="mt-auto py-3 px-6 text-center border-t border-[var(--border-color)] bg-[var(--bg-primary)]">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <div className="text-xs text-[var(--text-secondary)]">
-          © {new Date().getFullYear()} Props Bible
+          © {new Date().getFullYear()} The Props List
         </div>
         
         <div className="flex items-center gap-4">

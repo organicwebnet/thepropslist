@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { ShowsContext } from './ShowsContext.tsx';
-import { useFirebase } from './FirebaseContext.tsx';
-import type { Prop, PropFormData } from '../shared/types/props.ts';
-import { FirebaseDocument } from '../shared/services/firebase/types.ts';
-import { QueryOptions } from '../shared/services/firebase/types.ts'; // Import QueryOptions
-import { useAuth } from './AuthContext.tsx';
+import { ShowsContext } from './ShowsContext';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import type { Prop, PropFormData } from '../shared/types/props';
+import { FirebaseDocument } from '../shared/services/firebase/types';
+import { QueryOptions } from '../shared/services/firebase/types'; // Import QueryOptions
+import { useAuth } from './AuthContext';
 
 interface PropsContextType {
   props: Prop[];

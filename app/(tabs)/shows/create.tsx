@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import ShowFormNative from '../../../src/components/ShowForm.native.tsx';
-import { useShows } from '../../../src/contexts/ShowsContext.tsx';
-import type { Show } from '../../../src/shared/services/firebase/types.ts'; // Using Show from firebase/types
-import { useTheme } from '../../../src/contexts/ThemeContext.tsx';
+import ShowFormNative from '../../../src/components/ShowForm.native';
+import { useShows } from '../../../src/contexts/ShowsContext';
+import type { Show } from '../../../src/shared/services/firebase/types'; // Using Show from firebase/types
+import { useTheme } from '../../../src/contexts/ThemeContext';
 import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../../src/styles/theme';
 import LinearGradient from 'react-native-linear-gradient';
 

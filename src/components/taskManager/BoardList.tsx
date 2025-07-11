@@ -61,9 +61,6 @@ const BoardList: React.FC<BoardListProps> = ({
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Always show add card input for debugging
-  const showAddCardInput = true;
-
   const handleAddCardInternal = async () => {
     if (!newCardTitle.trim()) return;
     Alert.alert('DEBUG', `Add Card button pressed for list ${listId} with title: ${newCardTitle}`);
@@ -174,7 +171,7 @@ const BoardList: React.FC<BoardListProps> = ({
       <View style={{ alignItems: 'center', marginHorizontal: 6 }}>
         {/* Icon above the pill */}
         <Pressable onPress={() => setIsCollapsed(false)} style={{ marginBottom: 4 }}>
-          <MaterialIcons name="unfold-more-horizontal" size={28} color="#888" />
+          <MaterialIcons name="unfold-more" size={28} color="#888" />
         </Pressable>
         {/* The pill */}
         <View
@@ -235,7 +232,7 @@ const BoardList: React.FC<BoardListProps> = ({
     '#f9eaff', // Magenta
     '#f4f5f7', // Default
   ];
-  function pickPastelColor(str) {
+  function pickPastelColor(str: string) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
     return pastelColors[Math.abs(hash) % pastelColors.length];

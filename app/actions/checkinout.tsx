@@ -4,15 +4,15 @@ import { Stack, useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
-import { useTheme } from '../../src/contexts/ThemeContext.tsx';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../src/styles/theme';
-import { useFirebase } from '../../src/contexts/FirebaseContext.tsx';
-import { QRScannerScreen } from '../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
-import StyledText from '../../src/components/StyledText.tsx';
-import type { Prop } from '../../src/shared/types/props.ts';
-import { PropLifecycleStatus, lifecycleStatusLabels, PropStatusUpdate } from '../../src/types/lifecycle.ts';
-import { useProps } from '../../src/contexts/PropsContext.tsx';
-import { useAuth } from '../../src/contexts/AuthContext.tsx';
+import { useFirebase } from '../../src/platforms/mobile/contexts/FirebaseContext';
+import { QRScannerScreen } from '../../src/platforms/mobile/features/qr/QRScannerScreen';
+import StyledText from '../../src/components/StyledText';
+import type { Prop } from '../../src/shared/types/props';
+import { PropLifecycleStatus, lifecycleStatusLabels, PropStatusUpdate } from '../../src/types/lifecycle';
+import { useProps } from '../../src/contexts/PropsContext';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 // Define the types of actions the user can take
 type CheckInOutAction = 

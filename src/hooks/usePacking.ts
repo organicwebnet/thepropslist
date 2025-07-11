@@ -11,10 +11,10 @@ import {
   Firestore as WebFirestore // Import Web Firestore type
 } from 'firebase/firestore';
 import { Platform } from 'react-native'; // Import Platform
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { PackingBox, PackedProp } from '../types/packing.ts';
-import { FirebaseDocument, CustomFirestore } from '../shared/services/firebase/types.ts'; // Import CustomFirestore
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import { useAuth } from '../contexts/AuthContext';
+import { PackingBox, PackedProp } from '../types/packing';
+import { FirebaseDocument, CustomFirestore } from '../shared/services/firebase/types'; // Import CustomFirestore
 // Import RN Firebase types if needed for explicit casting, though CustomFirestore should suffice
 import {
   FirebaseFirestoreTypes,
@@ -23,8 +23,8 @@ import {
   where as rnWhere,
   onSnapshot as rnOnSnapshot
 } from '@react-native-firebase/firestore';
-import { FirebaseError, FirebaseService, QueryOptions } from '../shared/services/firebase/types.ts';
-import type { Prop, WeightUnit } from '../shared/types/props.ts'; // Added WeightUnit
+import { FirebaseError, FirebaseService, QueryOptions } from '../shared/services/firebase/types';
+import type { Prop, WeightUnit } from '../shared/types/props'; // Added WeightUnit
 import { OfflineSyncManager } from '../platforms/mobile/features/offline/OfflineSyncManager';
 
 interface PackingOperations {

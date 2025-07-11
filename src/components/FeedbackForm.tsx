@@ -138,7 +138,7 @@ export function FeedbackForm({ onClose, userEmail, onSubmit, initialFeedbackType
       }
       
       body += `## Device Information\n\`\`\`\n${deviceInfo}\n\`\`\`\n\n`;
-      body += `## Details\n**Type:** ${type}\n**Email:** ${email || 'Not provided'}\n**Date:** ${new Date().toLocaleString()}\n\n_Submitted from Props Bible app_`;
+      body += `## Details\n**Type:** ${type}\n**Email:** ${email || 'Not provided'}\n**Date:** ${new Date().toLocaleString()}\n\n_Submitted from The Props List app_`;
       
       // Create GitHub issue URL with proper labels
       const issueUrl = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent(GITHUB_LABELS[type as FeedbackType])}`;

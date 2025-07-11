@@ -1,7 +1,7 @@
 module.exports = ({ config }) => {
   return {
-    name: "Props Bible",
-    slug: "props-bible",
+    name: "The Props List",
+    slug: "props-list",
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
@@ -19,7 +19,7 @@ module.exports = ({ config }) => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.propsbible",
-      // googleServicesFile: process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist' // Comment out if file doesn't exist
+      googleServicesFile: process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist'
     },
     android: {
       adaptiveIcon: {
@@ -27,7 +27,8 @@ module.exports = ({ config }) => {
         backgroundColor: "#ffffff"
       },
       package: "com.propsbible",
-      // googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json' // Temporarily disabled
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
+      edgeToEdgeEnabled: true
     },
     web: {
       bundler: "metro",
@@ -48,7 +49,7 @@ module.exports = ({ config }) => {
     },
     scheme: "propsbible",
     plugins: [
-      // "@react-native-firebase/app", // Temporarily disabled
+      "@react-native-firebase/app",
       "expo-router"
     ],
     experiments: {

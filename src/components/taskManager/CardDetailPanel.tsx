@@ -21,7 +21,7 @@ import {
 
 // import Colors from '../constants/Colors'; // OLD
 import { useTheme } from '../../contexts/ThemeContext'; // NEW
-import { lightTheme, darkTheme } from '../../styles/theme.ts'; // Import theme objects
+import { lightTheme, darkTheme } from '../../styles/theme'; // Import theme objects
 
 import DatePicker from 'react-native-date-picker';
 // import { Timestamp } from 'firebase/firestore'; // OLD - use string/CustomTimestamp
@@ -34,7 +34,7 @@ import MemberPicker from './MemberPicker'; // CHANGED extension to .tsx
 // Remove the alias if MemberData from taskManager.ts is the one to be used consistently
 // import type { MemberData as MemberPickerData } from '../modals/MemberPicker';
 import { v4 as uuidv4 } from 'uuid'; // For generating comment IDs
-import { useFirebase } from '../../contexts/FirebaseContext'; // Added
+import { useFirebase } from '../../platforms/mobile/contexts/FirebaseContext'; // Added
 import * as DocumentPicker from 'expo-document-picker'; // Import for general file picking
 // Assuming DigitalAsset type is available from a shared location
 // If not, it would be defined here or imported from its actual location.

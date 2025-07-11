@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { View, Text, Platform } from 'react-native';
-import { FirebaseService } from '../shared/services/firebase/types.ts';
-import { MobileFirebaseService } from '../platforms/mobile/services/MobileFirebaseService.ts';
-import { WebFirebaseService } from '../platforms/web/services/firebase.ts';
-import { globalStyles } from '../styles/globalStyles';
+import { View, Text } from 'react-native';
+import { FirebaseService } from '../../../shared/services/firebase/types';
+import { MobileFirebaseService } from '../services/MobileFirebaseService';
+import { globalStyles } from '../../../styles/globalStyles';
 
 interface FirebaseContextType {
   service: FirebaseService;
@@ -30,12 +29,8 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
   const [error, setError] = React.useState<Error | null>(null);
   
   const service = React.useMemo(() => {
-    if (Platform.OS === 'web') {
-      return new WebFirebaseService(); // Assuming Web is handled elsewhere for now
-      // return null; // Or handle web properly if needed
-    } else {
-      return new MobileFirebaseService();
-    }
+    // Only mobile service for native app
+    return new MobileFirebaseService();
   }, []);
 
   React.useEffect(() => {

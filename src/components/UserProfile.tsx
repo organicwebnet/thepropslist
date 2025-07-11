@@ -11,7 +11,7 @@ import {
   deleteUser
 } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext.tsx';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { User as UserIcon, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
 import type { UserProfile } from '../types.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';

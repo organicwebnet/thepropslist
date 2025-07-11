@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
-import type { UserProfile } from '../shared/types/auth.ts';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import type { UserProfile } from '../shared/types/auth';
 
 interface UserPickerProps {
   selectedUserIds: string[];

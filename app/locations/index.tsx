@@ -5,12 +5,12 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 // import * as QRCodeSvg from 'react-native-qrcode-svg'; // Reverting to original import for clarity with ts-ignore
 import QRCode from 'react-native-qrcode-svg';
 
-import { useTheme } from '../../src/contexts/ThemeContext.tsx';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../src/styles/theme';
-import { useLocations } from '../../src/hooks/useLocations.ts';
-import { useShows } from '../../src/contexts/ShowsContext.tsx';
-import StyledText from '../../src/components/StyledText.tsx';
-import type { Location } from '../../src/types/locations.ts';
+import { useLocations } from '../../src/hooks/useLocations';
+import { useShows } from '../../src/contexts/ShowsContext';
+import StyledText from '../../src/components/StyledText';
+import type { Location } from '../../src/types/locations';
 
 export default function LocationsListScreen() {
   const router = useRouter();

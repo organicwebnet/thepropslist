@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, ScrollView, SafeAreaView, Platform, Switch, Image, Alert, ActivityIndicator } from 'react-native';
-import { type PropFormData, propCategories, type PropSource, type PropCategory } from '../shared/types/props.ts';
-import type { Show } from '../types/index.ts';
-import { type PropLifecycleStatus, lifecycleStatusLabels } from '../types/lifecycle.ts';
+import { type PropFormData, propCategories, type PropSource, type PropCategory } from '../shared/types/props';
+import type { Show } from '../types/index';
+import { type PropLifecycleStatus, lifecycleStatusLabels } from '../types/lifecycle';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'expo-router';

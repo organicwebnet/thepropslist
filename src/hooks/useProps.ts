@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { serverTimestamp } from 'firebase/firestore';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
-import type { Prop } from '../shared/types/props.ts';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { QueryOptions, FirebaseDocument } from '../shared/services/firebase/types.ts';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import type { Prop } from '../shared/types/props';
+import { useAuth } from '../contexts/AuthContext';
+import { QueryOptions, FirebaseDocument } from '../shared/services/firebase/types';
 import { isWithinInterval, addDays, parseISO } from 'date-fns';
 import { OfflineSyncManager } from '../platforms/mobile/features/offline/OfflineSyncManager';
 

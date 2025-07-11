@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, TextInput, ScrollView, Image, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useShows } from '../../../src/contexts/ShowsContext.tsx';
-import { useProps } from '../../../src/contexts/PropsContext.tsx';
+import { useShows } from '../../../src/contexts/ShowsContext';
+import { useProps } from '../../../src/contexts/PropsContext';
 import { usePacking } from '../../../src/hooks/usePacking';
-import type { Prop } from '../../../src/shared/types/props.ts';
-import type { PackingBox, PackedProp } from '../../../src/types/packing.ts';
-import { QRScannerScreen } from '../../../src/platforms/mobile/features/qr/QRScannerScreen.tsx';
-import { useTheme } from '../../../src/contexts/ThemeContext.tsx';
+import type { Prop } from '../../../src/shared/types/props';
+import type { PackingBox, PackedProp } from '../../../src/types/packing';
+import { QRScannerScreen } from '../../../src/platforms/mobile/features/qr/QRScannerScreen';
+import { useTheme } from '../../../src/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../../src/styles/theme';
-import StyledText from '../../../src/components/StyledText.tsx';
+import StyledText from '../../../src/components/StyledText';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface ScannedBoxResult {

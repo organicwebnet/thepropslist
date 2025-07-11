@@ -19,10 +19,10 @@ import {
   onSnapshot as rnOnSnapshot,
 } from '@react-native-firebase/firestore';
 
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
-import type { Location } from '../types/locations.ts';
-import type { CustomFirestore, FirebaseDocument, QueryOptions } from '../shared/services/firebase/types.ts';
-import { QRScannerService } from '../platforms/mobile/features/qr/QRScannerService.ts';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import type { Location } from '../types/locations';
+import type { CustomFirestore, FirebaseDocument, QueryOptions } from '../shared/services/firebase/types';
+import { QRScannerService } from '../platforms/mobile/features/qr/QRScannerService';
 
 interface NewLocationFirestoreData {
   name: string;

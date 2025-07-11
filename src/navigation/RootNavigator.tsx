@@ -36,7 +36,7 @@ export function RootNavigator() {
               name="Home" 
               component={Home}
               options={{
-                title: 'Props Bible',
+                title: 'The Props List',
               }}
             />
             <Stack.Screen

@@ -1,4 +1,4 @@
-# Props Bible
+# The Props List
 
 A comprehensive, production-ready props management system for theatrical productions built with React Native and Expo.
 

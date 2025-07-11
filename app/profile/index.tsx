@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Button, StyleSheet, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext.tsx'; // Adjust path if needed
+import { useAuth } from '../../src/contexts/AuthContext'; // Adjust path if needed
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();

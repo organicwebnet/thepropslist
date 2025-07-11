@@ -20,7 +20,7 @@ import { DigitalAssetGrid } from '../components/DigitalAssetGrid.tsx';
 import { ImageCarousel } from '../components/ImageCarousel.tsx';
 import { StatusHistory } from '../components/lifecycle/StatusHistory.tsx';
 import { MaintenanceHistory } from '../components/lifecycle/MaintenanceHistory.tsx';
-import { useFirebase } from '../../platforms/mobile/contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { useShows } from '../contexts/ShowsContext';
 import { User } from 'firebase/auth';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, X, ArrowRight, ArrowLeft } from 'lucide-react';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { UserRole } from '../shared/types/auth.ts';
 import { collection, doc, setDoc, getDoc } from 'firebase/firestore';
@@ -76,7 +76,7 @@ export function OnboardingGuide({ show, onComplete }: OnboardingGuideProps) {
       <div className="bg-[var(--bg-primary)] rounded-lg shadow-xl w-full max-w-2xl border border-[var(--border-color)]">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-[var(--border-color)]">
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Welcome to Props Bible</h2>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Welcome to The Props List</h2>
           <button
             onClick={onComplete}
             className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
@@ -90,7 +90,7 @@ export function OnboardingGuide({ show, onComplete }: OnboardingGuideProps) {
           {currentStep === 1 && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold">Let's Get Started!</h3>
-              <p>Props Bible helps you manage your theatrical props efficiently. Here's what you can do:</p>
+              <p>The Props List helps you manage your theatrical props efficiently. Here's what you can do:</p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li>Create and organize shows</li>
                 <li>Track props and their details</li>

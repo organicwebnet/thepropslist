@@ -26,7 +26,8 @@ service cloud.firestore {
       allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
     }
     match /userProfiles/{userId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow read: if isSystemAdmin() || (request.auth != null); // Allow any authenticated user to read profiles for display names
+      allow write: if isSystemAdmin() || (request.auth != null && request.auth.uid == userId); // Only allow writing to own profile
     }
     match /users/{userId} {
       allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == userId);
@@ -133,6 +134,13 @@ service cloud.firestore {
             get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
           )
         );
+    }
+
+    match /shopping_items/{shoppingId} {
+      allow read: if isSystemAdmin() || (request.auth != null);
+      allow create: if isSystemAdmin() || (request.auth != null && request.auth.token.email == request.resource.data.requestedBy);
+      allow update: if isSystemAdmin() || (request.auth != null); // Allow any authenticated user to add options
+      allow delete: if isSystemAdmin() || (request.auth != null && request.auth.token.email == resource.data.requestedBy);
     }
 
     // --- Collaborative Team & Role-Based Access Rules (ACTIVE) ---

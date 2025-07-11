@@ -45,7 +45,10 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "esModuleInterop": true,
-    "lib": ["esnext", "dom"],
+    "lib": [
+      "esnext",
+      "dom"
+    ],
     "moduleResolution": "bundler"
   },
   "exclude": [
@@ -56,6 +59,8 @@
     "**/*.tsx",
     "nativewind-env.d.ts",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-, "app/(tabs)/old_props_form.bak"  ]
+    "expo-env.d.ts",
+    "app/(tabs)/old_props_form.bak"
+  ],
+  "extends": "expo/tsconfig.base"
 }

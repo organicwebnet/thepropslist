@@ -12,7 +12,7 @@ import { useProps } from '../hooks/useProps.ts';
 import { useShows } from '../contexts/ShowsContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import type { Show } from '../types/index.ts';
-import { useFirebase } from '../../src/platforms/mobile/contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 export function Home({ navigation }: RootStackScreenProps<'Home'>) {
