@@ -4,6 +4,10 @@ import { ImageCarousel } from '../components/ImageCarousel';
 import { Plus, Package, ShoppingBag, Briefcase } from 'lucide-react';
 import { useRef } from 'react';
 import type { Prop } from '../types/props';
+import EditPropPage from './EditPropPage'; // Assuming you can import the form as a component
+import { useFirebase } from '../contexts/FirebaseContext';
+import type { PropFormData, PropCategory } from '../types/props';
+import { useShowSelection } from '../contexts/ShowSelectionContext';
 
 // Types for shopping items and options
 interface ShoppingOption {
@@ -29,6 +33,9 @@ interface ShoppingItem {
   referenceImage?: string;
   note?: string;
   labels?: string[];
+  act?: string; // Added for edit prop form
+  scene?: string; // Added for edit prop form
+  boughtOptionIndex?: number; // Added for bought items
 }
 
 // Mock data for shopping items
@@ -112,6 +119,99 @@ const TABS = [
   { key: 'hired', label: 'Hired Props' },
 ];
 
+// Helper to map ShoppingItem to PropFormData
+function shoppingItemToPropForm(item: ShoppingItem, showId: string): PropFormData {
+  const bestOption = item.options[0] || {};
+  return {
+    name: item.description,
+    price: bestOption.price || 0,
+    description: item.note || '',
+    category: 'Hand Prop' as PropCategory, // Default, user can change
+    quantity: item.quantity || 1,
+    source: item.type === 'hired' ? 'rented' : 'bought',
+    sourceDetails: [bestOption.shopName, bestOption.productUrl, bestOption.notes].filter(Boolean).join(' | '),
+    purchaseUrl: bestOption.productUrl,
+    images: bestOption.images ? bestOption.images.map((url: string, i: number) => ({ id: String(i), url })) : [],
+    notes: bestOption.comment || '',
+    showId,
+    act: item.act ? Number(item.act) : undefined,
+    sceneName: item.scene || undefined,
+    status: 'available',
+    tags: item.labels || [],
+  };
+}
+
+// Local PropEditModal component
+const PropEditModal: React.FC<{
+  shoppingItem: ShoppingItem;
+  showId: string;
+  onSave: () => void;
+  onSaveAndNext: () => void;
+  saving: boolean;
+  left: number;
+  total: number;
+}> = ({ shoppingItem, showId, onSave, onSaveAndNext, saving, left, total }) => {
+  const { service } = useFirebase();
+  const [form, setForm] = useState<PropFormData>(() => shoppingItemToPropForm(shoppingItem, showId));
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    setForm(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
+  };
+
+  const handleSubmit = async (next: boolean) => {
+    setError(null);
+    try {
+      await service.addDocument('props', form);
+      onSave();
+      if (next) onSaveAndNext();
+    } catch (err: any) {
+      setError(err.message || 'Failed to add prop.');
+    }
+  };
+
+  return (
+    <div className="bg-pb-darker rounded-xl p-6 max-w-lg w-full relative">
+      <div className="mb-2 text-white font-bold">Editing {total - left + 1} of {total} bought items</div>
+      {error && <div className="text-red-500 mb-2">{error}</div>}
+      <form onSubmit={e => { e.preventDefault(); handleSubmit(false); }}>
+        <div className="grid grid-cols-1 gap-4">
+          <div>
+            <label className="block text-pb-gray mb-1 font-medium">Name *</label>
+            <input name="name" value={form.name} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+          </div>
+          <div>
+            <label className="block text-pb-gray mb-1 font-medium">Category *</label>
+            <input name="category" value={form.category} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+          </div>
+          <div>
+            <label className="block text-pb-gray mb-1 font-medium">Quantity *</label>
+            <input name="quantity" type="number" min={1} value={form.quantity} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+          </div>
+          <div>
+            <label className="block text-pb-gray mb-1 font-medium">Act</label>
+            <input name="act" value={form.act || ''} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+          </div>
+          <div>
+            <label className="block text-pb-gray mb-1 font-medium">Scene</label>
+            <input name="sceneName" value={form.sceneName || ''} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+          </div>
+          <div>
+            <label className="block text-pb-gray mb-1 font-medium">Notes</label>
+            <textarea name="notes" value={form.notes || ''} onChange={handleChange} rows={2} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+          </div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <button type="submit" className="px-4 py-2 rounded bg-pb-primary text-white font-semibold" disabled={saving}>Save</button>
+          <button type="button" className="px-4 py-2 rounded bg-pb-accent text-white font-semibold" onClick={() => handleSubmit(true)} disabled={saving || left <= 1}>Save & Next</button>
+        </div>
+        <div className="mt-2 text-pb-gray text-xs">{left - 1} left to edit</div>
+      </form>
+    </div>
+  );
+};
+
 const ShoppingListPage: React.FC = () => {
   const [items, setItems] = useState<ShoppingItem[]>(mockShoppingItems);
   const [activeTab, setActiveTab] = useState<'prop' | 'material' | 'hired'>('prop');
@@ -156,6 +256,11 @@ const ShoppingListPage: React.FC = () => {
 
   // Local state to store moved props
   const [movedProps, setMovedProps] = useState<Prop[]>([]);
+  const [tab, setTab] = useState<'toBuy' | 'bought'>('toBuy');
+  const [editQueue, setEditQueue] = useState<ShoppingItem[]>([]);
+  const [editQueueIndex, setEditQueueIndex] = useState(0);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const { currentShowId } = useShowSelection();
 
   // Effect: update item status to 'picked' if any option is 'buy'
   React.useEffect(() => {
@@ -168,6 +273,38 @@ const ShoppingListPage: React.FC = () => {
       return item;
     }));
   }, [items]);
+
+  // Split items by status
+  const toBuyItems = items.filter(item => item.status !== 'bought');
+  const boughtItems = items.filter(item => item.status === 'bought');
+
+  // Handler to start editing bought items (props/hired)
+  const startEditQueue = (startIndex = 0) => {
+    const queue = boughtItems.filter(item => (item.type === 'prop' || item.type === 'hired'));
+    setEditQueue(queue);
+    setEditQueueIndex(startIndex);
+    setEditModalOpen(true);
+  };
+
+  // Handler for Save & Next
+  const handleSaveAndNext = () => {
+    if (editQueueIndex < editQueue.length - 1) {
+      setEditQueueIndex(editQueueIndex + 1);
+    } else {
+      setEditModalOpen(false);
+      setEditQueue([]);
+      setEditQueueIndex(0);
+      // Optionally refresh items here
+    }
+  };
+
+  // Handler for Save (just close modal)
+  const handleSave = () => {
+    setEditModalOpen(false);
+    setEditQueue([]);
+    setEditQueueIndex(0);
+    // Optionally refresh items here
+  };
 
   const filteredItems = items
     .filter((item: ShoppingItem) => item.type === activeTab)
@@ -261,6 +398,7 @@ const ShoppingListPage: React.FC = () => {
       if (item.id === addOptionItemId) {
         return {
           ...item,
+          lastUpdated: new Date().toISOString(),
           options: [
             ...item.options,
             {
@@ -337,16 +475,16 @@ const ShoppingListPage: React.FC = () => {
           <h1 className="text-2xl font-bold">Shopping List <span className="text-pb-accent">({items.length})</span></h1>
           <button className="px-4 py-2 rounded bg-pb-primary text-white font-semibold shadow hover:bg-pb-secondary transition-colors" onClick={() => setAddItemModalOpen(true)}>Add Request</button>
         </div>
+        {/* Tab List */}
         <div className="flex gap-4 mb-6">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              className={`px-4 py-2 rounded-t font-semibold focus:outline-none transition-colors ${activeTab === tab.key ? 'bg-pb-primary text-white' : 'bg-pb-darker/50 text-pb-gray hover:bg-pb-primary/20'}`}
-              onClick={() => setActiveTab(tab.key as 'prop' | 'material' | 'hired')}
-            >
-              {tab.label}
-            </button>
-          ))}
+          <button
+            className={`px-4 py-2 rounded-t font-semibold focus:outline-none transition-colors ${tab === 'toBuy' ? 'bg-pb-primary text-white' : 'bg-pb-darker/50 text-pb-gray hover:bg-pb-primary/20'}`}
+            onClick={() => setTab('toBuy')}
+          >To Buy</button>
+          <button
+            className={`px-4 py-2 rounded-t font-semibold focus:outline-none transition-colors ${tab === 'bought' ? 'bg-pb-primary text-white' : 'bg-pb-darker/50 text-pb-gray hover:bg-pb-primary/20'}`}
+            onClick={() => setTab('bought')}
+          >Bought</button>
         </div>
         {/* Search input */}
         <div className="mb-4">
@@ -373,9 +511,9 @@ const ShoppingListPage: React.FC = () => {
           </select>
         </div>
         <div className="space-y-4">
-          {filteredItems
+          {(tab === 'toBuy' ? toBuyItems : boughtItems)
             .filter(item => !labelFilter || (item.labels || []).includes(labelFilter))
-            .map(item => (
+            .map((item, idx) => (
             <div key={item.id} className="bg-pb-darker/50 rounded-xl p-4 border border-pb-primary/20 cursor-pointer hover:bg-pb-primary/10">
               <div className="flex justify-between items-start">
                 <div className="flex-1" onClick={() => handleItemClick(item)}>
@@ -468,6 +606,19 @@ const ShoppingListPage: React.FC = () => {
                     )}
                   </div>
                 )}
+                {/* For bought props/hired, show edit/move-to-props button and edit-required icon */}
+                {tab === 'bought' && (item.type === 'prop' || item.type === 'hired') && (
+                  <div className="flex gap-2 mt-2">
+                    {/* Show edit-required icon if missing act/scene or other required info */}
+                    {(!item.act || !item.scene) && (
+                      <span title="Needs updating" className="text-pb-yellow font-bold">⚠️</span>
+                    )}
+                    <button
+                      className="px-3 py-1 rounded bg-pb-accent text-white text-xs font-bold shadow hover:bg-pb-secondary transition-colors"
+                      onClick={() => startEditQueue(idx)}
+                    >Edit & Move to Props</button>
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap gap-4 mt-2">
                 {item.options.map((opt, i) => {
@@ -481,11 +632,21 @@ const ShoppingListPage: React.FC = () => {
                     textClass = 'text-pb-gray';
                   }
                   return (
-                    <div key={i} className={`${cardClass} rounded p-2 flex flex-col items-center min-w-[120px] border`}> 
+                    <div
+                      key={i}
+                      className={`${cardClass} rounded p-2 flex flex-col items-center min-w-[120px] border cursor-pointer hover:shadow-lg transition-shadow`}
+                      onClick={e => {
+                        e.stopPropagation();
+                        setSelectedItem(item);
+                        setSelectedOptionIndex(i);
+                        setCommentValue(opt.comment || '');
+                        setModalOpen(true);
+                      }}
+                    >
                       <div className="w-16 h-16 bg-pb-gray/20 rounded mb-2 flex items-center justify-center text-xs text-pb-gray">{opt.images.length > 0 ? <img src={opt.images[0]} alt="option" className="w-full h-full object-cover rounded" /> : 'No Image'}</div>
                       <div className={`${textClass} text-sm font-semibold mb-1`}>£{opt.price}</div>
-                      <div className="text-xs text-pb-gray mb-1">{opt.notes}</div>
-                      <div className="text-xs text-pb-accent">By: {opt.uploadedBy}</div>
+                      <div className="text-xs text-white mb-1">{opt.notes}</div>
+                      <div className="text-xs text-pb-accent font-bold">By: {opt.uploadedBy}</div>
                       {opt.status === 'maybe' && (
                         <span className="mt-1 px-2 py-0.5 rounded bg-pb-yellow text-xs font-bold text-black border border-pb-gray/30">Maybe</span>
                       )}
@@ -506,7 +667,7 @@ const ShoppingListPage: React.FC = () => {
               </div>
             </div>
           ))}
-          {filteredItems.length === 0 && (
+          {(tab === 'toBuy' ? toBuyItems : boughtItems).length === 0 && (
             <div className="text-pb-gray text-center py-8">No items in this list.</div>
           )}
         </div>
@@ -601,21 +762,44 @@ const ShoppingListPage: React.FC = () => {
                     setActionMessage('Marked as maybe!');
                   }}
                 >Maybe</button>
-                <button
-                  className={`px-4 py-2 rounded font-semibold shadow transition-colors ${selectedItem.options[selectedOptionIndex].status === 'buy' ? 'bg-green-600 text-white' : 'bg-pb-accent text-white hover:bg-pb-secondary'}`}
-                  onClick={() => {
-                    const updatedOptions = [...selectedItem.options];
-                    updatedOptions[selectedOptionIndex] = {
-                      ...updatedOptions[selectedOptionIndex],
-                      status: 'buy',
-                    };
-                    setSelectedItem({ ...selectedItem, options: updatedOptions });
-                    setItems(prevItems => prevItems.map(item =>
-                      item.id === selectedItem.id ? { ...item, options: updatedOptions } : item
-                    ));
-                    setActionMessage('Marked as bought!');
-                  }}
-                >Buy This</button>
+                {selectedItem.options[selectedOptionIndex].status !== 'bought' ? (
+                  selectedItem.options[selectedOptionIndex].status === 'buy' ? (
+                    <button
+                      className="px-4 py-2 rounded font-semibold shadow transition-colors bg-green-600 text-white"
+                      onClick={() => {
+                        // Mark as bought, move item to bought column, set boughtOptionIndex
+                        const updatedOptions = [...selectedItem.options];
+                        updatedOptions[selectedOptionIndex] = {
+                          ...updatedOptions[selectedOptionIndex],
+                          status: 'bought',
+                        };
+                        setSelectedItem({ ...selectedItem, options: updatedOptions });
+                        setItems(prevItems => prevItems.map(item =>
+                          item.id === selectedItem.id
+                            ? { ...item, options: updatedOptions, status: 'bought', boughtOptionIndex: selectedOptionIndex }
+                            : item
+                        ));
+                        setActionMessage('Marked as bought!');
+                      }}
+                    >Bought It</button>
+                  ) : (
+                    <button
+                      className={`px-4 py-2 rounded font-semibold shadow transition-colors bg-pb-accent text-white hover:bg-pb-secondary`}
+                      onClick={() => {
+                        const updatedOptions = [...selectedItem.options];
+                        updatedOptions[selectedOptionIndex] = {
+                          ...updatedOptions[selectedOptionIndex],
+                          status: 'buy',
+                        };
+                        setSelectedItem({ ...selectedItem, options: updatedOptions });
+                        setItems(prevItems => prevItems.map(item =>
+                          item.id === selectedItem.id ? { ...item, options: updatedOptions } : item
+                        ));
+                        setActionMessage('Marked as to buy!');
+                      }}
+                    >Buy This</button>
+                  )
+                ) : null}
               </div>
               {actionMessage && (
                 <div className="mb-2 text-green-400 text-sm font-semibold animate-fade-in-fast">{actionMessage}</div>
@@ -808,6 +992,20 @@ const ShoppingListPage: React.FC = () => {
             </div>
           )}
         </div>
+        {/* Edit Modal for Move to Props */}
+        {editModalOpen && editQueue.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+            <PropEditModal
+              shoppingItem={editQueue[editQueueIndex]}
+              showId={currentShowId || ''}
+              onSave={handleSave}
+              onSaveAndNext={handleSaveAndNext}
+              saving={false}
+              left={editQueue.length - editQueueIndex}
+              total={editQueue.length}
+            />
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
