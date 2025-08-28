@@ -21,6 +21,7 @@ import { ImageCarousel } from '../components/ImageCarousel.tsx';
 import { StatusHistory } from '../components/lifecycle/StatusHistory.tsx';
 import { MaintenanceHistory } from '../components/lifecycle/MaintenanceHistory.tsx';
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import type { CardData } from '../shared/types/taskManager';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { useShows } from '../contexts/ShowsContext';
 import { User } from 'firebase/auth';
@@ -42,6 +43,7 @@ export default function PropDetailPage() {
   const [isAddingStatus, setIsAddingStatus] = useState(false);
   const [isAddingMaintenance, setIsAddingMaintenance] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [mentionedInCards, setMentionedInCards] = useState<CardData[]>([]);
 
   const firebaseJsUser = user as User | null;
   const lifecycle = usePropLifecycle({ propId: id || undefined, currentUser: firebaseJsUser });
@@ -148,6 +150,32 @@ export default function PropDetailPage() {
             }
           }
           setLoading(false);
+          // After prop loaded, scan task cards for mentions
+          if (propDoc) {
+            try {
+              // Find all boards for this show
+              const boards = await service.getCollection<any>('todo_boards', { where: [['showId', '==', selectedShow?.id]] });
+              const allCards: CardData[] = [];
+              for (const b of boards) {
+                const lists = await service.getDocuments<any>(`todo_boards/${b.id}/lists`);
+                for (const l of lists) {
+                  const cards = await service.getDocuments<CardData>(`todo_boards/${b.id}/lists/${l.id}/cards`);
+                  cards.forEach(c => {
+                    const data = c.data as any;
+                    const title: string = data?.title || '';
+                    const desc: string = data?.description || '';
+                    const idRegex = new RegExp(`\\(prop:${propDoc.id}\\)`);
+                    if (idRegex.test(title) || idRegex.test(desc)) {
+                      allCards.push({ ...data, id: c.id, listId: l.id, boardId: b.id });
+                    }
+                  });
+                }
+              }
+              if (isMounted) setMentionedInCards(allCards);
+            } catch (e) {
+              console.error('Failed to fetch mentioned-in tasks:', e);
+            }
+          }
         }
       } catch (err) {
         if (isMounted) {
@@ -297,6 +325,27 @@ export default function PropDetailPage() {
                 <Trash2 className="h-5 w-5" />
               </button>
             </div>
+          </div>
+
+          {/* Mentioned in Tasks */}
+          <div className="mt-4 p-4 border border-[var(--border-color)] rounded-lg">
+            <h3 className="text-lg font-medium text-white mb-2">Mentioned in Tasks</h3>
+            {mentionedInCards.length === 0 ? (
+              <p className="text-sm text-[var(--text-secondary)]">No task references yet.</p>
+            ) : (
+              <ul className="list-disc pl-5 space-y-1">
+                {mentionedInCards.map((c) => (
+                  <li key={c.id}>
+                    <a
+                      href={`/(tabs)/taskBoard/${c.boardId}?selectedCardId=${c.id}`}
+                      className="text-blue-400 hover:underline"
+                    >
+                      {c.title || 'Untitled Card'}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="border-b border-[var(--border-color)]">
@@ -706,6 +755,22 @@ export default function PropDetailPage() {
                 <Feather name="trash-2" size={20} color="#ff6b6b" />
               </TouchableOpacity>
             </View>
+          </View>
+
+          {/* Mentioned in Tasks (Mobile) */}
+          <View style={styles.sectionMobile}>
+            <Text style={styles.sectionTitleMobile}>Mentioned in Tasks</Text>
+            {mentionedInCards.length === 0 ? (
+              <Text style={{ color: '#aaa' }}>No task references yet.</Text>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {mentionedInCards.map((c) => (
+                  <TouchableOpacity key={c.id} onPress={() => router.navigate(`/taskBoard/${c.boardId}?selectedCardId=${c.id}`)}>
+                    <Text style={{ color: '#60a5fa' }}>{c.title || 'Untitled Card'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* Status Badge */}
