@@ -8,7 +8,7 @@ import Board from "../components/TaskBoard/Board";
 import { useShowSelection } from "../contexts/ShowSelectionContext";
 import type { Show } from "../types/Show";
 import { useWebAuth } from '../contexts/WebAuthContext';
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { ShowSelectionProvider } from "../contexts/ShowSelectionContext";
 import Login from "../pages/Login";
 import Signup from "../pages/Signup";
@@ -135,6 +135,8 @@ function BoardsPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [boards, setBoards] = useState<BoardData[]>([]);
   const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const selectedCardId = searchParams.get('selectedCardId');
   const { currentShowId } = useShowSelection();
   const [showTitle, setShowTitle] = useState<string>("");
   const { user } = useWebAuth();
@@ -208,84 +210,114 @@ function BoardsPageContent() {
     }
   };
 
+  // If there is exactly one board, auto open it. If more than one, open the first.
+  const effectiveBoardId = selectedBoardId || boards[0]?.id || null;
+
   return (
     <DashboardLayout>
-      {!selectedBoardId ? (
+      {effectiveBoardId ? (
+        <div className="w-full">
+          {/* Header with title, dropdown if multiple boards, and create button */}
+          <div className="sticky top-0 z-20 bg-pb-darker/60 backdrop-blur-sm border-b border-pb-primary/20">
+            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-6 h-6 text-pb-primary" />
+                {boards.length > 1 ? (
+                  <select
+                    className="bg-pb-darker/50 border border-pb-primary/30 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-pb-primary"
+                    value={effectiveBoardId}
+                    onChange={e => setSelectedBoardId(e.target.value)}
+                  >
+                    {boards.map(b => (
+                      <option key={b.id} value={b.id}>{b.title}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <h1 className="text-2xl font-bold text-white">{boards[0]?.title || 'Board'}</h1>
+                )}
+              </div>
+              <div className="shrink-0">
+                <button
+                  className="bg-pb-primary text-white px-4 py-2 rounded hover:bg-pb-secondary transition"
+                  onClick={() => setShowForm(v => !v)}
+                >
+                  New Board
+                </button>
+              </div>
+            </div>
+            {showForm && (
+              <div className="max-w-7xl mx-auto px-4 pb-4 relative">
+                <button
+                  type="button"
+                  aria-label="Close create board form"
+                  title="Close"
+                  className="absolute -top-2 right-4 text-pb-gray hover:text-white bg-pb-darker/60 border border-pb-primary/30 rounded-full w-7 h-7 flex items-center justify-center"
+                  onClick={() => setShowForm(false)}
+                >
+                  ×
+                </button>
+                <form onSubmit={handleCreateBoard} className="flex items-center gap-2 max-w-md">
+                  <input
+                    className="flex-1 px-3 py-2 rounded border border-pb-primary/40 bg-pb-darker text-white focus:outline-none"
+                    type="text"
+                    placeholder="Board name"
+                    value={boardName}
+                    onChange={e => setBoardName(e.target.value)}
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="submit"
+                    className="bg-pb-success text-white px-4 py-2 rounded hover:bg-pb-primary transition"
+                    disabled={loading || !boardName.trim()}
+                  >
+                    {loading ? 'Creating...' : 'Create'}
+                  </button>
+                  {error && <div className="text-red-400 text-xs mt-2">{error}</div>}
+                </form>
+              </div>
+            )}
+          </div>
+          <Board boardId={effectiveBoardId} hideHeader selectedCardId={selectedCardId} />
+        </div>
+      ) : (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="max-w-4xl mx-auto mt-8"
+          className="max-w-7xl mx-auto mt-8 px-4"
         >
-          <div className="flex items-center mb-6 justify-center relative">
-            <div className="w-10 h-10 bg-pb-primary/20 rounded-lg flex items-center justify-center mr-4 absolute left-0">
-              <Calendar className="w-6 h-6 text-pb-primary" />
-            </div>
-            <div className="flex-1 flex flex-col items-center">
-              <h1 className="text-2xl font-bold text-white">Task Boards</h1>
-              <p className="text-pb-primary text-lg font-semibold mt-1">{showTitle || "No show selected"}</p>
-              <p className="text-sm text-pb-gray">Organize your work with Kanban-style boards</p>
-            </div>
-          </div>
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { scale: 0.95, opacity: 0 },
-              visible: { scale: 1, opacity: 1, transition: { duration: 0.4 } }
-            }}
-            whileHover="hover"
-            className="rounded-xl bg-pb-primary/10 border border-pb-primary/20 p-8 flex flex-col items-center justify-center shadow-lg min-h-[200px] w-full"
-          >
-            {boards.length === 0 && (
-              <>
-                <p className="text-lg text-pb-gray mb-2">Your Kanban boards will appear here.</p>
-                <p className="text-sm text-pb-gray mb-4">Create a new board to get started!</p>
-              </>
-            )}
-            <div className="flex flex-wrap gap-4 justify-center w-full mb-4">
-              {boards.map(board => (
-                <button
-                  key={board.id}
-                  className={`bg-pb-darker border border-pb-primary/30 rounded-lg px-6 py-4 text-white font-semibold shadow hover:bg-pb-primary/20 transition w-64 text-left ${selectedBoardId === board.id ? 'ring-2 ring-pb-primary' : ''}`}
-                  onClick={() => setSelectedBoardId(board.id)}
-                >
-                  <div className="text-lg font-bold mb-1">{board.title}</div>
-                  <div className="text-xs text-pb-gray">{(board.listIds?.length || 0)} lists</div>
-                </button>
-              ))}
-            </div>
+          <div className="text-center text-pb-gray">No boards yet. Create your first board.</div>
+          <div className="flex justify-center mt-4">
             <button
-              className="bg-pb-primary text-white px-4 py-2 rounded hover:bg-pb-secondary transition mb-2"
-              onClick={() => setShowForm(v => !v)}
+              className="bg-pb-primary text-white px-4 py-2 rounded hover:bg-pb-secondary transition"
+              onClick={() => setShowForm(true)}
             >
-              {showForm ? "Cancel" : "Create Board"}
+              Create Board
             </button>
-            {showForm && (
-              <form onSubmit={handleCreateBoard} className="flex flex-col items-center w-full max-w-xs mt-2">
-                <input
-                  className="w-full px-3 py-2 rounded border border-pb-primary/40 mb-2 bg-pb-darker text-white focus:outline-none"
-                  type="text"
-                  placeholder="Board name"
-                  value={boardName}
-                  onChange={e => setBoardName(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-                <button
-                  type="submit"
-                  className="bg-pb-success text-white px-4 py-2 rounded hover:bg-pb-primary transition w-full"
-                  disabled={loading || !boardName.trim()}
-                >
-                  {loading ? "Creating..." : "Create"}
-                </button>
-                {error && <div className="text-red-400 text-xs mt-2">{error}</div>}
-              </form>
-            )}
-          </motion.div>
+          </div>
+          {showForm && (
+            <form onSubmit={handleCreateBoard} className="flex flex-col items-center w-full max-w-xs mt-4 mx-auto">
+              <input
+                className="w-full px-3 py-2 rounded border border-pb-primary/40 mb-2 bg-pb-darker text-white focus:outline-none"
+                type="text"
+                placeholder="Board name"
+                value={boardName}
+                onChange={e => setBoardName(e.target.value)}
+                required
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                className="bg-pb-success text-white px-4 py-2 rounded hover:bg-pb-primary transition w-full"
+                disabled={loading || !boardName.trim()}
+              >
+                {loading ? 'Creating...' : 'Create'}
+              </button>
+              {error && <div className="text-red-400 text-xs mt-2">{error}</div>}
+            </form>
+          )}
         </motion.div>
-      ) : (
-          <Board boardId={selectedBoardId} />
       )}
     </DashboardLayout>
   );
