@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, useColorScheme, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import type { Prop } from '../shared/types/props.ts';
 import type { PropLifecycleStatus } from '../types/lifecycle.ts';
 import LinearGradient from 'react-native-linear-gradient';

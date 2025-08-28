@@ -1,5 +1,5 @@
 import { useAuth } from '../../../src/contexts/AuthContext';
-import { useFirebase } from '../../../src/contexts/FirebaseContext';
+import { useFirebase } from '../../../src/platforms/mobile/contexts/FirebaseContext';
 import { BoardData } from '../../../src/shared/types/taskManager';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';

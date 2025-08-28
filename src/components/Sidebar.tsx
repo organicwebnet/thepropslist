@@ -52,7 +52,7 @@ const Sidebar = () => {
       </nav>
       <div className="mt-auto pt-4 border-t border-gray-200 dark:border-dark-border flex-shrink-0">
         {/* Placeholder for user profile or settings link */}
-        <p className="text-xs text-gray-500 dark:text-dark-text-secondary text-center">© 2025 Props Bible</p>
+                  <p className="text-xs text-gray-500 dark:text-dark-text-secondary text-center">© 2025 The Props List</p>
       </div>
     </div>
   );

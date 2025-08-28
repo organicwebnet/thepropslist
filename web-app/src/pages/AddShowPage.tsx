@@ -1,0 +1,505 @@
+import React, { useState } from 'react';
+import DashboardLayout from '../PropsBibleHomepage';
+import { useFirebase } from '../contexts/FirebaseContext';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, UploadCloud, Users, UserPlus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import EntitySelect from '../components/EntitySelect';
+
+// Add types for show state
+interface Act {
+  name: string;
+  scenes: string[];
+}
+interface TeamMember {
+  email: string;
+  role: string;
+  userId?: string;
+  name?: string;
+  avatarUrl?: string;
+  status?: 'registered' | 'invited' | 'pending';
+}
+interface ShowFormState {
+  name: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  logoImage: File | null;
+  acts: Act[];
+  team: TeamMember[];
+  stageManager: string;
+  stageManagerEmail: string;
+  propsSupervisor: string;
+  propsSupervisorEmail: string;
+  productionCompany: string;
+  venues: string[];
+  isTouringShow: boolean;
+  status: string;
+  rehearsalAddresses: string[];
+  storageAddresses: string[];
+  rehearsalStartDate: string;
+  techWeekStartDate: string;
+  firstPerformanceDate: string;
+  pressNightDate: string;
+  venueIds?: string[];
+  rehearsalAddressIds?: string[];
+  storageAddressIds?: string[];
+}
+
+const statusOptions = [
+  { value: 'planning', label: 'Planning' },
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+];
+
+const AddShowPage: React.FC = () => {
+  const [show, setShow] = useState<ShowFormState>({
+    name: '',
+    description: '',
+    startDate: '',
+    endDate: '',
+    logoImage: null,
+    acts: [{ name: '', scenes: [''] }],
+    team: [{ email: '', role: '', status: undefined }],
+    stageManager: '',
+    stageManagerEmail: '',
+    propsSupervisor: '',
+    propsSupervisorEmail: '',
+    productionCompany: '',
+    venues: [''],
+    isTouringShow: false,
+    status: 'planning',
+    rehearsalAddresses: [''],
+    storageAddresses: [''],
+    rehearsalStartDate: '',
+    techWeekStartDate: '',
+    firstPerformanceDate: '',
+    pressNightDate: '',
+    venueIds: [],
+    rehearsalAddressIds: [],
+    storageAddressIds: [],
+  });
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { service: firebaseService } = useFirebase();
+  const [activeTab, setActiveTab] = useState<'details' | 'team'>('details');
+
+  // Mock user lookup function
+  const mockUserLookup = async (email: string) => {
+    // Simulate a lookup: if email contains 'registered', return a mock user
+    if (email.includes('registered')) {
+      return {
+        userId: 'user123',
+        name: 'Registered User',
+        avatarUrl: 'https://api.dicebear.com/7.x/identicon/svg?seed=' + encodeURIComponent(email),
+        status: 'registered' as const,
+      };
+    }
+    return null;
+  };
+
+  // Handle input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    if (type === 'checkbox' && 'checked' in e.target) {
+      setShow(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+    } else {
+      setShow(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Handle logo upload
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setShow(prev => ({ ...prev, logoImage: file }));
+    if (file) {
+      setLogoPreview(URL.createObjectURL(file));
+    } else {
+      setLogoPreview(null);
+    }
+  };
+
+  // Handle team array
+  const handleTeamChange = async (idx: number, key: string, value: string) => {
+    if (key === 'email') {
+      // Lookup user on email change
+      const user = await mockUserLookup(value);
+      setShow(prev => ({
+        ...prev,
+        team: prev.team.map((member, i) =>
+          i === idx
+            ? {
+                ...member,
+                email: value,
+                userId: user?.userId,
+                name: user?.name,
+                avatarUrl: user?.avatarUrl,
+                status: user ? 'registered' : 'invited',
+              }
+            : member
+        ),
+      }));
+    } else {
+      setShow(prev => ({
+        ...prev,
+        team: prev.team.map((member, i) => i === idx ? { ...member, [key]: value } : member),
+      }));
+    }
+  };
+  const handleAddTeam = () => {
+    setShow(prev => ({ ...prev, team: [...prev.team, { email: '', role: '', status: undefined }] }));
+  };
+  const handleRemoveTeam = (idx: number) => {
+    setShow(prev => ({ ...prev, team: prev.team.filter((_, i) => i !== idx) }));
+  };
+  const handleInvite = (idx: number) => {
+    setShow(prev => ({
+      ...prev,
+      team: prev.team.map((member, i) =>
+        i === idx ? { ...member, status: 'pending' } : member
+      ),
+    }));
+    // Here you would trigger an invite email/send to backend
+  };
+
+  // Handle acts (array of objects)
+  const handleActNameChange = (idx: number, value: string) => {
+    setShow(prev => ({
+      ...prev,
+      acts: prev.acts.map((act, i) => i === idx ? { ...act, name: value } : act),
+    }));
+  };
+  const handleAddAct = () => {
+    setShow(prev => ({ ...prev, acts: [...prev.acts, { name: '', scenes: [''] }] }));
+  };
+  const handleRemoveAct = (idx: number) => {
+    setShow(prev => ({ ...prev, acts: prev.acts.filter((_, i) => i !== idx) }));
+  };
+
+  // Handle scenes within an act
+  const handleSceneChange = (actIdx: number, sceneIdx: number, value: string) => {
+    setShow(prev => ({
+      ...prev,
+      acts: prev.acts.map((act, i) =>
+        i === actIdx
+          ? { ...act, scenes: act.scenes.map((scene, j) => j === sceneIdx ? value : scene) }
+          : act
+      ),
+    }));
+  };
+  const handleAddScene = (actIdx: number) => {
+    setShow(prev => ({
+      ...prev,
+      acts: prev.acts.map((act, i) =>
+        i === actIdx ? { ...act, scenes: [...act.scenes, ''] } : act
+      ),
+    }));
+  };
+  const handleRemoveScene = (actIdx: number, sceneIdx: number) => {
+    setShow(prev => ({
+      ...prev,
+      acts: prev.acts.map((act, i) =>
+        i === actIdx ? { ...act, scenes: act.scenes.filter((_, j) => j !== sceneIdx) } : act
+      ),
+    }));
+  };
+
+  // Handle form submit
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      let logoUrl = '';
+      if (show.logoImage) {
+        // Upload logo to Firebase Storage
+        const uploadResult = await firebaseService.uploadFile(`show_logos/${Date.now()}_${show.logoImage.name}`, show.logoImage) as unknown as { url: string } | undefined;
+        if (uploadResult && uploadResult.url) {
+          logoUrl = uploadResult.url;
+        }
+      }
+      const showData = {
+        ...show,
+        logoImage: logoUrl ? { url: logoUrl } : undefined,
+        startDate: show.startDate,
+        endDate: show.endDate,
+      };
+      const docRef = await firebaseService.addDocument('shows', showData);
+      setLoading(false);
+      navigate(`/shows/${docRef.id}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to add show.');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="flex-1 flex flex-col min-h-screen">
+        <form onSubmit={handleSubmit} className="w-full max-w-3xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 space-y-6">
+          <h1 className="text-2xl font-bold text-white mb-4">Add New Show</h1>
+          {error && <div className="text-red-500 mb-2">{error}</div>}
+
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6">
+            <button
+              type="button"
+              className={`px-4 py-2 rounded-t-lg font-semibold transition-colors focus:outline-none ${activeTab === 'details' ? 'bg-pb-primary text-white' : 'bg-pb-darker text-pb-primary hover:bg-pb-primary/10'}`}
+              onClick={() => setActiveTab('details')}
+              aria-selected={activeTab === 'details'}
+            >
+              Show Details
+            </button>
+            <button
+              type="button"
+              className={`px-4 py-2 rounded-t-lg font-semibold transition-colors focus:outline-none ${activeTab === 'team' ? 'bg-pb-primary text-white' : 'bg-pb-darker text-pb-primary hover:bg-pb-primary/10'}`}
+              onClick={() => setActiveTab('team')}
+              aria-selected={activeTab === 'team'}
+            >
+              <Users className="inline w-4 h-4 mr-1" /> Team & Collaborators
+            </button>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {activeTab === 'details' && (
+              <motion.div
+                key="details"
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-6"
+              >
+                {/* Logo Upload (moved into Show Details tab) */}
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Logo Image</label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer bg-pb-primary/20 hover:bg-pb-primary/40 px-4 py-2 rounded-lg text-pb-primary">
+                      <UploadCloud className="w-5 h-5" />
+                      <span>Upload</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                    </label>
+                    {logoPreview && (
+                      <img src={logoPreview} alt="Logo Preview" className="w-16 h-16 object-cover rounded border border-pb-primary/30" />
+                    )}
+                  </div>
+                </div>
+                {/* Name */}
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Show Name *</label>
+                  <input name="name" value={show.name} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" />
+                </div>
+                {/* Description */}
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Description *</label>
+                  <textarea name="description" value={show.description} onChange={handleChange} required rows={3} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" />
+                </div>
+                {/* Dates */}
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-pb-gray mb-1 font-medium">Start Date *</label>
+                    <input type="date" name="startDate" value={show.startDate} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-pb-gray mb-1 font-medium">End Date *</label>
+                    <input type="date" name="endDate" value={show.endDate} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" />
+                  </div>
+                </div>
+                {/* Important Dates */}
+                <fieldset className="mb-4 p-4 rounded-lg bg-pb-darker/40 border border-pb-primary/20">
+                  <legend className="px-2 text-pb-primary font-semibold">Important Dates</legend>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-pb-gray mb-1 font-medium">Start of Rehearsal</label>
+                      <input type="date" name="rehearsalStartDate" value={show.rehearsalStartDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                    </div>
+                    <div>
+                      <label className="block text-pb-gray mb-1 font-medium">Start of Tech Week</label>
+                      <input type="date" name="techWeekStartDate" value={show.techWeekStartDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                    </div>
+                    <div>
+                      <label className="block text-pb-gray mb-1 font-medium">First Performance</label>
+                      <input type="date" name="firstPerformanceDate" value={show.firstPerformanceDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                    </div>
+                    <div>
+                      <label className="block text-pb-gray mb-1 font-medium">Press Night</label>
+                      <input type="date" name="pressNightDate" value={show.pressNightDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                    </div>
+                  </div>
+                </fieldset>
+                {/* Acts & Scenes */}
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Acts & Scenes</label>
+                  {show.acts.map((act, actIdx) => (
+                    <div key={actIdx} className="mb-4 p-3 rounded bg-pb-darker/40 border border-pb-primary/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <input
+                          value={act.name}
+                          onChange={e => handleActNameChange(actIdx, e.target.value)}
+                          placeholder="Act Name"
+                          className="flex-1 rounded bg-pb-darker border border-pb-primary/30 p-2 text-white"
+                        />
+                        <button type="button" onClick={() => handleRemoveAct(actIdx)} className="p-1 text-pb-accent hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                      <div className="ml-4">
+                        <label className="block text-pb-gray mb-1 font-medium">Scenes</label>
+                        {act.scenes.map((scene, sceneIdx) => (
+                          <div key={sceneIdx} className="flex items-center gap-2 mb-2">
+                            <input
+                              value={scene}
+                              onChange={e => handleSceneChange(actIdx, sceneIdx, e.target.value)}
+                              placeholder={`Scene ${sceneIdx + 1}`}
+                              className="flex-1 rounded bg-pb-darker border border-pb-primary/30 p-2 text-white"
+                            />
+                            <button type="button" onClick={() => handleRemoveScene(actIdx, sceneIdx)} className="p-1 text-pb-accent hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        ))}
+                        <button type="button" onClick={() => handleAddScene(actIdx)} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent mt-1"><Plus className="w-4 h-4" /> Add Scene</button>
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" onClick={handleAddAct} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent mt-1"><Plus className="w-4 h-4" /> Add Act</button>
+                </div>
+                {/* Stage Manager & Props Supervisor */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-pb-gray mb-1 font-medium">Stage Manager</label>
+                    <input name="stageManager" value={show.stageManager} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                    <input name="stageManagerEmail" value={show.stageManagerEmail} onChange={handleChange} placeholder="Email" className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white mt-2" />
+                  </div>
+                  <div>
+                    <label className="block text-pb-gray mb-1 font-medium">Props Supervisor</label>
+                    <input name="propsSupervisor" value={show.propsSupervisor} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                    <input name="propsSupervisorEmail" value={show.propsSupervisorEmail} onChange={handleChange} placeholder="Email" className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white mt-2" />
+                  </div>
+                </div>
+                {/* Production Company */}
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Production Company</label>
+                  <input name="productionCompany" value={show.productionCompany} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                </div>
+                {/* Venues */}
+                <EntitySelect
+                  label="Venue(s)"
+                  type="venue"
+                  selectedIds={show.venueIds || []}
+                  onChange={(ids) => setShow(prev => ({ ...prev, venueIds: ids }))}
+                  allowMultiple={show.isTouringShow}
+                />
+                {/* Touring Status */}
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" name="isTouringShow" checked={show.isTouringShow} onChange={handleChange} id="isTouringShow" className="accent-pb-primary" />
+                  <label htmlFor="isTouringShow" className="text-pb-gray font-medium">Touring Show</label>
+                </div>
+                {/* Status */}
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Status</label>
+                  <select name="status" value={show.status} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white">
+                    {statusOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Rehearsal Addresses */}
+                <EntitySelect
+                  label="Rehearsal Space(s)"
+                  type="rehearsal"
+                  selectedIds={show.rehearsalAddressIds || []}
+                  onChange={(ids) => setShow(prev => ({ ...prev, rehearsalAddressIds: ids }))}
+                  allowMultiple={true}
+                />
+                {/* Storage Addresses */}
+                <EntitySelect
+                  label="Storage Space(s)"
+                  type="storage"
+                  selectedIds={show.storageAddressIds || []}
+                  onChange={(ids) => setShow(prev => ({ ...prev, storageAddressIds: ids }))}
+                  allowMultiple={true}
+                />
+              </motion.div>
+            )}
+            {activeTab === 'team' && (
+              <motion.div
+                key="team"
+                initial={{ opacity: 0, x: 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }}
+                transition={{ duration: 0.25 }}
+                className="space-y-6"
+              >
+                {/* Team Members */}
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Team Members</label>
+                  {show.team.map((member, idx) => (
+                    <div key={idx} className="flex flex-col md:flex-row md:items-center gap-2 mb-4 p-3 rounded bg-pb-darker/40 border border-pb-primary/20">
+                      <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
+                        <input
+                          type="email"
+                          placeholder="Email address"
+                          value={member.email}
+                          onChange={e => handleTeamChange(idx, 'email', e.target.value)}
+                          className="flex-1 rounded bg-pb-darker border border-pb-primary/30 p-2 text-white"
+                          required
+                        />
+                        <select
+                          value={member.role}
+                          onChange={e => handleTeamChange(idx, 'role', e.target.value)}
+                          className="flex-1 rounded bg-pb-darker border border-pb-primary/30 p-2 text-white"
+                          required
+                        >
+                          <option value="">Select Role</option>
+                          <option value="Stage Manager">Stage Manager</option>
+                          <option value="Props Supervisor">Props Supervisor</option>
+                          <option value="Designer">Designer</option>
+                          <option value="Performer">Performer</option>
+                          <option value="Other">Other</option>
+                        </select>
+                        <button type="button" onClick={() => handleRemoveTeam(idx)} className="p-1 text-pb-accent hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                      {/* Profile/Invite status */}
+                      <div className="flex items-center gap-2 mt-2 md:mt-0">
+                        {member.status === 'registered' && (
+                          <div className="flex items-center gap-2 text-pb-primary">
+                            {member.avatarUrl && <img src={member.avatarUrl} alt="avatar" className="w-8 h-8 rounded-full border border-pb-primary/30" />}
+                            <span className="font-medium">{member.name || 'Registered User'}</span>
+                            <span className="text-xs bg-pb-primary/20 px-2 py-1 rounded">Registered</span>
+                          </div>
+                        )}
+                        {member.status === 'invited' && (
+                          <button
+                            type="button"
+                            onClick={() => handleInvite(idx)}
+                            className="px-3 py-1 rounded bg-pb-primary text-white text-xs hover:bg-pb-accent transition"
+                          >
+                            Invite
+                          </button>
+                        )}
+                        {member.status === 'pending' && (
+                          <span className="text-xs bg-pb-accent/20 px-2 py-1 rounded text-pb-accent">Invite Sent</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <button type="button" onClick={handleAddTeam} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent mt-1"><UserPlus className="w-4 h-4" /> Add Team Member</button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-bold text-lg shadow transition disabled:opacity-60 disabled:cursor-not-allowed mt-4"
+          >
+            {loading ? 'Saving...' : 'Add Show'}
+          </motion.button>
+        </form>
+      </div>
+    </DashboardLayout>
+  );
+};
+
+export default AddShowPage; 

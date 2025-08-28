@@ -1,0 +1,36 @@
+export interface Show {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  startDate: any;
+  endDate: any;
+  imageUrl?: string;
+  acts?: any[];
+  createdAt: any;
+  updatedAt: any;
+  collaborators: any[];
+  team?: { uid: string; role: 'editor' | 'viewer' }[];
+  stageManager: string;
+  stageManagerEmail: string;
+  stageManagerPhone?: string;
+  propsSupervisor: string;
+  propsSupervisorEmail: string;
+  propsSupervisorPhone?: string;
+  productionCompany: string;
+  productionContactName: string;
+  productionContactEmail: string;
+  productionContactPhone?: string;
+  venues: any[];
+  isTouringShow: boolean;
+  contacts: any[];
+  logoImage?: { id: string; url: string; caption?: string };
+  status?: 'planning' | 'active' | 'completed';
+  rehearsalAddresses?: any[];
+  storageAddresses?: any[];
+  defaultActId?: string | number;
+  defaultSceneId?: string | number;
+  venueIds?: string[];
+  rehearsalAddressIds?: string[];
+  storageAddressIds?: string[];
+} 

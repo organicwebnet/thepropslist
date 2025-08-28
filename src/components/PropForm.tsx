@@ -14,7 +14,7 @@ import { HelpTooltip } from './HelpTooltip.tsx';
 import { v4 as uuidv4 } from 'uuid';
 import { lifecycleStatusLabels } from '../types/lifecycle.ts';
 import { UserPicker } from './UserPicker.tsx';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 
 export interface PropFormProps {
   onSubmit: (prop: PropFormData) => Promise<void>;

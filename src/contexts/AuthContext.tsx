@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { /* Platform, View, Text, ActivityIndicator, StyleSheet */ } from 'react-native'; // StyleSheet might be needed if styles are restored
 // import { User } from 'firebase/auth'; // Removed unused User import
-import { UserProfile, UserPermissions, DEFAULT_ROLE_PERMISSIONS, UserRole } from '../shared/types/auth.ts';
-import { CustomUser } from '../shared/services/firebase/types.ts';
-import { useFirebase } from './FirebaseContext.tsx';
-import { Address } from '../shared/types/address.ts';
+import { UserProfile, UserPermissions, DEFAULT_ROLE_PERMISSIONS, UserRole } from '../shared/types/auth';
+import { CustomUser } from '../shared/services/firebase/types';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import { Address } from '../shared/types/address';
 // import { FirebaseDocument } from '@/shared/services/firebase/types'; // Not needed for minimal
 // import { arrayUnion, arrayRemove, doc, collection } from 'firebase/firestore'; // Not needed for minimal
 

@@ -55,7 +55,7 @@ export function HelpCenter({ onClose }: HelpCenterProps) {
           Getting Started
         </h3>
         <div className="space-y-4">
-          <p>Welcome to Props Bible! Here's how to get started:</p>
+          <p>Welcome to The Props List! Here's how to get started:</p>
           <div className="space-y-2">
             {[
               { id: 'create-show', text: 'Create your first show' },

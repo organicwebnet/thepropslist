@@ -23,7 +23,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { Text as ThemedText, View as ThemedView } from '../../src/components/Themed';
 import CardDetailPanel from '../../src/components/taskManager/CardDetailPanel';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { useFirebase } from '../../src/contexts/FirebaseContext';
+import { useFirebase } from '../../src/platforms/mobile/contexts/FirebaseContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { BoardData, CardData, ListData, MemberData } from '../../src/shared/types/taskManager';
 import { darkTheme, lightTheme } from '../../src/styles/theme';

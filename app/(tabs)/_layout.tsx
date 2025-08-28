@@ -69,6 +69,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="shopping/index"
+        options={{
+          title: 'Shopping',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="bag" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -129,6 +138,24 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="shows/[id]/index"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="shopping/add"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="shopping/[id]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="shopping/[id]/add-option"
         options={{
           href: null,
         }}

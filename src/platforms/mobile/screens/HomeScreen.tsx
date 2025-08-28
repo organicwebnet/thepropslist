@@ -16,7 +16,7 @@ import {
 import { useNavigation, useRouter } from 'expo-router';
 import { FAB } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useFirebase } from '../../../contexts/FirebaseContext';
+import { useFirebase } from '../contexts/FirebaseContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useShows } from '../../../contexts/ShowsContext';
 import type { RootStackParamList } from '../../../navigation/types';

@@ -25,7 +25,7 @@ import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { AuthProvider, useAuth } from './contexts/AuthContext.tsx';
 import { ShowsProvider } from './contexts/ShowsContext.tsx';
 import { PropsProvider } from './contexts/PropsContext.tsx';
-import { FirebaseProvider, useFirebase } from './contexts/FirebaseContext.tsx';
+import { FirebaseProvider, useFirebase } from './platforms/mobile/contexts/FirebaseContext';
 // import { OfflineSyncProvider } from './contexts/OfflineSyncContext.tsx'; // Commented out as file not found
 import { RootNavigator } from './navigation/RootNavigator.tsx';
 import { useFonts } from './hooks/useFonts.ts';
@@ -512,7 +512,7 @@ function App() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-gray-100 dark:bg-dark-card-bg border-b dark:border-dark-border text-gray-900 dark:text-dark-text-primary p-4 flex justify-between items-center shadow-md flex-shrink-0">
-          <h1 className="text-2xl font-bold">Props Bible</h1>
+                      <h1 className="text-2xl font-bold">The Props List</h1>
           <div className="flex items-center space-x-4">
             {shows.length > 0 ? (
               <select

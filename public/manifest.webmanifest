@@ -1,6 +1,6 @@
 {
-  "name": "Props Bible",
-  "short_name": "Props Bible",
+  "name": "The Props List",
+  "short_name": "The Props List",
   "description": "A comprehensive props management system for theatrical productions",
   "start_url": "/",
   "display": "standalone",

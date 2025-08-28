@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 // import { collection, query, where, onSnapshot, doc, getDoc, DocumentData, Unsubscribe } from 'firebase/firestore';
 // import { db } from '../lib/firebase';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
-import type { Show } from '../types/index.ts'; // Corrected import path
-import { useAuth } from '../contexts/AuthContext.tsx'; // Keep if user context is needed
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import type { Show } from '../types/index'; // Corrected import path
+import { useAuth } from '../contexts/AuthContext'; // Keep if user context is needed
 
 export function useShow(showId: string | undefined) {
   const { service } = useFirebase();

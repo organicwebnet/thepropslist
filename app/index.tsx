@@ -10,7 +10,7 @@ export default function Index() {
   if (loading || status === 'pending') {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Props Bible</Text>
+        <Text style={styles.title}>The Props List</Text>
         <Text style={styles.loading}>Loading...</Text>
       </View>
     );

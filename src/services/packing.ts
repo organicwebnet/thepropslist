@@ -1,7 +1,7 @@
-import { generateId } from "../lib/utils.ts";
-import { PackedProp } from "../types/index.ts";
-import { PackingBox } from '../types/index.ts';
-import type { Prop } from '../shared/types/props.ts';
+import { generateId } from "../lib/utils";
+import { PackedProp } from "../types/index";
+import { PackingBox } from '../types/index';
+import type { Prop } from '../shared/types/props';
 import { Platform } from 'react-native';
 import { FirebaseService } from '../shared/services/firebase/types.ts';
 

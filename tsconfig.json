@@ -1,5 +1,4 @@
 {
-  "extends": "@tsconfig/react-native/tsconfig.json",
   "compilerOptions": {
     "strict": true,
     "skipLibCheck": true,
@@ -42,12 +41,15 @@
         "src/types/*"
       ]
     },
-    "allowImportingTsExtensions": true,
-    "module": "commonjs",
+    "module": "esnext",
     "noEmit": true,
-    "jsx": "react-native",
+    "jsx": "react-jsx",
     "esModuleInterop": true,
-    "lib": ["esnext", "dom"]
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "moduleResolution": "bundler"
   },
   "exclude": [
     "node_modules"
@@ -57,6 +59,8 @@
     "**/*.tsx",
     "nativewind-env.d.ts",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-, "app/(tabs)/old_props_form.bak"  ]
+    "expo-env.d.ts",
+    "app/(tabs)/old_props_form.bak"
+  ],
+  "extends": "expo/tsconfig.base"
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { serverTimestamp, Timestamp as FirebaseTimestamp } from 'firebase/firestore';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { User } from 'firebase/auth';
 import { Prop } from '../shared/types/props.ts';
 import type { PropStatusUpdate, MaintenanceRecord } from '../types/lifecycle.ts';

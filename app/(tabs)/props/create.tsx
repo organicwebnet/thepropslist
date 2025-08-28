@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { NativePropForm } from '../../../src/components/NativePropForm';
 import { PropFormData } from '../../../src/shared/types/props';
-import { useFirebase } from '../../../src/contexts/FirebaseContext';
+import { useFirebase } from '../../../src/platforms/mobile/contexts/FirebaseContext';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
 

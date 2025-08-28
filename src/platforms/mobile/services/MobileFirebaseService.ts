@@ -20,56 +20,48 @@ function createFirebaseDocument<T extends DocumentData>(docSnap: FirebaseFiresto
 }
 
 export class MobileFirebaseService extends BaseFirebaseService implements FirebaseService {
-  auth: FirebaseAuthTypes.Module;
-  firestore: FirebaseFirestoreTypes.Module;
-  storage: FirebaseStorageTypes.Module;
-  private _offlineSync: MobileOfflineSync;
+  auth!: FirebaseAuthTypes.Module;
+  firestore!: FirebaseFirestoreTypes.Module;
+  storage!: FirebaseStorageTypes.Module;
+  private _offlineSync!: MobileOfflineSync;
   private _isInitialized = false;
   private _defaultApp: ReactNativeFirebase.FirebaseApp | undefined;
 
   constructor() {
     super();
-    // Ensure default app is initialized with real Firebase config
-    if (firebase.apps.length === 0) {
-      // Get Firebase config from environment variables
-      const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY;
-      const authDomain = process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN;
-      const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
-      const storageBucket = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET;
-      const messagingSenderId = process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
-      const appId = process.env.EXPO_PUBLIC_FIREBASE_APP_ID;
-      
-      if (!apiKey || !authDomain || !projectId || !storageBucket || !messagingSenderId || !appId) {
-        throw new Error('Missing Firebase configuration. Please check your environment variables.');
-      }
-      
-      const firebaseConfig = {
-        apiKey,
-        authDomain,
-        projectId,
-        storageBucket,
-        messagingSenderId,
-        appId,
-      };
-      
-
-      
-      firebase.initializeApp(firebaseConfig);
-    }
-    this.auth = getAuth();
-    this.firestore = getFirestore();
-    this.storage = getStorage();
-    this._offlineSync = new MobileOfflineSync(this.firestore);
-    this.firestore.settings({ persistence: true });
+    // Don't initialize Firebase services immediately
+    // Wait for initialize() method to be called
+    this._isInitialized = false;
   }
 
   async initialize(): Promise<void> {
-    // Mobile Firebase initialized
+    try {
+      // Wait for React Native Firebase to be ready and get the default app
+      this._defaultApp = firebase.app();
+      
+      // Initialize Firebase services
+      this.auth = getAuth(this._defaultApp);
+      this.firestore = getFirestore(this._defaultApp);
+      this.storage = getStorage(this._defaultApp);
+      this._offlineSync = new MobileOfflineSync(this.firestore);
+      
+      // Enable offline persistence
+      try {
+        this.firestore.settings({ persistence: true });
+      } catch (error) {
+        console.warn('Firestore persistence already enabled or not available:', error);
+      }
+      
+      this._isInitialized = true;
+    } catch (error) {
+      console.error('Failed to initialize Firebase:', error);
+      throw new FirebaseError('Failed to initialize Firebase services', 'initialization-failed');
+    }
   }
 
   private getApp(): ReactNativeFirebase.FirebaseApp {
     if (!this._defaultApp) {
-        throw new FirebaseError('Firebase app not initialized. Call initialize() first.', 'not-initialized');
+        throw new FirebaseError('Firebase app not initialized.', 'not-initialized');
     }
     return this._defaultApp;
   }

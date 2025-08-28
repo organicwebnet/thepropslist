@@ -13,8 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import LinearGradient from 'react-native-linear-gradient';
 import type { AuthError } from 'firebase/auth';
-import { useAuth } from '../contexts/AuthContext.tsx';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
+import { useAuth } from '../contexts/AuthContext';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -214,7 +214,7 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
 
   const getSubtitle = () => {
     switch (mode) {
-      case 'signin': return 'Sign in to access your props bible';
+              case 'signin': return 'Sign in to access your props list';
       case 'signup': return 'Join the production crew';
       case 'forgot': return 'Enter your email to reset password';
     }

@@ -5,12 +5,12 @@ import {
   lifecycleStatusPriority, 
   StatusPriority,
   PropStatusUpdate as PropStatusUpdateType
-} from '../../types/lifecycle.ts';
-import { WysiwygEditor } from '../WysiwygEditor.tsx';
+} from '../../types/lifecycle';
+import { WysiwygEditor } from '../WysiwygEditor';
 import { AlertTriangle, Clock, RefreshCcw, Camera, Upload, X, Image } from 'lucide-react';
-import { HelpTooltip } from '../HelpTooltip.tsx';
-import { useFirebase } from '../../contexts/FirebaseContext.tsx';
-import { UserPicker } from '../UserPicker.tsx';
+import { HelpTooltip } from '../HelpTooltip';
+import { useFirebase } from '../../platforms/mobile/contexts/FirebaseContext';
+import { UserPicker } from '../UserPicker';
 
 interface PropStatusUpdateProps {
   currentStatus: PropLifecycleStatus;

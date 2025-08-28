@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, ScrollView, ActivityIndicator, Alert, TouchableOpacity, StyleSheet, Platform, FlatList, TextInput, Modal } from 'react-native';
 import { Link, useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index.ts';
-import { Prop } from '../shared/types/props.ts';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
-import { useAuth } from '../contexts/AuthContext.tsx';
+import { Show, Act, Scene, Venue, Contact, ShowCollaborator } from '../types/index';
+import { Prop } from '../shared/types/props';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Pencil, UserMinus, Plus, Trash2 } from 'lucide-react';
 import { FontAwesome5, MaterialCommunityIcons, Ionicons, Feather } from '@expo/vector-icons';
-import { darkTheme, lightTheme } from '../styles/theme.ts';
-import type { FirebaseDocument } from '../shared/services/firebase/types.ts';
-import { useTheme } from '../contexts/ThemeContext.tsx';
+import { darkTheme, lightTheme } from '../styles/theme';
+import type { FirebaseDocument } from '../shared/services/firebase/types';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => void }) {
   const { service: firebaseService } = useFirebase();

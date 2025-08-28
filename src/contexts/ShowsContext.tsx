@@ -7,12 +7,12 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 //   where, 
 //   onSnapshot 
 // } from '@react-native-firebase/firestore'; 
-import { useAuth } from './AuthContext.tsx';
+import { useAuth } from './AuthContext';
 // import { ShowsContext } from './ShowsContext'; // REMOVE self-import
-import { useFirebase } from './FirebaseContext.tsx';
-import { Show } from '../shared/services/firebase/types.ts';
+import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import { Show } from '../shared/services/firebase/types';
 // Import FirebaseDocument type
-import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types.ts';
+import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types';
 import { Platform } from 'react-native';
 // import type { FirebaseService } from '../shared/services/firebase/types.ts'; // Removed FirebaseService type import, service is used directly
 // Remove direct firestore imports as service is used
