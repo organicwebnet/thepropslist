@@ -7,9 +7,11 @@ import { arrayMove, SortableContext, horizontalListSortingStrategy, verticalList
 
 interface BoardProps {
   boardId: string;
+  hideHeader?: boolean;
+  selectedCardId?: string | null;
 }
 
-const Board: React.FC<BoardProps> = ({ boardId }) => {
+const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) => {
   const { service } = useFirebase();
   const [board, setBoard] = useState<BoardData | null>(null);
   const [lists, setLists] = useState<ListData[]>([]);
@@ -48,7 +50,7 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
       unsubCards = lists.map(list =>
         service.listenToCollection<CardData>(
           `todo_boards/${boardId}/lists/${list.id}/cards`,
-          (docs) => setCards(prev => ({ ...prev, [list.id]: docs.map(d => ({ ...d.data, id: d.id, title: d.data.title || d.data.name || "Untitled Card" })) })),
+           (docs) => setCards(prev => ({ ...prev, [list.id]: docs.map(d => ({ ...d.data, id: d.id, title: d.data.title || d.data.name || "Untitled Card" })) })),
           (err) => console.error(err)
         )
       );
@@ -148,10 +150,35 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
     const { active, over } = event;
     if (!over || !active) return;
     if (!Array.isArray(board.listIds)) return;
+
     const activeId = String(active.id).replace(/^list-/, '');
-    const overId = String(over.id).replace(/^list-/, '');
+
+    // Determine which list we are "over". When dragging a list, the over target
+    // might be a card inside a list due to nested sortable contexts.
+    let overListId: string | null = null;
+    const rawOverId = String(over.id);
+
+    if (rawOverId.startsWith('list-')) {
+      overListId = rawOverId.replace(/^list-/, '');
+    } else if (rawOverId.startsWith('card-')) {
+      const overCardId = rawOverId.replace(/^card-/, '');
+      for (const list of lists) {
+        if ((cards[list.id] || []).some(c => c.id === overCardId)) {
+          overListId = list.id;
+          break;
+        }
+      }
+    } else if (over.data?.current?.sortable?.containerId) {
+      const containerId = String(over.data.current.sortable.containerId);
+      if (containerId.startsWith('list-')) {
+        overListId = containerId.replace(/^list-/, '');
+      }
+    }
+
+    if (!overListId) return;
+
     const oldIndex = board.listIds.indexOf(activeId);
-    const newIndex = board.listIds.indexOf(overId);
+    const newIndex = board.listIds.indexOf(overListId);
     if (oldIndex === -1 || newIndex === -1) return;
     if (oldIndex !== newIndex) {
       const newListIds = arrayMove(board.listIds, oldIndex, newIndex);
@@ -223,6 +250,27 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
     }
   };
 
+  // Add list handler (FAB)
+  const addList = async () => {
+    try {
+      const payload = {
+        title: 'New List',
+        cardIds: [],
+        createdAt: new Date().toISOString(),
+      } as Partial<ListData> & { createdAt: string };
+      const newListId = await (service as any).addDocument(`todo_boards/${boardId}/lists`, payload);
+      // If we received the new id, append to board.listIds for ordering
+      if (newListId && board && Array.isArray(board.listIds)) {
+        const updated = [...board.listIds, newListId as string];
+        setBoard({ ...board, listIds: updated });
+        await service.updateDocument('todo_boards', boardId, { listIds: updated });
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to add list', err);
+    }
+  };
+
   if (!board) return <div>Loading board...</div>;
 
   // Deduplicate lists by name (case-insensitive)
@@ -236,14 +284,16 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
   if (!Array.isArray(board.listIds) || board.listIds.length === 0) {
     if (uniqueLists.length === 0) return <div>No lists found for this board.</div>;
     return (
-      <div className="relative w-full min-h-[80vh] flex flex-col bg-gradient-to-br from-pb-darker/80 to-pb-primary/30">
+      <div className="relative w-full min-h-screen flex flex-col bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 overflow-x-hidden">
         <div className="flex-1 flex flex-col min-h-0">
           {/* Board Title as sticky header */}
-          <div className="sticky top-0 z-10 bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 py-4">
-            <span className="text-2xl font-bold text-white pl-6">{board.title || board.name || "Board"}</span>
-          </div>
+          {!hideHeader && (
+            <div className="sticky top-0 z-10 bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 py-4">
+              <span className="text-2xl font-bold text-white pl-6">{board.title || board.name || "Board"}</span>
+            </div>
+          )}
           {/* Lists Row Scrollable Area */}
-          <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden">
+          <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -269,8 +319,8 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
               <SortableContext items={Array.isArray(board.listIds) ? board.listIds.map(id => `list-${id}`) : []} strategy={horizontalListSortingStrategy}>
             <div
               ref={listsRowRef}
-              className="flex items-start space-x-6 h-full cursor-grab"
-              style={{ WebkitOverflowScrolling: 'touch', maxWidth: '100%' }}
+              className="flex items-start gap-6 h-full cursor-grab w-max pr-10"
+              style={{ WebkitOverflowScrolling: 'touch' }}
             >
                   {Array.isArray(board.listIds) && board.listIds.length > 0
                     ? board.listIds.map(listId => {
@@ -287,6 +337,7 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
                             dndId={`list-${list.id}`}
                             onDeleteList={deleteList}
                             cardIdPrefix="card-"
+                            selectedCardId={selectedCardId || null}
                           />
                         );
                       })
@@ -301,6 +352,7 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
                           dndId={`list-${list.id}`}
                           onDeleteList={deleteList}
                           cardIdPrefix="card-"
+                          selectedCardId={selectedCardId || null}
                 />
               ))}
               {/* Add List button at the end of the lists (hidden, replaced by FAB) */}
@@ -335,7 +387,12 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
           </div>
         </div>
         {/* FAB to add a list */}
-        <button className="fixed bottom-10 right-10 bg-pb-primary hover:bg-pb-success text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-3xl z-50">
+        <button
+          onClick={addList}
+          className="fixed bottom-10 right-10 bg-pb-primary hover:bg-pb-success text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-3xl z-50"
+          aria-label="Add list"
+          title="Add list"
+        >
           +
         </button>
       </div>
@@ -343,14 +400,16 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
   }
 
   return (
-    <div className="relative w-full min-h-[80vh] flex flex-col bg-gradient-to-br from-pb-darker/80 to-pb-primary/30">
+    <div className="relative w-full min-h-screen flex flex-col bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 overflow-x-hidden">
       <div className="flex-1 flex flex-col min-h-0">
         {/* Board Title as sticky header */}
-        <div className="sticky top-0 z-10 bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 py-4">
-          <span className="text-2xl font-bold text-white pl-6">{board.title || board.name || "Board"}</span>
-        </div>
+        {!hideHeader && (
+          <div className="sticky top-0 z-10 bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 py-4">
+            <span className="text-2xl font-bold text-white pl-6">{board.title || board.name || "Board"}</span>
+          </div>
+        )}
         {/* Lists Row Scrollable Area */}
-        <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden">
+        <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -376,8 +435,8 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
             <SortableContext items={Array.isArray(board.listIds) ? board.listIds.map(id => `list-${id}`) : []} strategy={horizontalListSortingStrategy}>
           <div
             ref={listsRowRef}
-            className="flex items-start space-x-6 h-full cursor-grab"
-            style={{ WebkitOverflowScrolling: 'touch', maxWidth: '100%' }}
+            className="flex items-start gap-6 h-full cursor-grab w-max pr-10"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {Array.isArray(board.listIds) && board.listIds.length > 0
               ? board.listIds.map(listId => {
@@ -442,7 +501,12 @@ const Board: React.FC<BoardProps> = ({ boardId }) => {
         </div>
       </div>
       {/* FAB to add a list */}
-      <button className="fixed bottom-10 right-10 bg-pb-primary hover:bg-pb-success text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-3xl z-50">
+      <button
+        onClick={addList}
+        className="fixed bottom-10 right-10 bg-pb-primary hover:bg-pb-success text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg text-3xl z-50"
+        aria-label="Add list"
+        title="Add list"
+      >
         +
       </button>
     </div>

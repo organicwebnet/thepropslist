@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Card from "./Card";
 import type { ListData, CardData } from "../../types/taskManager";
 import { Edit, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useFirebase } from "../../contexts/FirebaseContext";
 
 interface ListColumnProps {
   list: ListData;
@@ -14,12 +15,43 @@ interface ListColumnProps {
   dndId: string;
   onDeleteList: (listId: string) => void;
   cardIdPrefix?: string;
+  selectedCardId?: string | null;
 }
 
-const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard, onUpdateCard, dndId, onDeleteList, cardIdPrefix = '' }) => {
+const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard, onUpdateCard, dndId, onDeleteList, cardIdPrefix = '', selectedCardId }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [addingCard, setAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState("");
+  const newCardInputRef = useRef<HTMLInputElement | null>(null);
+
+  // @mention state for the add-card title input
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionType, setMentionType] = useState<'prop' | 'container' | 'user' | null>(null);
+  const [showMentionSearch, setShowMentionSearch] = useState(false);
+  const [mentionSearchText, setMentionSearchText] = useState('');
+  const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([]);
+  const { service } = useFirebase();
+  const [propsList, setPropsList] = useState<{ id: string; name: string }[]>([]);
+  const [containersList, setContainersList] = useState<{ id: string; name: string }[]>([]);
+  const [usersList, setUsersList] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    // Load minimal sets for mentions; ignore errors
+    (async () => {
+      try {
+        const p = await service.getDocuments<any>('props');
+        setPropsList(p.map(d => ({ id: d.id, name: d.data?.name || 'Prop' })));
+      } catch {}
+      try {
+        const c = await service.getDocuments<any>('packing_boxes');
+        setContainersList(c.map(d => ({ id: d.id, name: d.data?.name || 'Box' })));
+      } catch {}
+      try {
+        const u = await service.getDocuments<any>('users');
+        setUsersList(u.map(d => ({ id: d.id, name: d.data?.displayName || d.data?.name || d.data?.email || 'User' })));
+      } catch {}
+    })();
+  }, [service]);
 
   // dnd-kit sortable for lists
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: dndId });
@@ -34,7 +66,9 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
     if (!newCardTitle.trim()) return;
     onAddCard(list.id, newCardTitle);
     setNewCardTitle("");
-    setAddingCard(false);
+    setAddingCard(true);
+    // Re-focus the input for rapid card entry
+    setTimeout(() => newCardInputRef.current?.focus(), 0);
   };
 
   return (
@@ -43,17 +77,22 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
       style={style}
       {...attributes}
       {...listeners}
-      className={`bg-pb-darker rounded-xl p-4 min-w-[20rem] w-80 flex-shrink-0 shadow-lg border border-pb-primary/30 flex flex-col transition-all duration-300 ${collapsed ? 'w-12 min-w-[3rem] p-0 items-center justify-center bg-pb-primary/20' : ''}`}
+      className={`bg-pb-darker rounded-xl shadow-lg border border-pb-primary/30 flex flex-col flex-shrink-0 transition-all duration-300 ${collapsed ? '!w-14 min-w-[3.5rem] min-h-[22rem] p-0 bg-pb-primary/20 relative items-center justify-center' : 'p-4 min-w-[18rem] w-[20rem]'}`}
     >
-      <div className={`flex items-center justify-between mb-4 w-full ${collapsed ? 'flex-col gap-0 mb-0 items-center justify-center' : ''}`} style={collapsed ? { height: '100%' } : {}}>
+      <div className={`flex items-center justify-between mb-4 w-full ${collapsed ? 'mb-0' : ''}`} style={collapsed ? { height: 'auto' } : {}}>
         {collapsed ? (
           <>
-            <div className="flex flex-col items-center justify-center h-full">
-              <span className="text-xs font-bold text-pb-primary/80 mb-2" style={{ letterSpacing: '0.1em', writingMode: 'vertical-lr', textOrientation: 'upright' }}>
-                {list.title.split('').join('\n')}
+            <div className="relative h-full w-full flex items-center justify-center">
+              <span className="text-sm font-bold text-pb-primary/80 select-none transform -rotate-90 whitespace-nowrap tracking-widest text-center">
+                {list.title}
               </span>
-              <button onClick={() => setCollapsed(false)} className="text-pb-primary hover:text-pb-success p-1 rounded mt-2">
-                <ChevronDown size={20} />
+              <button
+                onClick={() => setCollapsed(false)}
+                className="absolute bottom-2 left-1/2 -translate-x-1/2 text-pb-primary hover:text-pb-success p-1 rounded"
+                aria-label="Expand list"
+                title="Expand"
+              >
+                <ChevronDown size={18} />
               </button>
             </div>
           </>
@@ -77,13 +116,29 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
           <SortableContext items={Array.isArray(cards) ? cards.map(card => `${cardIdPrefix}${card.id}`) : []} strategy={verticalListSortingStrategy}>
             <div className="flex-1 flex flex-col gap-3 mb-4">
               {cards.map(card => (
-                <Card key={card.id} card={card} onUpdateCard={onUpdateCard} dndId={`${cardIdPrefix}${card.id}`} />
+                <div key={card.id} className="relative">
+                  {/* paperclip icon if has attachments */}
+                  {Array.isArray(card.attachments) && card.attachments.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-pb-primary text-white text-[10px] rounded-full px-1.5 py-0.5" title="Has attachments">📎</span>
+                  )}
+                  <Card card={card} onUpdateCard={onUpdateCard} dndId={`${cardIdPrefix}${card.id}`} openInitially={selectedCardId === card.id} />
+                </div>
               ))}
             </div>
           </SortableContext>
           {addingCard ? (
-            <div className="flex flex-col gap-2 mt-2">
+            <div className="flex flex-col gap-2 mt-2 relative">
+              <button
+                type="button"
+                aria-label="Cancel"
+                title="Cancel"
+                onClick={() => { setAddingCard(false); setNewCardTitle(""); }}
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-pb-darker/70 border border-pb-primary/40 text-white flex items-center justify-center hover:bg-pb-primary/40"
+              >
+                ×
+              </button>
               <input
+                ref={newCardInputRef}
                 className="rounded border border-pb-primary/40 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-pb-primary text-[#222]"
                 type="text"
                 value={newCardTitle}
@@ -91,10 +146,48 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
                 placeholder="Enter a title for this card..."
                 autoFocus
                 onKeyDown={e => {
-                  if (e.key === 'Enter') handleAddCard();
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddCard();
+                  }
                   if (e.key === 'Escape') { setAddingCard(false); setNewCardTitle(""); }
+                  if (e.key === '@') { setShowMentionMenu(true); }
                 }}
               />
+              {showMentionMenu && (
+                <div className="absolute -top-28 left-0 bg-white text-black rounded shadow p-2 z-50 w-56">
+                  <div className="font-semibold mb-1">Mention Type</div>
+                  <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionType('prop'); setShowMentionMenu(false); setShowMentionSearch(true); setMentionSearchText(''); setMentionSuggestions(propsList); }}>Prop</button>
+                  <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionType('container'); setShowMentionMenu(false); setShowMentionSearch(true); setMentionSearchText(''); setMentionSuggestions(containersList); }}>Box/Container</button>
+                  <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionType('user'); setShowMentionMenu(false); setShowMentionSearch(true); setMentionSearchText(''); setMentionSuggestions(usersList); }}>User</button>
+                </div>
+              )}
+              {showMentionSearch && (
+                <div className="absolute -top-40 left-0 bg-[#1f2937] text-white rounded border border-white/10 p-3 z-50 w-72">
+                  <div className="text-sm text-gray-300 mb-2">Search {mentionType}</div>
+                  <input
+                    className="w-full rounded bg-[#111827] border border-white/10 px-2 py-1 text-white mb-2"
+                    placeholder={`Type to search ${mentionType}...`}
+                    value={mentionSearchText}
+                    onChange={e => setMentionSearchText(e.target.value)}
+                  />
+                  <div className="max-h-40 overflow-auto space-y-1">
+                    {mentionSuggestions.filter(i => (i.name || '').toLowerCase().includes(mentionSearchText.toLowerCase())).map(i => (
+                      <button key={i.id} className="block w-full text-left px-2 py-1 rounded hover:bg-white/10" onClick={() => {
+                        // For card titles, insert plain @Name (no brackets/IDs); remove trailing lone '@'
+                        const text = `@${i.name}`;
+                        setNewCardTitle(prev => {
+                          const t = prev || '';
+                          const base = t.endsWith('@') ? t.slice(0, -1).trimEnd() : t.trimEnd();
+                          return (base ? base + ' ' : '') + text + ' ';
+                        });
+                        setShowMentionSearch(false);
+                        setMentionType(null);
+                      }}>{i.name}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button
                   className="bg-pb-success hover:bg-pb-primary text-white font-semibold py-1 px-3 rounded shadow"

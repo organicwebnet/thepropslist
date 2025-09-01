@@ -26,6 +26,7 @@ import { lightTheme, darkTheme } from '../../styles/theme'; // Import theme obje
 import DatePicker from 'react-native-date-picker';
 // import { Timestamp } from 'firebase/firestore'; // OLD - use string/CustomTimestamp
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker'; // Uncommented
 import type { CardLabel, CustomTimestamp, MemberData, ChecklistItemData, ChecklistData, CommentData, ActivityData, CardData, ListData } from '../../shared/types/taskManager'; // ADD THIS IMPORT
 import { Picker } from '@react-native-picker/picker';
@@ -380,6 +381,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     });
 
     const { service, isInitialized: isFirebaseInitialized, error: firebaseError } = useFirebase(); // Get Firebase status
+    const router = useRouter();
     const { user } = useAuth();
 
     const [editingTitleState, setEditingTitleState] = useState(false);
@@ -410,6 +412,8 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const [showPropSearch, setShowPropSearch] = useState(false);
     const [showUserSearch, setShowUserSearch] = useState(false);
     const [showContainerSearch, setShowContainerSearch] = useState(false);
+    // Track which field is currently invoking the @mention system
+    const [mentionTarget, setMentionTarget] = useState<'description' | 'title' | null>(null);
     const [propSearchText, setPropSearchText] = useState('');
     const [userSearchText, setUserSearchText] = useState('');
     const [containerSearchText, setContainerSearchText] = useState('');
@@ -421,6 +425,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const { service: firebaseService } = useFirebase();
     const [allProps, setAllProps] = useState<{id: string, name: string}[]>([]);
     const [allContainers, setAllContainers] = useState<{id: string, name: string}[]>([]);
+    const [currentShowId, setCurrentShowId] = useState<string | null>(null);
 
     // Fetch real props data - with error handling
     useEffect(() => {
@@ -430,6 +435,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         firebaseService.getDocument('todo_boards', boardId).then((doc: any) => {
             if (doc?.exists && doc.data?.showId) {
                 const showId = doc.data.showId;
+                setCurrentShowId(showId);
                 
                 // Fetch props for this show with proper error handling
                 firebaseService.getCollection('props')
@@ -501,6 +507,29 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
             ]);
         });
     }, [firebaseService, boardId, isVisible]);
+
+    // Helper: create a very basic prop and return its id
+    const createBasicProp = async (propName: string): Promise<{ id: string; name: string } | null> => {
+        try {
+            const showId = currentShowId || undefined;
+            const now = new Date().toISOString();
+            const result = await service.addDocument<any>('props', {
+                name: propName,
+                showId: showId,
+                category: 'Other',
+                price: 0,
+                quantity: 1,
+                status: 'confirmed',
+                createdAt: now,
+                updatedAt: now,
+            });
+            return { id: result.id, name: propName };
+        } catch (err) {
+            console.error('Failed to create basic prop from @P:', err);
+            Alert.alert('Error', 'Could not create prop');
+            return null;
+        }
+    };
 
 
     const editorRef = useRef<any>(null); // MODIFIED: Editor to any for ref type
@@ -704,25 +733,42 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const handleDescriptionChange = (text: string) => {
         setEditedDescription(text);
         
-        // Enhanced mention detection - check for @user, @prop, @box patterns
+        // Enhanced mention detection - check for @user, @prop, @box patterns and quick-create @P:Name
         if (!showMentionMenu && !showPropSearch) {
+            const quickCreateMatch = text.match(/@P:([^\n]+)$/);
+            if (quickCreateMatch && quickCreateMatch[1].trim()) {
+                const name = quickCreateMatch[1].trim();
+                (async () => {
+                    const created = await createBasicProp(name);
+                    if (created) {
+                        const propLink = `[@${created.name}](prop:${created.id})`;
+                        const newDescription = text.replace(/@P:[^\n]+$/, propLink + ' ');
+                        setEditedDescription(newDescription);
+                    }
+                })();
+                return;
+            }
             if (text.endsWith('@user ') || text.endsWith('@user')) {
                 // Trigger user search directly
+                setMentionTarget('description');
                 setShowUserSearch(true);
                 setUserSearchText('');
                 setUserSuggestions(allShowMembers || []);
             } else if (text.endsWith('@prop ') || text.endsWith('@prop')) {
                 // Trigger prop search directly
+                setMentionTarget('description');
                 setShowPropSearch(true);
                 setPropSearchText('');
                 setPropSuggestions(allProps);
             } else if (text.endsWith('@box ') || text.endsWith('@box')) {
                 // Trigger box/container search directly
+                setMentionTarget('description');
                 setShowContainerSearch(true);
                 setContainerSearchText('');
                 setContainerSuggestions(allContainers);
             } else if (text.endsWith('@') && !text.endsWith('@@')) {
                 // Show menu for ambiguous @ mentions
+                setMentionTarget('description');
                 setShowMentionMenu(true);
             }
         }
@@ -746,16 +792,21 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     };
 
     const handleSelectPropFromList = (prop: {id: string, name: string}) => {
-        // Remove the @ from the end of the description and add the prop as a clickable link
         const propLink = `[@${prop.name}](prop:${prop.id})`;
-        const newDescription = editedDescription.slice(0, -1) + propLink + ' ';
-        setEditedDescription(newDescription);
+        if (mentionTarget === 'title') {
+            const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + propLink + ' ' : editedTitle + ' ' + propLink + ' ';
+            setEditedTitle(newTitle);
+        } else {
+            const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + propLink + ' ' : editedDescription + ' ' + propLink + ' ';
+            setEditedDescription(newDescription);
+        }
         
         // Close everything
         setShowPropSearch(false);
         setShowMentionMenu(false);
         setPropSearchText('');
         setPropSuggestions([]);
+        setMentionTarget(null);
     };
 
     // User search handlers
@@ -775,16 +826,21 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     };
 
     const handleSelectUserFromList = (user: MemberData) => {
-        // Remove the @ from the end and add user mention
         const userMention = `@${user.name}`;
-        const newDescription = editedDescription.slice(0, -1) + userMention + ' ';
-        setEditedDescription(newDescription);
+        if (mentionTarget === 'title') {
+            const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + userMention + ' ' : editedTitle + ' ' + userMention + ' ';
+            setEditedTitle(newTitle);
+        } else {
+            const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + userMention + ' ' : editedDescription + ' ' + userMention + ' ';
+            setEditedDescription(newDescription);
+        }
         
         // Close everything
         setShowUserSearch(false);
         setShowMentionMenu(false);
         setUserSearchText('');
         setUserSuggestions([]);
+        setMentionTarget(null);
     };
 
     // Container search handlers
@@ -804,16 +860,21 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     };
 
     const handleSelectContainerFromList = (container: {id: string, name: string}) => {
-        // Remove the @ from the end and add container reference
         const containerRef = `[@${container.name}](container:${container.id})`;
-        const newDescription = editedDescription.slice(0, -1) + containerRef + ' ';
-        setEditedDescription(newDescription);
+        if (mentionTarget === 'title') {
+            const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + containerRef + ' ' : editedTitle + ' ' + containerRef + ' ';
+            setEditedTitle(newTitle);
+        } else {
+            const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + containerRef + ' ' : editedDescription + ' ' + containerRef + ' ';
+            setEditedDescription(newDescription);
+        }
         
         // Close everything
         setShowContainerSearch(false);
         setShowMentionMenu(false);
         setContainerSearchText('');
         setContainerSuggestions([]);
+        setMentionTarget(null);
     };
 
     const closeMentionSystem = () => {
@@ -827,6 +888,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         setPropSuggestions([]);
         setUserSuggestions([]);
         setContainerSuggestions([]);
+        setMentionTarget(null);
     };
 
     // Function to render description with clickable links and mentions
@@ -1374,7 +1436,48 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             </Pressable>
                             <View style={{ flex: 1 }}>
                                 {editingTitleState ? (
-                                    <TextInput style={[styles.input, { color: '#fff', fontWeight: 'bold', fontSize: 20, lineHeight: 26, width: '100%' }]} value={editedTitle} onChangeText={setEditedTitle} placeholder="Card Title" onBlur={handleSaveTitle} autoFocus placeholderTextColor={currentThemeColors.textSecondary}/>
+                                    <TextInput style={[styles.input, { color: '#fff', fontWeight: 'bold', fontSize: 20, lineHeight: 26, width: '100%' }]} value={editedTitle} onChangeText={(text) => {
+                                        setEditedTitle(text);
+                                        // Quick-create @P:Name inside title
+                                        const quickCreateMatch = text.match(/@P:([^\n]+)$/);
+                                        if (quickCreateMatch && quickCreateMatch[1].trim()) {
+                                            const name = quickCreateMatch[1].trim();
+                                            (async () => {
+                                                const created = await createBasicProp(name);
+                                                if (created) {
+                                                    const propLink = `[@${created.name}](prop:${created.id})`;
+                                                    const newTitle = text.replace(/@P:[^\n]+$/, propLink + ' ');
+                                                    setEditedTitle(newTitle);
+                                                }
+                                            })();
+                                            return;
+                                        }
+                                        if (!showMentionMenu && !showPropSearch) {
+                                            if (text.endsWith('@user ') || text.endsWith('@user')) {
+                                                setMentionTarget('title');
+                                                setShowUserSearch(true);
+                                                setUserSearchText('');
+                                                setUserSuggestions(allShowMembers || []);
+                                            } else if (text.endsWith('@prop ') || text.endsWith('@prop')) {
+                                                setMentionTarget('title');
+                                                setShowPropSearch(true);
+                                                setPropSearchText('');
+                                                setPropSuggestions(allProps);
+                                            } else if (text.endsWith('@box ') || text.endsWith('@box')) {
+                                                setMentionTarget('title');
+                                                setShowContainerSearch(true);
+                                                setContainerSearchText('');
+                                                setContainerSuggestions(allContainers);
+                                            } else if (text.endsWith('@') && !text.endsWith('@@')) {
+                                                setMentionTarget('title');
+                                                setShowMentionMenu(true);
+                                            }
+                                        }
+                                    }} placeholder="Card Title" onBlur={async () => {
+                                        // prevent saving while mention popovers open
+                                        if (showMentionMenu || showPropSearch || showUserSearch || showContainerSearch) return;
+                                        await handleSaveTitle();
+                                    }} autoFocus placeholderTextColor={currentThemeColors.textSecondary}/>
                                 ) : (
                                     <Pressable onPress={handleEditTitle} style={{ width: '100%' }}>
                                         <Text style={[styles.title, { fontSize: 20, lineHeight: 26, fontWeight: 'bold' }, completed && { textDecorationLine: 'line-through', color: currentThemeColors.textSecondary }]}>{internalCard.title}</Text>

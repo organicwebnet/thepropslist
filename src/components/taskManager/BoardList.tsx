@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Alert, Pressable, Image } from 'react-native';
 import { DraxView } from 'react-native-drax';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -6,6 +6,7 @@ import { lightTheme, darkTheme } from '../../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import LinearGradient from 'react-native-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFirebase } from '../../platforms/mobile/contexts/FirebaseContext';
 
 // Type definitions (assuming they are defined elsewhere, simplified here for clarity)
 interface CustomTimestamp {
@@ -36,6 +37,7 @@ interface BoardListProps {
   listId: string;
   listName: string;
   boardId: string;
+  boardId: string;
   cards: CardData[];
   onAddCard: (listId: string, cardTitle: string) => Promise<void>;
   onDeleteCard: (listId: string, cardId: string) => void;
@@ -47,6 +49,7 @@ interface BoardListProps {
 const BoardList: React.FC<BoardListProps> = ({
   listId,
   listName,
+  boardId,
   cards,
   onAddCard,
   onDeleteCard,
@@ -61,8 +64,143 @@ const BoardList: React.FC<BoardListProps> = ({
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // --- @mention state for add-new-card title ---
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [showPropSearch, setShowPropSearch] = useState(false);
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [showContainerSearch, setShowContainerSearch] = useState(false);
+  const [propSearchText, setPropSearchText] = useState('');
+  const [userSearchText, setUserSearchText] = useState('');
+  const [containerSearchText, setContainerSearchText] = useState('');
+  const [propSuggestions, setPropSuggestions] = useState<{id: string, name: string}[]>([]);
+  const [userSuggestions, setUserSuggestions] = useState<any[]>([]);
+  const [containerSuggestions, setContainerSuggestions] = useState<{id: string, name: string}[]>([]);
+
+  // Fetch props/containers for @mentions
+  const { service: firebaseService } = useFirebase();
+  const [allProps, setAllProps] = useState<{id: string, name: string}[]>([]);
+  const [allContainers, setAllContainers] = useState<{id: string, name: string}[]>([]);
+
+  useEffect(() => {
+    if (!firebaseService || !boardId) return;
+    firebaseService.getDocument('todo_boards', boardId).then((doc: any) => {
+      const showId = doc?.data?.showId;
+      // Props
+      firebaseService.getCollection('props')
+        .then((snapshot: any) => {
+          const items = snapshot?.docs ? snapshot.docs
+            .filter((d: any) => (showId ? d.data?.showId === showId : true))
+            .map((d: any) => ({ id: d.id, name: d.data?.name || 'Unnamed Prop' })) : [];
+          setAllProps(items);
+        })
+        .catch(() => setAllProps([{ id: 'prop1', name: 'Sample Prop' }]));
+      // Containers
+      firebaseService.getCollection('packing_boxes')
+        .then((snapshot: any) => {
+          const items = snapshot?.docs ? snapshot.docs
+            .filter((d: any) => (showId ? d.data?.showId === showId : true))
+            .map((d: any) => ({ id: d.id, name: d.data?.name || 'Unnamed Box' })) : [];
+          setAllContainers(items);
+        })
+        .catch(() => setAllContainers([{ id: 'cont1', name: 'Sample Box' }]));
+    }).catch(() => {
+      setAllProps([{ id: 'prop1', name: 'Sample Prop' }]);
+      setAllContainers([{ id: 'cont1', name: 'Sample Box' }]);
+    });
+  }, [firebaseService, boardId]);
+
+  const closeMentionSystem = () => {
+    setShowMentionMenu(false);
+    setShowPropSearch(false);
+    setShowUserSearch(false);
+    setShowContainerSearch(false);
+    setPropSearchText('');
+    setUserSearchText('');
+    setContainerSearchText('');
+    setPropSuggestions([]);
+    setUserSuggestions([]);
+    setContainerSuggestions([]);
+  };
+
+  const handleTitleChangeWithMentions = (text: string) => {
+    setNewCardTitle(text);
+    // Quick-create prop with @P:Name
+    const quickCreateMatch = text.match(/@P:([^\n]+)$/);
+    if (quickCreateMatch && quickCreateMatch[1].trim()) {
+      (async () => {
+        try {
+          const name = quickCreateMatch[1].trim();
+          const now = new Date().toISOString();
+          const created = await firebaseService.addDocument<any>('props', {
+            name,
+            showId: undefined,
+            category: 'Other',
+            price: 0,
+            quantity: 1,
+            status: 'confirmed',
+            createdAt: now,
+            updatedAt: now,
+          });
+          const propLink = `[@${name}](prop:${created.id})`;
+          setNewCardTitle(text.replace(/@P:[^\n]+$/, propLink + ' '));
+        } catch (err) {
+          console.error('Failed to quick-create prop from @P:', err);
+        }
+      })();
+      return;
+    }
+    if (!showMentionMenu && !showPropSearch && !showUserSearch && !showContainerSearch) {
+      if (text.endsWith('@prop ') || text.endsWith('@prop')) {
+        setShowPropSearch(true);
+        setPropSearchText('');
+        setPropSuggestions(allProps);
+      } else if (text.endsWith('@box ') || text.endsWith('@box')) {
+        setShowContainerSearch(true);
+        setContainerSearchText('');
+        setContainerSuggestions(allContainers);
+      } else if (text.endsWith('@user ') || text.endsWith('@user')) {
+        setShowUserSearch(true);
+        setUserSearchText('');
+        // If you have a members list, set suggestions here
+      } else if (text.endsWith('@') && !text.endsWith('@@')) {
+        setShowMentionMenu(true);
+      }
+    }
+  };
+
+  const handleSelectPropFromList = (prop: {id: string, name: string}) => {
+    const propLink = `[@${prop.name}](prop:${prop.id})`;
+    const updated = newCardTitle.endsWith('@') ? newCardTitle.slice(0, -1) + propLink + ' ' : newCardTitle + ' ' + propLink + ' ';
+    setNewCardTitle(updated);
+    setShowPropSearch(false);
+    setShowMentionMenu(false);
+    setPropSearchText('');
+    setPropSuggestions([]);
+  };
+
+  const handleSelectContainerFromList = (container: {id: string, name: string}) => {
+    const ref = `[@${container.name}](container:${container.id})`;
+    const updated = newCardTitle.endsWith('@') ? newCardTitle.slice(0, -1) + ref + ' ' : newCardTitle + ' ' + ref + ' ';
+    setNewCardTitle(updated);
+    setShowContainerSearch(false);
+    setShowMentionMenu(false);
+    setContainerSearchText('');
+    setContainerSuggestions([]);
+  };
+
+  const handleSelectUserFromList = (user: any) => {
+    const mention = `@${user?.name || 'user'}`;
+    const updated = newCardTitle.endsWith('@') ? newCardTitle.slice(0, -1) + mention + ' ' : newCardTitle + ' ' + mention + ' ';
+    setNewCardTitle(updated);
+    setShowUserSearch(false);
+    setShowMentionMenu(false);
+    setUserSearchText('');
+    setUserSuggestions([]);
+  };
+
   const handleAddCardInternal = async () => {
     if (!newCardTitle.trim()) return;
+    if (showMentionMenu || showPropSearch || showUserSearch || showContainerSearch) return;
     Alert.alert('DEBUG', `Add Card button pressed for list ${listId} with title: ${newCardTitle}`);
     setIsAddingCard(true);
     try {
@@ -311,9 +449,99 @@ const BoardList: React.FC<BoardListProps> = ({
             placeholder="Enter card title..."
             placeholderTextColor="#8B949E"
             value={newCardTitle}
-            onChangeText={setNewCardTitle}
+            onChangeText={handleTitleChangeWithMentions}
             autoFocus={false}
           />
+          {/* Mention Menu */}
+          {showMentionMenu && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 8, padding: 10, marginTop: 6 }}>
+              <Text style={{ color: '#000', fontWeight: 'bold', marginBottom: 6 }}>Mention Type</Text>
+              <Pressable onPress={() => { setShowMentionMenu(false); setShowPropSearch(true); setPropSearchText(''); setPropSuggestions(allProps); }} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                <Text style={{ color: '#000' }}>Prop</Text>
+              </Pressable>
+              <Pressable onPress={() => { setShowMentionMenu(false); setShowContainerSearch(true); setContainerSearchText(''); setContainerSuggestions(allContainers); }} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                <Text style={{ color: '#000' }}>Box/Container</Text>
+              </Pressable>
+              <Pressable onPress={() => { setShowMentionMenu(false); setShowUserSearch(true); setUserSearchText(''); }} style={{ paddingVertical: 8 }}>
+                <Text style={{ color: '#000' }}>User</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* Prop Search */}
+          {showPropSearch && (
+            <View style={{ backgroundColor: '#374151', borderRadius: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', padding: 10, marginTop: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <Ionicons name="cube" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>Search Props:</Text>
+                <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={16} color="#9CA3AF" />
+                </Pressable>
+              </View>
+              <TextInput
+                style={{ backgroundColor: '#2D3748', borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 8 }}
+                placeholder="Type to search props..."
+                placeholderTextColor="#9CA3AF"
+                value={propSearchText}
+                onChangeText={(t) => { setPropSearchText(t); setPropSuggestions((allProps || []).filter(p => p.name.toLowerCase().includes(t.toLowerCase()))); }}
+              />
+              {propSuggestions.map((p) => (
+                <Pressable key={p.id} onPress={() => handleSelectPropFromList(p)} style={{ paddingVertical: 8 }}>
+                  <Text style={{ color: '#fff' }}>{p.name}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {/* User Search */}
+          {showUserSearch && (
+            <View style={{ backgroundColor: '#374151', borderRadius: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', padding: 10, marginTop: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <Ionicons name="person" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>Search Users:</Text>
+                <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={16} color="#9CA3AF" />
+                </Pressable>
+              </View>
+              <TextInput
+                style={{ backgroundColor: '#2D3748', borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 8 }}
+                placeholder="Type to search users..."
+                placeholderTextColor="#9CA3AF"
+                value={userSearchText}
+                onChangeText={(t) => { setUserSearchText(t); /* setUserSuggestions(...) when available */ }}
+              />
+              {userSuggestions.map((u, idx) => (
+                <Pressable key={idx.toString()} onPress={() => handleSelectUserFromList(u)} style={{ paddingVertical: 8 }}>
+                  <Text style={{ color: '#fff' }}>{u?.name || 'User'}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {/* Container Search */}
+          {showContainerSearch && (
+            <View style={{ backgroundColor: '#374151', borderRadius: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', padding: 10, marginTop: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <Ionicons name="archive" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>Search Containers:</Text>
+                <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={16} color="#9CA3AF" />
+                </Pressable>
+              </View>
+              <TextInput
+                style={{ backgroundColor: '#2D3748', borderRadius: 4, paddingHorizontal: 12, paddingVertical: 8, color: '#fff', fontSize: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 8 }}
+                placeholder="Type to search containers..."
+                placeholderTextColor="#9CA3AF"
+                value={containerSearchText}
+                onChangeText={(t) => { setContainerSearchText(t); setContainerSuggestions((allContainers || []).filter(c => c.name.toLowerCase().includes(t.toLowerCase()))); }}
+              />
+              {containerSuggestions.map((c) => (
+                <Pressable key={c.id} onPress={() => handleSelectContainerFromList(c)} style={{ paddingVertical: 8 }}>
+                  <Text style={{ color: '#fff' }}>{c.name}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
           <View style={listStyles.addCardActions}>
             <Pressable
               style={({ pressed }) => [
