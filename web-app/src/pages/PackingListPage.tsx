@@ -96,7 +96,7 @@ const PackingListPage: React.FC = () => {
   if (!currentShowId) {
     return (
       <DashboardLayout>
-        <div className="max-w-4xl mx-auto p-8">
+        <div className="max-w-7xl mx-auto p-8">
           <h2 className="text-2xl font-bold mb-6">Select a Show</h2>
           {/* TODO: Show selector component here */}
           <button onClick={() => setCurrentShowId(prompt('Enter show ID:') || null)} className="btn btn-primary">Set Show</button>
@@ -107,7 +107,7 @@ const PackingListPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto p-8">
+      <div className="max-w-7xl mx-auto p-8">
         <h1 className="text-2xl font-bold mb-6">Packing Lists</h1>
         <form onSubmit={handleCreatePackingList} className="flex flex-col gap-2 mb-6 max-w-lg">
           <label htmlFor="new-list-name" className="text-white font-semibold mb-1">Create New List</label>

@@ -21,13 +21,14 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
   if (isWeb) {
     return (
-      <div style={{ ...globalStyles.container, minHeight }}>
+      <div style={{ minHeight }} className="w-full">
         <textarea
-          style={{ ...globalStyles.textArea, minHeight, resize: 'vertical' }}
-        value={value}
+          className="w-full rounded-lg bg-black/30 border border-white/20 text-white placeholder:text-gray-300 p-3"
+          style={{ minHeight, resize: 'vertical' }}
+          value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-        disabled={disabled}
+          disabled={disabled}
         />
       </div>
     );

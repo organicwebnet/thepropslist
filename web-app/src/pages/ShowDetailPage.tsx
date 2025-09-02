@@ -88,7 +88,7 @@ const ShowDetailPage: React.FC = () => {
   return ( 
     <DashboardLayout>
       <div className="flex-1 flex flex-col min-h-screen">
-        <div className="w-full max-w-3xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 relative">
+        <div className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 relative">
           {/* Edit Button */}
           <button
             onClick={() => id && window.location.assign(`/shows/${id}/edit`)}

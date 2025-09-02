@@ -1,3 +1,5 @@
+import type { PropImage } from './props';
+
 export interface CardData {
   id: string;
   title: string;
@@ -12,6 +14,8 @@ export interface CardData {
   attachments?: string[];
   completed?: boolean;
   propId?: string;
+  color?: string;
+  images?: PropImage[];
   [key: string]: any;
 }
 

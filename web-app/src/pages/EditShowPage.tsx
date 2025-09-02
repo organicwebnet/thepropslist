@@ -275,7 +275,7 @@ const EditShowPage: React.FC = () => {
   return (
     <DashboardLayout>
       <div className="flex-1 flex flex-col min-h-screen">
-        <form onSubmit={handleSubmit} className="w-full max-w-3xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 space-y-6">
+        <form onSubmit={handleSubmit} className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 space-y-6">
           <h1 className="text-2xl font-bold text-white mb-4">Edit Show</h1>
           {error && <div className="text-red-500 mb-2">{error}</div>}
 

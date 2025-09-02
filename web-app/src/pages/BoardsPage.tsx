@@ -216,10 +216,10 @@ function BoardsPageContent() {
   return (
     <DashboardLayout>
       {effectiveBoardId ? (
-        <div className="w-full">
+        <div className="w-full h-[calc(100vh-4.5rem)] overflow-hidden flex flex-col p-0">
           {/* Header with title, dropdown if multiple boards, and create button */}
-          <div className="sticky top-0 z-20 bg-pb-darker/60 backdrop-blur-sm border-b border-pb-primary/20">
-            <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="sticky top-0 z-20 bg-transparent px-6 pt-2 pb-2">
+            <div className="w-full flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Calendar className="w-6 h-6 text-pb-primary" />
                 {boards.length > 1 ? (
@@ -246,7 +246,7 @@ function BoardsPageContent() {
               </div>
             </div>
             {showForm && (
-              <div className="max-w-7xl mx-auto px-4 pb-4 relative">
+              <div className="w-full px-6 pb-4 relative">
                 <button
                   type="button"
                   aria-label="Close create board form"
@@ -278,7 +278,9 @@ function BoardsPageContent() {
               </div>
             )}
           </div>
-          <Board boardId={effectiveBoardId} hideHeader selectedCardId={selectedCardId} />
+          <div className="flex-1 min-h-0 overflow-hidden p-0">
+            <Board boardId={effectiveBoardId} hideHeader selectedCardId={selectedCardId} />
+          </div>
         </div>
       ) : (
         <motion.div

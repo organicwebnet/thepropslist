@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, BarChart3, Bell, Box, Calendar, CheckCircle, Crown, FileBarChart, FileText, Home, LogOut, Package, Package2, Plus, Scroll, Search, Settings, Star, Theater, User, Users, Wrench, Zap } from 'lucide-react';
+import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap } from 'lucide-react';
 import { useWebAuth } from './contexts/WebAuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useShowSelection } from "./contexts/ShowSelectionContext";
 import type { Show } from "./types/Show";
 import { useFirebase } from "./contexts/FirebaseContext";
@@ -53,16 +53,19 @@ type DashboardLayoutProps = {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { userProfile, signOut } = useWebAuth();
-  const [now, setNow] = React.useState(() => new Date());
   const navigate = useNavigate();
   const { currentShowId } = useShowSelection();
   const { service } = useFirebase();
   const [showTitle, setShowTitle] = React.useState<string>("");
+  const [navCollapsed, setNavCollapsed] = React.useState(false);
+  const location = useLocation();
+  const isBoardsPage = location.pathname.startsWith('/boards');
 
   React.useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
+    const cls = 'route-boards';
+    if (isBoardsPage) document.body.classList.add(cls); else document.body.classList.remove(cls);
+    return () => { document.body.classList.remove(cls); };
+  }, [isBoardsPage]);
 
   React.useEffect(() => {
     if (!currentShowId) {
@@ -78,16 +81,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     return () => { if (unsub) unsub(); };
   }, [service, currentShowId]);
 
-  const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const welcome = userProfile?.displayName ? `Welcome, ${userProfile.displayName}` : 'Welcome';
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-dark text-white">
+    <div className="min-h-screen bg-gradient-dark text-white overflow-x-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 bg-pb-darker/50 backdrop-blur-sm border-b border-pb-primary/20">
         <div className="flex items-center space-x-4">
@@ -96,32 +96,35 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               <Theater className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">Props Bible</h1>
+              <h1 className="text-lg font-bold text-white">The Props List</h1>
               <p className="text-xs text-pb-gray">Theater Props Management</p>
             </div>
           </div>
-          <div className="bg-pb-primary/20 text-pb-primary px-3 py-1 rounded-full text-xs font-medium">
-            Web Platform
-          </div>
+          <Link
+            to="#"
+            onClick={(e) => { e.preventDefault(); alert('Mobile app coming soon'); }}
+            className="bg-pb-primary/20 text-pb-primary px-3 py-1 rounded-full text-xs font-medium hover:bg-pb-primary/30"
+            title="Open mobile app (coming soon)"
+          >
+            Open App (Coming Soon)
+          </Link>
         </div>
         <div className="flex-1 flex flex-col items-center">
-          <span className="text-pb-primary text-lg font-semibold">
+          <span className="text-white text-lg font-semibold">
             {showTitle || "No show selected"}
           </span>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="text-sm text-pb-gray">
-            {userProfile?.displayName
-              ? `Welcome, ${userProfile.displayName} • ${timeString}`
-              : `Welcome • ${timeString}`}
-          </span>
-          <div className="relative">
-            <Bell className="w-5 h-5 text-pb-gray hover:text-white cursor-pointer" />
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-pb-accent rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold text-white">3</span>
-            </div>
-          </div>
-          <Settings className="w-5 h-5 text-pb-gray hover:text-white cursor-pointer" />
+          {userProfile?.displayName && (
+            <span className="text-sm text-pb-gray">Welcome, {userProfile.displayName}</span>
+          )}
+          <Link to="/profile" className="block">
+            <img
+              src={userProfile?.photoURL || '/public/icon.png'}
+              alt="Profile"
+              className="w-8 h-8 rounded-full border border-pb-primary/40 object-cover"
+            />
+          </Link>
           <button
             onClick={handleSignOut}
             className="ml-2 flex items-center px-2 py-1 rounded hover:bg-pb-primary/20 transition-colors text-pb-gray hover:text-white focus:outline-none"
@@ -139,14 +142,26 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="w-64 bg-pb-darker/30 backdrop-blur-sm border-r border-pb-primary/20 p-4 space-y-6"
+          className={`${navCollapsed ? 'w-16 p-2' : 'w-64 p-4'} bg-pb-darker/30 backdrop-blur-sm border-r border-pb-primary/20 space-y-4 transition-all duration-300`}
         >
+          {/* Collapse toggle */}
+          <div className="flex items-center justify-between mb-2">
+            {!navCollapsed && (
+              <h3 className="text-sm font-semibold text-pb-gray uppercase tracking-wider">Quick Actions</h3>
+            )}
+            <button
+              className="text-pb-gray hover:text-white bg-pb-darker/60 border border-pb-primary/30 rounded px-2 py-1"
+              onClick={() => setNavCollapsed(v => !v)}
+              aria-label={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={navCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {navCollapsed ? '»' : '«'}
+            </button>
+          </div>
+
           {/* Quick Actions */}
           <div>
-            <h3 className="text-sm font-semibold text-pb-gray uppercase tracking-wider mb-3">
-              Quick Actions
-            </h3>
-            <div className="space-y-2">
+            <div className={navCollapsed ? 'space-y-2' : 'space-y-2'}>
               {[
                 { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/' },
                 { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props' },
@@ -157,21 +172,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping' },
               ].map((item, index) => (
                 item.link ? (
-                  <Link to={item.link} key={index} className="block">
+                  <Link to={item.link} key={index} className="block" title={item.text} aria-label={item.text}>
                     <motion.div
                       variants={itemVariants}
                       initial="hidden"
                       animate="visible"
                       transition={{ delay: index * 0.1 }}
-                      className="flex items-center space-x-3 p-3 rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 transition-colors cursor-pointer group"
+                      className={`${navCollapsed ? 'justify-center' : ''} flex items-center space-x-3 p-3 rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 transition-colors cursor-pointer group`}
                     >
-                      <div className="w-8 h-8 bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors">
+                      <div className={`$${'{'}navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors`}>
                         <item.icon className="w-4 h-4 text-pb-primary" />
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">{item.text}</p>
-                        <p className="text-xs text-pb-gray">{item.subtext}</p>
-                      </div>
+                      {!navCollapsed && (
+                        <div>
+                          <p className="text-sm font-medium text-white">{item.text}</p>
+                          <p className="text-xs text-pb-gray">{item.subtext}</p>
+                        </div>
+                      )}
                     </motion.div>
                   </Link>
                 ) : (
@@ -181,15 +198,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     initial="hidden"
                     animate="visible"
                     transition={{ delay: index * 0.1 }}
-                    className="flex items-center space-x-3 p-3 rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 transition-colors cursor-pointer group"
+                    className={`${navCollapsed ? 'justify-center' : ''} flex items-center space-x-3 p-3 rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 transition-colors cursor-pointer group`}
+                    title={item.text}
+                    aria-label={item.text}
                   >
-                    <div className="w-8 h-8 bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors">
+                    <div className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors`}>
                       <item.icon className="w-4 h-4 text-pb-primary" />
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-white">{item.text}</p>
-                      <p className="text-xs text-pb-gray">{item.subtext}</p>
-                    </div>
+                    {!navCollapsed && (
+                      <div>
+                        <p className="text-sm font-medium text-white">{item.text}</p>
+                        <p className="text-xs text-pb-gray">{item.subtext}</p>
+                      </div>
+                    )}
                   </motion.div>
                 )
               ))}
@@ -198,7 +219,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         </motion.aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main className={`flex-1 overflow-hidden ${isBoardsPage ? 'px-0 py-6' : 'p-6'}`}>
           {children}
         </main>
       </div>

@@ -12,11 +12,11 @@ const PackingListDetailPage: React.FC = () => {
   const { packListId } = useParams<{ packListId: string }>();
   const navigate = useNavigate();
   const [packList, setPackList] = useState<PackList | null>(null);
-  const [containers, setContainers] = useState<Array<{ id: string; name: string; type?: string; description?: string; props: { propId: string; quantity: number }[] }>>([]);
+  const [containers, setContainers] = useState<Array<{ id: string; name: string; type?: string; description?: string; props: { propId: string; quantity: number }[]; dimensions?: { width: number; height: number; depth: number; unit: 'cm' | 'in' } }>>([]);
   const [propsList, setPropsList] = useState<InventoryProp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [containerForm, setContainerForm] = useState<{ description?: string; type?: string }>({ description: '', type: '' });
+  const [containerForm, setContainerForm] = useState<{ description?: string; type?: string; length?: string; width?: string; height?: string; unit?: 'cm' | 'in' }>({ description: '', type: '', length: '', width: '', height: '', unit: 'cm' });
   const [formError, setFormError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
@@ -45,8 +45,33 @@ const PackingListDetailPage: React.FC = () => {
       });
   }, [packListId, service]);
 
-  const handleContainerFormChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => {
-    setContainerForm({ ...containerForm, [e.target.name]: e.target.value });
+  const DEFAULT_DIMENSIONS: Record<string, { length: number; width: number; height: number; unit: 'cm' | 'in' }> = {
+    'Cardboard Box': { length: 60, width: 40, height: 40, unit: 'cm' },
+    'Pallet': { length: 120, width: 100, height: 150, unit: 'cm' },
+    'Flight Case': { length: 80, width: 60, height: 50, unit: 'cm' },
+    'Custom Case': { length: 100, width: 60, height: 60, unit: 'cm' },
+    'Crate': { length: 100, width: 80, height: 80, unit: 'cm' },
+    'Tote': { length: 60, width: 40, height: 30, unit: 'cm' },
+    'Trunk': { length: 90, width: 50, height: 50, unit: 'cm' },
+  };
+
+  const handleContainerFormChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === 'type') {
+      const defaults = DEFAULT_DIMENSIONS[value as keyof typeof DEFAULT_DIMENSIONS];
+      if (defaults) {
+        setContainerForm({
+          ...containerForm,
+          type: value,
+          length: String(defaults.length),
+          width: String(defaults.width),
+          height: String(defaults.height),
+          unit: defaults.unit,
+        });
+        return;
+      }
+    }
+    setContainerForm({ ...containerForm, [name]: value });
   };
 
   function generateAlphaCode(length = 6) {
@@ -61,6 +86,9 @@ const PackingListDetailPage: React.FC = () => {
   const handleAddContainer = (e: React.FormEvent) => {
     e.preventDefault();
     const refCode = generateAlphaCode();
+    const parsedLength = containerForm.length ? parseFloat(containerForm.length) : undefined;
+    const parsedWidth = containerForm.width ? parseFloat(containerForm.width) : undefined;
+    const parsedHeight = containerForm.height ? parseFloat(containerForm.height) : undefined;
     setContainers([
       ...containers,
       {
@@ -68,10 +96,13 @@ const PackingListDetailPage: React.FC = () => {
         name: refCode,
         type: containerForm.type || '',
         description: containerForm.description || '',
+        dimensions: (parsedWidth && parsedHeight && parsedLength)
+          ? { width: parsedWidth, height: parsedHeight, depth: parsedLength, unit: containerForm.unit || 'cm' }
+          : undefined,
         props: [],
       },
     ]);
-    setContainerForm({ description: '', type: '' });
+    setContainerForm({ description: '', type: '', length: '', width: '', height: '', unit: 'cm' });
   };
 
   // Compute unpacked props (not in any container)
@@ -163,9 +194,10 @@ const PackingListDetailPage: React.FC = () => {
           <button className="btn btn-secondary" onClick={() => navigate(-1)}>&larr; Back</button>
           <h1 className="text-2xl font-bold">Packing List: {packList.name}</h1>
         </div>
-        <div className="flex gap-8 items-start">
-          {/* Left Panel: Props List */}
-          <div className="w-1/2 bg-gray-900 rounded-xl shadow p-4 flex flex-col max-h-[75vh]">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="flex gap-8 items-start">
+            {/* Left Panel: Props List */}
+            <div className="w-1/2 bg-gray-900 rounded-xl shadow p-4 flex flex-col max-h-[75vh]">
             <h2 className="font-semibold mb-4 text-lg">Props for this Show</h2>
             <input
               type="text"
@@ -175,7 +207,6 @@ const PackingListDetailPage: React.FC = () => {
               className="input input-bordered bg-gray-800 text-white mb-4 w-full"
             />
             <div className="overflow-y-auto flex-1">
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 {filteredProps.length === 0 ? (
                   <div className="text-gray-400">No props found.</div>
                 ) : (
@@ -185,11 +216,10 @@ const PackingListDetailPage: React.FC = () => {
                     ))}
                   </div>
                 )}
-              </DndContext>
             </div>
-          </div>
-          {/* Right Panel: Add Container Form and Containers List */}
-          <div className="w-1/2 flex flex-col gap-4 max-h-[75vh]">
+            </div>
+            {/* Right Panel: Add Container Form and Containers List */}
+            <div className="w-1/2 flex flex-col gap-4 max-h-[75vh]">
             {/* Add Container Form */}
             <div className="bg-gray-900 rounded-xl shadow p-4 mb-2">
               <h2 className="font-semibold mb-2 text-lg">Add Package/Lift</h2>
@@ -209,6 +239,44 @@ const PackingListDetailPage: React.FC = () => {
                   <option value="Tote">Tote</option>
                   <option value="Trunk">Trunk</option>
                   <option value="Other">Other</option>
+                </select>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="length"
+                    value={containerForm.length || ''}
+                    onChange={handleContainerFormChange}
+                    placeholder="Length"
+                    className="input input-bordered bg-gray-800 text-white"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="width"
+                    value={containerForm.width || ''}
+                    onChange={handleContainerFormChange}
+                    placeholder="Width"
+                    className="input input-bordered bg-gray-800 text-white"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="height"
+                    value={containerForm.height || ''}
+                    onChange={handleContainerFormChange}
+                    placeholder="Height"
+                    className="input input-bordered bg-gray-800 text-white"
+                  />
+                </div>
+                <select
+                  name="unit"
+                  value={containerForm.unit || 'cm'}
+                  onChange={handleContainerFormChange}
+                  className="input input-bordered bg-gray-800 text-white"
+                >
+                  <option value="cm">cm</option>
+                  <option value="in">in</option>
                 </select>
                 <textarea
                   name="description"
@@ -235,6 +303,35 @@ const PackingListDetailPage: React.FC = () => {
                       >
                         {container.name}
                         {container.type && <span className="text-xs text-gray-400">({container.type})</span>}
+                        <button
+                          className="ml-auto btn btn-sm btn-primary"
+                          onClick={async () => {
+                            if (!packListId) return;
+                            try {
+                              const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                              const existsRemotely = (packList?.containers || []).some((c) => c.id === container.id);
+                              if (existsRemotely) {
+                                await packListService.updateContainer(packListId, container.id, {
+                                  name: container.name,
+                                  type: container.type,
+                                  description: container.description,
+                                  props: container.props,
+                                  dimensions: container.dimensions,
+                                });
+                              } else {
+                                const { id: _ignore, ...toCreate } = container as any;
+                                await packListService.addContainer(packListId, toCreate);
+                              }
+                              const refreshed = await packListService.getPackList(packListId);
+                              setPackList(refreshed);
+                              setContainers(refreshed.containers || []);
+                            } catch (err) {
+                              setFormError((err as Error)?.message || 'Failed to save container');
+                            }
+                          }}
+                        >
+                          Save Container
+                        </button>
                       </div>
                       {container.description && <div className="text-xs text-gray-400 mb-1">{container.description}</div>}
                       <DroppableContainer container={container}>
@@ -264,7 +361,8 @@ const PackingListDetailPage: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+          </div>
+        </DndContext>
       </div>
     </DashboardLayout>
   );

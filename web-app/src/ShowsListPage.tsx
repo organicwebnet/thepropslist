@@ -56,13 +56,7 @@ const ShowsListPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="mb-4 p-2 bg-pb-primary/10 rounded text-xs text-pb-gray">
-        <div>User UID: {user?.uid || 'N/A'}</div>
-        <div>User Profile Source: /users/{user?.uid}</div>
-        <div>Firestore Rules Check: /userProfiles/{user?.uid}</div>
-        <div>Groups: {JSON.stringify(userProfile?.groups)}</div>
-        <div>Role: {userProfile?.role}</div>
-      </div>
+      {/* Debug info removed per request */}
 
       <div className="relative min-h-[70vh] flex flex-col justify-center items-center bg-gradient-to-br from-pb-primary/40 via-pb-darker/80 to-pb-accent/30 rounded-xl shadow-xl p-6">
         <div className="flex w-full justify-between items-center mb-6">
@@ -92,7 +86,7 @@ const ShowsListPage: React.FC = () => {
             <div className="text-pb-gray">No shows found.</div>
           </div>
         ) : (
-          <div className="w-full max-w-3xl mx-auto">
+          <div className="w-full max-w-7xl mx-auto px-4">
             {shows.map((show) => (
               <div
                 key={show.id}

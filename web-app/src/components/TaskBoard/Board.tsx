@@ -284,16 +284,16 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
   if (!Array.isArray(board.listIds) || board.listIds.length === 0) {
     if (uniqueLists.length === 0) return <div>No lists found for this board.</div>;
     return (
-      <div className="relative w-full min-h-screen flex flex-col bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 overflow-x-hidden">
+      <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
         <div className="flex-1 flex flex-col min-h-0">
           {/* Board Title as sticky header */}
           {!hideHeader && (
-            <div className="sticky top-0 z-10 bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 py-4">
+            <div className="sticky top-0 z-10 bg-transparent py-2">
               <span className="text-2xl font-bold text-white pl-6">{board.title || board.name || "Board"}</span>
             </div>
           )}
           {/* Lists Row Scrollable Area */}
-          <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
+          <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden overscroll-contain">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -319,7 +319,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
               <SortableContext items={Array.isArray(board.listIds) ? board.listIds.map(id => `list-${id}`) : []} strategy={horizontalListSortingStrategy}>
             <div
               ref={listsRowRef}
-              className="flex items-start gap-6 h-full cursor-grab w-max pr-10"
+              className="flex items-start gap-3 h-full cursor-grab w-max px-6 lg:px-10 overscroll-contain"
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
                   {Array.isArray(board.listIds) && board.listIds.length > 0
@@ -400,16 +400,16 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
   }
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 overflow-x-hidden">
+    <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden p-0">
       <div className="flex-1 flex flex-col min-h-0">
         {/* Board Title as sticky header */}
         {!hideHeader && (
-          <div className="sticky top-0 z-10 bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 py-4">
+          <div className="sticky top-0 z-10 bg-transparent py-2">
             <span className="text-2xl font-bold text-white pl-6">{board.title || board.name || "Board"}</span>
           </div>
         )}
         {/* Lists Row Scrollable Area */}
-        <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-auto">
+        <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden overscroll-contain p-0">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -435,7 +435,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
             <SortableContext items={Array.isArray(board.listIds) ? board.listIds.map(id => `list-${id}`) : []} strategy={horizontalListSortingStrategy}>
           <div
             ref={listsRowRef}
-            className="flex items-start gap-6 h-full cursor-grab w-max pr-10"
+            className="flex items-start gap-6 h-full cursor-grab w-max pr-10 overscroll-contain p-0 m-0"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {Array.isArray(board.listIds) && board.listIds.length > 0

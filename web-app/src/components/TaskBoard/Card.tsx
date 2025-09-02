@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { CardData } from "../../types/taskManager";
 import { ImageUpload } from "../ImageUpload";
 import type { PropImage } from "../../types/props";
@@ -7,20 +7,22 @@ import { v4 as uuidv4 } from 'uuid';
 // import { RichTextEditor } from "../../../shared/components/RichTextEditor";
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { MoreVertical } from 'lucide-react';
 
 interface CardProps {
   card: CardData;
   onUpdateCard: (cardId: string, updates: Partial<CardData>) => void;
   dndId: string;
   openInitially?: boolean;
+  onDeleteCard: (cardId: string) => void;
 }
 
 // Popover/modal scaffold for feature dialogs
-const Popover: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ open, onClose, title, children }) => {
+const Popover: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode; className?: string }> = ({ open, onClose, title, children, className }) => {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-pb-darker rounded-xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-3 relative">
+      <div className={`bg-pb-darker rounded-xl p-6 w-full ${className || 'max-w-sm'} shadow-xl flex flex-col gap-3 relative`}>
         <button className="absolute top-2 right-2 text-white text-xl" onClick={onClose} aria-label="Close">×</button>
         <div className="text-base font-bold text-white mb-2">{title}</div>
         {children}
@@ -105,11 +107,11 @@ function parseMentions(text: string) {
   while ((m = bracket.exec(text)) !== null) {
     items.push({ type: m[2] as any, id: m[3], label: m[1] });
   }
-  // Plain @mentions – capture until next @ or newline
-  const plain = /(^|\s)@([^@\n]+)/g;
-  while ((m = plain.exec(text)) !== null) {
+  // Optional explicit user syntax beginning with @@username
+  const explicitUser = /(^|\s)@@([A-Za-z0-9_\-\.]+)/g;
+  while ((m = explicitUser.exec(text)) !== null) {
     const label = (m[2] || '').trim();
-    if (label) items.push({ type: 'user', label }); // default type; can be refined later
+    if (label) items.push({ type: 'user', label });
   }
   return items;
 }
@@ -119,7 +121,8 @@ const CardDetailModal: React.FC<{
   onClose: () => void;
   card: CardData;
   onUpdateCard: (cardId: string, updates: Partial<CardData>) => void;
-}> = ({ open, onClose, card, onUpdateCard }) => {
+  onDeleteCard: (cardId: string) => void;
+}> = ({ open, onClose, card, onUpdateCard, onDeleteCard }) => {
   const [title, setTitle] = useState(card.title);
   const { service: firebaseService, user } = useFirebase();
   const [propsList, setPropsList] = useState<{ id: string; name: string }[]>([]);
@@ -170,6 +173,16 @@ const CardDetailModal: React.FC<{
   // const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([]);
 
   const [newComment, setNewComment] = useState("");
+  const [showMore, setShowMore] = useState(false);
+
+  const titleRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    const el = titleRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  }, [open, title]);
 
   // 1. Add state for image upload popup and checklist add UI
   const [showImageUpload, setShowImageUpload] = useState(false);
@@ -237,7 +250,8 @@ const CardDetailModal: React.FC<{
     if (completed !== card.completed) logActivity('Completed changed', { from: card.completed, to: completed });
     if (JSON.stringify(labels) !== JSON.stringify(card.labels)) logActivity('Labels changed', {});
     if (JSON.stringify(checklists) !== JSON.stringify(card.checklist)) logActivity('Checklist changed', {});
-    onUpdateCard(card.id, { title, description, color: cardColor, assignedTo: members, completed, activityLog, dueDate, labels, checklist: checklists, images, attachments });
+    const attachmentUrls = (attachments || []).map((a: any) => typeof a === 'string' ? a : a.url);
+    onUpdateCard(card.id, { title, description, color: cardColor, assignedTo: members, completed, activityLog, dueDate, labels, checklist: checklists, images, attachments: attachmentUrls as any });
     onClose();
   };
 
@@ -355,8 +369,8 @@ const CardDetailModal: React.FC<{
               className="w-5 h-5 accent-pb-success rounded"
               title="Mark card as completed"
             />
-            <input
-              className={`rounded-lg px-3 py-1.5 text-2xl font-bold bg-transparent shadow-none focus:ring-2 focus:ring-pb-primary focus:outline-none placeholder:text-gray-300 text-white ${completed ? 'line-through opacity-60' : ''}`}
+            <textarea
+              className={`rounded-lg px-3 py-1.5 text-2xl font-bold bg-transparent shadow-none focus:ring-2 focus:ring-pb-primary focus:outline-none placeholder:text-gray-300 text-white resize-none leading-snug overflow-hidden ${completed ? 'line-through opacity-60' : ''}`}
               value={title}
               onChange={e => setTitle(e.target.value)}
               onKeyDown={e => {
@@ -365,9 +379,22 @@ const CardDetailModal: React.FC<{
                 }
               }}
               placeholder="Card title"
-              style={{ boxShadow: 'none', border: 'none' }}
+              style={{ boxShadow: 'none', border: 'none', height: 'auto' }}
               disabled={completed}
+              rows={1}
+              onInput={e => { const el = e.currentTarget; el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; }}
+              ref={titleRef}
             />
+            <div className="ml-auto relative">
+              <button className="text-white/80 hover:text-white" onClick={() => setShowMore(v => !v)} aria-label="More actions">
+                <MoreVertical size={18} />
+              </button>
+              {showMore && (
+                <div className="absolute right-0 top-6 bg-pb-darker border border-white/20 rounded shadow-lg z-50 min-w-[140px]">
+                  <button className="w-full text-left px-3 py-2 hover:bg-white/10 text-red-300" onClick={() => { onDeleteCard(card.id); setShowMore(false); onClose(); }}>Delete card</button>
+                </div>
+              )}
+            </div>
             {showMentionMenuTitle && (
               <div className="absolute top-12 left-10 bg-white text-black rounded shadow p-2 z-50 w-56">
                 <div className="font-semibold mb-1">Mention Type</div>
@@ -404,11 +431,11 @@ const CardDetailModal: React.FC<{
             )}
           </div>
           {/* Documents popover */}
-          <Popover open={showDocs} onClose={() => setShowDocs(false)} title="Documents">
+          <Popover open={showDocs} onClose={() => setShowDocs(false)} title="Documents" className="max-w-2xl">
             <div className="space-y-3">
               <div className="flex gap-2">
-                <input className="flex-1 rounded border border-pb-primary/40 px-2 py-1 text-[#222]" placeholder="Display name (optional)" value={newDocName} onChange={e => setNewDocName(e.target.value)} />
-                <input className="flex-[2] rounded border border-pb-primary/40 px-2 py-1 text-[#222]" placeholder="https://document.link" value={newDocUrl} onChange={e => setNewDocUrl(e.target.value)} />
+                <input className="flex-1 rounded border border-pb-primary/40 px-3 py-2 text-[#222]" placeholder="Display name (optional)" value={newDocName} onChange={e => setNewDocName(e.target.value)} />
+                <input className="flex-[2] rounded border border-pb-primary/40 px-3 py-2 text-[#222]" placeholder="https://document.link" value={newDocUrl} onChange={e => setNewDocUrl(e.target.value)} />
                 <button className="bg-pb-primary hover:bg-pb-success text-white font-semibold px-3 rounded" disabled={!newDocUrl} onClick={() => {
                   const id = uuidv4();
                   setAttachments(list => ([...(list || []), { id, url: newDocUrl.trim(), name: newDocName.trim() || undefined }]));
@@ -507,9 +534,6 @@ const CardDetailModal: React.FC<{
           <div className="rounded-lg p-2">
             <div className="flex items-center justify-between">
               <label className="block font-semibold text-white mb-1">Description</label>
-              {!editingDescription && (
-                <button className="text-pb-accent text-sm" onClick={() => setEditingDescription(true)}>Edit</button>
-              )}
             </div>
             {editingDescription ? (
               <div className="space-y-2">
@@ -740,7 +764,6 @@ const CardDetailModal: React.FC<{
         {/* Modal footer: Save/Delete/Close */}
         <div className="absolute bottom-6 right-8 flex gap-2">
           <button className="bg-pb-primary hover:bg-pb-success text-white font-semibold py-1 px-3 rounded shadow" onClick={handleSave}>Save</button>
-          <button className="bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-3 rounded shadow">Delete</button>
         </div>
       </div>
       {/* Fullscreen image viewer */}
@@ -783,7 +806,7 @@ const CardDetailModal: React.FC<{
   );
 };
 
-const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially }) => {
+const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially, onDeleteCard }) => {
   const [modalOpen, setModalOpen] = useState(!!openInitially);
   useEffect(() => {
     if (openInitially) setModalOpen(true);
@@ -792,8 +815,8 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially })
     e.preventDefault();
     setModalOpen(true);
   };
-  // dnd-kit sortable for cards
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: dndId });
+  // dnd-kit sortable for cards (disable when modal open)
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: dndId, disabled: modalOpen });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -811,7 +834,7 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially })
         }}
         {...attributes}
         {...listeners}
-        className={`block rounded-lg p-3 shadow hover:shadow-lg transition cursor-pointer no-underline ${(!card.color || card.color === '#374151') ? 'border border-white/10' : ''}`}
+        className={`block rounded-md p-3 shadow hover:shadow-lg transition cursor-pointer no-underline ${(!card.color || card.color === '#374151') ? 'border border-white/10' : ''}`}
         onClick={handleOpen}
         tabIndex={0}
         role="button"
@@ -828,7 +851,7 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially })
             <img
               src={(card.images.find(i => i.isMain) || card.images[0]).url}
               alt="cover"
-              className="w-full h-24 object-cover rounded-t-lg"
+              className="w-full h-24 object-cover rounded-t-md"
             />
           </div>
         )}
@@ -837,7 +860,7 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially })
             <img
               src={card.imageUrl}
               alt="cover"
-              className="w-full h-24 object-cover rounded-t-lg"
+              className="w-full h-24 object-cover rounded-t-md"
             />
           </div>
         )}
@@ -853,7 +876,7 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially })
           </div>
         )}
       </div>
-      <CardDetailModal open={modalOpen} onClose={() => setModalOpen(false)} card={card} onUpdateCard={onUpdateCard} />
+      <CardDetailModal open={modalOpen} onClose={() => setModalOpen(false)} card={card} onUpdateCard={onUpdateCard} onDeleteCard={onDeleteCard} />
     </>
 );
 };

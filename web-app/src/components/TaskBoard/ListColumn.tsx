@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Card from "./Card";
 import type { ListData, CardData } from "../../types/taskManager";
-import { Edit, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Edit, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useFirebase } from "../../contexts/FirebaseContext";
@@ -77,7 +77,7 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
       style={style}
       {...attributes}
       {...listeners}
-      className={`bg-pb-darker rounded-xl shadow-lg border border-pb-primary/30 flex flex-col flex-shrink-0 transition-all duration-300 ${collapsed ? '!w-14 min-w-[3.5rem] min-h-[22rem] p-0 bg-pb-primary/20 relative items-center justify-center' : 'p-4 min-w-[18rem] w-[20rem]'}`}
+      className={`bg-pb-darker rounded-md shadow-lg border border-pb-primary/30 flex flex-col flex-shrink-0 transition-all duration-300 ${collapsed ? '!w-10 min-w-[2.5rem] min-h-[22rem] p-0 bg-pb-primary/20 relative items-center justify-center' : 'p-4 min-w-[18rem] w-[20rem]'}`}
     >
       <div className={`flex items-center justify-between mb-4 w-full ${collapsed ? 'mb-0' : ''}`} style={collapsed ? { height: 'auto' } : {}}>
         {collapsed ? (
@@ -88,11 +88,11 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
               </span>
               <button
                 onClick={() => setCollapsed(false)}
-                className="absolute bottom-2 left-1/2 -translate-x-1/2 text-pb-primary hover:text-pb-success p-1 rounded"
+                className="absolute top-2 left-1/2 -translate-x-1/2 text-pb-primary hover:text-pb-success p-1 rounded"
                 aria-label="Expand list"
                 title="Expand"
               >
-                <ChevronDown size={18} />
+                <ChevronRight size={18} />
               </button>
             </div>
           </>
@@ -102,8 +102,8 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
               {list.title}
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setCollapsed(true)} className="text-pb-primary hover:text-pb-success p-1 rounded">
-                <ChevronUp size={20} />
+              <button onClick={() => setCollapsed(true)} className="text-pb-primary hover:text-pb-success p-1 rounded" aria-label="Collapse list" title="Collapse">
+                <ChevronLeft size={20} />
               </button>
               <button className="text-pb-primary hover:text-pb-success p-1 rounded"><Edit size={20} /></button>
               <button className="text-pb-accent hover:text-red-500 p-1 rounded" onClick={() => onDeleteList(list.id)}><Trash2 size={20} /></button>
@@ -114,7 +114,7 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
       {!collapsed && (
         <>
           <SortableContext items={Array.isArray(cards) ? cards.map(card => `${cardIdPrefix}${card.id}`) : []} strategy={verticalListSortingStrategy}>
-            <div className="flex-1 flex flex-col gap-3 mb-4">
+            <div className="flex flex-col gap-3 mb-4">
               {cards.map(card => (
                 <div key={card.id} className="relative">
                   {/* paperclip icon if has attachments */}

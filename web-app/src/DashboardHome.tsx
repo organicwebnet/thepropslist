@@ -2,23 +2,21 @@ import React from 'react';
 import DashboardLayout from './PropsBibleHomepage';
 import { motion } from 'framer-motion';
 import {
-  Package,
-  Theater,
   FileText,
-  Plus,
   Package2,
-  Box,
   Clock,
   CheckCircle,
-  Zap,
-  FileBarChart,
-  BarChart3,
   Crown,
-  Scroll,
-  Star,
-  Home,
-  Calendar
+  Star
 } from 'lucide-react';
+import { useShowSelection } from './contexts/ShowSelectionContext';
+import { useFirebase } from './contexts/FirebaseContext';
+import { useEffect, useState } from 'react';
+import type { Show } from './types/Show';
+import type { Prop } from './types/props';
+import type { CardData } from './types/taskManager';
+import { Link } from 'react-router-dom';
+import { useWebAuth } from './contexts/WebAuthContext';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -52,8 +50,203 @@ const itemVariants = {
 };
 
 const DashboardHome: React.FC = () => {
-  // TODO: Replace with real show and stats data
-  const currentShow = { title: 'Romeo & Juliet' };
+  const { currentShowId } = useShowSelection();
+  const { service } = useFirebase();
+  const [show, setShow] = useState<Show | null>(null);
+  const [props, setProps] = useState<Prop[]>([]);
+  const [cards, setCards] = useState<CardData[]>([]);
+  const { user, userProfile } = useWebAuth();
+
+  // Fetch show
+  useEffect(() => {
+    if (!currentShowId) return;
+    const unsub = service.listenToDocument<Show>(
+      `shows/${currentShowId}`,
+      doc => setShow({ ...doc.data, id: doc.id }),
+      () => setShow(null)
+    );
+    return () => { if (unsub) unsub(); };
+  }, [service, currentShowId]);
+
+  // Fetch props
+  useEffect(() => {
+    if (!currentShowId) return;
+    const unsub = service.listenToCollection<Prop>(
+      'props',
+      data => setProps(data.filter(doc => doc.data.showId === currentShowId).map(doc => ({ ...doc.data, id: doc.id })) as any),
+      () => setProps([])
+    );
+    return () => { if (unsub) unsub(); };
+  }, [service, currentShowId]);
+
+  // Fetch cards from all boards/lists for the show
+  useEffect(() => {
+    if (!currentShowId) return;
+    let unsubBoards: (() => void) | undefined;
+    let unsubCards: (() => void)[] = [];
+    unsubBoards = service.listenToCollection(
+      'todo_boards',
+      docs => {
+        const filteredBoards = docs.filter(b => (b.data as any).showId === currentShowId);
+        // Clear previous listeners
+        unsubCards.forEach(u => u && u());
+        unsubCards = [];
+        filteredBoards.forEach(board => {
+          service.listenToCollection(
+            `todo_boards/${board.id}/lists`,
+            lists => {
+              lists.forEach(list => {
+                const unsub = service.listenToCollection(
+                  `todo_boards/${board.id}/lists/${list.id}/cards`,
+                  cardsDocs => {
+                    setCards(prev => {
+                      const other = prev.filter((c: any) => c.listId !== list.id);
+                      return [
+                        ...other,
+                        ...cardsDocs.map(cd => ({ ...(cd.data as CardData), id: cd.id, listId: (list as any).id }))
+                      ];
+                    });
+                  },
+                  () => {}
+                );
+                unsubCards.push(unsub);
+              });
+            },
+            () => {}
+          );
+        });
+      },
+      () => {}
+    );
+    return () => { if (unsubBoards) unsubBoards(); unsubCards.forEach(u => u && u()); };
+  }, [service, currentShowId]);
+
+  // Calculate stats
+  const totalProps = props.length;
+  const totalOutstandingTasks = cards.filter(card => !card.completed).length;
+  const readyProps = props.filter(p => (p as any).status === 'with-stage-management').length;
+  const showReadyPercent = totalProps > 0 ? Math.round((readyProps / totalProps) * 100) : 0;
+
+  // Recent props activity
+  function toDateSafe(input: any): Date | null {
+    if (!input) return null;
+    if (input instanceof Date) return input;
+    if (typeof input === 'number') return new Date(input);
+    if (typeof input === 'string' && input.trim() !== '') {
+      const parsed = new Date(input);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+    if (input && typeof input.toDate === 'function') {
+      try {
+        const d = input.toDate();
+        return d instanceof Date && !isNaN(d.getTime()) ? d : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  const recentActivity = props
+    .map(p => {
+      const created = toDateSafe((p as any).createdAt);
+      const updated = toDateSafe((p as any).updatedAt);
+      const latest = updated && (!created || updated >= created) ? updated : created;
+      const type = updated && created ? (updated >= created ? 'updated' : 'added') : (updated ? 'updated' : 'added');
+      return latest ? { prop: p, type, date: latest } : null;
+    })
+    .filter((x): x is { prop: Prop; type: 'added' | 'updated'; date: Date } => Boolean(x))
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 4);
+
+  // Urgent tasks
+  const now = new Date();
+  const tasksWithDue = cards
+    .filter(card => card.dueDate && !card.completed)
+    .map(card => ({
+      ...card,
+      due: card.dueDate ? new Date(card.dueDate) : new Date()
+    }))
+    .sort((a, b) => a.due.getTime() - b.due.getTime())
+    .slice(0, 6);
+
+  // Cards assigned to or mentioning the current user
+  const assignedOrMentionedCards = cards.filter(card => {
+    if (!user) return false;
+    const assigned = Array.isArray(card.assignedTo) && card.assignedTo.includes((user as any).uid);
+    const mention = (userProfile && card.description && (
+      (userProfile.displayName && card.description.includes(userProfile.displayName)) ||
+      (userProfile.email && card.description.includes(userProfile.email))
+    ));
+    return assigned || Boolean(mention);
+  });
+
+  function getTaskColor(due: Date) {
+    if (due < now) return 'bg-red-600 text-white';
+    const diff = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    if (diff < 2) return 'bg-orange-500 text-white';
+    return 'bg-green-600 text-white';
+  }
+
+  function isValidDateString(val: unknown): val is string {
+    return typeof val === 'string' && (val as string).trim() !== '';
+  }
+
+  // Days until first performance
+  let daysLeft: number | null = null;
+  let perfDate: Date | null = null;
+  const perfRaw = (show as any)?.firstPerformanceDate || (show as any)?.startDate;
+  const tempPerf = perfRaw as any;
+  if (typeof tempPerf === 'string' && tempPerf.trim() !== '') {
+    perfDate = new Date(tempPerf);
+  } else if (typeof tempPerf === 'number' && !isNaN(tempPerf)) {
+    perfDate = new Date(tempPerf);
+  } else if (tempPerf && typeof tempPerf.toDate === 'function') {
+    perfDate = tempPerf.toDate();
+  }
+  if (perfDate) {
+    daysLeft = Math.max(0, Math.ceil((perfDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  }
+
+  // Find the next upcoming show date label
+  let nextShowDateLabel = '';
+  if (show) {
+    const nowLocal = new Date();
+    const dateFields = [
+      { key: 'rehearsalStartDate', label: 'Rehearsal' },
+      { key: 'techWeekStartDate', label: 'Tech Week' },
+      { key: 'firstPerformanceDate', label: 'First Performance' },
+      { key: 'pressNightDate', label: 'Press Night' },
+      { key: 'startDate', label: 'Start' },
+      { key: 'endDate', label: 'End' },
+    ];
+    const upcoming = dateFields
+      .map(({ key, label }) => {
+        const raw = (show as any)[key];
+        let date: Date | null = null;
+        const temp = raw as any;
+        if (isValidDateString(temp) && temp !== undefined) {
+          date = new Date(temp as string);
+        } else if (typeof temp === 'number' && !isNaN(temp)) {
+          date = new Date(temp);
+        } else if (temp && typeof temp.toDate === 'function') {
+          date = temp.toDate();
+        }
+        return date && date > nowLocal ? { date, label } : null;
+      })
+      .filter(Boolean) as { date: Date; label: string }[];
+    if (upcoming.length > 0) {
+      const soonest = upcoming.reduce((a, b) => (a.date < b.date ? a : b));
+      if (soonest.date instanceof Date && !isNaN(soonest.date.getTime())) {
+        nextShowDateLabel = `Next Show Date: ${soonest.label} – ${soonest.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+      } else {
+        nextShowDateLabel = `Next Show Date: ${soonest.label}`;
+      }
+    } else {
+      nextShowDateLabel = 'No upcoming show dates';
+    }
+  }
+
   return (
     <DashboardLayout>
       <motion.div
@@ -72,12 +265,12 @@ const DashboardHome: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-2xl font-bold text-white">
-                  {currentShow?.title || 'Selected a Show'}
+                  {show?.name || 'Select a Show'}
                 </h2>
-                <p className="text-pb-light/80">In Rehearsal • Tomorrow 7:30 PM • Royal Theater</p>
+                <p className="text-pb-light/80">{nextShowDateLabel}</p>
               </div>
               <div className="text-right">
-                <div className="text-3xl font-bold text-white">18 days </div>
+                <div className="text-3xl font-bold text-white">{daysLeft !== null ? `${daysLeft} days` : '--'}</div>
                 <div className="text-pb-light/80 text-sm">until first night</div>
               </div>
             </div>
@@ -85,7 +278,7 @@ const DashboardHome: React.FC = () => {
               <motion.div
                 className="bg-pb-success h-2 rounded-full"
                 initial={{ width: 0 }}
-                animate={{ width: '85%' }}
+                animate={{ width: `${showReadyPercent}%` }}
                 transition={{ duration: 1, delay: 0.5 }}
               />
             </div>
@@ -97,10 +290,9 @@ const DashboardHome: React.FC = () => {
           <motion.div variants={itemVariants} className="lg:col-span-2">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               {[
-                { icon: Package2, label: 'Total Props', value: '67', color: 'bg-pb-blue' },
-                { icon: Box, label: 'Packed', value: '58', color: 'bg-pb-green' },
-                { icon: Clock, label: 'Pending Tasks', value: '8', color: 'bg-pb-orange' },
-                { icon: CheckCircle, label: 'Ready for Show', value: '85%', color: 'bg-pb-success' }
+                { icon: Package2, label: 'Total Props', value: totalProps, color: 'bg-pb-blue' },
+                { icon: Clock, label: 'Pending Tasks', value: totalOutstandingTasks, color: 'bg-pb-orange' },
+                { icon: CheckCircle, label: 'Ready for Show', value: `${showReadyPercent}%`, color: 'bg-pb-success' },
               ].map((stat, index) => (
                 <motion.div
                   key={index}
@@ -119,39 +311,44 @@ const DashboardHome: React.FC = () => {
               ))}
             </div>
 
-            {/* Production Management */}
+            {/* Urgent Tasks Row */}
             <motion.div variants={itemVariants}>
               <div className="flex items-center space-x-2 mb-4">
-                <Zap className="w-5 h-5 text-pb-primary" />
-                <h3 className="text-lg font-semibold text-white">Production Management</h3>
+                <Clock className="w-5 h-5 text-pb-primary" />
+                <h3 className="text-lg font-semibold text-white">Urgent Tasks</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                 { icon: Home, color: 'from-pb-primary to-pb-secondary', title: 'Home', subtitle: 'Dashboard overview', link: '/' },
-                 { icon: Package, color: 'from-pb-blue to-pb-primary', title: 'Props Inventory', subtitle: 'Manage all production props', link: '/props' },
-                 { icon: Box, color: 'from-pb-green to-pb-primary', title: 'Packing Lists', subtitle: 'Packing & storage management', link: '/packing-lists' },
-                 { icon: Theater, color: 'from-pb-purple to-pb-primary', title: 'Show Management', subtitle: 'Manage productions and venues', link: '/shows' },
-                 { icon: Calendar, color: 'from-pb-orange to-pb-primary', title: 'Task Boards', subtitle: 'Kanban-style to-do boards', link: '/boards' },
-               ].map((item, index) => (
-                  <motion.div
-                    key={index}
-                    variants={cardVariants}
-                    whileHover="hover"
-                    className={`bg-gradient-to-br ${item.color} rounded-2xl p-6 cursor-pointer group`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                        <item.icon className="w-6 h-6 text-white" />
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {tasksWithDue.length === 0 && <div className="text-pb-gray">No urgent tasks.</div>}
+                {tasksWithDue.map((task) => (
+                  <Link key={task.id} to={`/boards?cardId=${task.id}`} className="min-w-[220px]">
+                    <div className={`p-4 rounded-xl shadow ${getTaskColor((task as any).due)}`}>
+                      <div className="font-bold text-lg">{task.title}</div>
+                      <div className="text-xs mb-1">Due: {(task as any).due.toLocaleString()}</div>
+                      <div className="text-xs">{task.description}</div>
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-white">{item.title}</h4>
-                        <p className="text-sm text-white/80">{item.subtitle}</p>
-                      </div>
+                  </Link>
+                ))}
                     </div>
                   </motion.div>
+            {user && assignedOrMentionedCards.length > 0 && (
+              <motion.div variants={itemVariants}>
+                <div className="flex items-center space-x-2 mb-4 mt-6">
+                  <Star className="w-5 h-5 text-pb-accent" />
+                  <h3 className="text-lg font-semibold text-white">Your Tasks</h3>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-2">
+                  {assignedOrMentionedCards.map(card => (
+                    <Link key={card.id} to={`/boards?cardId=${card.id}`} className="min-w-[220px]">
+                      <div className="p-4 rounded-xl shadow bg-pb-primary/80 text-white">
+                        <div className="font-bold text-lg">{card.title}</div>
+                        {card.dueDate && <div className="text-xs mb-1">Due: {new Date(card.dueDate).toLocaleString()}</div>}
+                        <div className="text-xs line-clamp-2">{card.description}</div>
+                      </div>
+                    </Link>
                 ))}
               </div>
             </motion.div>
+            )}
           </motion.div>
 
           {/* Recent Props Activity */}
@@ -162,12 +359,8 @@ const DashboardHome: React.FC = () => {
                 <h3 className="text-lg font-semibold text-white">Recent Props Activity</h3>
               </div>
               <div className="space-y-4">
-                {[
-                  { icon: Crown, title: 'Victorian Chair', subtitle: 'Added to Romeo & Juliet Act 2, Scene 1', user: 'Sarah (Props Master)', time: '5 min ago' },
-                  { icon: Scroll, title: 'Wooden Sword', subtitle: 'Marked as packed in Box #12', user: 'Mike (Props Assistant)', time: '12 min ago' },
-                  { icon: Star, title: 'Royal Goblet', subtitle: 'Condition updated: Needs minor repair', user: 'Emily (Stage Manager)', time: '18 min ago' },
-                  { icon: Scroll, title: 'Love Letter Scroll', subtitle: 'QR code scanned at rehearsal', user: 'David (ASM)', time: '25 min ago' }
-                ].map((activity, index) => (
+                {recentActivity.length === 0 && <div className="text-pb-gray">No recent activity.</div>}
+                {recentActivity.map((activity, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, x: 20 }}
@@ -176,12 +369,12 @@ const DashboardHome: React.FC = () => {
                     className="flex items-start space-x-3 p-3 rounded-lg bg-pb-primary/5 hover:bg-pb-primary/10 transition-colors"
                   >
                     <div className="w-8 h-8 bg-pb-accent/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <activity.icon className="w-4 h-4 text-pb-accent" />
+                      <Crown className="w-4 h-4 text-pb-accent" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white">{activity.title}</p>
-                      <p className="text-xs text-pb-gray">{activity.subtitle}</p>
-                      <p className="text-xs text-pb-gray mt-1">{activity.user} • {activity.time}</p>
+                      <p className="text-sm font-medium text-white">{activity.prop.name}</p>
+                      <p className="text-xs text-pb-gray">{activity.type === 'added' ? 'Prop added' : 'Prop updated'}</p>
+                      <p className="text-xs text-pb-gray mt-1">{activity.date ? activity.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</p>
                     </div>
                   </motion.div>
                 ))}
@@ -189,46 +382,6 @@ const DashboardHome: React.FC = () => {
             </div>
           </motion.div>
         </div>
-
-        {/* Department Status */}
-        <motion.div variants={itemVariants} className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-6 border border-pb-primary/20">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="w-5 h-5 text-pb-secondary" />
-              <h3 className="text-lg font-semibold text-white">Department Status</h3>
-            </div>
-            <div className="w-10 h-10 bg-pb-secondary/20 rounded-full flex items-center justify-center">
-              <Zap className="w-5 h-5 text-pb-secondary" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { dept: 'Props Department', status: 'On Track', progress: 85, color: 'text-pb-success' },
-              { dept: 'Stage Management', status: 'Ahead', progress: 92, color: 'text-pb-success' },
-              { dept: 'Set Design', status: 'Behind', progress: 68, color: 'text-pb-warning' }
-            ].map((dept, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="text-center"
-              >
-                <div className="text-sm font-medium text-white mb-1">{dept.dept}</div>
-                <div className={`text-xs ${dept.color} mb-2`}>{dept.status}</div>
-                <div className="w-full bg-pb-primary/20 rounded-full h-2">
-                  <motion.div
-                    className="bg-pb-primary h-2 rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${dept.progress}%` }}
-                    transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
-                  />
-                </div>
-                <div className="text-xs text-pb-gray mt-1">{dept.progress}%</div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
       </motion.div>
     </DashboardLayout>
   );
