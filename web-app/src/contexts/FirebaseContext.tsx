@@ -54,7 +54,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({ children }) 
   }, []);
 
   if (loadingUser || !service) {
-    return <div>Loading authentication...</div>;
+    // Render app-like background to avoid white flash during auth/service init
+    return <div className="min-h-screen w-full bg-gradient-to-br from-pb-darker/80 to-pb-primary/30" />;
   }
 
   return (

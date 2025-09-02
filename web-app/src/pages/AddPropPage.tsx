@@ -150,7 +150,30 @@ const AddPropPage: React.FC = () => {
     setSaving(true);
     setError(null);
     try {
-      await firebaseService.addDocument('props', form);
+      // Persist new maker / hire company if user typed a new one
+      let payload: any = { ...form };
+      if (form.source === 'made') {
+        const makerName = (form as any).makerName?.trim();
+        if (!((form as any).makerId) && makerName) {
+          try {
+            const newId = await firebaseService.addDocument('makers', { name: makerName });
+            payload.makerId = newId;
+            setMakers(prev => [...prev, { id: String(newId), name: makerName }]);
+          } catch {}
+        }
+      }
+      if (form.source === 'hired') {
+        const hireCompanyName = (form as any).hireCompanyName?.trim();
+        if (!((form as any).hireCompanyId) && hireCompanyName) {
+          try {
+            const newId = await firebaseService.addDocument('hire_companies', { name: hireCompanyName });
+            payload.hireCompanyId = newId;
+            setHireCompanies(prev => [...prev, { id: String(newId), name: hireCompanyName }]);
+          } catch {}
+        }
+      }
+
+      await firebaseService.addDocument('props', payload);
       setSaving(false);
       if (addAnother) {
         const { category, showId } = form;

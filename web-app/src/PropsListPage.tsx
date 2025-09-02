@@ -159,47 +159,59 @@ const PropsListPage: React.FC = () => {
             onChange={e => setSearch(e.target.value)}
             className="flex-1 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/40 text-white placeholder-pb-gray focus:outline-none focus:ring-2 focus:ring-pb-primary"
           />
-          <select
-            value={category}
-            onChange={e => setCategory(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/40 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary"
-          >
-            <option value="">All Categories</option>
-            {propCategories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          <select
-            value={status}
-            onChange={e => setStatus(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/40 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary"
-          >
-            <option value="">All Statuses</option>
-            <option value="in">In</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="retired">Retired</option>
-            <option value="available">Available</option>
-          </select>
-          <select
-            value={act}
-            onChange={e => setAct(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/40 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary"
-          >
-            <option value="">All Acts</option>
-            {acts.map(a => (
-              <option key={a} value={String(a)}>{a}</option>
-            ))}
-          </select>
-          <select
-            value={scene}
-            onChange={e => setScene(e.target.value)}
-            className="px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/40 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary"
-          >
-            <option value="">All Scenes</option>
-            {scenes.map(s => (
-              <option key={s} value={String(s)}>{s}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+            >
+              <option value="">All Categories</option>
+              {propCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+          <div className="relative">
+            <select
+              value={status}
+              onChange={e => setStatus(e.target.value)}
+              className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+            >
+              <option value="">All Statuses</option>
+              <option value="in">In</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="retired">Retired</option>
+              <option value="available">Available</option>
+            </select>
+            <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+          <div className="relative">
+            <select
+              value={act}
+              onChange={e => setAct(e.target.value)}
+              className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+            >
+              <option value="">All Acts</option>
+              {acts.map(a => (
+                <option key={a} value={String(a)}>{a}</option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+          <div className="relative">
+            <select
+              value={scene}
+              onChange={e => setScene(e.target.value)}
+              className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+            >
+              <option value="">All Scenes</option>
+              {scenes.map(s => (
+                <option key={s} value={String(s)}>{s}</option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
         </div>
         {!currentShowId && (
           <div className="flex flex-col items-center justify-center h-64">
