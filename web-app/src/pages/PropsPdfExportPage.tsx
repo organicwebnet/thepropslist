@@ -8,9 +8,9 @@ import html2pdf from 'html2pdf.js';
 
 
 const allFields: (keyof Prop)[] = [
-  'name', 'description', 'category', 'status', 'quantity', 'act', 'scene', 'images', 'digitalAssets', 'videos',
-  'location', 'notes', 'tags', 'manufacturer', 'model', 'serialNumber', 'color', 'period', 'style', 'condition',
-  // Add more fields as needed
+  'name', 'description', 'images', 'digitalAssets', 'videos',
+  'category', 'status', 'quantity', 'act', 'scene', 'location',
+  'manufacturer', 'model', 'serialNumber', 'color', 'style', 'condition',
 ];
 
 const defaultPdfOptions: PdfGenerationOptions = {
@@ -24,7 +24,13 @@ const defaultPdfOptions: PdfGenerationOptions = {
   title: '',
 };
 
-function generatePropsListHtml(props: Prop[], options: PdfGenerationOptions, header: string, footer: string, logoUrl?: string): string {
+function generatePropsListPages(
+  props: Prop[],
+  options: PdfGenerationOptions,
+  header: string,
+  footer: string,
+  logoUrl?: string
+): { css: string; pages: string[]; fullHtml: string } {
   console.log('Props passed to generatePropsListHtml:', props);
   const isLandscape = options.layout === 'landscape';
   const pageWidth = isLandscape ? 1123 : 794; // px (A4 at 96dpi)
@@ -57,46 +63,57 @@ function generatePropsListHtml(props: Prop[], options: PdfGenerationOptions, hea
   function badge(text: string, color: string) {
     return `<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.95em;font-weight:600;background:${color};color:#fff;margin-right:8px;">${text}</span>`;
   }
+  // Helper to render a QR code img for a URL (uses public QR server)
+  const qrImg = (url: string, size = 90) => `<img src="https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}" alt="QR" width="${size}" height="${size}" style="display:block;border:1px solid #ddd;border-radius:6px;background:#fff;"/>`;
+
   // Each prop page
   const propPages = props.map((prop, idx) => {
+    const sf = (options.selectedFields || {}) as any;
     // Images
     const mainImg = prop.images && prop.images.length > 0 ? prop.images[0].url : '';
     const galleryImgs = prop.images && prop.images.length > 1 ? prop.images.slice(1) : [];
     // Details table
-    const details = [
-      ['Category', prop.category],
-      ['Status', prop.status],
-      ['Quantity', prop.quantity],
-      ['Act', prop.act],
-      ['Scene', prop.scene],
-      ['Location', prop.location],
-      ['Tags', prop.tags?.join(', ')],
-      ['Manufacturer', prop.manufacturer],
-      ['Model', prop.model],
-      ['Serial Number', prop.serialNumber],
-      ['Color', prop.color],
-      ['Period', prop.period],
-      ['Style', prop.style],
-      ['Condition', prop.condition],
-    ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+    const details: [string, any, string][] = [] as any;
+    const pushIf = (key: keyof Prop | string, label: string, value: any) => {
+      if (sf[key] === false) return;
+      if (value === undefined || value === null || value === '') return;
+      details.push([label, value, String(key)]);
+    };
+    pushIf('category', 'Category', prop.category);
+    pushIf('status', 'Status', prop.status);
+    pushIf('quantity', 'Quantity', prop.quantity);
+    pushIf('act', 'Act', prop.act);
+    pushIf('scene', 'Scene', prop.scene);
+    pushIf('location', 'Location', prop.location);
+    pushIf('manufacturer', 'Manufacturer', prop.manufacturer);
+    pushIf('model', 'Model', prop.model);
+    pushIf('serialNumber', 'Serial Number', prop.serialNumber);
+    pushIf('color', 'Color', prop.color);
+    // Excluded: Period
+    pushIf('style', 'Style', prop.style);
+    pushIf('condition', 'Condition', prop.condition);
     const detailsHtml = details.map(([label, value]) =>
       `<tr><td class='detail-label'>${label}</td><td class='detail-value'>${value}</td></tr>`
     ).join('');
-    // Digital assets/videos
+    // Digital assets/videos (accept string[] or object[])
     let assetsHtml = '';
-    if (prop.digitalAssets && prop.digitalAssets.length > 0) {
-      assetsHtml += `<div class='assets-section'><h4>Files & Documents</h4><ul>`;
-      assetsHtml += prop.digitalAssets.map(asset =>
-        `<li><a href='${asset.url}' target='_blank'>${asset.name || asset.title || asset.url}</a></li>`
-      ).join('');
-      assetsHtml += `</ul></div>`;
+    const fileAssets = (prop.digitalAssets || []).map((a: any) => typeof a === 'string' ? ({ url: a, name: a, title: a }) : a);
+    const videoAssets = (prop.videos || []).map((a: any) => typeof a === 'string' ? ({ url: a, name: a, title: a }) : a);
+    if (fileAssets.length > 0 && (options.selectedFields as any)?.digitalAssets !== false) {
+      assetsHtml += `<div class='assets-section'><h4>Files & Documents</h4>`;
+      assetsHtml += fileAssets.map(asset => {
+        const name = asset.name || asset.title || asset.url;
+        return `<div style='display:flex;align-items:center;gap:12px;margin-bottom:10px;'>${options.showFilesQR ? qrImg(asset.url) : ''}<div style='display:flex;flex-direction:column;gap:4px;'><a href='${asset.url}' target='_blank'>${name}</a><span style='font-size:0.9em;color:#666;'>${asset.url}</span></div></div>`;
+      }).join('');
+      assetsHtml += `</div>`;
     }
-    if (prop.videos && prop.videos.length > 0) {
-      assetsHtml += `<div class='assets-section'><h4>Videos</h4><ul>`;
-      assetsHtml += prop.videos.map(video =>
-        `<li><a href='${video.url}' target='_blank'>${video.name || video.title || video.url}</a></li>`
-      ).join('');
-      assetsHtml += `</ul></div>`;
+    if (videoAssets.length > 0 && (options.selectedFields as any)?.videos !== false) {
+      assetsHtml += `<div class='assets-section'><h4>Videos</h4>`;
+      assetsHtml += videoAssets.map(video => {
+        const name = video.name || video.title || video.url;
+        return `<div style='display:flex;align-items:center;gap:12px;margin-bottom:10px;'>${options.showVideosQR ? qrImg(video.url) : ''}<div style='display:flex;flex-direction:column;gap:4px;'><a href='${video.url}' target='_blank'>${name}</a><span style='font-size:0.9em;color:#666;'>${video.url}</span></div></div>`;
+      }).join('');
+      assetsHtml += `</div>`;
     }
     // 50/50 split layout
     const isDummyImg = !mainImg || mainImg.startsWith('https://example.com/');
@@ -109,11 +126,15 @@ function generatePropsListHtml(props: Prop[], options: PdfGenerationOptions, hea
         </div>
         <div class='split-container ${isLandscape ? 'landscape' : 'portrait'}'>
           <div class='split-left'>
-            ${!isDummyImg
-              ? `<img class='main-img' src='${mainImg}' alt='Main image' />`
-              : `<div class='main-img placeholder-img'>No Image</div>`
-            }
-            ${galleryImgs.length > 0 ? `<div class='gallery-row'>${galleryImgs.map(img => `<img src='${img.url}' alt='Gallery image' class='gallery-img' />`).join('')}</div>` : ''}
+            ${sf.images === false ? '' : `
+            <div class='image-side-by-side'>
+              ${!isDummyImg
+                ? `<img class='main-img' src='${mainImg}' alt='Main image' />`
+                : `<div class='main-img placeholder-img'>No Image</div>`
+              }
+              ${galleryImgs.length > 0 ? `<div class='thumbs-col'>${galleryImgs.map(img => `<img src='${img.url}' alt='Thumbnail image' class='thumb-img' />`).join('')}</div>` : ''}
+            </div>
+            `}
           </div>
           <div class='split-right'>
             <div class='prop-title'>${prop.name || ''}</div>
@@ -121,7 +142,7 @@ function generatePropsListHtml(props: Prop[], options: PdfGenerationOptions, hea
               ${prop.category ? badge(prop.category, '#1976d2') : ''}
               ${prop.status ? badge(prop.status, '#8e24aa') : ''}
             </div>
-            ${prop.description ? `<div class='desc'>${prop.description}</div>` : ''}
+            ${(sf.description === false) ? '' : (prop.description ? `<div class='desc'>${prop.description}</div>` : '')}
             <table class='details-table'>${detailsHtml}</table>
             ${assetsHtml}
           </div>
@@ -139,7 +160,8 @@ function generatePropsListHtml(props: Prop[], options: PdfGenerationOptions, hea
   const catalogCss = `
     <style>
       body { background: #f0f0f0; font-family: 'Helvetica Neue', Arial, sans-serif; color: #222; margin: 0; padding: 0; }
-      .page { page-break-after: always; min-height: ${pageHeight}px; min-width: ${pageWidth}px; max-width: ${pageWidth}px; max-height: ${pageHeight}px; margin: 0 auto 32px auto; background: #fff; border: 2px solid #111; border-radius: 12px; box-shadow: 0 8px 32px #0002; display: flex; flex-direction: column; justify-content: space-between; padding: 0; }
+      .page { page-break-after: always; min-height: ${pageHeight}px; min-width: ${pageWidth}px; max-width: ${pageWidth}px; max-height: ${pageHeight}px; margin: 0 auto; background: #fff; border: 2px solid #111; border-radius: 12px; box-shadow: 0 8px 32px #0002; display: flex; flex-direction: column; justify-content: space-between; padding: 0; }
+      .page + .page { margin-top: 32px; }
       .header { text-align: left; padding: 32px 48px 12px 48px; font-size: 1.1em; color: #555; border-bottom: 1px solid #eee; background: #fff; }
       .footer { text-align: right; padding: 12px 48px 32px 48px; font-size: 1em; color: #555; border-top: 1px solid #eee; background: #fff; }
       .logo { max-height: 48px; margin-bottom: 8px; }
@@ -154,9 +176,10 @@ function generatePropsListHtml(props: Prop[], options: PdfGenerationOptions, hea
       .split-container.portrait { flex-direction: column; }
       .split-left, .split-right { flex: 1; padding: 48px; box-sizing: border-box; }
       .split-left { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-      .main-img { width: 100%; max-width: 340px; max-height: 340px; border-radius: 16px; box-shadow: 0 2px 12px #0001; border: 1px solid #eee; margin-bottom: 24px; }
-      .gallery-row { display: flex; gap: 12px; margin-top: 8px; }
-      .gallery-img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
+      .image-side-by-side { display: flex; flex-direction: row; align-items: flex-start; gap: 16px; width: 100%; justify-content: center; }
+      .main-img { width: 100%; max-width: 360px; max-height: 360px; border-radius: 16px; box-shadow: 0 2px 12px #0001; border: 1px solid #eee; }
+      .thumbs-col { display: flex; flex-direction: column; gap: 10px; }
+      .thumb-img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
       .split-right { display: flex; flex-direction: column; justify-content: flex-start; }
       .prop-title { font-size: 2em; font-weight: bold; margin-bottom: 12px; }
       .badges { margin-bottom: 16px; }
@@ -187,15 +210,15 @@ function generatePropsListHtml(props: Prop[], options: PdfGenerationOptions, hea
       @media print { .page { page-break-after: always; } }
     </style>
   `;
-  // Combine all pages
-  return `
+  const pages = [tocHtml, ...propPages];
+  const fullHtml = `
     <html><head><meta charset='UTF-8'><title>${options.title || 'Props List'}</title>
     ${catalogCss}
     </head><body>
-      ${tocHtml}
-      ${propPages.join('')}
+      ${pages.join('')}
     </body></html>
   `;
+  return { css: catalogCss, pages, fullHtml };
 }
 
 const PropsPdfExportPage: React.FC = () => {
@@ -218,6 +241,9 @@ const PropsPdfExportPage: React.FC = () => {
   const [iframeUrl, setIframeUrl] = useState<string | null>(null);
   // Add state for fullHtml at the top
   const [fullHtml, setFullHtml] = useState('');
+  const [pageCss, setPageCss] = useState('');
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(1);
 
   useEffect(() => {
     if (!currentShowId) {
@@ -249,6 +275,21 @@ const PropsPdfExportPage: React.FC = () => {
     }
   }, [showPreview]);
 
+  // Recompute scale to fit horizontally
+  useEffect(() => {
+    const handleResize = () => {
+      if (!previewContainerRef.current) return;
+      const dims = (pdfOptions.layout === 'landscape') ? { w: 1123, h: 794 } : { w: 794, h: 1123 };
+      const cw = previewContainerRef.current.clientWidth;
+      const padding = 32; // approximate padding inside container
+      const scale = Math.min(1, (cw - padding) / dims.w);
+      setPreviewScale(scale > 0 && Number.isFinite(scale) ? scale : 1);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [pdfOptions.layout, showPreview]);
+
   const handlePreviewKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!showPreview || pageHtmls.length === 0) return;
     if (e.key === 'ArrowLeft') {
@@ -277,15 +318,14 @@ const PropsPdfExportPage: React.FC = () => {
         return (a.name || '').localeCompare(b.name || '');
       });
     }
-    const html = generatePropsListHtml(sortedProps, { ...pdfOptions, title: showTitle }, header, footer, logoUrl);
-    setFullHtml(html);
-    console.log('Generated PDF HTML:', html); // DEBUG: Output the generated HTML
-    // In handlePreview, instead of splitting into pages, just set pageHtmls to a single full HTML document:
-    setPageHtmls([html]);
+    const { pages, fullHtml, css } = generatePropsListPages(sortedProps, { ...pdfOptions, title: showTitle }, header, footer, logoUrl);
+    setFullHtml(fullHtml);
+    setPageCss(css);
+    console.log('Generated PDF HTML pages:', pages.length);
+    setPageHtmls(pages);
     setCurrentPage(0);
     setShowPreview(true);
-    // The rest of the logic remains the same.
-    const blob = new Blob([html], { type: 'text/html' });
+    const blob = new Blob([fullHtml], { type: 'text/html' });
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(blob));
   };
@@ -324,13 +364,19 @@ const PropsPdfExportPage: React.FC = () => {
       setIframeUrl(null);
       return;
     }
-    const blob = new Blob([html], { type: 'text/html' });
+    const wrapped = `<html><head><meta charset='UTF-8'>${pageCss}</head><body>${html}</body></html>`;
+    const blob = new Blob([wrapped], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     setIframeUrl(url);
     return () => {
       URL.revokeObjectURL(url);
     };
-  }, [showPreview, pageHtmls, currentPage]);
+  }, [showPreview, pageHtmls, currentPage, pageCss]);
+
+  const pageW = pdfOptions.layout === 'landscape' ? 1123 : 794;
+  const pageH = pdfOptions.layout === 'landscape' ? 794 : 1123;
+  const scaledW = Math.max(0, Math.floor(pageW * previewScale));
+  const scaledH = Math.max(0, Math.floor(pageH * previewScale));
 
   return (
     <DashboardLayout>
@@ -343,7 +389,7 @@ const PropsPdfExportPage: React.FC = () => {
             <h2 className="text-2xl font-bold mb-2">Export Props List to PDF</h2>
             <div>
               <label className="font-semibold block mb-1">Fields to include:</label>
-              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-2">
                 {allFields.map(f => (
                   <label key={f} className="text-sm flex items-center gap-2">
                     <input
@@ -409,7 +455,7 @@ const PropsPdfExportPage: React.FC = () => {
             </div>
           </div>
           {/* Right panel: PDF preview */}
-          <div className="flex-1 flex flex-col items-center w-full overflow-auto bg-[#18183a]">
+          <div className="flex-1 flex flex-col w-full overflow-hidden bg-[#18183a]">
             {showPreview && pageHtmls.length > 0 && (
               <div
                 ref={previewNavRef}
@@ -418,32 +464,47 @@ const PropsPdfExportPage: React.FC = () => {
                 className="outline-none focus:ring-2 focus:ring-pb-primary rounded"
                 style={{ width: '100%' }}
               >
-                <div className="flex justify-center items-center w-full h-full min-h-[900px] p-8">
-                  <div className="relative flex justify-center items-center w-full" style={{ minHeight: '900px' }}>
-                    {iframeUrl ? (
-                      <iframe
-                        src={iframeUrl}
-                        title="PDF Preview"
-                        className="bg-white rounded-lg shadow-2xl border border-gray-300"
-                        style={{
-                          width: pdfOptions.layout === 'landscape' ? '1123px' : '794px',
-                          height: pdfOptions.layout === 'landscape' ? '900px' : '1800px',
-                          margin: '0 auto',
-                          background: 'white',
-                          boxShadow: '0 8px 32px #0003',
-                          borderRadius: '12px',
-                          border: '1px solid #e0e0e0',
-                          display: 'block',
-                          // Remove zoom and overflow
-                        }}
-                        scrolling="auto"
-                      />
-                    ) : (
-                      <div className="text-white text-lg">PDF page could not be loaded.</div>
-                    )}
+                {/* Top pager */}
+                <div className="flex items-center justify-center gap-4 mb-3 sticky top-0 bg-[#18183a] py-2 z-10">
+                  <button
+                    className="btn btn-secondary px-4 py-2 rounded disabled:opacity-50"
+                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                  >Previous</button>
+                  <span className="text-white text-lg">Page {currentPage + 1} of {pageHtmls.length}</span>
+                  <button
+                    className="btn btn-secondary px-4 py-2 rounded disabled:opacity-50"
+                    onClick={() => setCurrentPage(p => Math.min(pageHtmls.length - 1, p + 1))}
+                    disabled={currentPage === pageHtmls.length - 1}
+                  >Next</button>
+                </div>
+                <div ref={previewContainerRef} className="w-full h-full min-h-0 overflow-auto overflow-x-hidden p-0 m-0">
+                  <div className="mx-auto" style={{ width: scaledW, height: scaledH }}>
+                    <div style={{ width: pageW, height: pageH, transform: `scale(${previewScale})`, transformOrigin: 'top left' }}>
+                      {iframeUrl ? (
+                        <iframe
+                          src={iframeUrl}
+                          title="PDF Preview"
+                          className="bg-white rounded-lg shadow-2xl border border-gray-300"
+                          style={{
+                            width: `${pageW}px`,
+                            height: `${pageH}px`,
+                            background: 'white',
+                            boxShadow: '0 8px 32px #0003',
+                            borderRadius: '12px',
+                            border: '1px solid #e0e0e0',
+                            display: 'block',
+                          }}
+                          scrolling="no"
+                        />
+                      ) : (
+                        <div className="text-white text-lg">PDF page could not be loaded.</div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-center gap-4 mt-2">
+                {/* Bottom pager */}
+                <div className="flex items-center justify-center gap-4 mt-1 mb-0">
                   <button
                     className="btn btn-secondary px-4 py-2 rounded disabled:opacity-50"
                     onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
