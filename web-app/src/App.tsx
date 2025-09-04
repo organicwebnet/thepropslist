@@ -26,6 +26,7 @@ import ProfilePage from './pages/ProfilePage';
 import FeedbackPage from './pages/FeedbackPage';
 import PropDetailMockPage from './pages/PropDetailMockPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import JoinInvitePage from './pages/JoinInvitePage';
 
 function App() {
   const { user } = useWebAuth();
@@ -47,6 +48,7 @@ function App() {
           <Route path="/shows/:id/edit" element={<EditShowPage />} />
           <Route path="/shows/:id" element={<ShowDetailPage />} />
           <Route path="/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />
+          <Route path="/join/:token" element={<JoinInvitePage />} />
           <Route path="/packing-lists" element={<ProtectedRoute><PackingListPage /></ProtectedRoute>} />
           <Route path="/packing-lists/:packListId" element={<ProtectedRoute><PackingListDetailPage /></ProtectedRoute>} />
           <Route path="/packing-lists/:packListId/containers/:containerId" element={<ProtectedRoute><ContainerDetailPage /></ProtectedRoute>} />

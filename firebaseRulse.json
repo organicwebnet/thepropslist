@@ -87,12 +87,13 @@ service cloud.firestore {
     match /shows/{showId} {
       allow read: if isSystemAdmin() || (request.auth != null);
       allow update, delete: if isSystemAdmin() || (request.auth != null && (
+        request.auth.uid == resource.data.ownerId ||
+        request.auth.uid == resource.data.userId ||
         resource.data.team[request.auth.uid] == "god" ||
         resource.data.team[request.auth.uid] == "props_supervisor"
       ));
       allow create: if isSystemAdmin() || request.auth != null;
-
-      // Team subcollection (if you use it)
+    
       match /team/{teamMemberId} {
         allow read: if isSystemAdmin() || (request.auth != null && get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] != null);
         allow write: if isSystemAdmin() || (request.auth != null && (
@@ -102,14 +103,26 @@ service cloud.firestore {
       }
     }
     match /invitations/{inviteId} {
+      // Create allowed for inviter, show owner, or team admins
       allow create: if isSystemAdmin() || (request.auth != null && (
-        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] == "god" ||
-        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] == "props_supervisor"
+        // The user creating the invite is the inviter
+        request.resource.data.inviterId == request.auth.uid ||
+        // Or the user owns the show
+        request.auth.uid == get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.ownerId ||
+        request.auth.uid == get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.userId ||
+        // Or the user is an admin on the show
+        hasTeamRole(request.resource.data.showId, 'god') ||
+        hasTeamRole(request.resource.data.showId, 'props_supervisor')
       ));
-      allow read, update, delete: if isSystemAdmin() || (request.auth != null && (
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] == "god" ||
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] == "props_supervisor" ||
-        (request.auth.token.email == resource.data.email && resource.data.status == "pending")
+
+      // Read public so recipients can open the link without being on the team yet
+      allow read: if true;
+
+      // Update/delete allowed for inviter or show admins
+      allow update, delete: if isSystemAdmin() || (request.auth != null && (
+        request.auth.uid == resource.data.inviterId ||
+        hasTeamRole(resource.data.showId, 'god') ||
+        hasTeamRole(resource.data.showId, 'props_supervisor')
       ));
     }
     match /tasks/{taskId} {
