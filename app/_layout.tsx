@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
@@ -16,6 +18,10 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Make status bar match app theme and hide white gaps on Pixel
+    SystemUI.setBackgroundColorAsync('#18181b').catch(() => {});
+  }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <FirebaseProvider>
@@ -29,6 +35,7 @@ export default function RootLayout() {
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen name="auth" options={{ headerShown: false }} />
                   </Stack>
+                  <StatusBar style="light" backgroundColor="#18181b" translucent />
                 </PropsProvider>
               </ShowsProvider>
             </FontProvider>

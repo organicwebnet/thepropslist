@@ -14,6 +14,7 @@ import { Show } from '../shared/services/firebase/types';
 // Import FirebaseDocument type
 import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // import type { FirebaseService } from '../shared/services/firebase/types.ts'; // Removed FirebaseService type import, service is used directly
 // Remove direct firestore imports as service is used
 // import { collection, onSnapshot, query, where, orderBy, limit, doc, getDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -72,6 +73,10 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
        // Optional: Clear localStorage if show is deselected
        // localStorage.removeItem('lastSelectedShowId');
     }
+    // Persist selection on native as well
+    if (show && Platform.OS !== 'web') {
+      AsyncStorage.setItem('lastSelectedShowId', show.id).catch(() => {});
+    }
   }, [stableSetSelectedShowInternal]); // Dependency is now the stable internal setter
 
   // REMOVE Direct db instance derivation here
@@ -126,6 +131,17 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
         if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
           try {
             lastSelectedId = localStorage.getItem('lastSelectedShowId');
+            if (lastSelectedId) {
+              showToSelect = processedShows.find(s => s.id === lastSelectedId) || null;
+            }
+          } catch (e) { /* silent */ }
+        }
+
+        if (!showToSelect && Platform.OS !== 'web') {
+          try {
+            // Read cached selection on native
+            // eslint-disable-next-line no-extra-boolean-cast
+            lastSelectedId = (await AsyncStorage.getItem('lastSelectedShowId')) as string | null;
             if (lastSelectedId) {
               showToSelect = processedShows.find(s => s.id === lastSelectedId) || null;
             }
