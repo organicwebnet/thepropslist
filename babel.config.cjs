@@ -8,6 +8,14 @@ module.exports = function (api) {
     ],
     plugins: [
       [
+        'module-resolver',
+        {
+          alias: {
+            'lucide-react': 'lucide-react-native',
+          },
+        },
+      ],
+      [
         'module:react-native-dotenv',
         {
           moduleName: '@env',
