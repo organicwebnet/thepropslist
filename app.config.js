@@ -8,8 +8,8 @@ module.exports = ({ config }) => {
     userInterfaceStyle: "automatic",
     splash: {
       image: "./assets/splash.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff"
+      resizeMode: "cover",
+      backgroundColor: "#18181b"
     },
     assetBundlePatterns: [
       "**/*",
@@ -24,11 +24,16 @@ module.exports = ({ config }) => {
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff"
+        backgroundColor: "#18181b"
       },
       package: "com.propsbible",
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
-      edgeToEdgeEnabled: true
+      edgeToEdgeEnabled: true,
+      statusBar: {
+        backgroundColor: "#18181b",
+        style: "light",
+        translucent: true
+      }
     },
     web: {
       bundler: "metro",
