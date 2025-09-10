@@ -3,6 +3,7 @@ import { View, FlatList, TouchableOpacity, Text, StyleSheet, ActivityIndicator, 
 import { useRouter } from 'expo-router';
 import type { Show } from '../../src/shared/services/firebase/types';
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useShows } from '../../src/contexts/ShowsContext';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -21,6 +22,13 @@ export default function PackingScreen() {
 
   const handleCreateBox = () => {
     router.navigate('/(tabs)/packing/createBox');
+  };
+
+  const handleFindContainer = (show?: Show) => {
+    if (show) {
+      setSelectedShow(show);
+    }
+    router.navigate('/(tabs)/packing/find');
   };
 
   if (loading) {
@@ -53,9 +61,14 @@ export default function PackingScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Packing</Text>
-          <TouchableOpacity style={styles.addButton} onPress={handleCreateBox}>
-            <Ionicons name="add" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => handleFindContainer()}>
+              <MaterialCommunityIcons name="qrcode-scan" size={22} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addButton} onPress={handleCreateBox}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
         
         <FlatList
@@ -76,7 +89,15 @@ export default function PackingScreen() {
                   </Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#9ca3af" />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => handleFindContainer(item)}
+                  style={styles.rowIconButton}
+                >
+                  <MaterialCommunityIcons name="qrcode-scan" size={18} color="#c084fc" />
+                </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={24} color="#9ca3af" />
+              </View>
             </TouchableOpacity>
           )}
           keyExtractor={(item) => item.id}
@@ -119,6 +140,16 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  iconButton: {
+    backgroundColor: 'rgba(192, 132, 252, 0.6)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)'
   },
   loadingContainer: {
     flex: 1,
@@ -169,6 +200,14 @@ const styles = StyleSheet.create({
   showItemSubtitle: {
     fontSize: 14,
     color: '#9ca3af',
+  },
+  rowIconButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(192, 132, 252, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(192, 132, 252, 0.25)'
   },
   emptyContainer: {
     flex: 1,

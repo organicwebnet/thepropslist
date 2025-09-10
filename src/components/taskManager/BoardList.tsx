@@ -218,18 +218,16 @@ const BoardList: React.FC<BoardListProps> = ({
     listContainer: {
       width: 280,
       backgroundColor: 'transparent',
-      borderRadius: 8,
+      borderRadius: 12,
       marginHorizontal: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 0,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
       alignSelf: 'flex-start',
-      borderWidth: 2,
-      borderColor: 'rgba(80,80,200,0.3)',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.18,
-      shadowRadius: 12,
-      elevation: 8,
+      shadowOpacity: 0.10,
+      shadowRadius: 8,
+      elevation: 4,
     },
     listHeader: {
       flexDirection: 'row',
@@ -247,15 +245,15 @@ const BoardList: React.FC<BoardListProps> = ({
       paddingBottom: 4,
     },
     cardContainer: {
-      marginBottom: 10,
+      marginBottom: 12,
       padding: 0,
-      backgroundColor: 'rgb(24, 11, 102)',
-      borderRadius: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 3,
-      elevation: 2,
+      backgroundColor: 'rgba(12,18,36,0.65)',
+      borderRadius: 14,
+      borderWidth: 0,
+      borderColor: 'transparent',
+      overflow: 'hidden',
+      shadowColor: 'transparent',
+      elevation: 0,
     },
     cardDragging: {
       opacity: 0.8,
@@ -264,7 +262,7 @@ const BoardList: React.FC<BoardListProps> = ({
       fontSize: 16,
       fontWeight: '500',
       color: '#FFFFFF',
-      paddingHorizontal: 4,
+      paddingHorizontal: 2,
       paddingVertical: 2,
     },
     emptyListText: {
@@ -287,13 +285,13 @@ const BoardList: React.FC<BoardListProps> = ({
       fontWeight: '600',
     },
     textInput: {
-      backgroundColor: '#161B22',
+      backgroundColor: 'rgba(0,0,0,0.35)',
       color: '#FFFFFF',
       padding: 12,
       borderRadius: 8,
       marginBottom: 10,
       borderWidth: 1,
-      borderColor: '#555',
+      borderColor: 'rgba(255,255,255,0.12)',
     },
     addCardActions: {
       flexDirection: 'row',
@@ -357,40 +355,21 @@ const BoardList: React.FC<BoardListProps> = ({
     );
   }
 
-  // Use the same pastel color as collapsed
-  const pastelColors = [
-    '#e3fcef', // Green
-    '#fffbe6', // Yellow
-    '#ffe2cc', // Orange
-    '#ffd6e5', // Red
-    '#eae6ff', // Purple
-    '#deebff', // Blue
-    '#e6fcff', // Teal
-    '#e4f7d2', // Lime
-    '#f9eaff', // Magenta
-    '#f4f5f7', // Default
+  // Gradient background more in-keeping with app theme
+  const gradients = [
+    ['#222645', '#2f3a6b'],
+    ['#26324f', '#2b3f63'],
+    ['#233045', '#2a3960'],
+    ['#243252', '#2d416a'],
   ];
-  function pickPastelColor(str: string) {
+  function pickGradient(str: string) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    return pastelColors[Math.abs(hash) % pastelColors.length];
+    return gradients[Math.abs(hash) % gradients.length];
   }
-  const bgColor = pickPastelColor(listId || listName || 'default');
+  const [g1, g2] = pickGradient(listId || listName || 'default');
   return (
-    <View
-      style={{
-        ...listStyles.listContainer,
-        backgroundColor: bgColor,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(80,80,200,0.15)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.10,
-        shadowRadius: 8,
-        elevation: 4,
-      }}
-    >
+    <LinearGradient colors={[g1, g2]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={listStyles.listContainer}>
       <DraxView
         style={{ flex: 1, backgroundColor: 'transparent' }}
         receivingStyle={{ borderColor: currentThemeColors.primary, borderWidth: 2 }}
@@ -433,7 +412,7 @@ const BoardList: React.FC<BoardListProps> = ({
                       }}
                     />
                   ) : null}
-                  <View style={{ padding: 8, paddingTop: card.imageUrl ? 6 : 0 }}>
+                  <View style={{ padding: 12, paddingTop: card.imageUrl ? 8 : 12 }}>
                     <Text style={listStyles.cardTitle}>{card.title}</Text>
                     {/* Details row (icons, numbers) can go here if needed */}
                   </View>
@@ -563,14 +542,8 @@ const BoardList: React.FC<BoardListProps> = ({
           </View>
         </View>
       </DraxView>
-      {/* TEST BUTTON: Always visible, bright red */}
-      <Pressable
-        style={{ backgroundColor: 'red', padding: 16, margin: 8, borderRadius: 8, alignItems: 'center' }}
-        onPress={() => Alert.alert('Test', 'Button pressed!')}
-      >
-        <Text style={{ color: 'white', fontWeight: 'bold' }}>TEST BUTTON</Text>
-      </Pressable>
-    </View>
+      {/* Removed temporary test button */}
+    </LinearGradient>
   );
 };
 

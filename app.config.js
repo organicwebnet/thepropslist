@@ -1,4 +1,9 @@
+const fs = require('fs');
+const path = require('path');
+
 module.exports = ({ config }) => {
+  const iosPlist = process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist';
+  const hasIosPlist = fs.existsSync(path.resolve(__dirname, iosPlist));
   return {
     name: "The Props List",
     slug: "props-bible",
@@ -19,7 +24,7 @@ module.exports = ({ config }) => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.propsbible",
-      googleServicesFile: process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist'
+      ...(hasIosPlist ? { googleServicesFile: iosPlist } : {})
     },
     android: {
       adaptiveIcon: {

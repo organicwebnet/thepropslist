@@ -564,7 +564,6 @@ const TaskBoardDetailScreen = () => {
       borderColor: 'transparent',
       padding: 14,
       marginHorizontal: LIST_SPACING,
-      maxHeight: '95%',
       alignSelf: 'flex-start',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
@@ -1028,11 +1027,11 @@ const TaskBoardDetailScreen = () => {
           />
         </DraxProvider>
         
-        {/* Always visible bottom navigation */}
-        <View style={styles.bottomNavigation}>
+        {/* Bottom navigation to mirror main tabs for this standalone screen */}
+        <View style={[styles.bottomNavigation, { borderTopColor: '#c084fc', backgroundColor: '#18181b' }]}>
           <Pressable onPress={() => router.navigate('/(tabs)')} style={styles.navItem}>
             <Ionicons name="home" size={24} color="#c084fc" />
-            <DefaultText style={styles.navText}>Home</DefaultText>
+            <DefaultText style={[styles.navText, { color: '#c084fc' }]}>Home</DefaultText>
           </Pressable>
           <Pressable onPress={() => router.navigate('/(tabs)/props')} style={styles.navItem}>
             <Ionicons name="cube" size={24} color="#a3a3a3" />

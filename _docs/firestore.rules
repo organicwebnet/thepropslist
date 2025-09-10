@@ -152,12 +152,12 @@ service cloud.firestore {
              request.auth.uid in get(/databases/$(database)/documents/todo_boards/$(boardId)).data.sharedWith;
     }
 
-    // Safely checks for system-admin role by providing default empty maps/values
-    // to prevent null reference errors if the fields don't exist.
+    // Check for system-admin role without using unsupported map.get()
     function isSystemAdmin() {
-      return request.auth.uid != null &&
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.get('groups', {})
-          .get('system-admin', false) == true;
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+        (get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.groups != null) &&
+        (get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.groups['system-admin'] == true);
     }
 
     // Function to check if a user is a member of the show's team
@@ -179,8 +179,9 @@ service cloud.firestore {
 
     // Function to check user role from their profile
     function getUserRole() {
-      // Safely gets the role from the user's profile, returns null if not found.
-      return get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.get('role', null);
+      return request.auth != null && exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role
+        : null;
     }
 
     // THIS RULE MUST BE LAST to act as a catch-all deny.

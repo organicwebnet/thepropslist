@@ -76,9 +76,9 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
   
   if (!isInitialized) {
     return (
-        <View style={globalStyles.centered}>
-            <Text>Initializing Firebase...</Text>
-        </View>
+      <View style={[globalStyles.centered, { backgroundColor: '#18181b' }]}>
+        <Text style={{ color: 'white' }}>Initializing...</Text>
+      </View>
     );
   }
 

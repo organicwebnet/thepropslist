@@ -35,7 +35,7 @@ export default function RootLayout() {
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen name="auth" options={{ headerShown: false }} />
                   </Stack>
-                  <StatusBar style="light" backgroundColor="#18181b" translucent />
+                  <StatusBar style="light" backgroundColor="#18181b" translucent={false} />
                 </PropsProvider>
               </ShowsProvider>
             </FontProvider>

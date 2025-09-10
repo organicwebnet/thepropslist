@@ -117,10 +117,17 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
   };
 
   if (loading) {
+    if (Platform.OS === 'web') {
+      return (
+        <div className="flex items-center justify-center h-screen">
+          <ActivityIndicator size="large" color="var(--highlight-color)" />
+        </div>
+      );
+    }
     return (
-      <div className="flex items-center justify-center h-screen">
-        <ActivityIndicator size="large" color="var(--highlight-color)" />
-      </div>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <ActivityIndicator size="large" color="#BB86FC" />
+      </View>
     );
   }
 
@@ -249,8 +256,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
               Acts and Scenes
             </Text>
             {acts.length > 0 ? (
-              acts.map((act: Act) => (
-                <View key={act.id} style={{ marginBottom: 16, backgroundColor: '#404040', borderRadius: 8, padding: 16 }}>
+              acts.map((act: Act, actIndex: number) => (
+                <View key={String(act.id ?? actIndex)} style={{ marginBottom: 16, backgroundColor: '#404040', borderRadius: 8, padding: 16 }}>
                   <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 }}>
                     Act {act.id as string | number}
                     {act.name && <Text style={{ color: '#CCCCCC' }}> - {act.name}</Text>}
@@ -258,8 +265,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                   {act.description && (
                     <Text style={{ color: '#CCCCCC', marginBottom: 12 }}>{act.description}</Text>
                   )}
-                  {Array.isArray(act.scenes) && act.scenes.map((scene: Scene) => (
-                    <View key={scene.id} style={{ backgroundColor: '#505050', borderRadius: 8, padding: 12, marginBottom: 8 }}>
+                  {Array.isArray(act.scenes) && act.scenes.map((scene: Scene, sceneIndex: number) => (
+                    <View key={String(scene.id ?? `${actIndex}-${sceneIndex}`)} style={{ backgroundColor: '#505050', borderRadius: 8, padding: 12, marginBottom: 8 }}>
                       <Text style={{ fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4 }}>
                         Scene {scene.id as string | number}: {scene.name || 'Untitled Scene'}
                       </Text>
@@ -467,8 +474,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Acts and Scenes</h2>
           <div className="space-y-6">
             {acts.length > 0 ? (
-              acts.map((act: Act) => (
-                <div key={act.id} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+              acts.map((act: Act, actIndex: number) => (
+                <div key={String(act.id ?? actIndex)} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
                   <h3 className="text-lg font-medium text-[var(--text-primary)] mb-3">
                     Act {act.id as string | number}
                     {act.name && <span className="text-[var(--text-secondary)] ml-2">- {act.name}</span>}
@@ -477,8 +484,8 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                     <p className="text-[var(--text-secondary)] mb-3">{act.description}</p>
                   )}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Array.isArray(act.scenes) && act.scenes.map((scene: Scene) => (
-                      <div key={scene.id} className="p-3 bg-[var(--input-bg)] rounded-lg">
+                    {Array.isArray(act.scenes) && act.scenes.map((scene: Scene, sceneIndex: number) => (
+                      <div key={String(scene.id ?? `${actIndex}-${sceneIndex}`)} className="p-3 bg-[var(--input-bg)] rounded-lg">
                         <p className="font-medium text-[var(--text-primary)]">
                           Scene {scene.id as string | number}: {scene.name || 'Untitled Scene'}
                         </p>

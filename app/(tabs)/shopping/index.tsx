@@ -21,6 +21,7 @@ import { FirebaseDocument } from '../../../src/shared/services/firebase/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../../src/styles/theme';
+import { useShows } from '../../../src/contexts/ShowsContext';
 import LinearGradient from 'react-native-linear-gradient';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -29,6 +30,7 @@ export default function ShoppingListScreen() {
   const { service } = useFirebase();
   const { user, userProfile } = useAuth();
   const { theme: themeName } = useTheme();
+  const { selectedShow } = useShows();
   const router = useRouter();
   const currentTheme = themeName === 'dark' ? darkTheme : lightTheme;
 
@@ -68,7 +70,7 @@ export default function ShoppingListScreen() {
     if (!shoppingService) return;
     
     try {
-      const itemDocs = await shoppingService.getShoppingItems();
+      const itemDocs = await shoppingService.getShoppingItems(selectedShow?.id);
       setItems(itemDocs);
     } catch (error) {
       console.error('Error loading shopping items:', error);
@@ -77,7 +79,7 @@ export default function ShoppingListScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [shoppingService]);
+  }, [shoppingService, selectedShow?.id]);
 
   useEffect(() => {
     if (!user || !shoppingService) return;
@@ -92,11 +94,12 @@ export default function ShoppingListScreen() {
         console.error('Error listening to shopping items:', error);
         setLoading(false);
         setRefreshing(false);
-      }
+      },
+      selectedShow?.id
     );
 
     return unsubscribe;
-  }, [user, shoppingService]);
+  }, [user, shoppingService, selectedShow?.id]);
 
   // Load items when service is ready
   useEffect(() => {

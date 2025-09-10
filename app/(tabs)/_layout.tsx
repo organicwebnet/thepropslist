@@ -1,14 +1,23 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { View, ActivityIndicator } from 'react-native';
 
 export default function TabLayout() {
   const { user, loading } = useAuth();
 
   // Don't render tabs if user is not authenticated or still loading
-  if (loading || !user) {
-    return null;
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181b' }}>
+        <ActivityIndicator color="#c084fc" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return <Redirect href="/auth" />;
   }
 
   return (
@@ -101,6 +110,12 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="packing/find"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="packing/list"
         options={{
           href: null,
         }}
