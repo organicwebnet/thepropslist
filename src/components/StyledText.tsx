@@ -1,8 +1,8 @@
 import React from 'react';
 import { Text, StyleSheet, type TextProps } from 'react-native';
-import { useFont } from '../contexts/FontContext.tsx';
-import { useTheme } from '../contexts/ThemeContext.tsx';
-import { lightTheme, darkTheme } from '../styles/theme.ts';
+import { useFont } from '../contexts/FontContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { lightTheme, darkTheme } from '../styles/theme';
 
 // Extend TextProps to allow passing all standard Text component props
 interface StyledTextProps extends TextProps {

@@ -1,25 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { SafeAreaView, View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Alert } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { SafeAreaView, View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { Stack } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../../src/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../../src/styles/theme';
 import { useShows } from '../../../src/contexts/ShowsContext';
 import { useProps } from '../../../src/contexts/PropsContext';
-import { usePacking } from '../../../src/hooks/usePacking';
-import type { PackedProp } from '../../../src/types/packing';
-import { CONTAINER_TYPES } from '../../../src/shared/constants/containerTypes';
 
 type Step = 'select' | 'review';
-
-export default function CreateBoxScreen() {
-  const router = useRouter();
+export default function CreateBoxMock() {
   const { theme } = useTheme();
   const colors = theme === 'light' ? lightTheme.colors : darkTheme.colors;
   const s = styles(colors);
   const { selectedShow } = useShows();
   const { props: allProps } = useProps();
-  const { operations, loading: packingLoading } = usePacking(selectedShow?.id);
 
   const available = useMemo(
     () => (selectedShow ? (allProps || []).filter(p => p.showId === selectedShow.id) : (allProps || [])),
@@ -30,58 +24,16 @@ export default function CreateBoxScreen() {
   const [q, setQ] = useState('');
   const [ids, setIds] = useState<string[]>([]);
   const [name, setName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const containerTypes = CONTAINER_TYPES as readonly string[];
+  const containerTypes = ['Box', 'Crate', 'Trunk', 'Wardrobe', 'Bin', 'Case'];
   const [containerType, setContainerType] = useState<string>('Box');
 
   const filtered = useMemo(() => (q ? available.filter(p => p.name.toLowerCase().includes(q.toLowerCase())) : available), [available, q]);
   const selected = useMemo(() => available.filter(p => ids.includes(p.id)), [available, ids]);
   const toggle = (id: string) => setIds(prev => (prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]));
 
-  const handleCreate = async () => {
-    if (!selectedShow) {
-      Alert.alert('Select a show first');
-      return;
-    }
-    if (selected.length === 0 || !name.trim()) return;
-    setIsSaving(true);
-    try {
-      const packedProps: PackedProp[] = selected.map(p => ({
-        propId: p.id,
-        name: p.name || 'Unnamed Prop',
-        quantity: 1,
-        weight: 0,
-        weightUnit: 'kg',
-        isFragile: false,
-      }));
-
-      const newId = await operations.createBox(packedProps, name.trim(), `Created from mobile – ${containerType}`);
-      if (newId) {
-        await operations.updateBox(newId, { containerType });
-        Alert.alert('Box created', undefined, [
-          { text: 'OK', onPress: () => router.navigate({ pathname: '/(tabs)/packing/list', params: { showId: selectedShow.id } } as any) }
-        ]);
-      } else {
-        Alert.alert('Error', 'Failed to create box.');
-      }
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to create');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  if (packingLoading && step === 'select') {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={s.container}>
-      <Stack.Screen options={{ title: 'Create Box' }} />
+      <Stack.Screen options={{ title: 'Create Box (Mock)' }} />
       {step === 'select' ? (
         <View style={{ flex: 1, padding: 16 }}>
           <Text style={s.h}>Select props</Text>
@@ -91,7 +43,7 @@ export default function CreateBoxScreen() {
           </View>
           <FlatList
             data={filtered}
-            keyExtractor={(item, index) => String((item as any)?.id ?? `${(item as any)?.name ?? 'item'}-${index}`)}
+            keyExtractor={i => i.id}
             renderItem={({ item }) => {
               const checked = ids.includes(item.id);
               return (
@@ -131,14 +83,13 @@ export default function CreateBoxScreen() {
               );
             })}
           </View>
-
           <Text style={[s.label, { marginTop: 12 }]}>Items ({selected.length})</Text>
           <FlatList data={selected} keyExtractor={i => i.id} renderItem={({ item }) => (
             <View style={s.reviewRow}><Text style={s.title} numberOfLines={1}>{item.name}</Text><Text style={s.subStrong}>Qty: {item.quantity || 1}</Text></View>
           )} />
           <View style={[s.bottom, { justifyContent: 'flex-end' }]}>
-            <TouchableOpacity style={[s.primary, (selected.length === 0 || !name?.trim()) && { opacity: 0.4 }]} disabled={selected.length === 0 || !name?.trim() || isSaving} onPress={handleCreate}>
-              {isSaving ? <ActivityIndicator color={colors.card} /> : <Text style={s.primaryText}>Create</Text>}
+            <TouchableOpacity style={[s.primary, (selected.length === 0 || !name?.trim()) && { opacity: 0.4 }]} disabled={selected.length === 0 || !name?.trim()} onPress={() => alert('Mock only – no save.')}>
+              <Text style={s.primaryText}>Create (Mock)</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -20,6 +20,7 @@ import BoardsPage from './pages/BoardsPage';
 import PackingListPage from './pages/PackingListPage';
 import PackingListDetailPage from './pages/PackingListDetailPage';
 import ContainerDetailPage from './pages/ContainerDetailPage';
+import PublicContainerPage from './pages/PublicContainerPage';
 import PropsPdfExportPage from './pages/PropsPdfExportPage';
 import ShoppingListPage from './pages/ShoppingListPage';
 import ProfilePage from './pages/ProfilePage';
@@ -52,6 +53,8 @@ function App() {
           <Route path="/packing-lists" element={<ProtectedRoute><PackingListPage /></ProtectedRoute>} />
           <Route path="/packing-lists/:packListId" element={<ProtectedRoute><PackingListDetailPage /></ProtectedRoute>} />
           <Route path="/packing-lists/:packListId/containers/:containerId" element={<ProtectedRoute><ContainerDetailPage /></ProtectedRoute>} />
+          {/* Public container viewer: scan or link goes here */}
+          <Route path="/c/:containerId" element={<PublicContainerPage />} />
           <Route path="/shopping" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />

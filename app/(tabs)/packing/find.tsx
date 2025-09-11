@@ -34,6 +34,7 @@ export default function PropFinderScreen() {
   const [targetProp, setTargetProp] = useState<Prop | null>(null);
   const [propSearchQuery, setPropSearchQuery] = useState('');
   const [showPropSelectionModal, setShowPropSelectionModal] = useState(false);
+  const [hasSearchedProp, setHasSearchedProp] = useState(false);
   
   const [scannedBoxes, setScannedBoxes] = useState<ScannedBoxResult[]>([]);
   const [showScanner, setShowScanner] = useState(false);
@@ -57,6 +58,7 @@ export default function PropFinderScreen() {
     setPropSearchQuery('');
     setError(null);
     setFinderMode('prop');
+    setHasSearchedProp(true);
   };
 
   const handleQrScan = async (data: Record<string, any>) => {
@@ -214,10 +216,6 @@ export default function PropFinderScreen() {
     return (
       <>
         <View style={{ gap: 10 }}>
-          <TouchableOpacity style={s.scanButton} onPress={() => setShowPropSelectionModal(true)}>
-            <Feather name="search" size={18} color={currentThemeColors.card} style={{ marginRight: 8 }} />
-            <StyledText style={s.scanButtonText}>{targetProp ? `Selected: ${targetProp.name}` : 'Select Prop to Locate'}</StyledText>
-          </TouchableOpacity>
           <TouchableOpacity style={[s.scanButton, { backgroundColor: '#3A8CC1' }]} onPress={() => { setError(null); setScannerPurpose('prop'); setShowScanner(true); }}>
             <MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{ marginRight: 8 }} />
             <StyledText style={s.scanButtonText}>Scan Prop Label</StyledText>
@@ -226,22 +224,37 @@ export default function PropFinderScreen() {
         {targetProp ? (
           (() => {
             const matches = (allBoxesForShow || []).filter(b => Array.isArray(b.props) && b.props.some(p => p.propId === targetProp.id));
-            if (matches.length === 0) {
-              return <StyledText style={s.infoText}>No container found for this prop.</StyledText>;
-            }
             return (
               <View>
-                <StyledText style={[s.boxStatusText, { marginBottom: 6 }]}>Found in:</StyledText>
-                {matches.map(b => (
-                  <View key={b.id} style={[s.scannedBoxItem, s.boxFound]}>
-                    <View style={s.boxItemHeader}>
-                      <Feather name="package" size={20} color={currentThemeColors.primary} />
-                      <StyledText style={s.boxName}>{b.name || b.id}</StyledText>
-                    </View>
-                    <StyledText style={s.boxStatusText}>GUID: {b.id}</StyledText>
-                    <StyledText style={s.boxContentPreview}>Items: {b.props?.length || 0}</StyledText>
-                  </View>
-                ))}
+                {matches.length > 0 ? (
+                  <>
+                    <StyledText style={[s.boxStatusText, { marginBottom: 6 }]}>Found in container(s):</StyledText>
+                    {matches.map(b => (
+                      <View key={b.id} style={[s.scannedBoxItem, s.boxFound]}>
+                        <View style={s.boxItemHeader}>
+                          <Feather name="package" size={20} color={currentThemeColors.primary} />
+                          <StyledText style={s.boxName}>{b.name || b.id}</StyledText>
+                        </View>
+                        <StyledText style={s.boxStatusText}>GUID: {b.id}</StyledText>
+                      </View>
+                    ))}
+                  </>
+                ) : (
+                  hasSearchedProp ? (<StyledText style={s.infoText}>No container found for this prop.</StyledText>) : null
+                )}
+
+                {/* Show current location metadata */}
+                <View style={[s.scannedBoxItem, { borderColor: currentThemeColors.border, borderWidth: 1 }]}> 
+                  <StyledText style={[s.boxStatusText, { fontWeight: '600' }]}>Current Location</StyledText>
+                  <StyledText style={s.boxContentPreview}>Current: {targetProp.currentLocation || '-'}</StyledText>
+                  <StyledText style={s.boxContentPreview}>Storage: {targetProp.location || '-'}</StyledText>
+                  {targetProp.assignment?.type === 'location' && (
+                    <StyledText style={s.boxContentPreview}>Assigned Location: {targetProp.assignment.name || targetProp.assignment.id}</StyledText>
+                  )}
+                  {matches.length === 0 && targetProp.assignment?.type === 'box' && (
+                    <StyledText style={s.boxContentPreview}>Assigned Container GUID: {targetProp.assignment.id}</StyledText>
+                  )}
+                </View>
               </View>
             );
           })()
@@ -269,22 +282,40 @@ export default function PropFinderScreen() {
         </TouchableOpacity>
       </View>
       
-      <TouchableOpacity style={s.targetPropSelector} onPress={() => setShowPropSelectionModal(true)}>
-        <Feather name="search" size={20} color={currentThemeColors.textSecondary} style={{marginRight: 8}}/>
-        <StyledText style={s.targetPropText}>
-          {targetProp ? `Searching for: ${targetProp.name}` : 'Tap to select Prop to find'}
-        </StyledText>
-      </TouchableOpacity>
-
-      {targetProp && (
-          <View style={s.targetPropDisplay}>
-            {targetProp.primaryImageUrl ? 
-                <Image source={{uri: targetProp.primaryImageUrl}} style={s.targetPropImage} /> : 
-                <View style={s.targetPropImagePlaceholder}><Feather name="package" size={30} color={currentThemeColors.textSecondary}/></View>
-            }
-            <StyledText style={s.targetPropName}>{targetProp.name}</StyledText>
-          </View>
+      <View style={s.searchRow}>
+        <Feather name="search" size={20} color={currentThemeColors.textSecondary} style={{ marginRight: 8 }} />
+        <TextInput
+          style={s.searchTextInput}
+          placeholder="Search props by name"
+          placeholderTextColor={currentThemeColors.textSecondary}
+          value={propSearchQuery}
+          onChangeText={(t) => {
+            setPropSearchQuery(t);
+            if (!t) { setTargetProp(null); setHasSearchedProp(false); }
+          }}
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          onSubmitEditing={() => {
+            const first = (availablePropsForShow || []).find(p => p.name.toLowerCase().includes(propSearchQuery.trim().toLowerCase()));
+            if (first) { handleSelectTargetProp(first); setHasSearchedProp(true); }
+          }}
+        />
+      </View>
+      {propSearchQuery.trim().length > 0 && (
+        <View style={s.suggestions}>
+          {(availablePropsForShow || [])
+            .filter(p => p.name.toLowerCase().includes(propSearchQuery.trim().toLowerCase()))
+            .slice(0, 8)
+            .map((p, idx) => (
+              <TouchableOpacity key={p.id || `s-${idx}`} style={s.suggestionItem} onPress={() => handleSelectTargetProp(p)}>
+                <StyledText style={s.suggestionText}>{p.name}</StyledText>
+              </TouchableOpacity>
+            ))}
+        </View>
       )}
+
+      {/* Removed large selected prop preview to keep search simple */}
 
       {error && 
         <View style={s.errorContainer}>
@@ -347,6 +378,35 @@ const styles = (colors: typeof lightTheme.colors) => StyleSheet.create({
     borderColor: colors.border,
   },
   targetPropText: { fontSize: 16, color: colors.text, flex: 1 }, 
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  searchTextInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+  },
+  suggestions: {
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+  },
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  suggestionText: { color: colors.text, fontSize: 16 },
   targetPropDisplay: {
     alignItems: 'center',
     marginBottom: 15,

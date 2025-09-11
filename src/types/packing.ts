@@ -1,4 +1,4 @@
-import { WeightUnit } from '../shared/types/props.ts'; // Corrected Alias
+import { WeightUnit } from '../shared/types/props';
 import { Prop } from '../shared/types/props';
 // import { PackedProp } from './packing'; // Assuming PackedProp is here or adjust import
 
@@ -30,6 +30,8 @@ export interface PackingBox {
   labelIncludeThisWayUp?: boolean;
   labelIncludeKeepDry?: boolean;
   labelIncludeBatteries?: boolean;
+  // Mobile-only field to align with container types used on web
+  containerType?: string;
 }
 
 export interface PackedProp {

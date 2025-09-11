@@ -1,29 +1,23 @@
 import * as React from 'react';
 import {
-    ActivityIndicator, Text, View, Button, StyleSheet, TouchableOpacity, Image, TextInput, ScrollView, Platform
+    ActivityIndicator, Text, View, StyleSheet, TouchableOpacity, ScrollView, Platform
 } from 'react-native';
-import { PackingBox, PackedProp } from '../../types/packing.ts'; 
-import { Show } from '../../types/index.ts'; 
-import { Prop } from '../../shared/types/props.ts'; 
-import { PackingBoxCard } from './PackingBoxCard.tsx';
-import { PropSelector } from './PropSelector.native.tsx';
+import { PackingBox } from '../../types/packing'; 
+import { Show } from '../../types'; 
+import { Prop } from '../../shared/types/props'; 
+import { PackingBoxCard } from './PackingBoxCard';
 // For icons, we need to use lucide-react-native
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Timestamp } from 'firebase/firestore';
 import { darkTheme, lightTheme } from '../../styles/theme';
 const theme = darkTheme;
 
-export interface PropInstance extends Prop { 
-  instanceId: string; 
-  isPacked: boolean;
-}
+// Inline create UI removed; this component now only shows existing boxes
 
 interface PackingListProps {
   show: Show;
   boxes: PackingBox[];
   props: Prop[]; 
   isLoading?: boolean;
-  onCreateBox: (props: PackedProp[], boxName: string, actNumber?: number, sceneNumber?: number) => void; 
   onUpdateBox: (boxId: string, updates: Partial<PackingBox>) => Promise<void>; 
   onDeleteBox: (boxId: string) => Promise<void>;
 }
@@ -33,252 +27,60 @@ export function PackingList({
   boxes, 
   props, 
   isLoading = false,
-  onCreateBox,
   onUpdateBox,
   onDeleteBox,
 }: PackingListProps) {
-  const [currentBoxName, setCurrentBoxName] = React.useState('');
-  const [selectedProps, setSelectedProps] = React.useState<PropInstance[]>([]); 
-  const [propInstances, setPropInstances] = React.useState<PropInstance[]>([]); 
   const [editingBoxId, setEditingBoxId] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    const instances: PropInstance[] = [];
-    props.forEach(prop => { 
-      const quantity = prop.quantity || 1;
-      for (let i = 0; i < quantity; i++) {
-        instances.push({
-          ...prop, 
-          instanceId: `${prop.id}-${i}`,
-          isPacked: false
-        });
-      }
-    });
-    setPropInstances(instances);
-  }, [props]);
+  // Inline create/list selection removed
 
-  React.useEffect(() => {
-    setPropInstances(prevInstances => {
-      const packedPropIds = new Set<string>();
-      boxes.forEach(box => {
-        box.props?.forEach((packedProp: PackedProp) => {
-          for (let i = 0; i < (packedProp.quantity || 1); i++) {
-            packedPropIds.add(`${packedProp.propId}-${i}`);
-          }
-        });
-      });
-      return prevInstances.map(instance => ({
-        ...instance,
-        isPacked: packedPropIds.has(instance.instanceId)
+  // Removed selection/weight logic
+
+  const handlePrintAllLabels = async () => {
+    try {
+      // Build labels directly; avoid PackListService dependency here
+      const makeQr = (boxId: string) => {
+        const payload = JSON.stringify({ type: 'packingBox', id: boxId, showId: show.id });
+        return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(payload)}`;
+      };
+      const labels = boxes.map((b) => ({
+        id: `${b.id}-label`,
+        containerId: b.id,
+        packListId: show.id,
+        qrCode: makeQr(b.id),
+        containerName: b.name || 'Unnamed Box',
+        containerStatus: (b as any).status || 'draft',
+        propCount: b.props?.length || 0,
+        labels: (b as any).labels || [],
+        url: `https://props-bible/box/${show.id}/${b.id}`,
+        generatedAt: new Date(),
       }));
-    });
-  }, [boxes]);
-
-  const handleAddProp = (propInstance: PropInstance) => {
-    if (!selectedProps.some(p => p.instanceId === propInstance.instanceId)) {
-      setSelectedProps([...selectedProps, propInstance]);
+      const { LabelPrintService } = await import('../../shared/services/pdf/labelPrintService');
+      const printer = new LabelPrintService();
+      await printer.printLabels(labels as any);
+    } catch (e) {
+      console.warn('Failed to print labels', e);
     }
   };
 
-  const handleRemoveProp = (instanceId: string) => {
-    setSelectedProps(selectedProps.filter(p => p.instanceId !== instanceId));
-  };
-
-  const handleSaveBox = async () => {
-    if (selectedProps.length === 0 || !currentBoxName) return;
-    const packedProps: PackedProp[] = selectedProps.map(prop => ({
-      propId: prop.id,
-      name: prop.name ?? 'Unnamed Prop',
-      quantity: 1, 
-      weight: prop.weight ?? 0,
-      weightUnit: prop.weightUnit ?? 'lb',
-      isFragile: isFragile(prop)
-    }));
-
-    if (editingBoxId) {
-      try {
-        await onUpdateBox(editingBoxId, { name: currentBoxName, props: packedProps });
-      } catch (error) {
-        return; 
-      }
-    } else {
-      const firstProp = selectedProps[0];
-      try {
-        await onCreateBox(packedProps, currentBoxName, firstProp?.act ?? 0, firstProp?.scene ?? 0);
-      } catch (error) {
-        return; 
-      }
-    }
-    setSelectedProps([]);
-    setCurrentBoxName('');
-    setEditingBoxId(null);
-  };
-
-  const totalWeight = selectedProps.reduce((total, prop) => {
-    if (typeof prop?.weight !== 'number') return total;
-    const weight = prop.weightUnit === 'kg' ? prop.weight : prop.weight * 0.453592;
-    return total + weight;
-  }, 0);
-
-  const isFragile = (prop: PropInstance) => {
-    const fragileKeywords = ['fragile', 'delicate', 'breakable', 'glass'];
-    return fragileKeywords.some(keyword => 
-      prop.description?.toLowerCase().includes(keyword) ||
-      prop.notes?.toLowerCase().includes(keyword) ||
-      prop.tags?.includes('fragile')
-    );
-  };
-
-  const isBoxHeavy = totalWeight > 23;
-  const availablePropInstances = propInstances.filter(instance => !instance.isPacked);
-
-  const renderSourceIcon = (prop: PropInstance) => {
-    // This will need native styling and lucide-react-native icons
-    const iconSize = 16;
-    const iconColor = prop?.source === 'rented' ? theme.colors.iconWarning : theme.colors.primary; // yellow-500, blue-500
-
-    if (prop?.source === 'rented') {
-      return (
-        <View style={styles.sourceIconContainer}> 
-          <Feather name="clock" size={iconSize} color={iconColor} />
-        </View>
-      );
-    } else if (prop?.source === 'borrowed') {
-      return (
-        <View style={styles.sourceIconContainer}>
-          <MaterialCommunityIcons name="hand-coin" size={iconSize} color={iconColor} />
-        </View>
-      );
-    }
-    return null;
-  };
+  // No source icon needed currently
 
   const handleEditBox = (box: PackingBox) => {
     setEditingBoxId(box.id);
-    setCurrentBoxName(box.name ?? '');
-    const propsToSelect: PropInstance[] = [];
-    box.props?.forEach((packedProp: PackedProp) => {
-      const matchingInstances = propInstances.filter(inst => inst.id === packedProp.propId);
-      for (let i = 0; i < (packedProp.quantity || 1); i++) {
-        const instanceId = `${packedProp.propId}-${i}`;
-        const instanceToAdd = matchingInstances.find(inst => inst.instanceId === instanceId);
-        if (instanceToAdd) {
-          if (!propsToSelect.some(p => p.instanceId === instanceId)) {
-             propsToSelect.push(instanceToAdd);
-          }
-        } else {
-          console.warn(`Could not find matching instance for packed prop: ${packedProp.propId}, instance ${instanceId}`);
-        }
-      }
-    });
-    setSelectedProps(propsToSelect);
   };
 
   const handleCancelEdit = () => {
     setEditingBoxId(null);
-    setCurrentBoxName('');
-    setSelectedProps([]);
   };
 
-  // Refactored JSX for Native
+  // View-only boxes list; creation happens on separate screen
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
-      {/* Column 1: Selected Props & Box Creation */}
+      {/* Existing Boxes */}
       <View style={styles.column}>
-        <Text style={styles.columnHeader}>{editingBoxId ? 'Edit Box' : 'Create New Box'}</Text>
-        <View style={styles.boxCreationForm}>
-          <TextInput
-            value={currentBoxName}
-            onChangeText={setCurrentBoxName}
-            placeholder="Enter Box Name"
-            placeholderTextColor={theme.colors.textSecondary} 
-            style={styles.textInput}
-            autoCorrect={false}
-          />
-          
-          <Text style={styles.subHeader}>Select Props for this Box:</Text>
-          <View style={styles.selectorContainer}>
-            <PropSelector 
-              props={availablePropInstances} 
-              selectedProps={selectedProps}
-              onChange={(newSelectedProps: PropInstance[]) => setSelectedProps(newSelectedProps)} 
-              // disabled={isLoading} // Optional: disable while loading/saving
-            />
-          </View>
-
-          <Text style={styles.subHeader}>Currently Selected for Box:</Text>
-          <ScrollView 
-            style={styles.selectedPropsContainer} 
-            nestedScrollEnabled={true}
-            // contentContainerStyle={{ paddingBottom: 10 }} // Ensure some padding at the bottom
-          >
-            {selectedProps.length === 0 && (
-              <Text style={styles.emptyStateText}>No props selected yet for this box.</Text>
-            )}
-            {selectedProps.map((prop) => (
-              <View key={prop.instanceId} style={styles.selectedPropItem}>
-                <View style={styles.selectedPropInfo}>
-                  {prop.images?.[0]?.url ? (
-                    <Image source={{ uri: prop.images[0].url }} style={styles.selectedPropImage} />
-                  ) : (
-                    <View style={styles.selectedPropImagePlaceholder}>
-                      <Text style={styles.selectedPropImagePlaceholderText}>{prop.name[0]?.toUpperCase()}</Text>
-                    </View>
-                  )}
-                  <View>
-                    <Text style={styles.selectedPropName} numberOfLines={1}>{prop.name}</Text>
-                    {prop.notes && <Text style={styles.selectedPropNotes} numberOfLines={1}>{prop.notes}</Text>}
-                  </View>
-                </View>
-                <TouchableOpacity onPress={() => handleRemoveProp(prop.instanceId)}>
-                  <Feather name="x" size={18} color={theme.colors.iconDanger} />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-
-          <View style={styles.summarySection}>
-            <Text style={styles.summaryText}>Total Weight: {totalWeight.toFixed(1)} kg</Text>
-            {isBoxHeavy && (
-                <View style={styles.heavyBadge}>
-                    <Feather name="alert-triangle" size={14} color={theme.colors.iconWarning} /> 
-                    <Text style={styles.heavyBadgeText}>Heavy</Text>
-                </View>
-            )}
-          </View>
-          
-          <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity
-              onPress={handleSaveBox}
-              disabled={selectedProps.length === 0 || !currentBoxName || isLoading}
-              style={[
-                styles.button, 
-                styles.saveButton, 
-                (selectedProps.length === 0 || !currentBoxName || isLoading) && styles.buttonDisabled
-              ]}
-            >
-              {isLoading && editingBoxId === null ? (
-                <ActivityIndicator size="small" color={theme.colors.textPrimary} />
-              ) : (
-                <Text style={styles.buttonText}>{editingBoxId ? 'Update Box' : 'Create Box'}</Text>
-              )}
-            </TouchableOpacity>
-            {editingBoxId && (
-              <TouchableOpacity
-                onPress={handleCancelEdit}
-                style={[styles.button, styles.cancelButton]}
-                disabled={isLoading}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+        <View style={styles.listHeaderRow}>
+          <Text style={styles.columnHeader}>Packed Boxes for {show.name}</Text>
         </View>
-      </View>
-
-      {/* Column 2: Existing Boxes */}
-      <View style={styles.column}>
-        <Text style={styles.columnHeader}>Packed Boxes for {show.name}</Text>
         {boxes.length === 0 && !isLoading && (
            <Text style={styles.emptyStateText}>No boxes packed yet for this show.</Text>
         )}
@@ -319,6 +121,26 @@ const styles = StyleSheet.create({
     borderBottomWidth: Platform.OS === 'web' ? 1 : 0, // Only border on web
     borderBottomColor: theme.colors.border,
     paddingBottom: Platform.OS === 'web' ? 8 : 0,
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  printBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  printBtnText: {
+    color: theme.colors.buttonText,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   boxCreationForm: {
     backgroundColor: theme.colors.cardBg,
@@ -481,7 +303,5 @@ const styles = StyleSheet.create({
     marginRight: 6,
     // backgroundColor: 'rgba(255,255,255,0.1)', // Example subtle background
   },
-  selectorContainer: {
-    marginBottom: 16,
-  },
+  selectorContainer: { },
 }); 

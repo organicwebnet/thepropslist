@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PackingBox, PackedProp } from '../../types/packing.ts';
+import { PackingBox, PackedProp } from '../../types/packing';
 import { formatDistanceToNow } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
 import { useRouter, Link } from 'expo-router';
@@ -24,6 +24,7 @@ const statusStyles: Record<string, StatusStyle> = {
 export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -34,6 +35,35 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
     } finally {
         setIsDeleting(false);
     }    
+  };
+
+  const handlePrint = async () => {
+    try {
+      setIsPrinting(true);
+      const makeQr = (boxId: string) => {
+        const payload = JSON.stringify({ type: 'packingBox', id: boxId, showId: (box as any).showId });
+        return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(payload)}`;
+      };
+      const label = {
+        id: `${box.id}-label`,
+        containerId: box.id,
+        packListId: (box as any).showId || 'unknown',
+        qrCode: makeQr(box.id),
+        containerName: box.name || 'Unnamed Box',
+        containerStatus: (box as any).status || 'draft',
+        propCount: box.props?.length || 0,
+        labels: (box as any).labels || [],
+        url: `https://props-bible/box/${(box as any).showId || ''}/${box.id}`,
+        generatedAt: new Date(),
+      } as any;
+      const { LabelPrintService } = await import('../../shared/services/pdf/labelPrintService');
+      const printer = new LabelPrintService();
+      await printer.printLabels([label]);
+    } catch (e) {
+      console.warn('Print failed', e);
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   const updatedAt = box.updatedAt;
@@ -81,6 +111,13 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
             <Text style={styles.titleText} numberOfLines={1}>{box.name ?? 'Unnamed Box'}</Text>
           </TouchableOpacity>
           <View style={styles.actionButtonsRow}>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconButton} disabled={isPrinting}>
+              {isPrinting ? (
+                <ActivityIndicator size="small" color="#9CA3AF" />
+              ) : (
+                <Feather name="printer" size={18} color="#9CA3AF" />
+              )}
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => onEdit(box)} style={styles.iconButton}>
               <Feather name="edit-3" size={18} color="#9CA3AF" />
             </TouchableOpacity>

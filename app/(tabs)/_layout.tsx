@@ -108,6 +108,8 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      {/* Mock route kept for reference but hidden; remove if no longer needed */}
+      <Tabs.Screen name="packing/createBoxMock" options={{ href: null }} />
       <Tabs.Screen
         name="packing/find"
         options={{

@@ -16,6 +16,7 @@ import { PropStatusUpdate } from '../components/lifecycle/PropStatusUpdate.tsx';
 import { lifecycleStatusLabels, lifecycleStatusPriority, MaintenanceRecord, PropLifecycleStatus } from '../types/lifecycle.ts';
 import { VideoPlayer } from '../components/VideoPlayer.tsx';
 import { PropForm } from '../components/PropForm.tsx';
+import { NativePropForm } from '../components/NativePropForm.tsx';
 import { DigitalAssetGrid } from '../components/DigitalAssetGrid.tsx';
 import { ImageCarousel } from '../components/ImageCarousel.tsx';
 import { StatusHistory } from '../components/lifecycle/StatusHistory.tsx';
@@ -39,7 +40,7 @@ export default function PropDetailPage() {
   const [prop, setProp] = useState<Prop | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false); // default is false; toggled only by user action
   const [isAddingStatus, setIsAddingStatus] = useState(false);
   const [isAddingMaintenance, setIsAddingMaintenance] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
@@ -263,7 +264,26 @@ export default function PropDetailPage() {
 
   if (isEditing) {
     const initialFormData = prop as unknown as PropFormData;
-    return <PropForm initialData={initialFormData} onSubmit={handleEditSubmit} onCancel={() => setIsEditing(false)} />;
+    if (Platform.OS === 'web') {
+      return <PropForm initialData={initialFormData} onSubmit={handleEditSubmit} onCancel={() => setIsEditing(false)} />;
+    }
+    const handleNativeSubmit = async (data: PropFormData): Promise<boolean> => {
+      try {
+        await handleEditSubmit(data);
+        setIsEditing(false);
+        return true;
+      } catch (e) {
+        Alert.alert('Error', 'Failed to save changes.');
+        return false;
+      }
+    };
+    return (
+      <NativePropForm
+        initialData={initialFormData}
+        onFormSubmit={handleNativeSubmit}
+        submitButtonText="Save Changes"
+      />
+    );
   }
 
   if (isAddingStatus) {

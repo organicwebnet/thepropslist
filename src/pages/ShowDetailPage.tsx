@@ -164,7 +164,7 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
         <Stack.Screen options={{ title: show.name }} />
         <ScrollView style={{ flex: 1, padding: 16 }}>
           <TouchableOpacity 
-            onPress={() => router.back()}
+            onPress={() => router.navigate('/(tabs)/shows')}
             style={{ marginBottom: 24, padding: 8 }}
           >
             <Text style={{ color: '#BB86FC', fontSize: 16 }}>← Back to Shows</Text>
@@ -201,6 +201,9 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                   {show.description}
                 </Text>
               </View>
+              <TouchableOpacity onPress={handleEdit} style={{ padding: 8 }}>
+                <Feather name="edit" size={20} color="#fff" />
+              </TouchableOpacity>
             </View>
           </View>
 

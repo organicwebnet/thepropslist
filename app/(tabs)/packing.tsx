@@ -90,12 +90,6 @@ export default function PackingScreen() {
                 </View>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <TouchableOpacity
-                  onPress={() => handleFindContainer(item)}
-                  style={styles.rowIconButton}
-                >
-                  <MaterialCommunityIcons name="qrcode-scan" size={18} color="#c084fc" />
-                </TouchableOpacity>
                 <Ionicons name="chevron-forward" size={24} color="#9ca3af" />
               </View>
             </TouchableOpacity>

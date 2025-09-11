@@ -57,7 +57,17 @@ export function NativePropForm({
   const [location, setLocation] = useState(initialData?.location || '');
   const [notes, setNotes] = useState(initialData?.notes || '');
   const [tags, setTags] = useState(initialData?.tags?.join(',') || '');
-  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(initialData?.imageUrl || null);
+  const getInitialImageUrl = (data?: PropFormData | undefined): string | null => {
+    if (!data) return null;
+    const direct = (data as any).imageUrl as string | undefined;
+    const primary = (data as any).primaryImageUrl as string | undefined;
+    const fromArray = Array.isArray((data as any).images) && (data as any).images.length > 0
+      ? ((data as any).images[0]?.url as string | undefined)
+      : undefined;
+    return direct || primary || fromArray || null;
+  };
+
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(getInitialImageUrl(initialData));
   const [isConsumable, setIsConsumable] = useState(initialData?.isConsumable || false);
   const [requiresPreShowSetup, setRequiresPreShowSetup] = useState(initialData?.requiresPreShowSetup || false);
   const [isBreakable, setIsBreakable] = useState(initialData?.isBreakable || false);
@@ -99,7 +109,7 @@ export function NativePropForm({
     setStatusNotes(initialData?.statusNotes || '');
     setCurrentLocation(initialData?.currentLocation || '');
     setTags(initialData?.tags?.join(',') || '');
-    setSelectedImageUri(initialData?.imageUrl || null);
+    setSelectedImageUri(getInitialImageUrl(initialData));
     setIsConsumable(initialData?.isConsumable || false);
     setRequiresPreShowSetup(initialData?.requiresPreShowSetup || false);
     setIsBreakable(initialData?.isBreakable || false);
@@ -274,16 +284,25 @@ export function NativePropForm({
           placeholderTextColor="#9CA3AF"
         />
 
-        {/* --- 2. Image --- */}
-        <Text style={styles.label}>Image</Text>
-        <View style={styles.imagePickerContainer}>
-          {selectedImageUri ? (
-            <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
-          ) : (
-            <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderText}>No Image Selected</Text></View>
-          )}
-          <Button title="Select Image" onPress={pickImage} />
-        </View>
+        {/* --- 2. Images --- */}
+        <Text style={styles.label}>Images</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 6 }}>
+          {/* Primary image selection */}
+          <View style={{ alignItems: 'center' }}>
+            {selectedImageUri ? (
+              <Image source={{ uri: selectedImageUri }} style={styles.imagePreview} />
+            ) : (
+              <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderText}>Primary</Text></View>
+            )}
+            <Button title={selectedImageUri ? 'Replace' : 'Select'} onPress={pickImage} />
+          </View>
+          {/* Existing gallery thumbnails (read-only previews) */}
+          {(initialData?.images || []).map((img) => (
+            <View key={img.id} style={{ alignItems: 'center' }}>
+              <Image source={{ uri: img.url }} style={styles.imageThumb} />
+            </View>
+          ))}
+        </ScrollView>
         {isUploading && (
             <View style={styles.uploadingContainer}>
                 <ActivityIndicator size="small" color="#FFFFFF" />
@@ -711,6 +730,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
     backgroundColor: '#555', // Placeholder background
+  },
+  imageThumb: {
+    width: 120,
+    height: 90,
+    borderRadius: 8,
+    backgroundColor: '#555',
   },
   imagePlaceholder: {
     width: 200,
