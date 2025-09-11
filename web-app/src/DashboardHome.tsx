@@ -15,7 +15,8 @@ import { useEffect, useState } from 'react';
 import type { Show } from './types/Show';
 import type { Prop } from './types/props';
 import type { CardData } from './types/taskManager';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { OnboardingModal } from './components/OnboardingModal';
 import { useWebAuth } from './contexts/WebAuthContext';
 
 const containerVariants = {
@@ -51,6 +52,13 @@ const itemVariants = {
 
 const DashboardHome: React.FC = () => {
   const { currentShowId } = useShowSelection();
+  const navigate = useNavigate();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const seen = localStorage.getItem('onboarded') === '1';
+    if (!seen && !currentShowId) setShowOnboarding(true);
+  }, [currentShowId]);
   const { service } = useFirebase();
   const [show, setShow] = useState<Show | null>(null);
   const [props, setProps] = useState<Prop[]>([]);
@@ -384,6 +392,14 @@ const DashboardHome: React.FC = () => {
         </div>
       </motion.div>
     </DashboardLayout>
+    <OnboardingModal
+      isOpen={showOnboarding}
+      onClose={() => setShowOnboarding(false)}
+      onCreateShow={() => navigate('/shows/new')}
+      onInviteTeam={() => navigate('/profile')}
+      onAddProp={() => navigate('/props/add')}
+      onOpenBoard={() => navigate('/boards')}
+    />
   );
 };
 
