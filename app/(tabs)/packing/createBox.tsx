@@ -70,7 +70,7 @@ export default function CreateBoxScreen() {
       setIsSaving(false);
     }
   };
-
+  
   if (packingLoading && step === 'select') {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
@@ -139,8 +139,8 @@ export default function CreateBoxScreen() {
           <View style={[s.bottom, { justifyContent: 'flex-end' }]}>
             <TouchableOpacity style={[s.primary, (selected.length === 0 || !name?.trim()) && { opacity: 0.4 }]} disabled={selected.length === 0 || !name?.trim() || isSaving} onPress={handleCreate}>
               {isSaving ? <ActivityIndicator color={colors.card} /> : <Text style={s.primaryText}>Create</Text>}
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
+        </View>
         </View>
       )}
     </SafeAreaView>
@@ -170,4 +170,4 @@ const styles = (c: typeof lightTheme.colors) => StyleSheet.create({
   typeChipActive: { backgroundColor: c.primary, borderColor: c.primary },
   typeChipText: { color: c.textSecondary, fontWeight: '600' },
   typeChipTextActive: { color: c.card, fontWeight: '800' },
-});
+}); 

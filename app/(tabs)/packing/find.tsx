@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, TextInput, ScrollView, Image, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useShows } from '../../../src/contexts/ShowsContext';
 import { useProps } from '../../../src/contexts/PropsContext';
 import { usePacking } from '../../../src/hooks/usePacking';
@@ -23,6 +23,7 @@ type FinderMode = 'container' | 'prop';
 
 export default function PropFinderScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ initialMode?: string; code?: string; propName?: string; openScanner?: string }>();
   const { selectedShow } = useShows();
   const { props: allShowProps, loading: propsLoading } = useProps();
   const { boxes: allBoxesForShow, getDocument: getBoxById } = usePacking(selectedShow?.id);
@@ -60,6 +61,39 @@ export default function PropFinderScreen() {
     setFinderMode('prop');
     setHasSearchedProp(true);
   };
+
+  // Apply initial parameters from navigation (home global search)
+  useEffect(() => {
+    const modeRaw = (params.initialMode || '').toString().toLowerCase();
+    if (modeRaw === 'prop' || modeRaw === 'container') {
+      setFinderMode(modeRaw as FinderMode);
+    }
+    const code = (params.code || '').toString().trim();
+    if (code && modeRaw !== 'prop') {
+      setManualCode(code);
+      // auto-lookup quietly
+      (async () => {
+        try {
+          const doc = await getBoxById(code);
+          if (doc && doc.data) {
+            const { id: _ignored, ...rest } = doc.data as any;
+            setManualLookupBox({ id: doc.id, ...(rest as any) } as PackingBox);
+          }
+        } catch {}
+      })();
+    }
+    const pn = (params.propName || '').toString().trim();
+    if (pn) {
+      const found = availablePropsForShow.find(p => p.name?.toLowerCase().includes(pn.toLowerCase()));
+      if (found) handleSelectTargetProp(found);
+    }
+    if (params.openScanner === '1') {
+      setScannerPurpose(modeRaw === 'prop' ? 'prop' : 'container');
+      setShowScanner(true);
+    }
+    // only run once after mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleQrScan = async (data: Record<string, any>) => {
     console.log('PropFinder Scanned Data:', data);
