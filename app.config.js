@@ -1,4 +1,9 @@
+const fs = require('fs');
+const path = require('path');
+
 module.exports = ({ config }) => {
+  const iosPlist = process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist';
+  const hasIosPlist = fs.existsSync(path.resolve(__dirname, iosPlist));
   return {
     name: "The Props List",
     slug: "props-bible",
@@ -8,8 +13,8 @@ module.exports = ({ config }) => {
     userInterfaceStyle: "automatic",
     splash: {
       image: "./assets/splash.png",
-      resizeMode: "contain",
-      backgroundColor: "#ffffff"
+      resizeMode: "cover",
+      backgroundColor: "#18181b"
     },
     assetBundlePatterns: [
       "**/*",
@@ -19,16 +24,21 @@ module.exports = ({ config }) => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.propsbible",
-      googleServicesFile: process.env.GOOGLE_SERVICES_PLIST || './ios/GoogleService-Info.plist'
+      ...(hasIosPlist ? { googleServicesFile: iosPlist } : {})
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#ffffff"
+        backgroundColor: "#18181b"
       },
       package: "com.propsbible",
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './google-services.json',
-      edgeToEdgeEnabled: true
+      edgeToEdgeEnabled: true,
+      statusBar: {
+        backgroundColor: "#18181b",
+        style: "light",
+        translucent: true
+      }
     },
     web: {
       bundler: "metro",

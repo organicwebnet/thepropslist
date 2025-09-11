@@ -104,7 +104,6 @@ export default function ShowsScreen() {
           <ShowList
             shows={shows}
             onDelete={handleShowDelete}
-            onEdit={handleShowEdit}
             onSelect={handleShowSelect}
             selectedShowId={selectedShow?.id || undefined}
             currentUserEmail={user?.email || undefined}

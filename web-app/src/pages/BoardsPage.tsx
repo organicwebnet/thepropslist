@@ -21,6 +21,7 @@ import ShowsListPage from '../ShowsListPage';
 import AddShowPage from "../pages/AddShowPage";
 import EditShowPage from "../pages/EditShowPage";
 import ShowDetailPage from "../pages/ShowDetailPage";
+import JoinInvitePage from "../pages/JoinInvitePage";
 import PropsBibleHomepage from '../PropsBibleHomepage';
 
 const BoardsPage: React.FC = () => {
@@ -120,6 +121,7 @@ const BoardsPage: React.FC = () => {
           <Route path="/shows/:id/edit" element={<EditShowPage />} />
           <Route path="/shows/:id" element={<ShowDetailPage />} />
           <Route path="/boards" element={user ? <BoardsPageContent /> : <Navigate to="/login" replace />} />
+          <Route path="/join/:token" element={<JoinInvitePage />} />
           <Route path="/*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

@@ -13,7 +13,7 @@ import {
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { User as UserIcon, Settings, Camera, Mail, Phone, MapPin, Building, Save, Loader2, X, Sun, Moon, Type, RefreshCw, LogOut, LinkIcon } from 'lucide-react';
-import type { UserProfile } from '../types.ts';
+import type { UserProfile } from '../types';
 import { useTheme } from '../contexts/ThemeContext.tsx';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { FirebaseAuthTypes } from '@react-native-firebase/auth';

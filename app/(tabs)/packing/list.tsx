@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { TouchableOpacity, Text } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { LabelPrintService } from '../../../src/shared/services/pdf/labelPrintService';
 import { useShows } from '../../../src/contexts/ShowsContext';
 import { useProps } from '../../../src/contexts/PropsContext';
 import { usePacking } from '../../../src/hooks/usePacking';
@@ -58,6 +61,32 @@ export default function PackingListScreen() {
       setPackingBoxes(boxes);
     }
   }, [boxes]);
+
+  const handlePrintAllLabels = async () => {
+    if (!currentShow) return;
+    try {
+      const makeQr = (boxId: string) => {
+        const payload = JSON.stringify({ type: 'packingBox', id: boxId, showId: currentShow.id });
+        return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(payload)}`;
+      };
+      const labels = (packingBoxes || []).map((box) => ({
+        id: `${box.id}-label`,
+        containerId: box.id,
+        packListId: currentShow.id,
+        qrCode: makeQr(box.id),
+        containerName: box.name || 'Unnamed Box',
+        containerStatus: (box as any).status || 'draft',
+        propCount: box.props?.reduce((s, p) => s + (p.quantity || 1), 0) || 0,
+        labels: (box as any).labels || [],
+        url: `https://props-bible/box/${currentShow.id}/${box.id}`,
+        generatedAt: new Date(),
+      }));
+      const printer = new LabelPrintService();
+      await printer.printLabels(labels);
+    } catch (e) {
+      console.warn('Print failed', e);
+    }
+  };
 
   const handleCreateBox = async (props: PackedProp[], boxName: string, actNumber?: number, sceneNumber?: number) => {
     if (!currentShow) return;
@@ -140,10 +169,34 @@ export default function PackingListScreen() {
       style={styles.container}
     >
       <Stack.Screen options={{ 
-        title: `Packing: ${currentShow.name}`,
+        title: '',
         headerShown: true,
-        headerStyle: { backgroundColor: 'transparent' },
-        headerTintColor: '#fff'
+        headerStyle: { backgroundColor: '#18181b' },
+        headerTintColor: '#fff',
+        headerTitleStyle: { color: '#fff' },
+        headerShadowVisible: false,
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() =>
+                router.navigate({ pathname: '/(tabs)/packing/createBox', params: { showId: currentShow.id } } as any)
+              }
+              style={{ marginRight: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(192,132,252,0.85)', borderRadius: 8 }}
+            >
+              <Feather name="plus" size={18} color="#fff" />
+              <Text style={{ color: '#fff', marginLeft: 6, fontWeight: '600' }}>Add</Text>
+            </TouchableOpacity>
+            {packingBoxes.length > 0 && (
+              <TouchableOpacity
+                onPress={handlePrintAllLabels}
+                style={{ marginRight: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: 'rgba(192,132,252,0.25)', borderRadius: 8 }}
+              >
+                <Feather name="printer" size={18} color="#fff" />
+                <Text style={{ color: '#fff', marginLeft: 6, fontWeight: '600' }}>Print</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )
       }} />
       
       <PackingList
@@ -151,7 +204,6 @@ export default function PackingListScreen() {
         boxes={packingBoxes}
         props={showProps}
         isLoading={packingLoading}
-        onCreateBox={handleCreateBox}
         onUpdateBox={handleUpdateBox}
         onDeleteBox={handleDeleteBox}
       />

@@ -1,5 +1,17 @@
 import { Platform } from 'react-native';
-import { PackingLabel } from '../inventory/packListService.ts';
+// Local definition to avoid depending on web-only services during bundle
+export interface PackingLabel {
+  id: string;
+  containerId: string;
+  packListId: string;
+  qrCode: string;
+  containerName: string;
+  containerStatus: string;
+  propCount: number;
+  labels: string[];
+  url: string;
+  generatedAt: Date;
+}
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 // import { jsPDF } from "jspdf";
@@ -18,56 +30,84 @@ export class LabelPrintService {
           <meta charset="utf-8">
           <title>Packing Labels</title>
           <style>
-            body { font-family: system-ui, -apple-system, sans-serif; }
-            .label-grid { 
+            :root {
+              /* App dark theme alignment */
+              --bg: #111827;          /* darkTheme.colors.background */
+              --card: #1F2937;        /* darkTheme.colors.card */
+              --input: #374151;       /* darkTheme.colors.inputBackground */
+              --text: #F9FAFB;        /* darkTheme.colors.text */
+              --text-secondary: #9CA3AF; /* darkTheme.colors.textSecondary */
+              --border: #374151;      /* darkTheme.colors.border */
+              --primary: #3B82F6;     /* darkTheme.colors.primary */
+            }
+            html, body {
+              background-color: var(--bg);
+              color: var(--text);
+              font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+              margin: 0;
+            }
+            .label-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
               gap: 20px;
               padding: 20px;
             }
             .label {
-              border: 1px solid #ccc;
-              padding: 15px;
+              background: var(--card);
+              border: 1px solid var(--border);
+              padding: 16px;
               text-align: center;
               break-inside: avoid;
+              border-radius: 10px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.25);
             }
             .container-name {
               font-size: 18px;
-              font-weight: bold;
+              font-weight: 800;
               margin-bottom: 10px;
+              color: var(--text);
             }
             .container-info {
               font-size: 14px;
-              color: #666;
+              color: var(--text-secondary);
               margin-bottom: 10px;
             }
             .qr-code {
               width: 120px;
               height: 120px;
               margin: 10px auto;
+              background: #fff; /* keep high contrast for QR */
+              border-radius: 6px;
+              padding: 6px;
             }
             .label-tags {
               display: flex;
               flex-wrap: wrap;
-              gap: 5px;
+              gap: 6px;
               justify-content: center;
               margin: 10px 0;
             }
             .tag {
-              background: #f0f0f0;
-              padding: 2px 8px;
-              border-radius: 10px;
+              background: var(--input);
+              color: var(--text);
+              padding: 4px 10px;
+              border-radius: 12px;
               font-size: 12px;
+              border: 1px solid var(--border);
             }
             .url {
               font-size: 12px;
-              color: #666;
+              color: var(--text-secondary);
               word-break: break-all;
             }
             .generated-date {
-              font-size: 10px;
-              color: #999;
-              margin-top: 5px;
+              font-size: 11px;
+              color: var(--text-secondary);
+              margin-top: 6px;
+            }
+            @media print {
+              html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .label { box-shadow: none; }
             }
           </style>
         </head>

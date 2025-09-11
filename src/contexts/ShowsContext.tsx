@@ -14,6 +14,7 @@ import { Show } from '../shared/services/firebase/types';
 // Import FirebaseDocument type
 import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // import type { FirebaseService } from '../shared/services/firebase/types.ts'; // Removed FirebaseService type import, service is used directly
 // Remove direct firestore imports as service is used
 // import { collection, onSnapshot, query, where, orderBy, limit, doc, getDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -72,6 +73,10 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
        // Optional: Clear localStorage if show is deselected
        // localStorage.removeItem('lastSelectedShowId');
     }
+    // Persist selection on native as well
+    if (show && Platform.OS !== 'web') {
+      AsyncStorage.setItem('lastSelectedShowId', show.id).catch(() => {});
+    }
   }, [stableSetSelectedShowInternal]); // Dependency is now the stable internal setter
 
   // REMOVE Direct db instance derivation here
@@ -94,7 +99,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
     let teamShows: Show[] = [];
     let permissionDenied = false;
 
-    const processAndSetShows = () => {
+    const processAndSetShows = async () => {
       const allShows = [...ownedShows, ...teamShows];
       const uniqueShows = Array.from(new Map(allShows.map(show => [show.id, show])).values());
       
@@ -119,7 +124,8 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
 
       setShows(processedShows);
 
-      if (loading) {
+      // Always ensure a show is selected once data is available
+      if (!selectedShow) {
         let showToSelect: Show | null = null;
         let lastSelectedId: string | null = null;
 
@@ -130,14 +136,21 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
               showToSelect = processedShows.find(s => s.id === lastSelectedId) || null;
             }
           } catch (e) { /* silent */ }
+        } else {
+          try {
+            lastSelectedId = (await AsyncStorage.getItem('lastSelectedShowId')) as string | null;
+            if (lastSelectedId) {
+              showToSelect = processedShows.find(s => s.id === lastSelectedId) || null;
+            }
+          } catch (e) { /* silent */ }
         }
 
         if (!showToSelect && processedShows.length > 0) {
           showToSelect = processedShows[0];
         }
 
-        if (!selectedShow && showToSelect) {
-          setSelectedShowInternal(showToSelect);
+        if (showToSelect) {
+          setSelectedShow(showToSelect);
         }
       }
       setLoading(false);
@@ -172,10 +185,10 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       const teamShowsQuery: QueryOptions = { where: [[`team.${user.uid}`, '>=', '']] };
       teamUnsubscribe = firebaseService.listenToCollection<Show>(
         'shows',
-        (docs) => {
+        async (docs) => {
           if (permissionDenied) return;
           teamShows = docs.map(doc => ({ ...doc.data, id: doc.id } as Show));
-          processAndSetShows();
+          await processAndSetShows();
         },
         handleError,
         teamShowsQuery
@@ -185,10 +198,10 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       // For simplicity, we can just treat all shows as 'team' shows.
       teamUnsubscribe = firebaseService.listenToCollection<Show>(
         'shows',
-        (docs) => {
+        async (docs) => {
           if (permissionDenied) return;
           teamShows = docs.map(doc => ({ ...doc.data, id: doc.id } as Show));
-          processAndSetShows();
+          await processAndSetShows();
         },
         handleError
       );
@@ -198,7 +211,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       ownedUnsubscribe();
       teamUnsubscribe();
     };
-  }, [firebaseInitialized, firebaseService, user, isAdmin, authStatus, stableSetSelectedShowInternal]);
+  }, [firebaseInitialized, firebaseService, user, isAdmin, authStatus, stableSetSelectedShowInternal, setSelectedShow]);
 
   const setSelectedShowById = useCallback((id: string | null) => {
     if (id === null) {

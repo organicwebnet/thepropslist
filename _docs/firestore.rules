@@ -33,8 +33,24 @@ service cloud.firestore {
       allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == userId);
     }
     match /packingBoxes/{boxId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null &&
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid);
+      // Create uses request.resource; others use resource
+      allow create: if request.auth != null && (
+        isSystemAdmin() || (
+          exists(/databases/$(database)/documents/shows/$(request.resource.data.showId)) && (
+            get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.ownerId == request.auth.uid ||
+            get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] != null
+          )
+        )
+      );
+
+      allow read, update, delete: if request.auth != null && (
+        isSystemAdmin() || (
+          exists(/databases/$(database)/documents/shows/$(resource.data.showId)) && (
+            get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
+            get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null
+          )
+        )
+      );
     }
     match /packLists/{packListId} {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
@@ -152,12 +168,12 @@ service cloud.firestore {
              request.auth.uid in get(/databases/$(database)/documents/todo_boards/$(boardId)).data.sharedWith;
     }
 
-    // Safely checks for system-admin role by providing default empty maps/values
-    // to prevent null reference errors if the fields don't exist.
+    // Check for system-admin role without using unsupported map.get()
     function isSystemAdmin() {
-      return request.auth.uid != null &&
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.get('groups', {})
-          .get('system-admin', false) == true;
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+        (get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.groups != null) &&
+        (get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.groups['system-admin'] == true);
     }
 
     // Function to check if a user is a member of the show's team
@@ -179,8 +195,9 @@ service cloud.firestore {
 
     // Function to check user role from their profile
     function getUserRole() {
-      // Safely gets the role from the user's profile, returns null if not found.
-      return get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.get('role', null);
+      return request.auth != null && exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role
+        : null;
     }
 
     // THIS RULE MUST BE LAST to act as a catch-all deny.

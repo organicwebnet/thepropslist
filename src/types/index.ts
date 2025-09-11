@@ -1,7 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
-import type { CustomTimestamp } from '../shared/services/firebase/types.ts';
-import { Address } from '../shared/types/address.ts';
-export type { PropImage } from '../shared/types/props.ts';
+import type { CustomTimestamp } from '../shared/services/firebase/types';
+import { Address } from '../shared/types/address';
+export type { PropImage } from '../shared/types/props';
 
 export interface Scene {
   id: string | number;
@@ -186,4 +186,4 @@ export interface TodoItem {
   priority?: 'low' | 'medium' | 'high';
 }
 
-export * from './packing.ts'; 
+export * from './packing'; 

@@ -1,0 +1,32 @@
+.public-wrap {
+  min-height: 100vh;
+  background: #111827; /* dark bg */
+  color: #F9FAFB;      /* text */
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* align card to top */
+  padding: 0 24px; /* remove top/bottom spacing */
+}
+.card {
+  background: #1F2937; /* card */
+  border: 1px solid #374151; /* border */
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 780px;
+  width: 100%;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  min-height: 100vh; /* reach the bottom on short content */
+}
+.card.error { color: #FCA5A5; border-color: #B91C1C; }
+.title { font-size: 24px; font-weight: 800; margin: 0 0 4px 0; }
+.subtitle { font-size: 18px; font-weight: 700; margin: 0 0 8px 0; }
+.muted { color: #9CA3AF; }
+.list { list-style: none; padding: 0; margin: 0; }
+.list-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #374151; }
+.prop-name { font-weight: 600; }
+.prop-meta { color: #9CA3AF; }
+.footer { margin-top: 16px; }
+.home-link { color: #3B82F6; text-decoration: none; }
+.home-link:hover { text-decoration: underline; }
+
+

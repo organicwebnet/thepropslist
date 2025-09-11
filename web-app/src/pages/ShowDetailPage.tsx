@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useParams, Link } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
+import { useWebAuth } from '../contexts/WebAuthContext';
 import type { Show } from '../types/Show';
-import { Pencil } from 'lucide-react';
+import { Pencil, UserPlus } from 'lucide-react';
 
 const ShowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { service: firebaseService } = useFirebase();
+  const { user } = useWebAuth();
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +129,36 @@ const ShowDetailPage: React.FC = () => {
                 {show.isTouringShow && <span className="text-pb-accent">Touring Show</span>}
               </div>
             </div>
+          </div>
+          <div className="mt-3">
+            <a
+              href={show?.id ? `/join/${crypto.randomUUID()}` : '#'}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!show?.id) return;
+                // Create a bare invite doc then show copyable link
+                const token = crypto.randomUUID();
+                try {
+                  await firebaseService.setDocument('invitations', token, {
+                    showId: show.id,
+                    role: 'viewer',
+                    inviterId: user?.uid || show.userId,
+                    status: 'pending',
+                    createdAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                  });
+                  const link = `${window.location.origin}/join/${token}`;
+                  await navigator.clipboard.writeText(link);
+                  alert('Invite link copied to clipboard:\n' + link);
+                } catch (err) {
+                  console.error(err);
+                  alert('Failed to create invite: ' + (err instanceof Error ? err.message : 'unknown error'));
+                }
+              }}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
+            >
+              <UserPlus className="w-4 h-4" /> Invite teammate
+            </a>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">

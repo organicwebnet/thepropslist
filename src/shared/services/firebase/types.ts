@@ -26,7 +26,7 @@ export type { BoardData as TodoBoard, ListData, MemberData } from '../../types/t
 
 // --- App-Specific Data Structures ---
 
-export type { Act, Contact, Scene, Venue, ShowCollaborator } from '../../types/index.ts';
+export type { Act, Contact, Scene, Venue, ShowCollaborator } from '../../types/index';
 
 // --- Custom Error ---
 export class FirebaseError extends Error {

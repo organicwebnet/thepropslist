@@ -61,6 +61,7 @@ export function HomeScreen() {
   const { service } = useFirebase();
   const { user } = useAuth();
   const { shows, selectedShow, setSelectedShow, loading: showsLoading } = useShows();
+  const [globalQuery, setGlobalQuery] = useState('');
   
   const [todoBoards, setTodoBoards] = useState<FirebaseDocument<TodoBoard>[]>([]);
   const [loadingBoards, setLoadingBoards] = useState(true);
@@ -337,6 +338,77 @@ export function HomeScreen() {
     </View>
   );
 
+  const navigateToFind = (params?: Record<string, string | number | boolean | undefined>) => {
+    const base = '/(tabs)/packing/find';
+    if (!params || Object.keys(params).length === 0) {
+      router.navigate(base as any);
+      return;
+    }
+    const search = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== null)
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+      .join('&');
+    router.navigate(`${base}?${search}` as any);
+  };
+
+  const renderGlobalSearch = () => (
+    <View style={styles.globalSearchRow}>
+      <Ionicons name="search" size={18} color={darkColors.secondaryText} style={{ marginRight: 8 }} />
+      <TextInput
+        style={styles.globalSearchInput}
+        placeholder="Search props or enter container GUID"
+        placeholderTextColor={darkColors.secondaryText}
+        value={globalQuery}
+        onChangeText={setGlobalQuery}
+        returnKeyType="search"
+        onSubmitEditing={() => {
+          const q = globalQuery.trim();
+          if (!q) return navigateToFind({});
+          const looksLikeGuid = /[A-Za-z0-9\-]{5,}/.test(q);
+          if (looksLikeGuid) {
+            navigateToFind({ initialMode: 'container', code: q });
+          } else {
+            navigateToFind({ initialMode: 'prop', propName: q });
+          }
+        }}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+      <TouchableOpacity
+        onPress={() => navigateToFind({ initialMode: 'container', openScanner: '1' })}
+        style={styles.scanButton}
+      >
+        <Ionicons name="qr-code-outline" size={18} color={'#111'} />
+        <Text style={styles.scanButtonText}>Scan</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderPrimaryGrid = () => (
+    <View style={styles.grid}>
+      <TouchableOpacity style={styles.gridItem} onPress={() => navigateToFind({})}>
+        <Ionicons name="search" size={22} color={darkColors.text} />
+        <Text style={styles.gridText}>Find</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.gridItem} onPress={() => router.navigate({ pathname: '/(tabs)/packing/list', params: { showId: selectedShow?.id } } as any)}>
+        <Ionicons name="cube-outline" size={22} color={darkColors.text} />
+        <Text style={styles.gridText}>Packing</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.gridItem} onPress={() => router.navigate('/(tabs)/todos' as any)}>
+        <Ionicons name="list-circle-outline" size={22} color={darkColors.text} />
+        <Text style={styles.gridText}>Task Board</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.gridItem} onPress={() => router.navigate('/(tabs)/props' as any)}>
+        <Ionicons name="pricetag-outline" size={22} color={darkColors.text} />
+        <Text style={styles.gridText}>Props</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.gridItem} onPress={() => router.navigate('/(tabs)/shopping' as any)}>
+        <Ionicons name="cart-outline" size={22} color={darkColors.text} />
+        <Text style={styles.gridText}>Shopping</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   const renderShowSelector = () => (
     <View style={styles.pickerContainer}>
       <Picker
@@ -442,7 +514,9 @@ export function HomeScreen() {
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {renderWelcomeHeader()}
+            {renderGlobalSearch()}
             {renderShowSelector()}
+            {renderPrimaryGrid()}
             
             {!selectedShow && !showsLoading && (
               <View style={styles.centeredMessage}>
@@ -553,6 +627,49 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   scrollContent: { padding: 16, paddingBottom: 80 },
+  globalSearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1f2937',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2c2c2c',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  globalSearchInput: {
+    flex: 1,
+    color: darkColors.text,
+    fontSize: 16,
+    marginRight: 8,
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: darkColors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  scanButtonText: { color: '#111', marginLeft: 6, fontWeight: '700' },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 16,
+  },
+  gridItem: {
+    width: '31%',
+    backgroundColor: '#1d2125',
+    borderWidth: 1,
+    borderColor: '#2c2c2c',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 6,
+  },
+  gridText: { color: darkColors.text, fontWeight: '600', fontSize: 12, textAlign: 'center' },
   headerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
   welcomeText: { color: darkColors.secondaryText, fontSize: 16 },

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, TextInput, ScrollView, Image, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useShows } from '../../../src/contexts/ShowsContext';
 import { useProps } from '../../../src/contexts/PropsContext';
 import { usePacking } from '../../../src/hooks/usePacking';
@@ -19,13 +19,14 @@ interface ScannedBoxResult {
 }
 
 // To manage the mode of operation for the finder
-type FinderMode = 'showAssignment' | 'scanBoxes';
+type FinderMode = 'container' | 'prop';
 
 export default function PropFinderScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ initialMode?: string; code?: string; propName?: string; openScanner?: string }>();
   const { selectedShow } = useShows();
   const { props: allShowProps, loading: propsLoading } = useProps();
-  const { getDocument: getBoxById } = usePacking(selectedShow?.id);
+  const { boxes: allBoxesForShow, getDocument: getBoxById } = usePacking(selectedShow?.id);
 
   const { theme } = useTheme();
   const currentThemeColors = theme === 'light' ? lightTheme.colors : darkTheme.colors;
@@ -34,12 +35,17 @@ export default function PropFinderScreen() {
   const [targetProp, setTargetProp] = useState<Prop | null>(null);
   const [propSearchQuery, setPropSearchQuery] = useState('');
   const [showPropSelectionModal, setShowPropSelectionModal] = useState(false);
+  const [hasSearchedProp, setHasSearchedProp] = useState(false);
   
   const [scannedBoxes, setScannedBoxes] = useState<ScannedBoxResult[]>([]);
   const [showScanner, setShowScanner] = useState(false);
   const [isProcessingScan, setIsProcessingScan] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [finderMode, setFinderMode] = useState<FinderMode>('showAssignment');
+  const [finderMode, setFinderMode] = useState<FinderMode>('container');
+  const [manualCode, setManualCode] = useState('');
+  const [manualLookupBox, setManualLookupBox] = useState<PackingBox | null>(null);
+  const [scannedBox, setScannedBox] = useState<PackingBox | null>(null);
+  const [scannerPurpose, setScannerPurpose] = useState<'container' | 'prop'>('container');
 
   const availablePropsForShow = selectedShow ? allShowProps.filter(p => p.showId === selectedShow.id) : [];
   const filteredPropsForModal = propSearchQuery
@@ -48,35 +54,67 @@ export default function PropFinderScreen() {
 
   const handleSelectTargetProp = (prop: Prop) => {
     setTargetProp(prop);
-    setScannedBoxes([]); // Reset scanned boxes when a new prop is selected
+    setScannedBoxes([]);
     setShowPropSelectionModal(false);
     setPropSearchQuery('');
     setError(null);
-    // If prop has an assignment, default to showing that. Otherwise, go to scan boxes mode.
-    setFinderMode(prop.assignment ? 'showAssignment' : 'scanBoxes'); 
+    setFinderMode('prop');
+    setHasSearchedProp(true);
   };
+
+  // Apply initial parameters from navigation (home global search)
+  useEffect(() => {
+    const modeRaw = (params.initialMode || '').toString().toLowerCase();
+    if (modeRaw === 'prop' || modeRaw === 'container') {
+      setFinderMode(modeRaw as FinderMode);
+    }
+    const code = (params.code || '').toString().trim();
+    if (code && modeRaw !== 'prop') {
+      setManualCode(code);
+      // auto-lookup quietly
+      (async () => {
+        try {
+          const doc = await getBoxById(code);
+          if (doc && doc.data) {
+            const { id: _ignored, ...rest } = doc.data as any;
+            setManualLookupBox({ id: doc.id, ...(rest as any) } as PackingBox);
+          }
+        } catch {}
+      })();
+    }
+    const pn = (params.propName || '').toString().trim();
+    if (pn) {
+      const found = availablePropsForShow.find(p => p.name?.toLowerCase().includes(pn.toLowerCase()));
+      if (found) handleSelectTargetProp(found);
+    }
+    if (params.openScanner === '1') {
+      setScannerPurpose(modeRaw === 'prop' ? 'prop' : 'container');
+      setShowScanner(true);
+    }
+    // only run once after mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleQrScan = async (data: Record<string, any>) => {
     console.log('PropFinder Scanned Data:', data);
-    if (!targetProp) {
-      setError("Please select a target prop first.");
-      setShowScanner(false); // Close scanner if no target prop
-      return;
-    }
-
-    if (data && data.type === 'packingBox' && data.id) {
+    if (data && (data.type === 'prop' || data.type === 'PROP' || data.type === 'Prop') && (data.id || data.propId)) {
+      // Scanned a prop label → jump to prop mode and locate containers
+      const pid = data.id || data.propId;
+      const found = availablePropsForShow.find(p => p.id === pid);
+      if (found) {
+        handleSelectTargetProp(found);
+        setFinderMode('prop');
+        setShowScanner(false);
+        return;
+      } else {
+        setError('Prop not found in this show.');
+        setShowScanner(false);
+        return;
+      }
+    } else if (data && data.type === 'packingBox' && data.id) {
       setIsProcessingScan(true);
       setError(null);
       try {
-        // Check if box already scanned to prevent duplicates in this session
-        if (scannedBoxes.some(sb => sb.box.id === data.id)) {
-            setError(`Box ${data.name || data.id} already scanned.`);
-            // Potentially allow re-scan or just inform
-            // setShowScanner(false); // Scanner remains open
-            setIsProcessingScan(false);
-            return;
-        }
-
         const fetchedBoxDoc = await getBoxById(data.id);
         if (fetchedBoxDoc && fetchedBoxDoc.data) {
           const { id: dataId, ...restOfData } = fetchedBoxDoc.data as any; // Exclude id from data if present
@@ -84,22 +122,22 @@ export default function PropFinderScreen() {
             id: fetchedBoxDoc.id, // Use the document ID from snapshot
             ...restOfData 
           } as PackingBox;
-          const contains = !!fetchedBox.props?.some(p => p.propId === targetProp.id);
-          setScannedBoxes(prev => [
-            { box: fetchedBox, containsTargetProp: contains, scannedAt: Date.now() },
-            ...prev, // Add new scan to the top
-          ].sort((a, b) => b.scannedAt - a.scannedAt)); // Keep sorted by newest scan first
+          setScannedBox(fetchedBox);
+          const contains = targetProp ? !!fetchedBox.props?.some(p => p.propId === targetProp.id) : false;
+          if (targetProp) {
+            setScannedBoxes(prev => [
+              { box: fetchedBox, containsTargetProp: contains, scannedAt: Date.now() },
+              ...prev,
+            ].sort((a, b) => b.scannedAt - a.scannedAt));
+          }
         } else {
           setError(`Box with ID ${data.id} not found.`);
-          // setShowScanner(false); // Scanner remains open even if box not found, user might scan another
         }
       } catch (e: any) {
         console.error("Error processing scanned box:", e);
         setError(e.message || "Failed to process scanned box.");
-        // setShowScanner(false); // Scanner remains open on error, user might try again
       } finally {
         setIsProcessingScan(false);
-        // setShowScanner(false); // REMOVED: Keep scanner open for continuous scanning
       }
     } else {
       setError("Scanned QR is not a valid Packing Box QR code.");
@@ -128,57 +166,138 @@ export default function PropFinderScreen() {
     </View>
   );
 
+  const renderBoxDetails = (box: PackingBox) => (
+    <View style={[s.scannedBoxItem, s.boxFound]}>
+      <View style={s.boxItemHeader}>
+        <Feather name="package" size={20} color={currentThemeColors.primary} />
+        <StyledText style={s.boxName}>{box.name || box.id}</StyledText>
+      </View>
+      <StyledText style={s.boxStatusText}>GUID: {box.id}</StyledText>
+      {box.description && <StyledText style={s.boxDescription}>{box.description}</StyledText>}
+      <StyledText style={[s.boxStatusText, { marginTop: 4 }]}>Contents:</StyledText>
+      {Array.isArray(box.props) && box.props.length > 0 ? (
+        box.props.map((p, idx) => (
+          <StyledText key={box.id + '-' + idx} style={s.boxContentPreview}>- {p.name} × {p.quantity}</StyledText>
+        ))
+      ) : (
+        <StyledText style={s.boxContentPreview}>No items</StyledText>
+      )}
+    </View>
+  );
+
   const renderContent = () => {
-    if (!targetProp) {
-        return <StyledText style={s.infoText}>Select a prop above to start finding.</StyledText>;
-    }
-
-    if (finderMode === 'showAssignment' && targetProp.assignment) {
-        const assignment = targetProp.assignment;
-        return (
-            <View style={s.assignmentInfoContainer}>
-                <Feather name="info" size={24} color={currentThemeColors.primary} style={{marginBottom: 8}} />
-                <StyledText style={s.assignmentTitle}>Current Assignment:</StyledText>
-                <StyledText style={s.assignmentText}>
-                    Prop "<StyledText style={s.boldText}>{targetProp.name}</StyledText>" is assigned to:
-                </StyledText>
-                <StyledText style={s.assignmentDetailText}>
-                    Type: <StyledText style={s.boldText}>{assignment.type === 'box' ? 'Box' : 'Location'}</StyledText>
-                </StyledText>
-                <StyledText style={s.assignmentDetailText}>
-                    Name: <StyledText style={s.boldText}>{assignment.name || assignment.id}</StyledText>
-                </StyledText>
-                {assignment.assignedAt && 
-                    <StyledText style={s.assignmentDetailText}>
-                        Assigned At: <StyledText style={s.boldText}>{new Date(assignment.assignedAt).toLocaleString()}</StyledText>
-                    </StyledText>
-                }
-                <TouchableOpacity style={s.scanButton} onPress={() => setFinderMode('scanBoxes')} >
-                    <MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{marginRight: 8}} />
-                    <StyledText style={s.scanButtonText}>Verify or Scan Other Boxes</StyledText>
-                </TouchableOpacity>
-            </View>
-        );
-    }
-
-    // Fallback to scanBoxes mode or if no assignment
-    return (
+    if (finderMode === 'container') {
+      return (
         <>
-            <TouchableOpacity style={s.scanButton} onPress={() => { setError(null); setShowScanner(true); }} disabled={isProcessingScan}>
-                {isProcessingScan ? 
-                <ActivityIndicator color={currentThemeColors.card} /> : 
-                <><MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{marginRight: 8}} /><StyledText style={s.scanButtonText}>Scan Box QR Code</StyledText></>}
-            </TouchableOpacity>
-            <FlatList
-                data={scannedBoxes}
-                renderItem={renderScannedBoxItem}
-                keyExtractor={(item, index) => item.box.id + index.toString()}
-                ListEmptyComponent={<StyledText style={s.infoText}>Scan packing boxes to see if they contain "{targetProp.name}".</StyledText>}
-                style={s.resultsList}
+          <TouchableOpacity style={s.scanButton} onPress={() => { setError(null); setScannerPurpose('container'); setShowScanner(true); }} disabled={isProcessingScan}>
+            {isProcessingScan ? (
+              <ActivityIndicator color={currentThemeColors.card} />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{ marginRight: 8 }} />
+                <StyledText style={s.scanButtonText}>Scan Container Label</StyledText>
+              </>
+            )}
+          </TouchableOpacity>
+          <View style={s.manualLookupRow}>
+            <TextInput
+              style={s.manualInput}
+              placeholder="Enter container GUID"
+              placeholderTextColor={currentThemeColors.textSecondary}
+              value={manualCode}
+              onChangeText={(t) => { setManualCode(t.trim()); setManualLookupBox(null); }}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
+            <TouchableOpacity
+              onPress={async () => {
+                if (!manualCode) return;
+                try {
+                  setIsProcessingScan(true);
+                  setError(null);
+                  const doc = await getBoxById(manualCode);
+                  if (doc && doc.data) {
+                    const { id: _ignored, ...rest } = doc.data as any;
+                    setManualLookupBox({ id: doc.id, ...(rest as any) } as PackingBox);
+                  } else {
+                    setManualLookupBox(null);
+                    setError(`Container ${manualCode} not found.`);
+                  }
+                } catch (e: any) {
+                  setManualLookupBox(null);
+                  setError(e.message || 'Lookup failed');
+                } finally {
+                  setIsProcessingScan(false);
+                }
+              }}
+              style={s.lookupButton}
+              disabled={isProcessingScan}
+            >
+              {isProcessingScan ? (
+                <ActivityIndicator color={currentThemeColors.card} />
+              ) : (
+                <StyledText style={s.lookupButtonText}>Lookup</StyledText>
+              )}
+            </TouchableOpacity>
+          </View>
+          {scannedBox && renderBoxDetails(scannedBox)}
+          {manualLookupBox && renderBoxDetails(manualLookupBox)}
         </>
+      );
+    }
+
+    // Prop mode: show which containers hold the selected prop
+    return (
+      <>
+        <View style={{ gap: 10 }}>
+          <TouchableOpacity style={[s.scanButton, { backgroundColor: '#3A8CC1' }]} onPress={() => { setError(null); setScannerPurpose('prop'); setShowScanner(true); }}>
+            <MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{ marginRight: 8 }} />
+            <StyledText style={s.scanButtonText}>Scan Prop Label</StyledText>
+          </TouchableOpacity>
+        </View>
+        {targetProp ? (
+          (() => {
+            const matches = (allBoxesForShow || []).filter(b => Array.isArray(b.props) && b.props.some(p => p.propId === targetProp.id));
+            return (
+              <View>
+                {matches.length > 0 ? (
+                  <>
+                    <StyledText style={[s.boxStatusText, { marginBottom: 6 }]}>Found in container(s):</StyledText>
+                    {matches.map(b => (
+                      <View key={b.id} style={[s.scannedBoxItem, s.boxFound]}>
+                        <View style={s.boxItemHeader}>
+                          <Feather name="package" size={20} color={currentThemeColors.primary} />
+                          <StyledText style={s.boxName}>{b.name || b.id}</StyledText>
+                        </View>
+                        <StyledText style={s.boxStatusText}>GUID: {b.id}</StyledText>
+                      </View>
+                    ))}
+                  </>
+                ) : (
+                  hasSearchedProp ? (<StyledText style={s.infoText}>No container found for this prop.</StyledText>) : null
+                )}
+
+                {/* Show current location metadata */}
+                <View style={[s.scannedBoxItem, { borderColor: currentThemeColors.border, borderWidth: 1 }]}> 
+                  <StyledText style={[s.boxStatusText, { fontWeight: '600' }]}>Current Location</StyledText>
+                  <StyledText style={s.boxContentPreview}>Current: {targetProp.currentLocation || '-'}</StyledText>
+                  <StyledText style={s.boxContentPreview}>Storage: {targetProp.location || '-'}</StyledText>
+                  {targetProp.assignment?.type === 'location' && (
+                    <StyledText style={s.boxContentPreview}>Assigned Location: {targetProp.assignment.name || targetProp.assignment.id}</StyledText>
+                  )}
+                  {matches.length === 0 && targetProp.assignment?.type === 'box' && (
+                    <StyledText style={s.boxContentPreview}>Assigned Container GUID: {targetProp.assignment.id}</StyledText>
+                  )}
+                </View>
+              </View>
+            );
+          })()
+        ) : (
+          <StyledText style={s.infoText}>Pick a prop to locate its container.</StyledText>
+        )}
+      </>
     );
-  }
+  };
 
   if (!selectedShow) {
     return <View style={s.centered}><StyledText>Please select a show first to use Prop Finder.</StyledText></View>;
@@ -186,24 +305,51 @@ export default function PropFinderScreen() {
 
   return (
     <View style={s.container}>
-      <Stack.Screen options={{ title: 'Prop Finder' }} />
+      <Stack.Screen options={{ title: 'Find' }} />
+      {/* Simple mode switch */}
+      <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 8, marginBottom: 12 }}>
+        <TouchableOpacity onPress={() => setFinderMode('container')} style={[s.modeBtn, finderMode === 'container' && s.modeBtnActive]}>
+          <StyledText style={[s.modeBtnText, finderMode === 'container' && s.modeBtnTextActive]}>Container</StyledText>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setFinderMode('prop')} style={[s.modeBtn, finderMode === 'prop' && s.modeBtnActive]}>
+          <StyledText style={[s.modeBtnText, finderMode === 'prop' && s.modeBtnTextActive]}>Prop</StyledText>
+        </TouchableOpacity>
+      </View>
       
-      <TouchableOpacity style={s.targetPropSelector} onPress={() => setShowPropSelectionModal(true)}>
-        <Feather name="search" size={20} color={currentThemeColors.textSecondary} style={{marginRight: 8}}/>
-        <StyledText style={s.targetPropText}>
-          {targetProp ? `Searching for: ${targetProp.name}` : 'Tap to select Prop to find'}
-        </StyledText>
-      </TouchableOpacity>
-
-      {targetProp && (
-          <View style={s.targetPropDisplay}>
-            {targetProp.primaryImageUrl ? 
-                <Image source={{uri: targetProp.primaryImageUrl}} style={s.targetPropImage} /> : 
-                <View style={s.targetPropImagePlaceholder}><Feather name="package" size={30} color={currentThemeColors.textSecondary}/></View>
-            }
-            <StyledText style={s.targetPropName}>{targetProp.name}</StyledText>
-          </View>
+      <View style={s.searchRow}>
+        <Feather name="search" size={20} color={currentThemeColors.textSecondary} style={{ marginRight: 8 }} />
+        <TextInput
+          style={s.searchTextInput}
+          placeholder="Search props by name"
+          placeholderTextColor={currentThemeColors.textSecondary}
+          value={propSearchQuery}
+          onChangeText={(t) => {
+            setPropSearchQuery(t);
+            if (!t) { setTargetProp(null); setHasSearchedProp(false); }
+          }}
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+          onSubmitEditing={() => {
+            const first = (availablePropsForShow || []).find(p => p.name.toLowerCase().includes(propSearchQuery.trim().toLowerCase()));
+            if (first) { handleSelectTargetProp(first); setHasSearchedProp(true); }
+          }}
+        />
+      </View>
+      {propSearchQuery.trim().length > 0 && (
+        <View style={s.suggestions}>
+          {(availablePropsForShow || [])
+            .filter(p => p.name.toLowerCase().includes(propSearchQuery.trim().toLowerCase()))
+            .slice(0, 8)
+            .map((p, idx) => (
+              <TouchableOpacity key={p.id || `s-${idx}`} style={s.suggestionItem} onPress={() => handleSelectTargetProp(p)}>
+                <StyledText style={s.suggestionText}>{p.name}</StyledText>
+              </TouchableOpacity>
+            ))}
+        </View>
       )}
+
+      {/* Removed large selected prop preview to keep search simple */}
 
       {error && 
         <View style={s.errorContainer}>
@@ -266,6 +412,35 @@ const styles = (colors: typeof lightTheme.colors) => StyleSheet.create({
     borderColor: colors.border,
   },
   targetPropText: { fontSize: 16, color: colors.text, flex: 1 }, 
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  searchTextInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+  },
+  suggestions: {
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
+  },
+  suggestionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  suggestionText: { color: colors.text, fontSize: 16 },
   targetPropDisplay: {
     alignItems: 'center',
     marginBottom: 15,
@@ -296,6 +471,46 @@ const styles = (colors: typeof lightTheme.colors) => StyleSheet.create({
   },
   scanButtonText: { color: colors.card, fontSize: 16, fontWeight: 'bold' },
   resultsList: { flex: 1, width: '100%' },
+  modeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modeBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  modeBtnText: { color: colors.text },
+  modeBtnTextActive: { color: colors.card, fontWeight: 'bold' },
+  manualLookupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  manualInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.text,
+  },
+  lookupButton: {
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lookupButtonText: { color: colors.card, fontWeight: 'bold' },
   scannedBoxItem: {
     padding: 12,
     borderRadius: 8,
