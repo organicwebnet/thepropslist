@@ -1,14 +1,20 @@
 import { onCall } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 
-// MailerSend HTTP API integration
+// Providers: Brevo (preferred) or MailerSend (fallback)
+// Brevo API: https://api.brevo.com/v3/smtp/email
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL;
+const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || "Props Bible";
+
+// MailerSend HTTP API integration (fallback if Brevo not configured)
 const MS_API_KEY = process.env.MAILERSEND_API_KEY;
 const MS_FROM_EMAIL = process.env.MAILERSEND_FROM_EMAIL;
 const MS_FROM_NAME = process.env.MAILERSEND_FROM_NAME || "Props Bible";
 
-if (!MS_API_KEY || !MS_FROM_EMAIL) {
+if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
   logger.warn(
-    "MailerSend secrets not set (MAILERSEND_API_KEY, MAILERSEND_FROM_EMAIL). sendInviteEmail will no-op until configured."
+    "Brevo secrets not set (BREVO_API_KEY, BREVO_FROM_EMAIL). Will fallback to MailerSend if configured."
   );
 }
 
@@ -22,10 +28,6 @@ export const sendInviteEmail = onCall(async (req) => {
   };
 
   if (!to) throw new Error("Missing 'to' recipient email");
-  if (!MS_API_KEY || !MS_FROM_EMAIL) {
-    logger.error("MailerSend secrets missing; skipping email.", { to, role, showName });
-    return { ok: false, skipped: true };
-  }
 
   const subject = `You're invited to join ${showName || "a show"} on Props Bible`;
   const html = `
@@ -38,33 +40,66 @@ export const sendInviteEmail = onCall(async (req) => {
     </div>
   `;
 
-  const body = {
-    from: {
-      email: MS_FROM_EMAIL,
-      name: fromName || MS_FROM_NAME,
-    },
-    to: [{ email: to }],
-    subject,
-    html,
-  } as any;
+  // Prefer Brevo if configured
+  if (BREVO_API_KEY && BREVO_FROM_EMAIL) {
+    const body = {
+      sender: { email: BREVO_FROM_EMAIL, name: fromName || BREVO_FROM_NAME },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    } as any;
 
-  const res = await fetch("https://api.mailersend.com/v1/email", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${MS_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  } as any);
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": BREVO_API_KEY,
+        "Content-Type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    } as any);
 
-  if (!(res as any).ok) {
-    const text = await (res as any).text().catch(() => "");
-    logger.error("MailerSend send failed", { status: (res as any).status, text });
-    throw new Error(`MailerSend error: ${(res as any).status}`);
+    if (!(res as any).ok) {
+      const text = await (res as any).text().catch(() => "");
+      logger.error("Brevo send failed", { status: (res as any).status, text });
+      throw new Error(`Brevo error: ${(res as any).status}`);
+    }
+    logger.info("Invite email sent via Brevo", { to, role, showName });
+    return { ok: true, provider: "brevo" } as any;
   }
 
-  logger.info("Invite email sent via MailerSend", { to, role, showName });
-  return { ok: true };
+  // Fallback to MailerSend
+  if (MS_API_KEY && MS_FROM_EMAIL) {
+    const body = {
+      from: {
+        email: MS_FROM_EMAIL,
+        name: fromName || MS_FROM_NAME,
+      },
+      to: [{ email: to }],
+      subject,
+      html,
+    } as any;
+
+    const res = await fetch("https://api.mailersend.com/v1/email", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${MS_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    } as any);
+
+    if (!(res as any).ok) {
+      const text = await (res as any).text().catch(() => "");
+      logger.error("MailerSend send failed", { status: (res as any).status, text });
+      throw new Error(`MailerSend error: ${(res as any).status}`);
+    }
+    logger.info("Invite email sent via MailerSend", { to, role, showName });
+    return { ok: true, provider: "mailersend" } as any;
+  }
+
+  logger.error("No email provider configured (Brevo or MailerSend)", { to, role, showName });
+  return { ok: false, skipped: true } as any;
 });
 
 
