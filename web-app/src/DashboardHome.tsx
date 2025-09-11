@@ -256,6 +256,7 @@ const DashboardHome: React.FC = () => {
   }
 
   return (
+    <>
     <DashboardLayout>
       <motion.div
         variants={containerVariants}
@@ -400,6 +401,7 @@ const DashboardHome: React.FC = () => {
       onAddProp={() => navigate('/props/add')}
       onOpenBoard={() => navigate('/boards')}
     />
+    </>
   );
 };
 
