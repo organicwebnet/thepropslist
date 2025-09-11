@@ -78,7 +78,7 @@ export default function PackingListScreen() {
         containerStatus: (box as any).status || 'draft',
         propCount: box.props?.reduce((s, p) => s + (p.quantity || 1), 0) || 0,
         labels: (box as any).labels || [],
-        url: `https://props-bible/box/${currentShow.id}/${box.id}`,
+        url: `https://thepropslist.uk/c/${box.id}`,
         generatedAt: new Date(),
       }));
       const printer = new LabelPrintService();

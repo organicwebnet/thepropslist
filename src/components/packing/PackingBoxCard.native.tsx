@@ -53,7 +53,7 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
         containerStatus: (box as any).status || 'draft',
         propCount: box.props?.length || 0,
         labels: (box as any).labels || [],
-        url: `https://props-bible/box/${(box as any).showId || ''}/${box.id}`,
+        url: `https://thepropslist.uk/c/${box.id}`,
         generatedAt: new Date(),
       } as any;
       const { LabelPrintService } = await import('../../shared/services/pdf/labelPrintService');

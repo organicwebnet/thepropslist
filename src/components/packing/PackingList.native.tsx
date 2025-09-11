@@ -52,7 +52,7 @@ export function PackingList({
         containerStatus: (b as any).status || 'draft',
         propCount: b.props?.length || 0,
         labels: (b as any).labels || [],
-        url: `https://props-bible/box/${show.id}/${b.id}`,
+        url: `https://thepropslist.uk/c/${b.id}`,
         generatedAt: new Date(),
       }));
       const { LabelPrintService } = await import('../../shared/services/pdf/labelPrintService');
