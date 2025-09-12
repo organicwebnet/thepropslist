@@ -229,9 +229,6 @@ const ShowDetailPage: React.FC = () => {
           {renderList(show.venues, 'Venues', (venue, idx) => <li key={idx}>{venue.name || venue}</li>)}
           {renderList(show.contacts, 'Contacts', (contact, idx) => <li key={idx}>{contact.name || contact}</li>)}
           {renderList(show.collaborators, 'Collaborators', (collab, idx) => <li key={idx}>{collab.name || collab.email || collab}</li>)}
-          <div className="mt-2">
-            <Link to={`/shows/${show.id}/team`} className="inline-block text-pb-primary underline">Manage team →</Link>
-          </div>
           {renderList(show.acts, 'Acts', (act, idx) => <li key={idx}>{act.name || act}</li>)}
           {renderList(show.rehearsalAddresses, 'Rehearsal Addresses', (addr, idx) => <li key={idx}>{addr.address || addr}</li>)}
           {renderList(show.storageAddresses, 'Storage Addresses', (addr, idx) => <li key={idx}>{addr.address || addr}</li>)}
