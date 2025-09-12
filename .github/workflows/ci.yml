@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ROLLUP_SKIP_NODEJS_NATIVE: '1'
+      ROLLUP_SKIP_NODEJS_NATIVE: 'true'
 
     steps:
     - uses: actions/checkout@v4
@@ -21,9 +21,12 @@ jobs:
         node-version: '20'
         cache: 'npm'
 
-    - name: Install web-app dependencies (omit optional)
+    - name: Install web-app dependencies (clean install)
       working-directory: web-app
-      run: npm ci --omit=optional
+      shell: bash
+      run: |
+        rm -rf node_modules package-lock.json
+        npm install
 
     - name: Create env file for web-app (with safe defaults)
       working-directory: web-app
