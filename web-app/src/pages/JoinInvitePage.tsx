@@ -99,7 +99,7 @@ const JoinInvitePage: React.FC = () => {
         status: 'accepted',
         acceptedAt: new Date().toISOString(),
         acceptedBy: currentUser?.uid || null,
-      }, { merge: true });
+      });
       // After joining, go to home if signed in, otherwise login
       if (getAuth().currentUser) {
         navigate('/');
@@ -137,7 +137,7 @@ const JoinInvitePage: React.FC = () => {
           <div className="text-red-400">{error}</div>
         ) : !invite ? null : (
           <div className="w-full max-w-lg bg-pb-darker/60 rounded-xl shadow-lg p-6">
-            <h1 className="text-xl font-bold text-white mb-2">Join show</h1>
+            <h1 className="text-xl font-bold text-white mb-2">Join show · v2</h1>
             <div className="text-pb-gray mb-4">You are invited to join this production as <span className="text-pb-primary font-semibold">{invite.role}</span>.</div>
             <div className="mb-4 flex border-b border-pb-primary/20">
               <button type="button" onClick={() => setActiveTab('google')} className={`px-3 py-2 text-sm ${activeTab === 'google' ? 'text-white border-b-2 border-pb-primary' : 'text-pb-gray'}`}>Sign in with Google</button>
