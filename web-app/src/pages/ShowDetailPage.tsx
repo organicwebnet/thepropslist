@@ -163,11 +163,14 @@ const ShowDetailPage: React.FC = () => {
               onClick={() => setInviteOpen(true)}
               className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
             >
-              <UserPlus className="w-4 h-4" /> Invite teammate
+              <UserPlus className="w-4 h-4" /> Invite team
             </button>
-            <Link to={`/shows/${show.id}/team`} className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30">
+            <button
+              onClick={() => window.location.assign(`/shows/${show.id}/team`)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
+            >
               Manage team
-            </Link>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
