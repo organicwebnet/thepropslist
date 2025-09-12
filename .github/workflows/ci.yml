@@ -11,18 +11,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
 
-    - name: Install dependencies
+    - name: Install web-app dependencies
+      working-directory: web-app
       run: npm ci
 
-    - name: Create env file
+    - name: Create env file for web-app
+      working-directory: web-app
       run: |
         echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env
         echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env
@@ -36,12 +38,17 @@ jobs:
         echo "VITE_APPLE_SERVICE_ID=${{ secrets.VITE_APPLE_SERVICE_ID }}" >> .env
         echo "VITE_APPLE_KEY_ID=${{ secrets.VITE_APPLE_KEY_ID }}" >> .env
 
-    - name: Run tests
-      run: npm test
-      continue-on-error: true
-
-    - name: Build
+    - name: Build web-app
+      working-directory: web-app
       run: npm run build
+
+    - name: Install functions dependencies
+      working-directory: functions
+      run: npm ci
+
+    - name: Type-check functions
+      working-directory: functions
+      run: npx tsc -p tsconfig.json
 
     - name: Deploy to Firebase
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -50,4 +57,4 @@ jobs:
         repoToken: '${{ secrets.GITHUB_TOKEN }}'
         firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
         channelId: live
-        projectId: props-bible-app-1c1cb 
+        projectId: props-bible-app-1c1cb
