@@ -118,12 +118,26 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           {userProfile?.displayName && (
             <span className="text-sm text-pb-gray">Welcome, {userProfile.displayName}</span>
           )}
-          <Link to="/profile" className="block">
+          <Link to="/profile" className="relative block">
             <img
               src={userProfile?.photoURL || '/public/icon.png'}
               alt="Profile"
               className="w-8 h-8 rounded-full border border-pb-primary/40 object-cover"
             />
+            {(() => {
+              const missing: string[] = [];
+              if (!userProfile?.displayName) missing.push('name');
+              if (!userProfile?.photoURL) missing.push('photo');
+              if (!userProfile?.organization) missing.push('org');
+              const incomplete = missing.length > 0;
+              return incomplete ? (
+                <span
+                  title={`Complete your profile: ${missing.join(', ')}`}
+                  className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-amber-400 border border-black animate-pulse"
+                  aria-label="Profile incomplete"
+                />
+              ) : null;
+            })()}
           </Link>
           <button
             onClick={handleSignOut}
