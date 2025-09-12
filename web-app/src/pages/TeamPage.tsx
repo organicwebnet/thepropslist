@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import type { Show } from '../types/Show';
 import { buildInviteEmailDocTo, buildReminderEmailDoc } from '../services/EmailService';
+import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 
 type Invitation = {
   id?: string;
@@ -87,6 +88,17 @@ const TeamPage: React.FC = () => {
     setSubmitting(true);
     setError(null);
     try {
+      // Prevent inviting an email that already has an Auth account
+      try {
+        const methods = await fetchSignInMethodsForEmail(getAuth(), inviteEmail);
+        if (Array.isArray(methods) && methods.length > 0) {
+          setError('This email is already registered. Ask them to sign in and open the invite link, or add them directly as a collaborator.');
+          setSubmitting(false);
+          return;
+        }
+      } catch (authCheckErr) {
+        console.warn('Email check failed', authCheckErr);
+      }
       const inviteData: Invitation = {
         showId: id,
         role: inviteRole,

@@ -5,6 +5,7 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import type { Show } from '../types/Show';
 import { Pencil, UserPlus } from 'lucide-react';
+import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { buildInviteEmailDocTo } from '../services/EmailService';
 
 const ShowDetailPage: React.FC = () => {
@@ -270,6 +271,16 @@ const ShowDetailPage: React.FC = () => {
                   if (!inviteEmail || !inviteEmail.includes('@')) {
                     setInviteError('Please enter a valid email');
                     return;
+                  }
+                  // Prevent inviting an email that already has an Auth account
+                  try {
+                    const methods = await fetchSignInMethodsForEmail(getAuth(), inviteEmail);
+                    if (Array.isArray(methods) && methods.length > 0) {
+                      setInviteError('This email is already registered. Ask them to sign in and open the invite link, or add them directly as a collaborator.');
+                      return;
+                    }
+                  } catch (authCheckErr) {
+                    console.warn('Email check failed', authCheckErr);
                   }
                   setInviteSubmitting(true);
                   const token = crypto.randomUUID();
