@@ -25,20 +25,33 @@ jobs:
       working-directory: web-app
       run: npm ci --omit=optional
 
-    - name: Create env file for web-app
+    - name: Create env file for web-app (with safe defaults)
       working-directory: web-app
+      shell: bash
+      env:
+        VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+        VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+        VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+        VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
+        VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+        VITE_APPLE_TEAM_ID: ${{ secrets.VITE_APPLE_TEAM_ID }}
+        VITE_APPLE_SERVICE_ID: ${{ secrets.VITE_APPLE_SERVICE_ID }}
+        VITE_APPLE_KEY_ID: ${{ secrets.VITE_APPLE_KEY_ID }}
       run: |
-        echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env
-        echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env
-        echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> .env
-        echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> .env
-        echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> .env
-        echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env
-        echo "VITE_GOOGLE_API_KEY=${{ secrets.VITE_GOOGLE_API_KEY }}" >> .env
-        echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
-        echo "VITE_APPLE_TEAM_ID=${{ secrets.VITE_APPLE_TEAM_ID }}" >> .env
-        echo "VITE_APPLE_SERVICE_ID=${{ secrets.VITE_APPLE_SERVICE_ID }}" >> .env
-        echo "VITE_APPLE_KEY_ID=${{ secrets.VITE_APPLE_KEY_ID }}" >> .env
+        echo "VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY:-dummy}" >> .env
+        echo "VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN:-dummy}.firebaseapp.com" >> .env
+        echo "VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID:-dummy}" >> .env
+        echo "VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET:-dummy}.appspot.com" >> .env
+        echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID:-000000000000}" >> .env
+        echo "VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID:-1:000000000000:web:0000000000000000000000}" >> .env
+        echo "VITE_GOOGLE_API_KEY=${VITE_GOOGLE_API_KEY:-dummy}" >> .env
+        echo "VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-dummy.apps.googleusercontent.com}" >> .env
+        echo "VITE_APPLE_TEAM_ID=${VITE_APPLE_TEAM_ID:-}" >> .env
+        echo "VITE_APPLE_SERVICE_ID=${VITE_APPLE_SERVICE_ID:-}" >> .env
+        echo "VITE_APPLE_KEY_ID=${VITE_APPLE_KEY_ID:-}" >> .env
 
     - name: Build web-app
       working-directory: web-app
