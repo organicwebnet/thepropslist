@@ -110,13 +110,21 @@ service cloud.firestore {
       }
     }
     match /invitations/{inviteId} {
+      function isShowOwner(showId) {
+        return get(/databases/$(database)/documents/shows/$(showId)).data.userId == request.auth.uid ||
+               get(/databases/$(database)/documents/shows/$(showId)).data.ownerId == request.auth.uid;
+      }
+
       allow create: if isSystemAdmin() || (request.auth != null && (
-        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] == "god" ||
-        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] == "props_supervisor"
+        isShowOwner(request.resource.data.showId) ||
+        hasTeamRole(request.resource.data.showId, 'god') ||
+        hasTeamRole(request.resource.data.showId, 'props_supervisor')
       ));
+
       allow read, update, delete: if isSystemAdmin() || (request.auth != null && (
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] == "god" ||
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] == "props_supervisor" ||
+        isShowOwner(resource.data.showId) ||
+        hasTeamRole(resource.data.showId, 'god') ||
+        hasTeamRole(resource.data.showId, 'props_supervisor') ||
         (request.auth.token.email == resource.data.email && resource.data.status == "pending")
       ));
     }
