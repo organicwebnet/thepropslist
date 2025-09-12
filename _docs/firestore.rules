@@ -121,12 +121,8 @@ service cloud.firestore {
       ));
     }
     // Allow enqueuing emails for MailerSend/Trigger Email extensions
-    match /mail/{docId} {
-      allow create: if request.auth != null;  // clients can enqueue emails
-      allow read, update, delete: if false;
-    }
-    match /mailersend/emails/{emailId} {
-      allow create: if request.auth != null;  // alternate path
+    match /emails/{emailId} {
+      allow create: if request.auth != null;  // enqueue for MailerSend extension
       allow read, update, delete: if false;
     }
     match /tasks/{taskId} {
