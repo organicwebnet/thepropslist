@@ -68,12 +68,23 @@ jobs:
       working-directory: functions
       run: npx tsc -p tsconfig.json
 
+    - name: Decode service account (from base64)
+      if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 != '' }}
+      id: sa
+      shell: bash
+      env:
+        FIREBASE_SERVICE_ACCOUNT_BASE64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}
+      run: |
+        echo "$FIREBASE_SERVICE_ACCOUNT_BASE64" | base64 -d > sa.json
+        json=$(cat sa.json)
+        json="${json//'%'/'%25'}"; json="${json//$'\n'/'%0A'}"; json="${json//$'\r'/'%0D'}"
+        echo "json=${json}" >> $GITHUB_OUTPUT
+
     - name: Deploy to Firebase
-      if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (secrets.FIREBASE_SERVICE_ACCOUNT != '' || secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 != '') }}
+      if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (secrets.FIREBASE_SERVICE_ACCOUNT != '' || steps.sa.outputs.json != '') }}
       uses: FirebaseExtended/action-hosting-deploy@v0
       with:
         repoToken: '${{ secrets.GITHUB_TOKEN }}'
-        firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
-        firebaseServiceAccountBase64: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}'
+        firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' && secrets.FIREBASE_SERVICE_ACCOUNT || steps.sa.outputs.json }}
         channelId: live
         projectId: props-bible-app-1c1cb
