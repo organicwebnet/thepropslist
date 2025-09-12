@@ -68,12 +68,9 @@ jobs:
       working-directory: functions
       run: npx tsc -p tsconfig.json
 
-    - name: Deploy to Firebase (token auth)
+    - name: Deploy to Firebase (CLI with token)
       if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-      uses: FirebaseExtended/action-hosting-deploy@v0
-      with:
-        repoToken: '${{ secrets.GITHUB_TOKEN }}'
-        channelId: live
-        projectId: props-bible-app-1c1cb
       env:
         FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+      run: |
+        npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
