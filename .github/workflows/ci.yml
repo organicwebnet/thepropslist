@@ -69,7 +69,7 @@ jobs:
       run: npx tsc -p tsconfig.json
 
     - name: Decode service account (from base64)
-      if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 != '' }}
+      if: ${{ env.FIREBASE_SERVICE_ACCOUNT_BASE64 != '' }}
       id: sa
       shell: bash
       env:
@@ -81,10 +81,10 @@ jobs:
         echo "json=${json}" >> $GITHUB_OUTPUT
 
     - name: Deploy to Firebase
-      if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (secrets.FIREBASE_SERVICE_ACCOUNT != '' || steps.sa.outputs.json != '') }}
+      if: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && (env.FIREBASE_SERVICE_ACCOUNT != '' || steps.sa.outputs.json != '') }}
       uses: FirebaseExtended/action-hosting-deploy@v0
       with:
         repoToken: '${{ secrets.GITHUB_TOKEN }}'
-        firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' && secrets.FIREBASE_SERVICE_ACCOUNT || steps.sa.outputs.json }}
+        firebaseServiceAccount: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' && env.FIREBASE_SERVICE_ACCOUNT || steps.sa.outputs.json }}
         channelId: live
         projectId: props-bible-app-1c1cb
