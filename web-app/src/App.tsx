@@ -10,6 +10,7 @@ import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import { useWebAuth } from './contexts/WebAuthContext';
 import ShowDetailPage from './pages/ShowDetailPage';
+import TeamPage from './pages/TeamPage';
 import AddShowPage from './pages/AddShowPage';
 import EditShowPage from './pages/EditShowPage';
 import { ShowSelectionProvider } from './contexts/ShowSelectionContext';
@@ -48,6 +49,7 @@ function App() {
           <Route path="/shows/new" element={<AddShowPage />} />
           <Route path="/shows/:id/edit" element={<EditShowPage />} />
           <Route path="/shows/:id" element={<ShowDetailPage />} />
+          <Route path="/shows/:id/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />
           <Route path="/join/:token" element={<JoinInvitePage />} />
           <Route path="/packing-lists" element={<ProtectedRoute><PackingListPage /></ProtectedRoute>} />
