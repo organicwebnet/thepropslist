@@ -283,9 +283,38 @@ const ShowDetailPage: React.FC = () => {
                       const emailDoc = {
                         from: { email: 'info@thepropslist.uk', name: 'Props Bible' },
                         to: [{ email: inviteEmail, name: inviteName || 'Invitee' }],
-                        subject: `You're invited to join ${show.name}`,
-                        html: `<p>Hello${inviteName ? ` ${inviteName}` : ''},</p><p>You’ve been invited as <b>${inviteRole}</b> (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on <b>${show.name}</b>.</p><p><a href="${inviteUrl}">Accept your invite</a></p><p style="color:#889">If the link doesn’t work, copy and paste it: ${inviteUrl}</p>`,
-                        text: `You’ve been invited as ${inviteRole} (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on ${show.name}. Accept: ${inviteUrl}`,
+                        subject: `You’re invited to join ${show.name} on Props Bible`,
+                        html: `
+                          <div style="background:#0b0b12;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#111827;border-radius:10px;border:1px solid #1f2937;overflow:hidden;">
+                              <tr>
+                                <td style="padding:20px 24px;background:#0f172a;border-bottom:1px solid #1f2937;">
+                                  <div style="font-size:18px;font-weight:700;color:#ffffff;">Props Bible</div>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td style="padding:24px;">
+                                  <p style="margin:0 0 12px 0;">Hello${inviteName ? ` ${inviteName}` : ''},</p>
+                                  <p style="margin:0 0 16px 0;">You’ve been invited as <strong>${inviteRole}</strong> (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on <strong>${show.name}</strong>.</p>
+                                  <p style="margin:0 0 24px 0;">Click the button below to accept your invite.</p>
+                                  <p style="margin:0 0 24px 0;">
+                                    <a href="${inviteUrl}"
+                                       style="display:inline-block;background:#06b6d4;color:#0b0b12;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;">Accept invite</a>
+                                  </p>
+                                  <p style="margin:0;color:#9ca3af;font-size:13px;">If the button doesn’t work, copy and paste this link into your browser:<br/>
+                                  <span style="word-break:break-all;color:#cbd5e1;">${inviteUrl}</span></p>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td style="padding:16px 24px;background:#0f172a;border-top:1px solid #1f2937;color:#94a3b8;font-size:12px;">
+                                  <div>Sent by Props Bible • thepropslist.uk</div>
+                                </td>
+                              </tr>
+                            </table>
+                          </div>
+                        `,
+                        text: `Hello${inviteName ? ` ${inviteName}` : ''},\n\nYou’ve been invited as ${inviteRole} (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on ${show.name}.\n\nAccept your invite: ${inviteUrl}\n\nIf the link doesn’t work, copy and paste it into your browser.\n\nProps Bible • thepropslist.uk`,
+                        replyTo: { email: 'info@thepropslist.uk', name: 'Props Bible' },
                       } as any;
                       // MailerSend extension is configured to watch 'emails' collection
                       await firebaseService.addDocument('emails', emailDoc);
