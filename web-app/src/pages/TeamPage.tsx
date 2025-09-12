@@ -3,11 +3,13 @@ import DashboardLayout from '../PropsBibleHomepage';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import type { Show } from '../types/Show';
+import { buildInviteEmailDocTo, buildReminderEmailDoc } from '../services/EmailService';
 
 type Invitation = {
   id?: string;
   showId: string;
   role: string;
+  jobRole?: string;
   inviterId?: string;
   status?: 'pending' | 'accepted' | 'revoked' | 'expired';
   createdAt?: string;
@@ -30,7 +32,8 @@ const TeamPage: React.FC = () => {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'editor' | 'viewer'>('viewer');
+  const [inviteJobRole, setInviteJobRole] = useState<string>('propmaker');
+  const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
   const [submitting, setSubmitting] = useState(false);
 
   const showId = id || show?.id || '';
@@ -60,6 +63,24 @@ const TeamPage: React.FC = () => {
     return () => { if (unsub) unsub(); };
   }, [service, id]);
 
+  // Job roles (same set used in ShowDetailPage)
+  const JOB_ROLES = [
+    { value: 'propmaker', label: 'Prop Maker' },
+    { value: 'senior-propmaker', label: 'Senior Prop Maker' },
+    { value: 'props-carpenter', label: 'Props Carpenter' },
+    { value: 'show-carpenter', label: 'Show Carpenter' },
+    { value: 'painter', label: 'Painter' },
+    { value: 'buyer', label: 'Buyer' },
+    { value: 'props-supervisor', label: 'Props Supervisor' },
+    { value: 'art-director', label: 'Art Director' },
+    { value: 'set-dresser', label: 'Set Dresser' },
+    { value: 'stage-manager', label: 'Stage Manager' },
+    { value: 'assistant-stage-manager', label: 'Assistant Stage Manager' },
+    { value: 'designer', label: 'Designer' },
+    { value: 'assistant-designer', label: 'Assistant Designer' },
+    { value: 'crew', label: 'Crew' },
+  ] as const;
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !inviteEmail) return;
@@ -69,6 +90,7 @@ const TeamPage: React.FC = () => {
       const inviteData: Invitation = {
         showId: id,
         role: inviteRole,
+        jobRole: inviteJobRole,
         inviterId: user?.uid,
         status: 'pending',
         createdAt: new Date().toISOString(),
@@ -78,43 +100,18 @@ const TeamPage: React.FC = () => {
       };
       const docId = await service.addDocument('invitations', inviteData);
       const inviteUrl = `${window.location.origin}/join/${docId}`;
-      const emailDoc = {
-        from: { email: 'info@thepropslist.uk', name: 'The Props List' },
-        to: [{ email: inviteEmail, name: inviteName || 'Invitee' }],
-        subject: `You’re invited to join ${show?.name || 'this show'} on The Props List`,
-        html: `<div style="background:#0b0b12;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#111827;border-radius:10px;border:1px solid #1f2937;overflow:hidden;">
-          <tr>
-            <td style="padding:20px 24px;background:#0f172a;border-bottom:1px solid #1f2937;">
-              <div style="font-size:18px;font-weight:700;color:#ffffff;">The Props List</div>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:24px;">
-              <p style="margin:0 0 12px 0;">Hello${inviteName ? ` ${inviteName}` : ''},</p>
-              <p style="margin:0 0 16px 0;">You’ve been invited as <strong>${inviteRole}</strong> on <strong>${show?.name || 'this show'}</strong>.</p>
-              <p style="margin:0 0 24px 0;">Click the button below to accept your invite.</p>
-              <p style="margin:0 0 24px 0;">
-                <a href="${inviteUrl}" style="display:inline-block;background:#06b6d4;color:#0b0b12;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;">Accept invite</a>
-              </p>
-              <p style="margin:0;color:#9ca3af;font-size:13px;">If the button doesn’t work, copy and paste this link into your browser:<br/>
-              <span style="word-break:break-all;color:#cbd5e1;">${inviteUrl}</span></p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 24px;background:#0f172a;border-top:1px solid #1f2937;color:#94a3b8;font-size:12px;">
-              <div>Sent by The Props List • thepropslist.uk</div>
-            </td>
-          </tr>
-        </table>
-      </div>`,
-        text: `Hello${inviteName ? ` ${inviteName}` : ''},\n\nYou’ve been invited as ${inviteRole} on ${show?.name || 'this show'}.\n\nAccept your invite: ${inviteUrl}\n\nIf the link doesn’t work, copy and paste it into your browser.\n\nThe Props List • thepropslist.uk`,
-        replyTo: { email: 'info@thepropslist.uk', name: 'The Props List' },
-      } as any;
+      const emailDoc = buildInviteEmailDocTo(inviteEmail, {
+        showName: show?.name || 'this show',
+        inviteUrl,
+        inviteeName: inviteName || null,
+        role: inviteRole,
+        jobRoleLabel: JOB_ROLES.find(r => r.value === inviteJobRole)?.label || inviteJobRole,
+      });
       await service.addDocument('emails', emailDoc);
       setInviteOpen(false);
       setInviteName('');
       setInviteEmail('');
+      setInviteJobRole('propmaker');
       setInviteRole('viewer');
       alert('Invite email queued.');
     } catch (e: any) {
@@ -127,14 +124,12 @@ const TeamPage: React.FC = () => {
   const handleResend = async (inv: Invitation) => {
     try {
       const inviteUrl = `${window.location.origin}/join/${inv.id}`;
-      const emailDoc = {
-        from: { email: 'info@thepropslist.uk', name: 'The Props List' },
-        to: [{ email: inv.email, name: inv.name || 'Invitee' }],
-        subject: `Reminder: join ${show?.name || 'this show'} on The Props List`,
-        html: `<p>Hello${inv.name ? ` ${inv.name}` : ''},</p><p>This is a quick reminder to accept your invite to <b>${show?.name || 'this show'}</b>.</p><p><a href="${inviteUrl}">Accept invite</a></p>`,
-        text: `Hello${inv.name ? ` ${inv.name}` : ''}, Reminder to accept your invite: ${inviteUrl}`,
-        replyTo: { email: 'info@thepropslist.uk', name: 'The Props List' },
-      } as any;
+      const emailDoc = buildReminderEmailDoc(inv.email, {
+        showName: show?.name || 'this show',
+        inviteUrl,
+        inviteeName: inv.name || null,
+        role: inv.role || 'viewer',
+      });
       await service.addDocument('emails', emailDoc);
       alert('Reminder email queued.');
     } catch (e) {
@@ -182,16 +177,35 @@ const TeamPage: React.FC = () => {
             <button onClick={() => setInviteOpen(v => !v)} className="px-3 py-1.5 rounded bg-pb-primary text-white text-sm font-semibold">Invite teammate</button>
           </div>
           {inviteOpen && (
-            <form onSubmit={handleInvite} className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 bg-pb-darker/50 p-4 rounded border border-pb-primary/20">
-              <input placeholder="Full name" className="rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={inviteName} onChange={e => setInviteName(e.target.value)} />
-              <input type="email" placeholder="Email" required className="rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
-              <select className="rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={inviteRole} onChange={e => setInviteRole(e.target.value as any)}>
-                <option value="viewer">Viewer</option>
-                <option value="editor">Editor</option>
-              </select>
-              <div className="flex gap-2">
-                <button disabled={submitting} className="px-3 py-2 rounded bg-pb-primary text-white font-semibold disabled:opacity-60">{submitting ? 'Sending…' : 'Send invite'}</button>
+            <form onSubmit={handleInvite} className="mb-4 bg-pb-darker/50 p-4 rounded border border-pb-primary/20 space-y-4">
+              <div>
+                <label className="block text-sm text-pb-gray mb-1">Name</label>
+                <input placeholder="e.g. Alex Props" className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={inviteName} onChange={e => setInviteName(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm text-pb-gray mb-1">Email</label>
+                <input type="email" placeholder="invitee@example.com" required className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm text-pb-gray mb-1">Job role</label>
+                <select className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={inviteJobRole} onChange={e => setInviteJobRole(e.target.value)}>
+                  {JOB_ROLES.map(r => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-pb-gray mb-1">Role</label>
+                <select className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={inviteRole} onChange={e => setInviteRole(e.target.value as any)}>
+                  <option value="viewer">Viewer</option>
+                  <option value="editor">Editor</option>
+                  <option value="props_supervisor">Props Supervisor</option>
+                  <option value="god">Admin</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setInviteOpen(false)} className="px-3 py-2 rounded bg-pb-darker/60 text-pb-gray border border-pb-primary/20">Cancel</button>
+                <button disabled={submitting} className="px-3 py-2 rounded bg-pb-primary text-white font-semibold disabled:opacity-60">{submitting ? 'Sending…' : 'Send invite'}</button>
               </div>
             </form>
           )}
