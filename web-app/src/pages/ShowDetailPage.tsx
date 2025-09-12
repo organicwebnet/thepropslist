@@ -5,6 +5,8 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import type { Show } from '../types/Show';
 import { Pencil, UserPlus } from 'lucide-react';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app as firebaseApp } from '../firebase';
 
 const ShowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +18,14 @@ const ShowDetailPage: React.FC = () => {
   const [venueAddresses, setVenueAddresses] = useState<any[]>([]);
   const [rehearsalAddresses, setRehearsalAddresses] = useState<any[]>([]);
   const [storageAddresses, setStorageAddresses] = useState<any[]>([]);
+
+  // Invite modal state
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
+  const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -131,34 +141,12 @@ const ShowDetailPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-3">
-            <a
-              href={show?.id ? `/join/${crypto.randomUUID()}` : '#'}
-              onClick={async (e) => {
-                e.preventDefault();
-                if (!show?.id) return;
-                // Create a bare invite doc then show copyable link
-                const token = crypto.randomUUID();
-                try {
-                  await firebaseService.setDocument('invitations', token, {
-                    showId: show.id,
-                    role: 'viewer',
-                    inviterId: user?.uid || show.userId,
-                    status: 'pending',
-                    createdAt: new Date().toISOString(),
-                    expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-                  });
-                  const link = `${window.location.origin}/join/${token}`;
-                  await navigator.clipboard.writeText(link);
-                  alert('Invite link copied to clipboard:\n' + link);
-                } catch (err) {
-                  console.error(err);
-                  alert('Failed to create invite: ' + (err instanceof Error ? err.message : 'unknown error'));
-                }
-              }}
+            <button
+              onClick={() => setInviteOpen(true)}
               className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
             >
               <UserPlus className="w-4 h-4" /> Invite teammate
-            </a>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
@@ -231,6 +219,129 @@ const ShowDetailPage: React.FC = () => {
           )}
           <Link to="/shows" className="inline-block mt-4 text-pb-primary underline">← Back to Shows</Link>
         </div>
+
+        {/* Invite teammate modal */}
+        {inviteOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+            <div className="w-full max-w-md rounded-lg bg-[#12121a] border border-pb-primary/20 shadow-xl">
+              <div className="px-5 py-4 border-b border-pb-primary/20 flex items-center justify-between">
+                <h3 className="text-white text-lg font-semibold">Invite teammate</h3>
+                <button
+                  onClick={() => {
+                    if (!inviteSubmitting) setInviteOpen(false);
+                  }}
+                  className="text-pb-gray hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setInviteError(null);
+                  if (!show?.id) return;
+                  if (!inviteEmail || !inviteEmail.includes('@')) {
+                    setInviteError('Please enter a valid email');
+                    return;
+                  }
+                  setInviteSubmitting(true);
+                  const token = crypto.randomUUID();
+                  try {
+                    const inviteUrl = `${window.location.origin}/join/${token}`;
+                    await firebaseService.setDocument('invitations', token, {
+                      showId: show.id,
+                      role: inviteRole,
+                      inviterId: user?.uid || show.userId,
+                      status: 'pending',
+                      createdAt: new Date().toISOString(),
+                      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+                      email: inviteEmail,
+                      name: inviteName || null,
+                    });
+
+                    // Enqueue email for MailerSend extension (web-app only path)
+                    try {
+                      await firebaseService.addDocument('mail', {
+                        from: { email: 'info@thepropslist.uk', name: 'Props Bible' },
+                        to: [{ email: inviteEmail, name: inviteName || 'Invitee' }],
+                        subject: `You're invited to join ${show.name}`,
+                        html: `<p>You’ve been invited as <b>${inviteRole}</b> on <b>${show.name}</b>.</p><p><a href="${inviteUrl}">Accept your invite</a></p>`,
+                        text: `You’ve been invited as ${inviteRole} on ${show.name}. Accept: ${inviteUrl}`,
+                      });
+                    } catch (mailErr) {
+                      console.warn('Failed to enqueue MailerSend email; invite link still created', mailErr);
+                    }
+
+                    setInviteOpen(false);
+                    setInviteName('');
+                    setInviteEmail('');
+                    setInviteRole('viewer');
+                  } catch (err: any) {
+                    console.error(err);
+                    setInviteError(err?.message || 'Failed to create invite');
+                  } finally {
+                    setInviteSubmitting(false);
+                  }
+                }}
+                className="px-5 py-4 space-y-4"
+              >
+                {inviteError && (
+                  <div className="p-2 rounded border border-red-500/30 text-red-300 bg-red-500/10 text-sm">{inviteError}</div>
+                )}
+                <div>
+                  <label className="block text-sm text-pb-gray mb-1">Name</label>
+                  <input
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    type="text"
+                    className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
+                    placeholder="e.g. Alex Props"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-pb-gray mb-1">Email</label>
+                  <input
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    type="email"
+                    required
+                    className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
+                    placeholder="invitee@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-pb-gray mb-1">Role</label>
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as any)}
+                    className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
+                  >
+                    <option value="viewer">Viewer</option>
+                    <option value="editor">Editor</option>
+                    <option value="props_supervisor">Props Supervisor</option>
+                    <option value="god">Admin</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => !inviteSubmitting && setInviteOpen(false)}
+                    className="px-4 py-2 rounded border border-pb-primary/30 text-pb-gray hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={inviteSubmitting}
+                    className="px-4 py-2 rounded bg-pb-primary text-white hover:bg-pb-accent disabled:opacity-50"
+                  >
+                    {inviteSubmitting ? 'Sending…' : 'Send invite'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
