@@ -68,9 +68,27 @@ jobs:
       working-directory: functions
       run: npx tsc -p tsconfig.json
 
-    - name: Deploy to Firebase (CLI with token)
+    - name: Prepare service account file (for ADC)
+      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" ]]; then
+          echo "Using FIREBASE_SERVICE_ACCOUNT_BASE64"
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/sa.json"
+        elif [[ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]]; then
+          echo "Using FIREBASE_SERVICE_ACCOUNT"
+          printf '%s' "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > "$GITHUB_WORKSPACE/sa.json"
+        else
+          echo "No service account secret set" >&2
+          exit 1
+        fi
+        # Minimal sanity check
+        jq -r .client_email "$GITHUB_WORKSPACE/sa.json" >/dev/null 2>&1 || { echo "Invalid service account JSON" >&2; exit 1; }
+
+    - name: Deploy to Firebase (CLI with service account)
       if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       env:
-        FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
       run: |
         npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
