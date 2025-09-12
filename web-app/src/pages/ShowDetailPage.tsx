@@ -5,8 +5,6 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import type { Show } from '../types/Show';
 import { Pencil, UserPlus } from 'lucide-react';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app as firebaseApp } from '../firebase';
 
 const ShowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,10 +17,29 @@ const ShowDetailPage: React.FC = () => {
   const [rehearsalAddresses, setRehearsalAddresses] = useState<any[]>([]);
   const [storageAddresses, setStorageAddresses] = useState<any[]>([]);
 
+  // Job roles (for collaborator job function, not permissions)
+  const JOB_ROLES = [
+    { value: 'propmaker', label: 'Prop Maker' },
+    { value: 'senior-propmaker', label: 'Senior Prop Maker' },
+    { value: 'props-carpenter', label: 'Props Carpenter' },
+    { value: 'show-carpenter', label: 'Show Carpenter' },
+    { value: 'painter', label: 'Painter' },
+    { value: 'buyer', label: 'Buyer' },
+    { value: 'props-supervisor', label: 'Props Supervisor' },
+    { value: 'art-director', label: 'Art Director' },
+    { value: 'set-dresser', label: 'Set Dresser' },
+    { value: 'stage-manager', label: 'Stage Manager' },
+    { value: 'assistant-stage-manager', label: 'Assistant Stage Manager' },
+    { value: 'designer', label: 'Designer' },
+    { value: 'assistant-designer', label: 'Assistant Designer' },
+    { value: 'crew', label: 'Crew' },
+  ] as const;
+
   // Invite modal state
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteJobRole, setInviteJobRole] = useState<string>('propmaker');
   const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -43,7 +60,7 @@ const ShowDetailPage: React.FC = () => {
         }
         setLoading(false);
       },
-      (err: Error) => {
+      () => {
         setError('Failed to load show details.');
         setShow(null);
         setLoading(false);
@@ -251,6 +268,7 @@ const ShowDetailPage: React.FC = () => {
                     await firebaseService.setDocument('invitations', token, {
                       showId: show.id,
                       role: inviteRole,
+                      jobRole: inviteJobRole,
                       inviterId: user?.uid || show.userId,
                       status: 'pending',
                       createdAt: new Date().toISOString(),
@@ -265,8 +283,8 @@ const ShowDetailPage: React.FC = () => {
                         from: { email: 'info@thepropslist.uk', name: 'Props Bible' },
                         to: [{ email: inviteEmail, name: inviteName || 'Invitee' }],
                         subject: `You're invited to join ${show.name}`,
-                        html: `<p>You’ve been invited as <b>${inviteRole}</b> on <b>${show.name}</b>.</p><p><a href="${inviteUrl}">Accept your invite</a></p>`,
-                        text: `You’ve been invited as ${inviteRole} on ${show.name}. Accept: ${inviteUrl}`,
+                        html: `<p>Hello${inviteName ? ` ${inviteName}` : ''},</p><p>You’ve been invited as <b>${inviteRole}</b> (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on <b>${show.name}</b>.</p><p><a href="${inviteUrl}">Accept your invite</a></p><p style="color:#889">If the link doesn’t work, copy and paste it: ${inviteUrl}</p>`,
+                        text: `You’ve been invited as ${inviteRole} (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on ${show.name}. Accept: ${inviteUrl}`,
                       });
                     } catch (mailErr) {
                       console.warn('Failed to enqueue MailerSend email; invite link still created', mailErr);
@@ -275,6 +293,7 @@ const ShowDetailPage: React.FC = () => {
                     setInviteOpen(false);
                     setInviteName('');
                     setInviteEmail('');
+                    setInviteJobRole('propmaker');
                     setInviteRole('viewer');
                   } catch (err: any) {
                     console.error(err);
@@ -308,6 +327,18 @@ const ShowDetailPage: React.FC = () => {
                     className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
                     placeholder="invitee@example.com"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm text-pb-gray mb-1">Job role</label>
+                  <select
+                    value={inviteJobRole}
+                    onChange={(e) => setInviteJobRole(e.target.value)}
+                    className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
+                  >
+                    {JOB_ROLES.map(r => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm text-pb-gray mb-1">Role</label>
