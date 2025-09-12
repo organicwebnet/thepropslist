@@ -129,6 +129,10 @@ const JoinInvitePage: React.FC = () => {
     }
   };
 
+  const hasPrefilledName = !!invite?.collaborator?.name;
+  const hasPrefilledEmail = !!invite?.collaborator?.email;
+  const isSignedIn = !!getAuth().currentUser;
+
   return (
       <div className="min-h-screen w-full bg-gradient-dark flex items-center justify-center px-4 py-10">
         {loading ? (
@@ -164,22 +168,30 @@ const JoinInvitePage: React.FC = () => {
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="space-y-3 rounded-lg border border-pb-primary/20 p-5 bg-pb-darker/30">
-                <div>
-                  <label className="block text-sm text-pb-gray mb-1">Full name</label>
-                  <input className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={name} onChange={e => setName(e.target.value)} required />
-                </div>
-                <div>
-                  <label className="block text-sm text-pb-gray mb-1">Email</label>
-                  <input type="email" className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={email} onChange={e => setEmail(e.target.value)} readOnly={!!invite?.collaborator?.email} placeholder={invite?.collaborator?.email || ''} required />
-                </div>
-                <div>
-                  <label className="block text-sm text-pb-gray mb-1">Create password</label>
-                  <input type="password" className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={password} onChange={e => setPassword(e.target.value)} minLength={6} />
-                </div>
-                <div>
-                  <label className="block text-sm text-pb-gray mb-1">Confirm password</label>
-                  <input type="password" className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} minLength={6} />
-                </div>
+                {!hasPrefilledName && (
+                  <div>
+                    <label className="block text-sm text-pb-gray mb-1">Full name</label>
+                    <input className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={name} onChange={e => setName(e.target.value)} required />
+                  </div>
+                )}
+                {!hasPrefilledEmail && (
+                  <div>
+                    <label className="block text-sm text-pb-gray mb-1">Email</label>
+                    <input type="email" className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={email} onChange={e => setEmail(e.target.value)} required />
+                  </div>
+                )}
+                {!isSignedIn && (
+                  <>
+                    <div>
+                      <label className="block text-sm text-pb-gray mb-1">Create password</label>
+                      <input type="password" className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={password} onChange={e => setPassword(e.target.value)} minLength={6} />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-pb-gray mb-1">Confirm password</label>
+                      <input type="password" className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} minLength={6} />
+                    </div>
+                  </>
+                )}
                 <div className="flex items-center justify-end gap-2 pt-2">
                   <Link to={`/shows/${invite.showId}`} className="px-4 py-2 rounded bg-pb-darker/60 text-pb-gray border border-pb-primary/20">Cancel</Link>
                   <button disabled={submitting} className="px-4 py-2 rounded bg-pb-primary text-white font-semibold hover:bg-pb-secondary disabled:opacity-60">{submitting ? 'Joining...' : 'Join show'}</button>
