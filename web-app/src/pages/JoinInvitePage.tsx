@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
-import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 
 type InviteDoc = {
   showId: string;
@@ -82,6 +82,12 @@ const JoinInvitePage: React.FC = () => {
       // Ensure the invited user has an auth account
       const auth = getAuth();
       let currentUser = auth.currentUser;
+      // Prevent accepting as a different signed-in user than the email shown on the invite
+      if (currentUser && invite?.collaborator?.email && currentUser.email && currentUser.email !== invite.collaborator.email) {
+        setError(`You are signed in as ${currentUser.email}. Please sign out and join using ${invite.collaborator.email}.`);
+        setSubmitting(false);
+        return;
+      }
       if (!currentUser) {
         if (activeTab === 'password') {
           if (!email) throw new Error('Email is required.');
@@ -146,7 +152,21 @@ const JoinInvitePage: React.FC = () => {
             {activeTab === 'google' && (
               <div className="mb-3">
                 <div className="mb-3 rounded border border-pb-primary/30 bg-pb-darker/40 p-3 text-sm text-pb-gray">
-                  Sign in with Google to verify your email. Only your name (editable) and optional phone are needed here.
+                  {getAuth().currentUser ? (
+                    <div>
+                      You are signed in as <span className="text-white font-semibold">{getAuth().currentUser?.email}</span>.
+                      {invite?.collaborator?.email && getAuth().currentUser?.email !== invite.collaborator.email ? (
+                        <>
+                          <br/>This invite is for <span className="text-white font-semibold">{invite.collaborator.email}</span>. Please switch account.
+                        </>
+                      ) : null}
+                      <div className="mt-2">
+                        <button type="button" onClick={() => signOut(getAuth())} className="px-3 py-1.5 rounded border border-pb-primary/40 text-pb-gray hover:text-white">Sign out</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>Sign in with Google to verify your email. Only your name (editable) and optional phone are needed here.</>
+                  )}
                 </div>
                 <button type="button" onClick={handleGoogle} className="px-3 py-2 rounded bg-white text-[#1a1a1a] font-semibold shadow hover:bg-gray-100 flex items-center">
                   <svg className="w-5 h-5 mr-2" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M533.5 278.4c0-17.4-1.6-34.1-4.6-50.4H272v95.3h147.2c-6.3 34-25 62.8-53.3 82.1v68h86.1c50.4-46.4 81.5-114.8 81.5-195z"/><path fill="#34A853" d="M272 544.3c72.9 0 134.1-24.1 178.8-65.9l-86.1-68c-23.9 16.1-54.5 25.7-92.7 25.7-71 0-131.2-47.9-152.8-112.2H31.9v70.4C76.4 486.6 168.1 544.3 272 544.3z"/><path fill="#4A90E2" d="M119.2 324c-10.9-32.7-10.9-68.1 0-100.8V152.7H31.9c-43.9 87.8-43.9 193.9 0 281.7l87.3-70.4z"/><path fill="#FBBC05" d="M272 107.7c39.6-.6 77.7 14 106.7 41.5l79.5-79.5C405.9 24.7 344.7 0 272 0 168.1 0 76.4 57.7 31.9 152.7l87.3 70.4C140.8 155 201 107.1 272 107.7z"/></svg>
