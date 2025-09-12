@@ -278,16 +278,28 @@ const ShowDetailPage: React.FC = () => {
                     });
 
                     // Enqueue email for MailerSend extension (web-app only path)
+                    let mailQueued = false;
                     try {
-                      await firebaseService.addDocument('mail', {
+                      const emailDoc = {
                         from: { email: 'info@thepropslist.uk', name: 'Props Bible' },
                         to: [{ email: inviteEmail, name: inviteName || 'Invitee' }],
                         subject: `You're invited to join ${show.name}`,
                         html: `<p>Hello${inviteName ? ` ${inviteName}` : ''},</p><p>You’ve been invited as <b>${inviteRole}</b> (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on <b>${show.name}</b>.</p><p><a href="${inviteUrl}">Accept your invite</a></p><p style="color:#889">If the link doesn’t work, copy and paste it: ${inviteUrl}</p>`,
                         text: `You’ve been invited as ${inviteRole} (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on ${show.name}. Accept: ${inviteUrl}`,
-                      });
+                      } as any;
+                      // Default collection name many email extensions use
+                      await firebaseService.addDocument('mail', emailDoc);
+                      mailQueued = true;
+                      // Alternate path used by some MailerSend setups
+                      await firebaseService.addDocument('mailersend/emails', emailDoc).then(() => { mailQueued = true; }).catch(() => {});
                     } catch (mailErr) {
                       console.warn('Failed to enqueue MailerSend email; invite link still created', mailErr);
+                    }
+                    // User feedback
+                    if (mailQueued) {
+                      alert('Invite created and email queued. Watch your inbox.');
+                    } else {
+                      alert('Invite link created, but email could not be queued. You can copy and share the link manually.');
                     }
 
                     setInviteOpen(false);
