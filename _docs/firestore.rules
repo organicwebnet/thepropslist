@@ -120,6 +120,15 @@ service cloud.firestore {
         (request.auth.token.email == resource.data.email && resource.data.status == "pending")
       ));
     }
+    // Allow enqueuing emails for MailerSend/Trigger Email extensions
+    match /mail/{docId} {
+      allow create: if request.auth != null;  // clients can enqueue emails
+      allow read, update, delete: if false;
+    }
+    match /mailersend/emails/{emailId} {
+      allow create: if request.auth != null;  // alternate path
+      allow read, update, delete: if false;
+    }
     match /tasks/{taskId} {
       allow read, write: if isSystemAdmin() || (request.auth != null && (
           get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null ||
