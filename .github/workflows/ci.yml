@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ROLLUP_SKIP_NODEJS_NATIVE: '1'
 
     steps:
     - uses: actions/checkout@v4
@@ -19,9 +21,9 @@ jobs:
         node-version: '20'
         cache: 'npm'
 
-    - name: Install web-app dependencies
+    - name: Install web-app dependencies (omit optional)
       working-directory: web-app
-      run: npm ci
+      run: npm ci --omit=optional
 
     - name: Create env file for web-app
       working-directory: web-app
@@ -40,8 +42,6 @@ jobs:
 
     - name: Build web-app
       working-directory: web-app
-      env:
-        ROLLUP_SKIP_NODEJS_NATIVE: '1'
       run: npm run build
 
     - name: Install functions dependencies
