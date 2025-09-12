@@ -1,16 +1,17 @@
 import { onCall } from "firebase-functions/v2/https";
+import fetch from "cross-fetch";
 import * as logger from "firebase-functions/logger";
 
 // Providers: Brevo (preferred) or MailerSend (fallback)
 // Brevo API: https://api.brevo.com/v3/smtp/email
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL;
-const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || "Props Bible";
+const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || "The Props List";
 
 // MailerSend HTTP API integration (fallback if Brevo not configured)
 const MS_API_KEY = process.env.MAILERSEND_API_KEY;
 const MS_FROM_EMAIL = process.env.MAILERSEND_FROM_EMAIL;
-const MS_FROM_NAME = process.env.MAILERSEND_FROM_NAME || "Props Bible";
+const MS_FROM_NAME = process.env.MAILERSEND_FROM_NAME || "The Props List";
 
 if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
   logger.warn(
@@ -29,14 +30,14 @@ export const sendInviteEmail = onCall(async (req) => {
 
   if (!to) throw new Error("Missing 'to' recipient email");
 
-  const subject = `You're invited to join ${showName || "a show"} on Props Bible`;
+  const subject = `You're invited to join ${showName || "a show"} on The Props List`;
   const html = `
     <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #111;">
       <p>Hello,</p>
       <p>You’ve been invited as <b>${role || "team member"}</b> on <b>${showName || "this show"}</b>.</p>
       ${inviteUrl ? `<p><a href="${inviteUrl}">Accept your invite</a></p>` : ""}
       ${inviteUrl ? `<p style=\"color:#555\">If the link doesn’t work, copy and paste it: ${inviteUrl}</p>` : ""}
-      <p>Thanks,<br/>Props Bible</p>
+      <p>Thanks,<br/>The Props List</p>
     </div>
   `;
 

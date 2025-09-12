@@ -281,15 +281,15 @@ const ShowDetailPage: React.FC = () => {
                     let mailQueued = false;
                     try {
                       const emailDoc = {
-                        from: { email: 'info@thepropslist.uk', name: 'Props Bible' },
+                        from: { email: 'info@thepropslist.uk', name: 'The Props List' },
                         to: [{ email: inviteEmail, name: inviteName || 'Invitee' }],
-                        subject: `You’re invited to join ${show.name} on Props Bible`,
+                        subject: `You’re invited to join ${show.name} on The Props List`,
                         html: `
                           <div style="background:#0b0b12;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;">
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#111827;border-radius:10px;border:1px solid #1f2937;overflow:hidden;">
                               <tr>
                                 <td style="padding:20px 24px;background:#0f172a;border-bottom:1px solid #1f2937;">
-                                  <div style="font-size:18px;font-weight:700;color:#ffffff;">Props Bible</div>
+                                  <div style="font-size:18px;font-weight:700;color:#ffffff;">The Props List</div>
                                 </td>
                               </tr>
                               <tr>
@@ -307,14 +307,14 @@ const ShowDetailPage: React.FC = () => {
                               </tr>
                               <tr>
                                 <td style="padding:16px 24px;background:#0f172a;border-top:1px solid #1f2937;color:#94a3b8;font-size:12px;">
-                                  <div>Sent by Props Bible • thepropslist.uk</div>
+                                  <div>Sent by The Props List • thepropslist.uk</div>
                                 </td>
                               </tr>
                             </table>
                           </div>
                         `,
-                        text: `Hello${inviteName ? ` ${inviteName}` : ''},\n\nYou’ve been invited as ${inviteRole} (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on ${show.name}.\n\nAccept your invite: ${inviteUrl}\n\nIf the link doesn’t work, copy and paste it into your browser.\n\nProps Bible • thepropslist.uk`,
-                        replyTo: { email: 'info@thepropslist.uk', name: 'Props Bible' },
+                        text: `Hello${inviteName ? ` ${inviteName}` : ''},\n\nYou’ve been invited as ${inviteRole} (${JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole}) on ${show.name}.\n\nAccept your invite: ${inviteUrl}\n\nIf the link doesn’t work, copy and paste it into your browser.\n\nThe Props List • thepropslist.uk`,
+                        replyTo: { email: 'info@thepropslist.uk', name: 'The Props List' },
                       } as any;
                       // MailerSend extension is configured to watch 'emails' collection
                       await firebaseService.addDocument('emails', emailDoc);
