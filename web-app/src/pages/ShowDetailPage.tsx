@@ -161,7 +161,14 @@ const ShowDetailPage: React.FC = () => {
           </div>
           <div className="mt-3 flex gap-2">
             <button
-              onClick={() => setInviteOpen(true)}
+              onClick={() => {
+                if (!user) {
+                  alert('Please sign in to send invites.');
+                  window.location.assign('/login');
+                  return;
+                }
+                setInviteOpen(true);
+              }}
               className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
             >
               <UserPlus className="w-4 h-4" /> Invite team
