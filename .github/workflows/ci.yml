@@ -91,4 +91,4 @@ jobs:
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
       run: |
-        npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
+        npx firebase-tools@14.16.0 deploy --only hosting,firestore:rules --project props-bible-app-1c1cb --non-interactive --debug
