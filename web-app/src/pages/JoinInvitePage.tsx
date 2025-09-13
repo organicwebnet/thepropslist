@@ -58,6 +58,11 @@ const JoinInvitePage: React.FC = () => {
         if (data?.collaborator) {
           setName(data.collaborator.name || '');
           setEmail(data.collaborator.email || '');
+        } else {
+          // Fallback to top-level fields for older invites
+          const legacy: any = data as any;
+          if (legacy?.name) setName(legacy.name);
+          if (legacy?.email) setEmail(legacy.email);
         }
         setLoading(false);
       } catch (e) {
@@ -129,8 +134,8 @@ const JoinInvitePage: React.FC = () => {
     }
   };
 
-  const hasPrefilledName = !!invite?.collaborator?.name;
-  const hasPrefilledEmail = !!invite?.collaborator?.email;
+  const hasPrefilledName = !!(invite?.collaborator?.name || (invite as any)?.name);
+  const hasPrefilledEmail = !!(invite?.collaborator?.email || (invite as any)?.email);
   const isSignedIn = !!getAuth().currentUser;
 
   return (
