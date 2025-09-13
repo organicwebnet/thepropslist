@@ -85,9 +85,34 @@ const JoinInvitePage: React.FC = () => {
         if (!email) throw new Error('Email is required.');
         if (password.length < 6) throw new Error('Password must be at least 6 characters.');
         if (password !== confirmPassword) throw new Error('Passwords do not match.');
-        await createUserWithEmailAndPassword(auth, email, password);
-        currentUser = auth.currentUser;
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+          currentUser = auth.currentUser;
+        } catch (createErr: any) {
+          if (createErr?.code === 'auth/email-already-in-use') {
+            setError('This email is already registered. Please use “Continue with Google” on the left or sign in with your existing account, then reopen the invite.');
+            return;
+          }
+          throw createErr;
+        }
       }
+      // Persist minimal user profile for clean DB
+      if (currentUser?.uid) {
+        const uid = currentUser.uid;
+        const profile = {
+          uid,
+          email: currentUser.email || email,
+          displayName: currentUser.displayName || name || 'User',
+          role: 'user',
+          createdAt: new Date(),
+          lastLogin: new Date(),
+          preferences: { theme: 'light', notifications: true, defaultView: 'grid' },
+        } as any;
+        await service.setDocument('users', uid, profile);
+        await service.setDocument('userProfiles', uid, profile);
+      }
+
+      // Mark invite accepted
       await service.setDocument('invitations', token, {
         ...invite,
         collaborator: { name, email },
@@ -95,6 +120,23 @@ const JoinInvitePage: React.FC = () => {
         acceptedAt: new Date().toISOString(),
         acceptedBy: currentUser?.uid || null,
       });
+
+      // Add membership to the show (collaborators array + team map)
+      try {
+        const showSnap = await service.getDocument<any>('shows', invite.showId);
+        if (showSnap && showSnap.data) {
+          const show = showSnap.data as any;
+          const nextCollaborators = Array.isArray(show.collaborators) ? [...show.collaborators] : [];
+          if (!nextCollaborators.find((c: any) => c?.email === email)) {
+            nextCollaborators.push({ email, role: invite.role, addedAt: new Date().toISOString(), addedBy: invite.inviterId || null, name });
+          }
+          const nextTeam = { ...(show.team && !Array.isArray(show.team) ? show.team : {}) } as Record<string, string>;
+          if (currentUser?.uid) nextTeam[currentUser.uid] = invite.role as any;
+          await service.updateDocument('shows', invite.showId, { collaborators: nextCollaborators, team: nextTeam } as any);
+        }
+      } catch (membershipErr) {
+        console.warn('Failed to add member to show', membershipErr);
+      }
       navigate(`/shows/${invite.showId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join.');
@@ -119,13 +161,50 @@ const JoinInvitePage: React.FC = () => {
         }
         // Auto-accept invite on successful Google sign-in
         if (token && invite) {
+          const finalName = profile.displayName || name;
+          const finalEmail = profile.email || email;
+
+          // Store user profile
+          if (auth.currentUser?.uid) {
+            const uid = auth.currentUser.uid;
+            const profileDoc = {
+              uid,
+              email: finalEmail,
+              displayName: finalName || 'User',
+              role: 'user',
+              createdAt: new Date(),
+              lastLogin: new Date(),
+            } as any;
+            await service.setDocument('users', uid, profileDoc);
+            await service.setDocument('userProfiles', uid, profileDoc);
+          }
+
+          // Accept invite
           await service.setDocument('invitations', token, {
             ...invite,
-            collaborator: { name: profile.displayName || name, email: profile.email || email },
+            collaborator: { name: finalName, email: finalEmail },
             status: 'accepted',
             acceptedAt: new Date().toISOString(),
             acceptedBy: auth.currentUser?.uid || null,
           });
+
+          // Add membership to the show
+          try {
+            const showSnap = await service.getDocument<any>('shows', invite.showId);
+            if (showSnap && showSnap.data) {
+              const show = showSnap.data as any;
+              const nextCollaborators = Array.isArray(show.collaborators) ? [...show.collaborators] : [];
+              if (!nextCollaborators.find((c: any) => c?.email === finalEmail)) {
+                nextCollaborators.push({ email: finalEmail, role: invite.role, addedAt: new Date().toISOString(), addedBy: invite.inviterId || null, name: finalName });
+              }
+              const nextTeam = { ...(show.team && !Array.isArray(show.team) ? show.team : {}) } as Record<string, string>;
+              if (auth.currentUser?.uid) nextTeam[auth.currentUser.uid] = invite.role as any;
+              await service.updateDocument('shows', invite.showId, { collaborators: nextCollaborators, team: nextTeam } as any);
+            }
+          } catch (membershipErr) {
+            console.warn('Failed to add member to show', membershipErr);
+          }
+
           navigate(`/shows/${invite.showId}`);
         }
       }
