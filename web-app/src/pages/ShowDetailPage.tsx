@@ -100,6 +100,14 @@ const ShowDetailPage: React.FC = () => {
   );
   if (!show) return null;
 
+  // Compute current user's role for this show
+  const currentUid = user?.uid || '';
+  const teamMap: Record<string, string> | null = (show.team && !Array.isArray(show.team)) ? (show.team as any) : null;
+  const myRoleFromTeam = currentUid && teamMap ? teamMap[currentUid] : undefined as any;
+  const myRoleFromCollab = (user?.email && Array.isArray(show.collaborators)) ? (show.collaborators as any[]).find((c: any) => c?.email === user?.email)?.role : undefined;
+  const myRole = myRoleFromTeam || myRoleFromCollab || 'viewer';
+  const canInvite = (myRole === 'god' || myRole === 'props_supervisor') || (user?.uid && user.uid === show.userId);
+
   // Helper for rendering lists
   const renderList = (
     items: any[] | undefined,
@@ -159,27 +167,29 @@ const ShowDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={() => {
-                if (!user) {
-                  alert('Please sign in to send invites.');
-                  window.location.assign('/login');
-                  return;
-                }
-                setInviteOpen(true);
-              }}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
-            >
-              <UserPlus className="w-4 h-4" /> Invite team
-            </button>
-            <button
-              onClick={() => window.location.assign(`/shows/${show.id}/team`)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
-            >
-              Manage team
-            </button>
-          </div>
+          {canInvite && (
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => {
+                  if (!user) {
+                    alert('Please sign in to send invites.');
+                    window.location.assign('/login');
+                    return;
+                  }
+                  setInviteOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
+              >
+                <UserPlus className="w-4 h-4" /> Invite team
+              </button>
+              <button
+                onClick={() => window.location.assign(`/shows/${show.id}/team`)}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
+              >
+                Manage team
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
             <div>

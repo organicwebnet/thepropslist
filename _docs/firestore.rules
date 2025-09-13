@@ -115,13 +115,17 @@ service cloud.firestore {
                get(/databases/$(database)/documents/shows/$(showId)).data.ownerId == request.auth.uid;
       }
 
-      // Temporary: allow any authenticated user to create an invitation.
-      // Reason: current data model stores team as arrays; rules map lookups are unreliable.
-      // We'll tighten this once team roles are normalized.
-      allow create: if request.auth != null;
+      // Create invite allowed to show owner or elevated roles
+      allow create: if isSystemAdmin() || (request.auth != null && (
+        isShowOwner(request.resource.data.showId) ||
+        hasTeamRole(request.resource.data.showId, 'god') ||
+        hasTeamRole(request.resource.data.showId, 'props_supervisor') ||
+        hasTeamRole(request.resource.data.showId, 'art_director')
+      ));
 
       // Allow public read of pending invites so invite links open without auth
-      allow read: if resource.data.status == "pending" || isSystemAdmin() || (request.auth != null && (
+      // Backward-compat: some legacy invites may not have a status field
+      allow read: if (resource.data.status == "pending" || resource.data.status == null) || isSystemAdmin() || (request.auth != null && (
         isShowOwner(resource.data.showId) ||
         hasTeamRole(resource.data.showId, 'god') ||
         hasTeamRole(resource.data.showId, 'props_supervisor') ||
@@ -133,6 +137,47 @@ service cloud.firestore {
         hasTeamRole(resource.data.showId, 'god') ||
         hasTeamRole(resource.data.showId, 'props_supervisor')
       ));
+    }
+
+    // Private prop costings visible only to owner/god/props_supervisor
+    match /shows/{showId}/props_private/{propId} {
+      allow read, write: if isSystemAdmin() || (request.auth != null && (
+        isShowOwner(showId) ||
+        hasTeamRole(showId, 'god') ||
+        hasTeamRole(showId, 'props_supervisor') ||
+        hasTeamRole(showId, 'art_director')
+      ));
+    }
+
+    // Change/Purchase/Maintenance requests (public metadata)
+    match /requests/{requestId} {
+      allow read: if request.auth != null && (
+        isSystemAdmin() ||
+        (get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null)
+      );
+
+      // Create by editor+ (god, props_supervisor, editor)
+      allow create: if request.auth != null && (
+        hasTeamRole(request.resource.data.showId, 'god') ||
+        hasTeamRole(request.resource.data.showId, 'props_supervisor') ||
+        hasTeamRole(request.resource.data.showId, 'editor')
+      );
+
+      // Update/approve/reject by props_supervisor+ (includes art_director)
+      allow update, delete: if request.auth != null && (
+        hasTeamRole(resource.data.showId, 'god') ||
+        hasTeamRole(resource.data.showId, 'props_supervisor') ||
+        hasTeamRole(resource.data.showId, 'art_director')
+      );
+    }
+
+    // Private cost breakdown for requests
+    match /requests_private/{requestId} {
+      allow read, write: if request.auth != null && (
+        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'god') ||
+        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'props_supervisor') ||
+        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'art_director')
+      );
     }
     // Allow enqueuing emails for MailerSend/Trigger Email extensions
     match /emails/{emailId} {
