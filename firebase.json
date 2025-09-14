@@ -1,18 +1,31 @@
 {
-  "hosting": {
-    "public": "web-app/dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  },
+  "hosting": [
+    {
+      "target": "app",
+      "public": "web-app/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        { "source": "/app/**", "destination": "/index.html" }
+      ]
+    },
+    {
+      "target": "marketing",
+      "public": "marketing",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        { "source": "**", "destination": "/index.html" }
+      ]
+    }
+  ],
+  
   "emulators": {
     "auth": {
       "port": 9099
