@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
+import { storage } from '../firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const FeedbackPage: React.FC = () => {
   const { service } = useFirebase();
@@ -14,6 +16,7 @@ const FeedbackPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +36,18 @@ const FeedbackPage: React.FC = () => {
         status: 'new'
       } as any;
       const id = await service.addDocument('feedback', doc);
+      // Optional screenshot upload
+      if (file) {
+        const path = `feedback/${id}/${Date.now()}_${file.name}`;
+        const sref = storageRef(storage, path);
+        await uploadBytes(sref, file);
+        const url = await getDownloadURL(sref);
+        await service.setDocument('feedback', id, { screenshotUrl: url } as any, { merge: true } as any);
+      }
       setSubmittedId(id);
       setTitle('');
       setMessage('');
+      setFile(null);
     } catch (err: any) {
       setError(err?.message || 'Failed to send feedback');
     } finally {
@@ -74,6 +86,10 @@ const FeedbackPage: React.FC = () => {
               <label className="block text-pb-gray text-xs mb-1">Email (optional)</label>
               <input className="w-full p-2 rounded bg-pb-darker text-white border border-pb-gray focus:border-pb-primary" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
             </div>
+          </div>
+          <div>
+            <label className="block text-pb-gray text-xs mb-1">Screenshot (optional)</label>
+            <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} className="block w-full text-sm text-pb-gray file:mr-3 file:py-2 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-pb-primary/20 file:text-pb-primary hover:file:bg-pb-primary/30" />
           </div>
           <div>
             <label className="block text-pb-gray text-xs mb-1">Title</label>
