@@ -2,6 +2,7 @@ import { onCall } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import fetch from "cross-fetch";
 import * as logger from "firebase-functions/logger";
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
 // Initialize Admin SDK once
@@ -116,8 +117,10 @@ export const sendInviteEmail = onCall(async (req) => {
 // Required environment variables:
 //   GITHUB_TOKEN: a repo-scoped PAT with issues:write
 //   GITHUB_REPO:  "owner/repo" (e.g., organicwebnet/the_props_bible)
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_REPO = process.env.GITHUB_REPO || "";
+// Read from environment variables OR functions config (set via `firebase functions:config:set feedback.github_token=...`)
+const runtimeConfig = (functions as any)?.config ? (functions as any).config() : {};
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN || runtimeConfig?.feedback?.github_token;
+const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || runtimeConfig?.feedback?.github_repo || "";
 
 export const onFeedbackCreated = onDocumentCreated("feedback/{id}", async (event) => {
   const snap = event.data;

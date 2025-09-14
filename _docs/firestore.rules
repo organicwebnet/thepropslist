@@ -179,6 +179,15 @@ service cloud.firestore {
         hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'art_director')
       );
     }
+
+    // Feedback collection (bug reports / feature requests)
+    match /feedback/{id} {
+      // Allow creates from authenticated users
+      allow create: if request.auth != null;
+      // Reads by admins; allow user to read their own submissions if desired
+      allow read: if isSystemAdmin();
+      // No public updates/deletes
+    }
     // Allow enqueuing emails for MailerSend/Trigger Email extensions
     match /emails/{emailId} {
       allow create: if request.auth != null;  // enqueue for MailerSend extension
