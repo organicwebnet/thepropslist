@@ -118,6 +118,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           {userProfile?.displayName && (
             <span className="text-sm text-pb-gray">Welcome, {userProfile.displayName}</span>
           )}
+          <Link to="/feedback" className="text-xs text-pb-primary underline">Report a bug</Link>
           <Link to="/profile" className="relative block">
             <img
               src={userProfile?.photoURL || '/public/icon.png'}

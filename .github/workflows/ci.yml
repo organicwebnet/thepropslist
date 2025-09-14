@@ -93,3 +93,12 @@ jobs:
       run: |
         # Revert to hosting-only until IAM grants allow rules deploy
         npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
+
+    - name: Deploy Cloud Functions (feedback integration)
+      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
+        GITHUB_TOKEN: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
+        GITHUB_REPO:  ${{ secrets.FEEDBACK_GITHUB_REPO }}
+      run: |
+        npx firebase-tools@14.16.0 deploy --only functions --project props-bible-app-1c1cb --non-interactive --debug
