@@ -86,15 +86,6 @@ jobs:
         # Minimal sanity check
         jq -r .client_email "$GITHUB_WORKSPACE/sa.json" >/dev/null 2>&1 || { echo "Invalid service account JSON" >&2; exit 1; }
 
-    - name: Set Functions runtime config (feedback -> GitHub)
-      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
-      env:
-        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
-        FEEDBACK_GITHUB_TOKEN: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
-        FEEDBACK_GITHUB_REPO: ${{ secrets.FEEDBACK_GITHUB_REPO }}
-      run: |
-        npx firebase-tools@14.16.0 functions:config:set feedback.github_token="$FEEDBACK_GITHUB_TOKEN" feedback.github_repo="$FEEDBACK_GITHUB_REPO" --project props-bible-app-1c1cb
-
     - name: Deploy to Firebase (CLI with service account)
       if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       env:
