@@ -13,7 +13,7 @@
         "**/node_modules/**"
       ],
       "rewrites": [
-        { "source": "/app/**", "destination": "/index.html" }
+        { "source": "**", "destination": "/index.html" }
       ]
     },
     {
@@ -23,6 +23,11 @@
         "firebase.json",
         "**/.*",
         "**/node_modules/**"
+      ],
+      "redirects": [
+        { "source": "/app/**", "destination": "https://app.thepropslist.uk/:splat", "type": 301 },
+        { "source": "/login", "destination": "https://app.thepropslist.uk/login", "type": 301 },
+        { "source": "/signup", "destination": "https://app.thepropslist.uk/signup", "type": 301 }
       ],
       "rewrites": [
         { "source": "**", "destination": "/index.html" }

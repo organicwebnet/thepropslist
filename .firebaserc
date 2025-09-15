@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "props-bible-app-1c1cb"
-  }
+  },
+  "targets": {
+    "props-bible-app-1c1cb": {
+      "hosting": {
+        "app": [
+          "props-bible-app-1c1cb"
+        ],
+        "marketing": [
+          "thepropslist-marketing"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

@@ -1,7 +1,10 @@
-import { onCall } from "firebase-functions/v2/https";
+import { onCall, onRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import fetch from "cross-fetch";
 import * as logger from "firebase-functions/logger";
+import * as functions from "firebase-functions";
+// Force Gen1 for specific endpoints
+import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 // Initialize Admin SDK once
 try {
@@ -95,8 +98,10 @@ export const sendInviteEmail = onCall(async (req) => {
 // Required environment variables:
 //   GITHUB_TOKEN: a repo-scoped PAT with issues:write
 //   GITHUB_REPO:  "owner/repo" (e.g., organicwebnet/the_props_bible)
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_REPO = process.env.GITHUB_REPO || "";
+// Read from environment variables OR functions config (set via `firebase functions:config:set feedback.github_token=...`)
+const runtimeConfig = functions?.config ? functions.config() : {};
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN || runtimeConfig?.feedback?.github_token;
+const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || runtimeConfig?.feedback?.github_repo || "";
 export const onFeedbackCreated = onDocumentCreated("feedback/{id}", async (event) => {
     const snap = event.data;
     if (!snap)
@@ -156,5 +161,716 @@ export const onFeedbackCreated = onDocumentCreated("feedback/{id}", async (event
     }
     catch (err) {
         logger.error("GitHub integration error", { err });
+    }
+});
+// EU-region Firestore trigger to match Firestore (eur3) and avoid Eventarc/Run region mismatch
+export const onFeedbackCreatedEU = functionsV1
+    .region('europe-west1')
+    .firestore.document('feedback/{id}')
+    .onCreate(async (snap, context) => {
+    try {
+        const id = context?.params?.id;
+        const data = snap.data();
+        const runtimeConfig = functions?.config ? functions.config() : {};
+        const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN || runtimeConfig?.feedback?.github_token;
+        const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || runtimeConfig?.feedback?.github_repo || "";
+        if (!GITHUB_TOKEN || !GITHUB_REPO) {
+            logger.warn("GitHub integration not configured; skipping issue creation", { id });
+            return;
+        }
+        if (data?.githubIssueNumber)
+            return; // already processed
+        const [owner, repo] = String(GITHUB_REPO).split("/");
+        const titlePrefix = data?.type ? `[${String(data.type).toUpperCase()}] ` : "";
+        const sev = data?.severity ? `Severity: ${data.severity}` : "";
+        const page = data?.page ? `Page: ${data.page}` : "";
+        const env = `App: ${data?.appVersion || "n/a"} | User: ${data?.userId || "anon"} | ${data?.email || "no-email"}`;
+        const body = [
+            data?.message || "",
+            "",
+            `Title: ${data?.title || "(no title)"}`,
+            [sev, page].filter(Boolean).join(" | "),
+            env,
+            data?.screenshotUrl ? `Screenshot: ${data.screenshotUrl}` : ''
+        ].filter(Boolean).join("\n");
+        const labels = [];
+        if (data?.type)
+            labels.push(String(data.type));
+        if (data?.severity)
+            labels.push(`sev:${data.severity}`);
+        labels.push("from-app");
+        const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${GITHUB_TOKEN}`,
+                "Content-Type": "application/json",
+                Accept: "application/vnd.github+json",
+            },
+            body: JSON.stringify({
+                title: `${titlePrefix}${data?.title || "Feedback"}`.slice(0, 120),
+                body,
+                labels,
+            }),
+        });
+        if (!res.ok) {
+            const text = await res.text().catch(() => "");
+            logger.error("GitHub issue creation failed (EU)", { status: res.status, text });
+            return;
+        }
+        const json = await res.json();
+        const issueNumber = json?.number;
+        const issueUrl = json?.html_url;
+        await admin.firestore().doc(`feedback/${id}`).set({ githubIssueNumber: issueNumber, githubIssueUrl: issueUrl, status: "open" }, { merge: true });
+        logger.info("Created GitHub issue from feedback (EU)", { id, issueNumber });
+    }
+    catch (err) {
+        logger.error("onFeedbackCreatedEU error", { err });
+    }
+});
+// --- Stripe Billing (Webhook + Customer Portal) ---
+const cfg = functions?.config ? functions.config() : {};
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || cfg?.stripe?.secret;
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || cfg?.stripe?.webhook_secret;
+// Optional price ids if you want to map to friendly plan names
+const PRICE_STARTER = process.env.PRICE_STARTER || cfg?.stripe?.plan_starter_price;
+const PRICE_STANDARD = process.env.PRICE_STANDARD || cfg?.stripe?.plan_standard_price;
+const PRICE_PRO = process.env.PRICE_PRO || cfg?.stripe?.plan_pro_price;
+let stripe = null;
+async function ensureStripe() {
+    if (stripe)
+        return stripe;
+    if (!STRIPE_SECRET_KEY) {
+        logger.warn("Stripe secret key not configured; billing endpoints will be inert.");
+        return null;
+    }
+    const mod = await import("stripe");
+    const StripeCtor = mod.default;
+    stripe = new StripeCtor(STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
+    return stripe;
+}
+function mapPlan(priceId) {
+    if (!priceId)
+        return undefined;
+    if (PRICE_STARTER && priceId === PRICE_STARTER)
+        return "starter";
+    if (PRICE_STANDARD && priceId === PRICE_STANDARD)
+        return "standard";
+    if (PRICE_PRO && priceId === PRICE_PRO)
+        return "pro";
+    return undefined;
+}
+export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, res) => {
+    try {
+        const s = await ensureStripe();
+        if (!s || !STRIPE_WEBHOOK_SECRET) {
+            res.status(200).send("stripe not configured");
+            return;
+        }
+        const sig = req.headers["stripe-signature"];
+        const event = s.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
+        // Helper to upsert profile by email
+        const upsertByEmail = async (email, data) => {
+            const snap = await admin.firestore().collection("userProfiles").where("email", "==", email).limit(1).get();
+            if (snap.empty)
+                return;
+            const doc = snap.docs[0];
+            await doc.ref.set(data, { merge: true });
+        };
+        switch (event.type) {
+            case "checkout.session.completed": {
+                const session = event.data.object;
+                const customerId = session.customer || "";
+                const subscriptionId = session.subscription || "";
+                const email = session.customer_details?.email || session.client_reference_id || "";
+                let planPriceId;
+                try {
+                    if (subscriptionId && s) {
+                        const sub = await s.subscriptions.retrieve(subscriptionId);
+                        planPriceId = sub.items.data[0]?.price?.id;
+                    }
+                }
+                catch { }
+                const plan = mapPlan(planPriceId);
+                const update = {
+                    stripeCustomerId: customerId || undefined,
+                    subscriptionId: subscriptionId || undefined,
+                    planPriceId: planPriceId || undefined,
+                    plan: plan || undefined,
+                    subscriptionStatus: session.status || "active",
+                    currentPeriodEnd: session.expires_at || undefined,
+                    lastStripeEventTs: Date.now(),
+                };
+                if (email)
+                    await upsertByEmail(email, update);
+                break;
+            }
+            case "customer.subscription.updated":
+            case "customer.subscription.deleted": {
+                const sub = event.data.object;
+                const customerId = sub.customer || "";
+                const status = sub.status;
+                const planPriceId = sub.items.data[0]?.price?.id;
+                const plan = mapPlan(planPriceId);
+                const currentPeriodEnd = typeof sub.current_period_end === "number" ? sub.current_period_end : undefined;
+                // Lookup customer email to find profile
+                let email = "";
+                try {
+                    if (s && customerId) {
+                        const cust = await s.customers.retrieve(customerId);
+                        email = cust?.email || "";
+                    }
+                }
+                catch { }
+                const update = {
+                    stripeCustomerId: customerId || undefined,
+                    subscriptionId: sub.id,
+                    subscriptionStatus: status,
+                    planPriceId: planPriceId || undefined,
+                    plan: plan || undefined,
+                    currentPeriodEnd,
+                    cancelAtPeriodEnd: sub.cancel_at_period_end || false,
+                    lastStripeEventTs: Date.now(),
+                };
+                if (email) {
+                    const snap = await admin.firestore().collection("userProfiles").where("email", "==", email).limit(1).get();
+                    if (!snap.empty)
+                        await snap.docs[0].ref.set(update, { merge: true });
+                }
+                break;
+            }
+            case "invoice.payment_succeeded":
+            case "invoice.payment_failed": {
+                const invoice = event.data.object;
+                const customerId = invoice.customer || "";
+                let email = "";
+                try {
+                    if (s && customerId) {
+                        const cust = await s.customers.retrieve(customerId);
+                        email = cust?.email || "";
+                    }
+                }
+                catch { }
+                if (email) {
+                    await upsertByEmail(email, { lastStripeEventTs: Date.now() });
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        res.status(200).send("ok");
+    }
+    catch (err) {
+        logger.error("stripe webhook error", { err });
+        res.status(400).send(`webhook error`);
+    }
+});
+export const createBillingPortalSession = onCall({ region: "us-central1" }, async (req) => {
+    if (!req.auth)
+        throw new Error("unauthenticated");
+    if (!stripe)
+        throw new Error("Stripe not configured");
+    const uid = req.auth.uid;
+    const db = admin.firestore();
+    const profileRef = db.doc(`userProfiles/${uid}`);
+    const profileSnap = await profileRef.get();
+    const profile = profileSnap.exists ? profileSnap.data() : {};
+    let customerId = profile?.stripeCustomerId;
+    if (!customerId) {
+        // Try to find by email
+        const user = await admin.auth().getUser(uid).catch(() => undefined);
+        const email = (profile?.email || user?.email);
+        if (email && stripe) {
+            const list = await stripe.customers.list({ email, limit: 1 });
+            if (list.data.length > 0)
+                customerId = list.data[0].id;
+        }
+        if (customerId)
+            await profileRef.set({ stripeCustomerId: customerId }, { merge: true });
+    }
+    if (!customerId)
+        throw new Error("No Stripe customer");
+    const returnUrl = process.env.BILLING_RETURN_URL || cfg?.app?.billing_return_url || "https://app.thepropslist.uk/profile";
+    const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+    });
+    return { url: session.url };
+});
+// --- Public container info for marketing site (/c/:id) ---
+export const publicContainerInfo = onRequest({ region: "us-central1", timeoutSeconds: 120, memory: "512MiB", minInstances: 1 }, async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+    }
+    const idOrCode = (req.query.id || req.query.code || "").trim();
+    if (!idOrCode) {
+        res.status(400).json({ error: "missing id" });
+        return;
+    }
+    try {
+        const db = admin.firestore();
+        // First: search within packLists.containers[] (legacy schema)
+        const listsSnap = await db.collection("packLists").get();
+        let found = null;
+        listsSnap.forEach((doc) => {
+            if (found)
+                return;
+            const data = doc.data();
+            // Case 1: packList doc with containers array
+            const containers = Array.isArray(data.containers) ? data.containers : [];
+            const match = containers.find((c) => c && (c.id === idOrCode || c.code === idOrCode || c.name === idOrCode));
+            if (match) {
+                found = match;
+                return;
+            }
+            // Case 2: some apps wrote container docs directly into packLists
+            if (!found && data.name === idOrCode && Array.isArray(data.props)) {
+                found = {
+                    id: data.id || doc.id,
+                    code: data.code || data.shortCode || undefined,
+                    name: data.name,
+                    status: data.status || data.containerStatus,
+                    props: data.props,
+                };
+            }
+        });
+        // Second: search dedicated packingBoxes collection (current schema)
+        let boxDoc = null;
+        if (!found) {
+            // Try direct doc lookup
+            boxDoc = await db.collection("packingBoxes").doc(idOrCode).get();
+            if (!boxDoc.exists) {
+                // Try common fields
+                const tryFields = ["code", "shortCode", "id", "name"];
+                for (const field of tryFields) {
+                    const qs = await db.collection("packingBoxes").where(field, "==", idOrCode).limit(1).get();
+                    if (!qs.empty) {
+                        boxDoc = qs.docs[0];
+                        break;
+                    }
+                }
+            }
+            if (boxDoc && boxDoc.exists) {
+                const d = boxDoc.data() || {};
+                found = {
+                    id: d.id || boxDoc.id,
+                    code: d.code || d.shortCode || undefined,
+                    name: d.name || boxDoc.id,
+                    status: d.status || d.containerStatus,
+                    props: Array.isArray(d.props) ? d.props : [],
+                };
+            }
+        }
+        if (!found) {
+            res.status(404).json({ error: "not found" });
+            return;
+        }
+        // Resolve prop names and first images if possible
+        let propsOut = [];
+        let publicProps = [];
+        try {
+            const propIds = Array.isArray(found.props) ? found.props.map((p) => p?.propId).filter(Boolean) : [];
+            if (propIds.length) {
+                const chunk = 10;
+                const names = {};
+                const firstImageUrl = {};
+                for (let i = 0; i < propIds.length; i += chunk) {
+                    const group = propIds.slice(i, i + chunk);
+                    const qs = await db.collection("props").where(admin.firestore.FieldPath.documentId(), "in", group).get();
+                    qs.forEach(d => {
+                        const data = d.data();
+                        names[d.id] = data?.name || "";
+                        try {
+                            const imgs = Array.isArray(data?.images) ? data.images : [];
+                            const first = imgs.find((x) => x && (x.url || x.downloadURL || x.src));
+                            firstImageUrl[d.id] = (first?.url || first?.downloadURL || first?.src || "");
+                        }
+                        catch { }
+                    });
+                }
+                const limited = (found.props || []).slice(0, 50);
+                propsOut = limited.map((p) => ({ name: names[p.propId] || p.name || "", quantity: p.quantity || 0 }));
+                publicProps = limited.map((p) => ({ name: names[p.propId] || p.name || "", quantity: p.quantity || 0, imageUrl: firstImageUrl[p.propId] || "" }));
+            }
+        }
+        catch { }
+        // Load children (nested) if any
+        let children = [];
+        try {
+            const childQs = await db.collection("packingBoxes").where("parentId", "==", found.id || idOrCode).limit(100).get();
+            children = childQs.docs.map(d => {
+                const cd = d.data();
+                return { id: d.id, code: cd.code || cd.shortCode || null, name: cd.name || d.id };
+            });
+        }
+        catch { }
+        const publicData = {
+            id: found.id || idOrCode,
+            name: found.name || found.code || "Container",
+            status: found.status || "unknown",
+            propCount: Array.isArray(found.props) ? found.props.reduce((s, p) => s + (p.quantity || 0), 0) : 0,
+            props: propsOut,
+            publicProps,
+            children,
+        };
+        res.json(publicData);
+    }
+    catch (err) {
+        logger.error("publicContainerInfo error", { err });
+        res.status(500).json({ error: "internal" });
+    }
+});
+// Gen1 fallback for public container info to bypass Cloud Run startup issues
+export const publicContainerInfoV1 = functionsV1.https.onRequest(async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+    }
+    const idOrCode = (req.query?.id || req.query?.code || "").trim();
+    if (!idOrCode) {
+        res.status(400).json({ error: "missing id" });
+        return;
+    }
+    try {
+        const db = admin.firestore();
+        // First: search within packLists.containers[] (legacy schema)
+        const listsSnap = await db.collection("packLists").get();
+        let found = null;
+        listsSnap.forEach((doc) => {
+            if (found)
+                return;
+            const data = doc.data();
+            const containers = Array.isArray(data?.containers) ? data.containers : [];
+            const match = containers.find((c) => c && (c.id === idOrCode || c.code === idOrCode || c.name === idOrCode));
+            if (match) {
+                found = match;
+                return;
+            }
+            if (!found && data?.name === idOrCode && Array.isArray(data?.props)) {
+                found = { id: data.id || doc.id, code: data.code || data.shortCode || undefined, name: data.name, status: data.status || data.containerStatus, props: data.props };
+            }
+        });
+        // Second: search dedicated packingBoxes collection (current schema)
+        let boxDoc = null;
+        if (!found) {
+            boxDoc = await db.collection("packingBoxes").doc(idOrCode).get();
+            if (!boxDoc.exists) {
+                const tryFields = ["code", "shortCode", "id", "name"];
+                for (const field of tryFields) {
+                    const qs = await db.collection("packingBoxes").where(field, "==", idOrCode).limit(1).get();
+                    if (!qs.empty) {
+                        boxDoc = qs.docs[0];
+                        break;
+                    }
+                }
+            }
+            if (boxDoc && boxDoc.exists) {
+                const d = boxDoc.data() || {};
+                found = { id: d.id || boxDoc.id, code: d.code || d.shortCode || undefined, name: d.name || boxDoc.id, status: d.status || d.containerStatus, props: Array.isArray(d.props) ? d.props : [] };
+            }
+        }
+        if (!found) {
+            res.status(404).json({ error: "not found" });
+            return;
+        }
+        // Resolve prop names and first images if possible
+        let propsOut = [];
+        let publicProps = [];
+        try {
+            const propIds = Array.isArray(found.props) ? found.props.map((p) => p?.propId).filter(Boolean) : [];
+            if (propIds.length) {
+                const chunk = 10;
+                const names = {};
+                const firstImageUrl = {};
+                for (let i = 0; i < propIds.length; i += chunk) {
+                    const group = propIds.slice(i, i + chunk);
+                    const qs = await db.collection("props").where(admin.firestore.FieldPath.documentId(), "in", group).get();
+                    qs.forEach(d => {
+                        const data = d.data();
+                        names[d.id] = data?.name || "";
+                        try {
+                            const imgs = Array.isArray(data?.images) ? data.images : [];
+                            const first = imgs.find((x) => x && (x.url || x.downloadURL || x.src));
+                            firstImageUrl[d.id] = (first?.url || first?.downloadURL || first?.src || "");
+                        }
+                        catch { }
+                    });
+                }
+                const limited = (found.props || []).slice(0, 50);
+                propsOut = limited.map((p) => ({ name: names[p.propId] || p.name || "", quantity: p.quantity || 0 }));
+                publicProps = limited.map((p) => ({ name: names[p.propId] || p.name || "", quantity: p.quantity || 0, imageUrl: firstImageUrl[p.propId] || "" }));
+            }
+        }
+        catch { }
+        // Load children (nested) if any
+        let children = [];
+        try {
+            const childQs = await db.collection("packingBoxes").where("parentId", "==", found.id || idOrCode).limit(100).get();
+            children = childQs.docs.map(d => { const cd = d.data(); return { id: d.id, code: cd.code || cd.shortCode || null, name: cd.name || d.id }; });
+        }
+        catch { }
+        const publicData = {
+            id: found.id || idOrCode,
+            name: found.name || found.code || "Container",
+            status: found.status || "unknown",
+            propCount: Array.isArray(found.props) ? found.props.reduce((s, p) => s + (p.quantity || 0), 0) : 0,
+            props: propsOut,
+            publicProps,
+            children,
+        };
+        res.json(publicData);
+    }
+    catch (err) {
+        logger.error("publicContainerInfoV1 error", { err });
+        res.status(500).json({ error: "internal" });
+    }
+});
+// --- Normalization utilities ---
+export const normalizeContainers = onCall({ region: "us-central1" }, async (req) => {
+    const commit = !!req.data?.commit;
+    const dryRun = [];
+    const db = admin.firestore();
+    // 1) Migrate inline containers in packLists into packingBoxes
+    const lists = await db.collection("packLists").get();
+    for (const doc of lists.docs) {
+        const data = doc.data();
+        // Case: doc looks like a container (has props and name)
+        if (Array.isArray(data?.props) && typeof data?.name === "string" && !Array.isArray(data?.containers)) {
+            const code = data.name;
+            const boxId = data.id || doc.id;
+            dryRun.push({ action: "upsertBoxFromInlinePackListDoc", source: doc.id, target: boxId, code });
+            if (commit) {
+                await db.collection("packingBoxes").doc(boxId).set({
+                    id: boxId,
+                    code,
+                    name: data.name,
+                    type: data.type || "box",
+                    status: data.status || "unknown",
+                    props: Array.isArray(data.props) ? data.props : [],
+                    labels: Array.isArray(data.labels) ? data.labels : [],
+                    metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+                }, { merge: true });
+            }
+            continue;
+        }
+        // Case: containers array
+        const containers = Array.isArray(data?.containers) ? data.containers : [];
+        for (const c of containers) {
+            if (!c || typeof c !== "object")
+                continue;
+            const boxId = c.id || c.code || c.name || undefined;
+            if (!boxId)
+                continue;
+            dryRun.push({ action: "upsertBoxFromContainersArray", source: doc.id, target: boxId });
+            if (commit) {
+                await db.collection("packingBoxes").doc(String(boxId)).set({
+                    id: String(boxId),
+                    code: c.code || undefined,
+                    name: c.name || String(boxId),
+                    type: c.type || "box",
+                    status: c.status || "unknown",
+                    props: Array.isArray(c.props) ? c.props : [],
+                    labels: Array.isArray(c.labels) ? c.labels : [],
+                    parentId: c.parentId || null,
+                    metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+                }, { merge: true });
+            }
+        }
+    }
+    return { ok: true, dryRun, committed: commit };
+});
+export const setContainerParent = onCall({ region: "us-central1" }, async (req) => {
+    const { boxId, parentId } = req.data || {};
+    if (!boxId)
+        throw new Error("boxId required");
+    const db = admin.firestore();
+    await db.collection("packingBoxes").doc(String(boxId)).set({ parentId: parentId || null }, { merge: true });
+    return { ok: true };
+});
+// Convenience HTTP wrappers (guarded by token) to run admin tasks from CLI
+export const normalizeContainersHttp = onRequest({ region: "us-central1" }, async (req, res) => {
+    try {
+        const token = req.query.token || "";
+        const commit = String(req.query.commit || "false").toLowerCase() === "true";
+        const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_CONFIG && (() => { try {
+            return JSON.parse(String(process.env.FIREBASE_CONFIG)).projectId;
+        }
+        catch {
+            return "";
+        } })() || "";
+        if (!token || token !== projectId) {
+            res.status(403).json({ ok: false, error: "forbidden" });
+            return;
+        }
+        const db = admin.firestore();
+        const out = [];
+        const lists = await db.collection("packLists").get();
+        for (const doc of lists.docs) {
+            const data = doc.data();
+            if (Array.isArray(data?.props) && typeof data?.name === "string" && !Array.isArray(data?.containers)) {
+                const code = data.name;
+                const boxId = data.id || doc.id;
+                out.push({ action: "upsertBoxFromInlinePackListDoc", source: doc.id, target: boxId, code });
+                if (commit) {
+                    await db.collection("packingBoxes").doc(boxId).set({
+                        id: boxId,
+                        code,
+                        name: data.name,
+                        type: data.type || "box",
+                        status: data.status || "unknown",
+                        props: Array.isArray(data.props) ? data.props : [],
+                        labels: Array.isArray(data.labels) ? data.labels : [],
+                        metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+                    }, { merge: true });
+                }
+                continue;
+            }
+            const containers = Array.isArray(data?.containers) ? data.containers : [];
+            for (const c of containers) {
+                if (!c || typeof c !== "object")
+                    continue;
+                const boxId = c.id || c.code || c.name || undefined;
+                if (!boxId)
+                    continue;
+                out.push({ action: "upsertBoxFromContainersArray", source: doc.id, target: boxId });
+                if (commit) {
+                    await db.collection("packingBoxes").doc(String(boxId)).set({
+                        id: String(boxId),
+                        code: c.code || undefined,
+                        name: c.name || String(boxId),
+                        type: c.type || "box",
+                        status: c.status || "unknown",
+                        props: Array.isArray(c.props) ? c.props : [],
+                        labels: Array.isArray(c.labels) ? c.labels : [],
+                        parentId: c.parentId || null,
+                        metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+                    }, { merge: true });
+                }
+            }
+        }
+        res.json({ ok: true, committed: commit, results: out });
+    }
+    catch (e) {
+        logger.error("normalizeContainersHttp error", e);
+        res.status(500).json({ ok: false });
+    }
+});
+// Gen1 fallback endpoint for ease of invocation
+export const adminNormalizeContainers = functions.https.onRequest(async (req, res) => {
+    try {
+        const token = req.query.token || "";
+        const commit = String(req.query.commit || "false").toLowerCase() === "true";
+        const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_CONFIG && (() => { try {
+            return JSON.parse(String(process.env.FIREBASE_CONFIG)).projectId;
+        }
+        catch {
+            return "";
+        } })() || "";
+        if (!token || token !== projectId) {
+            res.status(403).json({ ok: false, error: "forbidden" });
+            return;
+        }
+        const db = admin.firestore();
+        const out = [];
+        const lists = await db.collection("packLists").get();
+        for (const doc of lists.docs) {
+            const data = doc.data();
+            if (Array.isArray(data?.props) && typeof data?.name === "string" && !Array.isArray(data?.containers)) {
+                const code = data.name;
+                const boxId = data.id || doc.id;
+                out.push({ action: "upsertBoxFromInlinePackListDoc", source: doc.id, target: boxId, code });
+                if (commit) {
+                    await db.collection("packingBoxes").doc(boxId).set({
+                        id: boxId,
+                        code,
+                        name: data.name,
+                        type: data.type || "box",
+                        status: data.status || "unknown",
+                        props: Array.isArray(data.props) ? data.props : [],
+                        labels: Array.isArray(data.labels) ? data.labels : [],
+                        metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+                    }, { merge: true });
+                }
+                continue;
+            }
+            const containers = Array.isArray(data?.containers) ? data.containers : [];
+            for (const c of containers) {
+                if (!c || typeof c !== "object")
+                    continue;
+                const boxId = c.id || c.code || c.name || undefined;
+                if (!boxId)
+                    continue;
+                out.push({ action: "upsertBoxFromContainersArray", source: doc.id, target: boxId });
+                if (commit) {
+                    await db.collection("packingBoxes").doc(String(boxId)).set({
+                        id: String(boxId),
+                        code: c.code || undefined,
+                        name: c.name || String(boxId),
+                        type: c.type || "box",
+                        status: c.status || "unknown",
+                        props: Array.isArray(c.props) ? c.props : [],
+                        labels: Array.isArray(c.labels) ? c.labels : [],
+                        parentId: c.parentId || null,
+                        metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+                    }, { merge: true });
+                }
+            }
+        }
+        res.json({ ok: true, committed: commit, results: out });
+    }
+    catch (e) {
+        logger.error("adminNormalizeContainers error", e);
+        res.status(500).json({ ok: false });
+    }
+});
+// --- Simple marketing waitlist collector ---
+export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res) => {
+    // Minimal CORS (allow marketing site origins)
+    const origin = req.headers.origin || "";
+    const allowedOrigins = [
+        "https://thepropslist-marketing.web.app",
+        "https://thepropslist.uk",
+        "https://www.thepropslist.uk",
+    ];
+    if (allowedOrigins.includes(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+    }
+    if (req.method !== "POST") {
+        res.status(405).json({ ok: false, error: "method-not-allowed" });
+        return;
+    }
+    try {
+        const body = (req.body || {});
+        const email = (body.email || "").toString().trim().toLowerCase();
+        const name = (body.name || "").toString().trim();
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            res.status(400).json({ ok: false, error: "invalid-email" });
+            return;
+        }
+        const doc = {
+            email,
+            name: name || null,
+            createdAt: Date.now(),
+            userAgent: req.headers["user-agent"] || null,
+            referer: req.headers.referer || null,
+            ip: req.headers["x-forwarded-for"] || null,
+        };
+        await admin.firestore().collection("waitlist").add(doc);
+        res.status(200).json({ ok: true });
+    }
+    catch (err) {
+        logger.error("joinWaitlist error", { err });
+        res.status(500).json({ ok: false });
     }
 });

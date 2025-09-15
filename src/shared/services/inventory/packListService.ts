@@ -38,6 +38,8 @@ export class FirebaseError extends Error {
 
 export interface PackingContainer {
   id: string;
+  code?: string; // short human code for QR
+  parentId?: string | null; // support nesting (e.g., box on pallet)
   name: string;
   description?: string;
   dimensions?: {
@@ -520,7 +522,13 @@ export class DigitalPackListService implements PackListService {
 
     const labels: PackingLabel[] = [];
     for (const container of packList.containers) {
-      const containerUrl = `${this.baseUrl}/container/${packList.id}/${container.id}`;
+      // Build a public URL that lives on the marketing domain at /c/:containerId
+      // If baseUrl is the app domain (app.thepropslist.uk), strip the app. subdomain.
+      // In local dev, fall back to current baseUrl.
+      const publicOrigin = this.baseUrl.includes('app.')
+        ? this.baseUrl.replace('app.', '')
+        : this.baseUrl;
+      const containerUrl = `${publicOrigin}/c/${container.id}`;
       const qrCode = await this.qrService.generateQRCode({
         type: 'container',
         id: container.id,
