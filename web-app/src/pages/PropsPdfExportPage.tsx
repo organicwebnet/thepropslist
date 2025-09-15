@@ -310,6 +310,17 @@ const PropsPdfExportPage: React.FC = () => {
       setShowData(doc.data || null);
       setPdfOptions(opt => ({ ...opt, title: doc.data?.name || '' }));
     });
+    // Pull brand defaults
+    service.getDocument<any>(`shows/${currentShowId}/brand`, 'default' as any).then((brandDoc: any) => {
+      const b = brandDoc?.data as any;
+      if (b) {
+        setPdfOptions(opt => ({
+          ...opt,
+          fonts: { heading: b.fonts?.heading || opt.fonts.heading, body: b.fonts?.body || opt.fonts.body },
+          brandColors: { primary: b.colors?.primary || opt.brandColors?.primary || '#0ea5e9', accent: b.colors?.accent || opt.brandColors?.accent || '#22c55e' },
+        }));
+      }
+    }).catch(() => {});
     unsubProps = service.listenToCollection('props', (data) => {
       setProps(data.filter(doc => doc.data.showId === currentShowId).map(doc => ({ ...(doc.data as Prop), id: doc.id })));
       setLoading(false);

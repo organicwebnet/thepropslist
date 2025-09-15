@@ -24,6 +24,7 @@ import PackingListDetailPage from './pages/PackingListDetailPage';
 import ContainerDetailPage from './pages/ContainerDetailPage';
 import PublicContainerPage from './pages/PublicContainerPage';
 import PropsPdfExportPage from './pages/PropsPdfExportPage';
+import BrandingStudioPage from './pages/BrandingStudioPage';
 import ShoppingListPage from './pages/ShoppingListPage';
 import ProfilePage from './pages/ProfilePage';
 import FeedbackPage from './pages/FeedbackPage';
@@ -41,6 +42,7 @@ function App() {
           <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
           <Route path="/props/pdf-export" element={<ProtectedRoute><PropsPdfExportPage /></ProtectedRoute>} />
+          <Route path="/branding" element={<ProtectedRoute><BrandingStudioPage /></ProtectedRoute>} />
           <Route path="/props/:id/edit" element={<ProtectedRoute><EditPropPage /></ProtectedRoute>} />
           <Route path="/props/add" element={<ProtectedRoute><AddPropPage /></ProtectedRoute>} />
           <Route path="/props/:id" element={<ProtectedRoute><PropDetailPage /></ProtectedRoute>} />
