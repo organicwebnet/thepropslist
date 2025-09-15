@@ -82,8 +82,8 @@ function generatePropsListPages(
     </div>
   `;
   // Helper for badges
-  function badge(text: string, color: string) {
-    return `<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.95em;font-weight:600;background:${color};color:#fff;margin-right:8px;">${text}</span>`;
+  function badge(text: string, _color: string) {
+    return `<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:0.95em;font-weight:600;border:1px solid #000;color:#000;margin-right:8px;">${text}</span>`;
   }
   // Helper to render a QR code img for a URL (uses public QR server)
   const qrImg = (url: string, size = 90) => `<img src="https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}" alt="QR" width="${size}" height="${size}" style="display:block;border:1px solid #ddd;border-radius:6px;background:#fff;"/>`;
@@ -181,18 +181,18 @@ function generatePropsListPages(
   // CSS for catalog look
   const catalogCss = `
     <style>
-      body { background: #f0f0f0; font-family: 'Helvetica Neue', Arial, sans-serif; color: #222; margin: 0; padding: 0; }
+      body { background: #f0f0f0; font-family: 'Helvetica Neue', Arial, sans-serif; color: #000; margin: 0; padding: 0; }
       .page { page-break-after: always; min-height: ${pageHeight}px; min-width: ${pageWidth}px; max-width: ${pageWidth}px; max-height: ${pageHeight}px; margin: 0 auto; background: #fff; border: 2px solid #111; border-radius: 12px; box-shadow: 0 8px 32px #0002; display: flex; flex-direction: column; justify-content: space-between; padding: 0; }
       .page + .page { margin-top: 32px; }
-      .header { text-align: left; padding: 32px 48px 12px 48px; font-size: 1.1em; color: #555; border-bottom: 1px solid #eee; background: #fff; }
-      .footer { text-align: right; padding: 12px 48px 32px 48px; font-size: 1em; color: #555; border-top: 1px solid #eee; background: #fff; }
+      .header { text-align: left; padding: 32px 48px 12px 48px; font-size: 1.1em; color: #000; border-bottom: 1px solid #eee; background: #fff; }
+      .footer { text-align: right; padding: 12px 48px 32px 48px; font-size: 1em; color: #000; border-top: 1px solid #eee; background: #fff; }
       .logo { max-height: 48px; margin-bottom: 8px; }
       .toc-title { font-size: 2.2em; font-weight: bold; margin-bottom: 8px; }
       .toc-header { font-size: 1.1em; color: #888; margin-bottom: 16px; }
       .toc-content { padding: 32px 48px; }
       .toc-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
       .toc-table th, .toc-table td { border-bottom: 1px solid #eee; padding: 8px 12px; text-align: left; font-size: 1.1em; }
-      .toc-table th { color: #1976d2; font-weight: 700; }
+      .toc-table th { color: #000; font-weight: 700; }
       .toc-table td:first-child { width: 60px; text-align: center; }
       .split-container { display: flex; flex-direction: row; width: 100%; height: 100%; }
       .split-container.portrait { flex-direction: column; }
@@ -205,13 +205,13 @@ function generatePropsListPages(
       .split-right { display: flex; flex-direction: column; justify-content: flex-start; }
       .prop-title { font-size: 2em; font-weight: bold; margin-bottom: 12px; }
       .badges { margin-bottom: 16px; }
-      .desc { font-size: 1.15em; margin-bottom: 18px; color: #444; }
+      .desc { font-size: 1.15em; margin-bottom: 18px; color: #000; }
       .details-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
       .details-table td { padding: 6px 10px; font-size: 1.05em; }
-      .detail-label { color: #888; font-weight: 600; width: 120px; }
-      .detail-value { color: #222; font-weight: 400; }
+      .detail-label { color: #000; font-weight: 600; width: 120px; }
+      .detail-value { color: #000; font-weight: 400; }
       .assets-section { margin-top: 18px; }
-      .assets-section h4 { margin: 0 0 8px 0; font-size: 1.1em; color: #2a2a2a; }
+      .assets-section h4 { margin: 0 0 8px 0; font-size: 1.1em; color: #000; }
       .assets-section ul { padding-left: 18px; }
       .assets-section li { margin-bottom: 6px; }
       .placeholder-img {
