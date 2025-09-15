@@ -3,8 +3,10 @@ import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import fetch from "cross-fetch";
 import * as logger from "firebase-functions/logger";
 import * as functions from "firebase-functions";
+// Force Gen1 for specific endpoints
+import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
 // Initialize Admin SDK once
 try {
@@ -187,6 +189,72 @@ export const onFeedbackCreated = onDocumentCreated("feedback/{id}", async (event
   }
 });
 
+// EU-region Firestore trigger to match Firestore (eur3) and avoid Eventarc/Run region mismatch
+export const onFeedbackCreatedEU = (functionsV1 as any)
+  .region('europe-west1')
+  .firestore.document('feedback/{id}')
+  .onCreate(async (snap: any, context: any) => {
+    try {
+      const id = context?.params?.id as string;
+      const data = snap.data() as any;
+
+      const runtimeConfig = (functions as any)?.config ? (functions as any).config() : {};
+      const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN || runtimeConfig?.feedback?.github_token;
+      const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || runtimeConfig?.feedback?.github_repo || "";
+      if (!GITHUB_TOKEN || !GITHUB_REPO) {
+        logger.warn("GitHub integration not configured; skipping issue creation", { id });
+        return;
+      }
+      if (data?.githubIssueNumber) return; // already processed
+
+      const [owner, repo] = String(GITHUB_REPO).split("/");
+      const titlePrefix = data?.type ? `[${String(data.type).toUpperCase()}] ` : "";
+      const sev = data?.severity ? `Severity: ${data.severity}` : "";
+      const page = data?.page ? `Page: ${data.page}` : "";
+      const env = `App: ${data?.appVersion || "n/a"} | User: ${data?.userId || "anon"} | ${data?.email || "no-email"}`;
+      const body = [
+        data?.message || "",
+        "",
+        `Title: ${data?.title || "(no title)"}`,
+        [sev, page].filter(Boolean).join(" | "),
+        env,
+        data?.screenshotUrl ? `Screenshot: ${data.screenshotUrl}` : ''
+      ].filter(Boolean).join("\n");
+
+      const labels: string[] = [];
+      if (data?.type) labels.push(String(data.type));
+      if (data?.severity) labels.push(`sev:${data.severity}`);
+      labels.push("from-app");
+
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+          "Content-Type": "application/json",
+          Accept: "application/vnd.github+json",
+        },
+        body: JSON.stringify({
+          title: `${titlePrefix}${data?.title || "Feedback"}`.slice(0, 120),
+          body,
+          labels,
+        }),
+      } as any);
+
+      if (!(res as any).ok) {
+        const text = await (res as any).text().catch(() => "");
+        logger.error("GitHub issue creation failed (EU)", { status: (res as any).status, text });
+        return;
+      }
+      const json = await (res as any).json();
+      const issueNumber = json?.number;
+      const issueUrl = json?.html_url;
+      await admin.firestore().doc(`feedback/${id}`).set({ githubIssueNumber: issueNumber, githubIssueUrl: issueUrl, status: "open" }, { merge: true });
+      logger.info("Created GitHub issue from feedback (EU)", { id, issueNumber });
+    } catch (err) {
+      logger.error("onFeedbackCreatedEU error", { err });
+    }
+  });
+
 // --- Stripe Billing (Webhook + Customer Portal) ---
 const cfg = (functions as any)?.config ? (functions as any).config() : {};
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || cfg?.stripe?.secret;
@@ -197,12 +265,16 @@ const PRICE_STANDARD = process.env.PRICE_STANDARD || cfg?.stripe?.plan_standard_
 const PRICE_PRO = process.env.PRICE_PRO || cfg?.stripe?.plan_pro_price;
 
 let stripe: Stripe | null = null;
-if (STRIPE_SECRET_KEY) {
-  stripe = new Stripe(STRIPE_SECRET_KEY, {
-    apiVersion: "2024-06-20" as any,
-  });
-} else {
-  logger.warn("Stripe secret key not configured; billing endpoints will be inert.");
+async function ensureStripe(): Promise<Stripe | null> {
+  if (stripe) return stripe;
+  if (!STRIPE_SECRET_KEY) {
+    logger.warn("Stripe secret key not configured; billing endpoints will be inert.");
+    return null;
+  }
+  const mod = await import("stripe");
+  const StripeCtor = (mod as any).default as typeof Stripe;
+  stripe = new StripeCtor(STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" as any });
+  return stripe;
 }
 
 function mapPlan(priceId?: string | null): string | undefined {
@@ -215,12 +287,13 @@ function mapPlan(priceId?: string | null): string | undefined {
 
 export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, res) => {
   try {
-    if (!stripe || !STRIPE_WEBHOOK_SECRET) {
+    const s = await ensureStripe();
+    if (!s || !STRIPE_WEBHOOK_SECRET) {
       res.status(200).send("stripe not configured");
       return;
     }
     const sig = req.headers["stripe-signature"] as string;
-    const event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
+    const event = s.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
 
     // Helper to upsert profile by email
     const upsertByEmail = async (email: string, data: any) => {
@@ -238,8 +311,8 @@ export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, re
         const email = session.customer_details?.email || session.client_reference_id || "";
         let planPriceId: string | undefined;
         try {
-          if (subscriptionId && stripe) {
-            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          if (subscriptionId && s) {
+            const sub = await s.subscriptions.retrieve(subscriptionId);
             planPriceId = sub.items.data[0]?.price?.id;
           }
         } catch {}
@@ -267,8 +340,8 @@ export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, re
         // Lookup customer email to find profile
         let email = "";
         try {
-          if (stripe && customerId) {
-            const cust = await stripe.customers.retrieve(customerId);
+          if (s && customerId) {
+            const cust = await s.customers.retrieve(customerId);
             email = (cust as any)?.email || "";
           }
         } catch {}
@@ -294,8 +367,8 @@ export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, re
         const customerId = (invoice.customer as string) || "";
         let email = "";
         try {
-          if (stripe && customerId) {
-            const cust = await stripe.customers.retrieve(customerId);
+          if (s && customerId) {
+            const cust = await s.customers.retrieve(customerId);
             email = (cust as any)?.email || "";
           }
         } catch {}
@@ -345,45 +418,398 @@ export const createBillingPortalSession = onCall({ region: "us-central1" }, asyn
 });
 
 // --- Public container info for marketing site (/c/:id) ---
-export const publicContainerInfo = onRequest({ region: "us-central1" }, async (req, res) => {
+export const publicContainerInfo = onRequest({ region: "us-central1", timeoutSeconds: 120, memory: "512MiB" as any, minInstances: 1 as any }, async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   if (req.method === "OPTIONS") {
     res.status(204).send("");
     return;
   }
-  const id = (req.query.id as string) || "";
-  if (!id) {
+  const idOrCode = ((req.query.id as string) || (req.query.code as string) || "").trim();
+  if (!idOrCode) {
     res.status(400).json({ error: "missing id" });
     return;
   }
   try {
-    const snap = await admin.firestore().collection("packLists").get();
+    const db = admin.firestore();
+    // First: search within packLists.containers[] (legacy schema)
+    const listsSnap = await db.collection("packLists").get();
     let found: any = null;
-    snap.forEach((doc) => {
+    listsSnap.forEach((doc) => {
       if (found) return;
       const data = doc.data();
-      const containers = Array.isArray(data.containers) ? data.containers : [];
-      const match = containers.find((c: any) => c && c.id === id);
-      if (match) found = match;
+      // Case 1: packList doc with containers array
+      const containers = Array.isArray((data as any).containers) ? (data as any).containers : [];
+      const match = containers.find((c: any) => c && (c.id === idOrCode || c.code === idOrCode || c.name === idOrCode));
+      if (match) { found = match; return; }
+      // Case 2: some apps wrote container docs directly into packLists
+      if (!found && (data as any).name === idOrCode && Array.isArray((data as any).props)) {
+        found = {
+          id: (data as any).id || doc.id,
+          code: (data as any).code || (data as any).shortCode || undefined,
+          name: (data as any).name,
+          status: (data as any).status || (data as any).containerStatus,
+          props: (data as any).props,
+        } as any;
+      }
     });
+
+    // Second: search dedicated packingBoxes collection (current schema)
+    let boxDoc: FirebaseFirestore.DocumentSnapshot | null = null;
+    if (!found) {
+      // Try direct doc lookup
+      boxDoc = await db.collection("packingBoxes").doc(idOrCode).get();
+      if (!boxDoc.exists) {
+        // Try common fields
+        const tryFields = ["code", "shortCode", "id", "name"];
+        for (const field of tryFields) {
+          const qs = await db.collection("packingBoxes").where(field, "==", idOrCode).limit(1).get();
+          if (!qs.empty) { boxDoc = qs.docs[0]; break; }
+        }
+      }
+      if (boxDoc && boxDoc.exists) {
+        const d = boxDoc.data() || {};
+        found = {
+          id: d.id || boxDoc.id,
+          code: (d as any).code || (d as any).shortCode || undefined,
+          name: (d as any).name || boxDoc.id,
+          status: (d as any).status || (d as any).containerStatus,
+          props: Array.isArray((d as any).props) ? (d as any).props : [],
+        } as any;
+      }
+    }
+
     if (!found) {
       res.status(404).json({ error: "not found" });
       return;
     }
+
+    // Resolve prop names and first images if possible
+    let propsOut: any[] = [];
+    let publicProps: any[] = [];
+    try {
+      const propIds: string[] = Array.isArray(found.props) ? found.props.map((p: any) => p?.propId).filter(Boolean) : [];
+      if (propIds.length) {
+        const chunk = 10;
+        const names: Record<string, string> = {};
+        const firstImageUrl: Record<string, string> = {};
+        for (let i = 0; i < propIds.length; i += chunk) {
+          const group = propIds.slice(i, i + chunk);
+          const qs = await db.collection("props").where(admin.firestore.FieldPath.documentId(), "in", group).get();
+          qs.forEach(d => {
+            const data = d.data() as any;
+            names[d.id] = data?.name || "";
+            try {
+              const imgs = Array.isArray(data?.images) ? data.images : [];
+              const first = imgs.find((x: any) => x && (x.url || x.downloadURL || x.src));
+              firstImageUrl[d.id] = (first?.url || first?.downloadURL || first?.src || "");
+            } catch {}
+          });
+        }
+        const limited = (found.props || []).slice(0, 50);
+        propsOut = limited.map((p: any) => ({ name: names[p.propId] || p.name || "", quantity: p.quantity || 0 }));
+        publicProps = limited.map((p: any) => ({ name: names[p.propId] || p.name || "", quantity: p.quantity || 0, imageUrl: firstImageUrl[p.propId] || "" }));
+      }
+    } catch {}
+
+    // Load children (nested) if any
+    let children: any[] = [];
+    try {
+      const childQs = await db.collection("packingBoxes").where("parentId", "==", found.id || idOrCode).limit(100).get();
+      children = childQs.docs.map(d => {
+        const cd = d.data() as any;
+        return { id: d.id, code: cd.code || cd.shortCode || null, name: cd.name || d.id };
+      });
+    } catch {}
+
     const publicData = {
-      id,
-      name: found.name || "Container",
+      id: found.id || idOrCode,
+      name: found.name || found.code || "Container",
       status: found.status || "unknown",
       propCount: Array.isArray(found.props) ? found.props.reduce((s: number, p: any) => s + (p.quantity || 0), 0) : 0,
-      props: Array.isArray(found.props)
-        ? found.props.slice(0, 50).map((p: any) => ({ name: p.name || "", quantity: p.quantity || 0 }))
-        : [],
+      props: propsOut,
+      publicProps,
+      children,
     } as any;
     res.json(publicData);
   } catch (err) {
     logger.error("publicContainerInfo error", { err });
     res.status(500).json({ error: "internal" });
+  }
+});
+
+// Gen1 fallback for public container info to bypass Cloud Run startup issues
+export const publicContainerInfoV1 = (functionsV1 as any).https.onRequest(async (req: any, res: any) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+
+  const idOrCode = ((req.query?.id as string) || (req.query?.code as string) || "").trim();
+  if (!idOrCode) { res.status(400).json({ error: "missing id" }); return; }
+
+  try {
+    const db = admin.firestore();
+    // First: search within packLists.containers[] (legacy schema)
+    const listsSnap = await db.collection("packLists").get();
+    let found: any = null;
+    listsSnap.forEach((doc) => {
+      if (found) return;
+      const data: any = doc.data();
+      const containers = Array.isArray(data?.containers) ? data.containers : [];
+      const match = containers.find((c: any) => c && (c.id === idOrCode || c.code === idOrCode || c.name === idOrCode));
+      if (match) { found = match; return; }
+      if (!found && data?.name === idOrCode && Array.isArray(data?.props)) {
+        found = { id: data.id || doc.id, code: data.code || data.shortCode || undefined, name: data.name, status: data.status || data.containerStatus, props: data.props };
+      }
+    });
+
+    // Second: search dedicated packingBoxes collection (current schema)
+    let boxDoc: FirebaseFirestore.DocumentSnapshot | null = null;
+    if (!found) {
+      boxDoc = await db.collection("packingBoxes").doc(idOrCode).get();
+      if (!boxDoc.exists) {
+        const tryFields = ["code", "shortCode", "id", "name"];
+        for (const field of tryFields) {
+          const qs = await db.collection("packingBoxes").where(field, "==", idOrCode).limit(1).get();
+          if (!qs.empty) { boxDoc = qs.docs[0]; break; }
+        }
+      }
+      if (boxDoc && boxDoc.exists) {
+        const d: any = boxDoc.data() || {};
+        found = { id: d.id || boxDoc.id, code: d.code || d.shortCode || undefined, name: d.name || boxDoc.id, status: d.status || d.containerStatus, props: Array.isArray(d.props) ? d.props : [] };
+      }
+    }
+
+    if (!found) { res.status(404).json({ error: "not found" }); return; }
+
+    // Resolve prop names and first images if possible
+    let propsOut: any[] = [];
+    let publicProps: any[] = [];
+    try {
+      const propIds: string[] = Array.isArray(found.props) ? found.props.map((p: any) => p?.propId).filter(Boolean) : [];
+      if (propIds.length) {
+        const chunk = 10;
+        const names: Record<string, string> = {};
+        const firstImageUrl: Record<string, string> = {};
+        for (let i = 0; i < propIds.length; i += chunk) {
+          const group = propIds.slice(i, i + chunk);
+          const qs = await db.collection("props").where(admin.firestore.FieldPath.documentId(), "in", group).get();
+          qs.forEach(d => {
+            const data: any = d.data();
+            names[d.id] = data?.name || "";
+            try {
+              const imgs = Array.isArray(data?.images) ? data.images : [];
+              const first = imgs.find((x: any) => x && (x.url || x.downloadURL || x.src));
+              firstImageUrl[d.id] = (first?.url || first?.downloadURL || first?.src || "");
+            } catch {}
+          });
+        }
+        const limited = (found.props || []).slice(0, 50);
+        propsOut = limited.map((p: any) => ({ name: names[p.propId] || p.name || "", quantity: p.quantity || 0 }));
+        publicProps = limited.map((p: any) => ({ name: names[p.propId] || p.name || "", quantity: p.quantity || 0, imageUrl: firstImageUrl[p.propId] || "" }));
+      }
+    } catch {}
+
+    // Load children (nested) if any
+    let children: any[] = [];
+    try {
+      const childQs = await db.collection("packingBoxes").where("parentId", "==", found.id || idOrCode).limit(100).get();
+      children = childQs.docs.map(d => { const cd: any = d.data(); return { id: d.id, code: cd.code || cd.shortCode || null, name: cd.name || d.id }; });
+    } catch {}
+
+    const publicData = {
+      id: found.id || idOrCode,
+      name: found.name || found.code || "Container",
+      status: found.status || "unknown",
+      propCount: Array.isArray(found.props) ? found.props.reduce((s: number, p: any) => s + (p.quantity || 0), 0) : 0,
+      props: propsOut,
+      publicProps,
+      children,
+    } as any;
+
+    res.json(publicData);
+  } catch (err) {
+    logger.error("publicContainerInfoV1 error", { err });
+    res.status(500).json({ error: "internal" });
+  }
+});
+
+// --- Normalization utilities ---
+export const normalizeContainers = onCall({ region: "us-central1" }, async (req) => {
+  const commit = !!req.data?.commit;
+  const dryRun: any[] = [];
+  const db = admin.firestore();
+
+  // 1) Migrate inline containers in packLists into packingBoxes
+  const lists = await db.collection("packLists").get();
+  for (const doc of lists.docs) {
+    const data = doc.data() as any;
+    // Case: doc looks like a container (has props and name)
+    if (Array.isArray(data?.props) && typeof data?.name === "string" && !Array.isArray(data?.containers)) {
+      const code = data.name;
+      const boxId = data.id || doc.id;
+      dryRun.push({ action: "upsertBoxFromInlinePackListDoc", source: doc.id, target: boxId, code });
+      if (commit) {
+        await db.collection("packingBoxes").doc(boxId).set({
+          id: boxId,
+          code,
+          name: data.name,
+          type: data.type || "box",
+          status: data.status || "unknown",
+          props: Array.isArray(data.props) ? data.props : [],
+          labels: Array.isArray(data.labels) ? data.labels : [],
+          metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+        }, { merge: true });
+      }
+      continue;
+    }
+    // Case: containers array
+    const containers = Array.isArray(data?.containers) ? data.containers : [];
+    for (const c of containers) {
+      if (!c || typeof c !== "object") continue;
+      const boxId = c.id || c.code || c.name || undefined;
+      if (!boxId) continue;
+      dryRun.push({ action: "upsertBoxFromContainersArray", source: doc.id, target: boxId });
+      if (commit) {
+        await db.collection("packingBoxes").doc(String(boxId)).set({
+          id: String(boxId),
+          code: c.code || undefined,
+          name: c.name || String(boxId),
+          type: c.type || "box",
+          status: c.status || "unknown",
+          props: Array.isArray(c.props) ? c.props : [],
+          labels: Array.isArray(c.labels) ? c.labels : [],
+          parentId: c.parentId || null,
+          metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+        }, { merge: true });
+      }
+    }
+  }
+
+  return { ok: true, dryRun, committed: commit } as any;
+});
+
+export const setContainerParent = onCall({ region: "us-central1" }, async (req) => {
+  const { boxId, parentId } = req.data || {};
+  if (!boxId) throw new Error("boxId required");
+  const db = admin.firestore();
+  await db.collection("packingBoxes").doc(String(boxId)).set({ parentId: parentId || null }, { merge: true });
+  return { ok: true } as any;
+});
+
+// Convenience HTTP wrappers (guarded by token) to run admin tasks from CLI
+export const normalizeContainersHttp = onRequest({ region: "us-central1" }, async (req, res) => {
+  try {
+    const token = (req.query.token as string) || "";
+    const commit = String((req.query.commit as any) || "false").toLowerCase() === "true";
+    const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_CONFIG && (() => { try { return JSON.parse(String(process.env.FIREBASE_CONFIG)).projectId as string; } catch { return ""; } })() || "";
+    if (!token || token !== projectId) { res.status(403).json({ ok: false, error: "forbidden" }); return; }
+    const db = admin.firestore();
+    const out: any[] = [];
+    const lists = await db.collection("packLists").get();
+    for (const doc of lists.docs) {
+      const data = doc.data() as any;
+      if (Array.isArray(data?.props) && typeof data?.name === "string" && !Array.isArray(data?.containers)) {
+        const code = data.name;
+        const boxId = data.id || doc.id;
+        out.push({ action: "upsertBoxFromInlinePackListDoc", source: doc.id, target: boxId, code });
+        if (commit) {
+          await db.collection("packingBoxes").doc(boxId).set({
+            id: boxId,
+            code,
+            name: data.name,
+            type: data.type || "box",
+            status: data.status || "unknown",
+            props: Array.isArray(data.props) ? data.props : [],
+            labels: Array.isArray(data.labels) ? data.labels : [],
+            metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+          }, { merge: true });
+        }
+        continue;
+      }
+      const containers = Array.isArray(data?.containers) ? data.containers : [];
+      for (const c of containers) {
+        if (!c || typeof c !== "object") continue;
+        const boxId = c.id || c.code || c.name || undefined;
+        if (!boxId) continue;
+        out.push({ action: "upsertBoxFromContainersArray", source: doc.id, target: boxId });
+        if (commit) {
+          await db.collection("packingBoxes").doc(String(boxId)).set({
+            id: String(boxId),
+            code: c.code || undefined,
+            name: c.name || String(boxId),
+            type: c.type || "box",
+            status: c.status || "unknown",
+            props: Array.isArray(c.props) ? c.props : [],
+            labels: Array.isArray(c.labels) ? c.labels : [],
+            parentId: c.parentId || null,
+            metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+          }, { merge: true });
+        }
+      }
+    }
+    res.json({ ok: true, committed: commit, results: out });
+  } catch (e) {
+    logger.error("normalizeContainersHttp error", e as any);
+    res.status(500).json({ ok: false });
+  }
+});
+
+// Gen1 fallback endpoint for ease of invocation
+export const adminNormalizeContainers = (functions as any).https.onRequest(async (req: any, res: any) => {
+  try {
+    const token = (req.query.token as string) || "";
+    const commit = String((req.query.commit as any) || "false").toLowerCase() === "true";
+    const projectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_CONFIG && (() => { try { return JSON.parse(String(process.env.FIREBASE_CONFIG)).projectId as string; } catch { return ""; } })() || "";
+    if (!token || token !== projectId) { res.status(403).json({ ok: false, error: "forbidden" }); return; }
+    const db = admin.firestore();
+    const out: any[] = [];
+    const lists = await db.collection("packLists").get();
+    for (const doc of lists.docs) {
+      const data = doc.data() as any;
+      if (Array.isArray(data?.props) && typeof data?.name === "string" && !Array.isArray(data?.containers)) {
+        const code = data.name;
+        const boxId = data.id || doc.id;
+        out.push({ action: "upsertBoxFromInlinePackListDoc", source: doc.id, target: boxId, code });
+        if (commit) {
+          await db.collection("packingBoxes").doc(boxId).set({
+            id: boxId,
+            code,
+            name: data.name,
+            type: data.type || "box",
+            status: data.status || "unknown",
+            props: Array.isArray(data.props) ? data.props : [],
+            labels: Array.isArray(data.labels) ? data.labels : [],
+            metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+          }, { merge: true });
+        }
+        continue;
+      }
+      const containers = Array.isArray(data?.containers) ? data.containers : [];
+      for (const c of containers) {
+        if (!c || typeof c !== "object") continue;
+        const boxId = c.id || c.code || c.name || undefined;
+        if (!boxId) continue;
+        out.push({ action: "upsertBoxFromContainersArray", source: doc.id, target: boxId });
+        if (commit) {
+          await db.collection("packingBoxes").doc(String(boxId)).set({
+            id: String(boxId),
+            code: c.code || undefined,
+            name: c.name || String(boxId),
+            type: c.type || "box",
+            status: c.status || "unknown",
+            props: Array.isArray(c.props) ? c.props : [],
+            labels: Array.isArray(c.labels) ? c.labels : [],
+            parentId: c.parentId || null,
+            metadata: { createdAt: admin.firestore.FieldValue.serverTimestamp(), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+          }, { merge: true });
+        }
+      }
+    }
+    res.json({ ok: true, committed: commit, results: out });
+  } catch (e) {
+    logger.error("adminNormalizeContainers error", e as any);
+    res.status(500).json({ ok: false });
   }
 });
 

@@ -1,13 +1,15 @@
 {
   "name": "functions",
   "version": "1.0.0",
-  "main": "lib/index.js",
+  "main": "lib/src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc -p tsconfig.json",
     "deploy": "firebase deploy --only functions",
     "dev": "firebase emulators:start --only functions",
-    "send:mailersend": "node --loader ts-node/esm scripts/send-mailersend-test.ts"
+    "send:mailersend": "node --loader ts-node/esm scripts/send-mailersend-test.ts",
+    "normalize:dry": "node --loader ts-node/esm scripts/normalize-containers.ts",
+    "normalize:commit": "node --loader ts-node/esm scripts/normalize-containers.ts --commit"
   },
   "keywords": [],
   "author": "",

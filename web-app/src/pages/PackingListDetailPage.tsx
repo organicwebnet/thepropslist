@@ -219,7 +219,7 @@ const PackingListDetailPage: React.FC = () => {
             </div>
             </div>
             {/* Right Panel: Add Container Form and Containers List */}
-            <div className="w-1/2 flex flex-col gap-4 max-h-[75vh]">
+            <div className="w-1/2 flex flex-col gap-4">
             {/* Add Container Form */}
             <div className="bg-gray-900 rounded-xl shadow p-4 mb-2">
               <h2 className="font-semibold mb-2 text-lg">Add Package/Lift</h2>

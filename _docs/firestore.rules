@@ -43,7 +43,19 @@ service cloud.firestore {
         )
       );
 
-      allow read, update, delete: if request.auth != null && (
+      // Public read allowed only when explicitly marked as publicReadable
+      allow read: if resource.data.publicReadable == true || (
+        request.auth != null && (
+          isSystemAdmin() || (
+            exists(/databases/$(database)/documents/shows/$(resource.data.showId)) && (
+              get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
+              get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null
+            )
+          )
+        )
+      );
+
+      allow update, delete: if request.auth != null && (
         isSystemAdmin() || (
           exists(/databases/$(database)/documents/shows/$(resource.data.showId)) && (
             get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||

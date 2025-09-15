@@ -38,6 +38,8 @@ export class FirebaseError extends Error {
 
 export interface PackingContainer {
   id: string;
+  code?: string; // short human code for QR
+  parentId?: string | null; // support nesting (e.g., box on pallet)
   name: string;
   description?: string;
   dimensions?: {

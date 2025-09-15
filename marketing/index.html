@@ -92,6 +92,7 @@
             <div id="pc-name" style="font-weight:800;font-size:20px;margin-bottom:6px"></div>
             <div id="pc-meta" class="muted" style="margin-bottom:12px"></div>
             <div id="pc-props"></div>
+            <div id="pc-children" style="margin-top:16px"></div>
             <div style="margin-top:12px" id="pc-app-cta"></div>
           </div>
         </div>
@@ -242,10 +243,22 @@
         var path = window.location.pathname || '';
         var match = path.match(/^\/c\/([A-Za-z0-9_-]+)/);
         if (!match) return;
-        var containerId = match[1];
+        var containerRaw = match[1];
+        var containerId = (containerRaw || '').toString();
+        var containerCode = containerId.toUpperCase();
         // Show the public container section and hide marketing hero
-        document.querySelector('#public-container').style.display = 'block';
-        document.querySelector('.hero') && (document.querySelector('.hero').style.display = 'none');
+        document.title = 'Container';
+        var pc = document.querySelector('#public-container');
+        pc.style.display = 'block';
+        var hide = function(sel){ var el = document.querySelector(sel); if (el) el.style.display = 'none'; };
+        hide('.hero');
+        hide('.backdrop');
+        hide('.top-gradient');
+        hide('.float');
+        // Hide all other sections except the public-container block
+        Array.prototype.forEach.call(document.querySelectorAll('section'), function(s){
+          if (s.id !== 'public-container') s.style.display = 'none';
+        });
         var loading = document.getElementById('pc-loading');
         var errorEl = document.getElementById('pc-error');
         var content = document.getElementById('pc-content');
@@ -264,16 +277,74 @@
           }
         } catch (e) {}
 
-        // Fetch minimal public data via public Cloud Function endpoint
-        // Expect a function deployed at https://app.thepropslist.uk/api/public/container?id=...
-        fetch('https://app.thepropslist.uk/api/public/container?id=' + encodeURIComponent(containerId))
+        // Try Cloud Function first; if 404, fallback to Firestore REST with narrow query
+        fetch('https://us-central1-props-bible-app-1c1cb.cloudfunctions.net/publicContainerInfo?id=' + encodeURIComponent(containerId))
           .then(function(r){ if (!r.ok) throw new Error('Not found'); return r.json(); })
           .then(function(data){
             loading.style.display = 'none';
             content.style.display = 'block';
             nameEl.textContent = data.name || ('Container ' + containerId);
-            metaEl.textContent = [data.status, (data.propCount + ' props')].filter(Boolean).join(' · ');
-            if (Array.isArray(data.props) && data.props.length) {
+            var childCount = Array.isArray(data.children) ? data.children.length : 0;
+            var itemCount = Array.isArray(data.publicProps) && data.publicProps.length
+              ? data.publicProps.reduce(function(s,p){ return s + (p.quantity || 1); }, 0)
+              : (typeof data.propCount === 'number' ? data.propCount : 0);
+            var metaBits = [];
+            if (data.status) metaBits.push(data.status);
+            if (itemCount) metaBits.push(itemCount + ' items');
+            if (childCount) metaBits.push(childCount + ' containers');
+            metaEl.textContent = metaBits.join(' · ');
+            // Prefer explicit publicProps with images
+            if (Array.isArray(data.publicProps) && data.publicProps.length) {
+              var grid = document.createElement('div');
+              grid.style.display = 'grid';
+              grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(140px, 1fr))';
+              grid.style.gap = '12px';
+              data.publicProps.forEach(function(p){
+                var card = document.createElement('div');
+                card.className = 'card';
+                card.style.padding = '8px';
+                var img = document.createElement('img');
+                img.alt = p.name || 'Prop';
+                img.loading = 'lazy';
+                img.style.width = '100%';
+                img.style.height = '120px';
+                img.style.objectFit = 'cover';
+                if (p.imageUrl) { img.src = p.imageUrl; } else { img.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"300\" height=\"200\"><rect width=\"100%\" height=\"100%\" fill=\"%23111827\"/><text x=\"50%\" y=\"50%\" fill=\"%239ca3af\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"14\">No image</text></svg>'; }
+                img.onerror = function(){ this.src='data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"300\" height=\"200\"><rect width=\"100%\" height=\"100%\" fill=\"%23111827\"/><text x=\"50%\" y=\"50%\" fill=\"%239ca3af\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"14\">Image unavailable</text></svg>'; };
+                img.style.cursor = 'zoom-in';
+                img.addEventListener('click', function(){
+                  var overlay = document.createElement('div');
+                  overlay.style.position = 'fixed'; overlay.style.inset = '0'; overlay.style.background = 'rgba(0,0,0,.85)'; overlay.style.display = 'flex'; overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '50';
+                  var big = document.createElement('img'); big.src = img.src; big.alt = img.alt; big.style.maxWidth = '92%'; big.style.maxHeight = '92%'; big.style.objectFit = 'contain'; big.style.boxShadow = '0 10px 30px rgba(0,0,0,.5)';
+                  overlay.appendChild(big);
+                  overlay.addEventListener('click', function(){ document.body.removeChild(overlay); });
+                  document.body.appendChild(overlay);
+                });
+                var caption = document.createElement('div');
+                caption.style.fontSize = '13px';
+                caption.style.marginTop = '6px';
+                caption.style.color = 'var(--muted)';
+                caption.textContent = (p.name || 'Prop') + (p.quantity ? (' × ' + p.quantity) : '');
+                if (p.imageUrl) card.appendChild(img);
+                card.appendChild(caption);
+                grid.appendChild(card);
+              });
+              propsEl.appendChild(grid);
+              // Children list
+              if (Array.isArray(data.children) && data.children.length) {
+                var ch = document.getElementById('pc-children');
+                var title = document.createElement('div'); title.textContent = 'Contains'; title.style.fontWeight = '700'; title.style.margin = '12px 0 6px';
+                ch.appendChild(title);
+                var ul = document.createElement('ul'); ul.style.listStyle='none'; ul.style.padding='0'; ul.style.margin='0';
+                data.children.forEach(function(c){
+                  var li=document.createElement('li'); li.className='muted'; li.style.padding='4px 0';
+                  var code = c.code ? (' ('+c.code+')') : '';
+                  var a=document.createElement('a'); a.href = '/c/' + encodeURIComponent(c.code || c.id); a.textContent = (c.name || c.id) + code; a.style.color='var(--text)';
+                  li.appendChild(a); ul.appendChild(li);
+                });
+                ch.appendChild(ul);
+              }
+            } else if (Array.isArray(data.props) && data.props.length) {
               var list = document.createElement('ul');
               list.style.listStyle = 'none'; list.style.padding = '0'; list.style.margin = '0';
               data.props.forEach(function(p){
@@ -285,7 +356,7 @@
               });
               propsEl.appendChild(list);
             } else {
-              propsEl.innerHTML = '<div class="muted">No public item details.</div>';
+              propsEl.innerHTML = '<div class=\"muted\">No public item details.</div>';
             }
             var link = document.createElement('a');
             link.href = 'https://app.thepropslist.uk/login?next=' + encodeURIComponent('/c/' + containerId);
@@ -294,9 +365,156 @@
             ctaEl.appendChild(link);
           })
           .catch(function(){
-            loading.style.display = 'none';
-            errorEl.style.display = 'block';
-            errorEl.textContent = 'Container not found or not public.';
+            // Fallback: fetch from Firestore REST packingBoxes by code==containerId or id
+            var apiKey = 'AIzaSyDDdMvYxnBpCmlWW-I-S96lxWknJWDaV98';
+            var project = 'props-bible-app-1c1cb';
+            function runQuery(field, value) {
+              var url = 'https://firestore.googleapis.com/v1/projects/' + project + '/databases/(default)/documents:runQuery?key=' + apiKey;
+              var body = {
+                structuredQuery: {
+                  from: [{ collectionId: 'packingBoxes' }],
+                  where: {
+                    compositeFilter: {
+                      op: 'AND',
+                      filters: [
+                        { fieldFilter: { field: { fieldPath: field }, op: 'EQUAL', value: { stringValue: value } } },
+                        { fieldFilter: { field: { fieldPath: 'publicReadable' }, op: 'EQUAL', value: { booleanValue: true } } }
+                      ]
+                    }
+                  },
+                  limit: 1
+                }
+              };
+              return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                .then(function(r){ return r.json(); })
+                .then(function(rows){ return (rows || []).find(function(x){ return x && x.document; }); });
+            }
+            function runChildren(parentId) {
+              var url = 'https://firestore.googleapis.com/v1/projects/' + project + '/databases/(default)/documents:runQuery?key=' + apiKey;
+              var body = {
+                structuredQuery: {
+                  from: [{ collectionId: 'packingBoxes' }],
+                  where: {
+                    compositeFilter: {
+                      op: 'AND',
+                      filters: [
+                        { fieldFilter: { field: { fieldPath: 'parentId' }, op: 'EQUAL', value: { stringValue: parentId } } },
+                        { fieldFilter: { field: { fieldPath: 'publicReadable' }, op: 'EQUAL', value: { booleanValue: true } } }
+                      ]
+                    }
+                  },
+                  limit: 100
+                }
+              };
+              return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                .then(function(r){ return r.json(); })
+                .then(function(rows){ return (rows || []).filter(function(x){ return x && x.document; }); });
+            }
+            // Try multiple fields and case variants
+            runQuery('code', containerId)
+              .then(function(doc){ return doc ? doc : runQuery('code', containerCode); })
+              .then(function(doc){ return doc ? doc : runQuery('shortCode', containerId); })
+              .then(function(doc){ return doc ? doc : runQuery('shortCode', containerCode); })
+              .then(function(doc){ return doc ? doc : runQuery('id', containerId); })
+              .then(function(doc){ return doc ? doc : runQuery('name', containerId); })
+              .then(function(doc){
+                if (!doc) throw new Error('not-found');
+                var f = doc.document.fields || {};
+                var name = (f.name && f.name.stringValue) || containerId;
+                loading.style.display = 'none';
+                content.style.display = 'block';
+                nameEl.textContent = name;
+                // Render publicProps grid if present on the doc
+                var publicProps = [];
+                var childrenDocs = [];
+                try {
+                  var arr = (f.publicProps && f.publicProps.arrayValue && f.publicProps.arrayValue.values) || [];
+                  if (arr.length) {
+                    var grid = document.createElement('div');
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(140px, 1fr))';
+                    grid.style.gap = '12px';
+                    arr.forEach(function(v){
+                      var m = v.mapValue && v.mapValue.fields || {};
+                      var p = {
+                        name: (m.name && m.name.stringValue) || '',
+                        quantity: (m.quantity && (m.quantity.integerValue || m.quantity.doubleValue)) ? Number(m.quantity.integerValue || m.quantity.doubleValue) : undefined,
+                        imageUrl: (m.imageUrl && m.imageUrl.stringValue) || ''
+                      };
+                      publicProps.push(p);
+                      var card = document.createElement('div');
+                      card.className = 'card';
+                      card.style.padding = '8px';
+                      var img = document.createElement('img');
+                      img.alt = p.name || 'Prop';
+                      img.loading = 'lazy';
+                      img.style.width = '100%';
+                      img.style.height = '120px';
+                      img.style.objectFit = 'cover';
+                      if (p.imageUrl) { img.src = p.imageUrl; } else { img.src = 'data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"300\" height=\"200\"><rect width=\"100%\" height=\"100%\" fill=\"%23111827\"/><text x=\"50%\" y=\"50%\" fill=\"%239ca3af\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"14\">No image</text></svg>'; }
+                      img.onerror = function(){ this.src='data:image/svg+xml;charset=utf-8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"300\" height=\"200\"><rect width=\"100%\" height=\"100%\" fill=\"%23111827\"/><text x=\"50%\" y=\"50%\" fill=\"%239ca3af\" dominant-baseline=\"middle\" text-anchor=\"middle\" font-size=\"14\">Image unavailable</text></svg>'; };
+                      img.style.cursor = 'zoom-in';
+                      img.addEventListener('click', function(){
+                        var overlay = document.createElement('div');
+                        overlay.style.position = 'fixed'; overlay.style.inset = '0'; overlay.style.background = 'rgba(0,0,0,.85)'; overlay.style.display = 'flex'; overlay.style.alignItems = 'center'; overlay.style.justifyContent = 'center'; overlay.style.zIndex = '50';
+                        var big = document.createElement('img'); big.src = img.src; big.alt = img.alt; big.style.maxWidth = '92%'; big.style.maxHeight = '92%'; big.style.objectFit = 'contain'; big.style.boxShadow = '0 10px 30px rgba(0,0,0,.5)';
+                        overlay.appendChild(big);
+                        overlay.addEventListener('click', function(){ document.body.removeChild(overlay); });
+                        document.body.appendChild(overlay);
+                      });
+                      var caption = document.createElement('div');
+                      caption.style.fontSize = '13px';
+                      caption.style.marginTop = '6px';
+                      caption.style.color = 'var(--muted)';
+                      caption.textContent = (p.name || 'Prop') + (p.quantity ? (' × ' + p.quantity) : '');
+                      if (p.imageUrl) card.appendChild(img);
+                      card.appendChild(caption);
+                      grid.appendChild(card);
+                    });
+                    propsEl.innerHTML = '';
+                    propsEl.appendChild(grid);
+                  } else {
+                    propsEl.innerHTML = '<div class=\"muted\">(Details require app login)</div>';
+                  }
+                } catch (e) {
+                  propsEl.innerHTML = '<div class=\"muted\">(Details require app login)</div>';
+                }
+                // Children via REST
+                var ch = document.getElementById('pc-children');
+                runChildren(doc.document.name.split('/').pop())
+                  .then(function(children){
+                    if (!children || !children.length) return;
+                    var title = document.createElement('div'); title.textContent = 'Contains'; title.style.fontWeight = '700'; title.style.margin = '12px 0 6px';
+                    ch.appendChild(title);
+                    var ul = document.createElement('ul'); ul.style.listStyle='none'; ul.style.padding='0'; ul.style.margin='0';
+                    children.forEach(function(entry){
+                      var fields = entry.document.fields || {};
+                      var id = entry.document.name.split('/').pop();
+                      var code = (fields.code && fields.code.stringValue) || (fields.shortCode && fields.shortCode.stringValue) || '';
+                      var nameC = (fields.name && fields.name.stringValue) || id;
+                      var li=document.createElement('li'); li.className='muted'; li.style.padding='4px 0';
+                      var a=document.createElement('a'); a.href = '/c/' + encodeURIComponent(code || id); a.textContent = nameC + (code?(' ('+code+')'):''); a.style.color='var(--text)';
+                      li.appendChild(a); ul.appendChild(li);
+                    });
+                    ch.appendChild(ul);
+                  })
+                  .catch(function(){});
+                // Totals meta
+                var qty = publicProps.length ? publicProps.reduce(function(s,p){ return s + (p.quantity || 1); }, 0) : 0;
+                var bits = [];
+                if (qty) bits.push(qty + ' items');
+                metaEl.textContent = bits.join(' · ');
+                var link = document.createElement('a');
+                link.href = 'https://app.thepropslist.uk/login?next=' + encodeURIComponent('/c/' + containerId);
+                link.className = 'cta';
+                link.textContent = 'Open in app';
+                ctaEl.appendChild(link);
+              })
+              .catch(function(){
+                loading.style.display = 'none';
+                errorEl.style.display = 'block';
+                errorEl.textContent = 'Container not found or not public (' + containerId + ').';
+              });
           });
       })();
     </script>
