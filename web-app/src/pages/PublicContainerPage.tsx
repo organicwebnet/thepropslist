@@ -24,7 +24,7 @@ export default function PublicContainerPage() {
         setError(null);
         // Minimal, anonymous fetch via a Cloud Function or public API endpoint if you have one.
         // Fallback: try Firestore REST API if security rules allow reading this document.
-        const res = await fetch(`/api/public/containers/${containerId}`);
+        const res = await fetch(`/api/public/container?id=${encodeURIComponent(String(containerId))}`);
         if (!res.ok) throw new Error('Not found');
         const data = await res.json();
         setBox({ id: containerId || '', ...data });

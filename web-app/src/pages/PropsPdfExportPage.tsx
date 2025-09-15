@@ -229,6 +229,7 @@ function generatePropsListPages(
         border: 1px solid #ccc;
         margin-bottom: 24px;
       }
+      ${options.watermark ? `.page::after { content: '${(options.watermark || '').replace(/'/g, "\\'")}'; position: absolute; inset: 0; display: block; pointer-events: none; font-size: 64px; font-weight: 700; color: rgba(0,0,0,0.06); transform: rotate(-30deg); white-space: nowrap; text-align: center; top: 45%; }` : ''}
       @media print { .page { page-break-after: always; } }
     </style>
   `;
@@ -294,6 +295,12 @@ const PropsPdfExportPage: React.FC = () => {
   const [pageCss, setPageCss] = useState('');
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const [fieldsOpen, setFieldsOpen] = useState(true);
+  // Presets
+  const [presets, setPresets] = useState<{ id: string; name: string; data: PdfGenerationOptions }[]>([]);
+  const [presetName, setPresetName] = useState('');
+  const inputClass = "w-full p-2 rounded-lg bg-pb-darker/60 border border-pb-primary/20 text-white placeholder:text-pb-gray focus:outline-none focus:ring-2 focus:ring-pb-primary focus:border-pb-primary";
+  const selectClass = inputClass;
 
   useEffect(() => {
     if (!currentShowId) {
@@ -305,6 +312,7 @@ const PropsPdfExportPage: React.FC = () => {
     setLoading(true);
     let unsubShow: (() => void) | undefined;
     let unsubProps: (() => void) | undefined;
+    let unsubPresets: (() => void) | undefined;
     unsubShow = service.listenToDocument('shows/' + currentShowId, doc => {
       setShowTitle(doc.data?.name || '');
       setShowData(doc.data || null);
@@ -318,7 +326,10 @@ const PropsPdfExportPage: React.FC = () => {
           ...opt,
           fonts: { heading: b.fonts?.heading || opt.fonts.heading, body: b.fonts?.body || opt.fonts.body },
           brandColors: { primary: b.colors?.primary || opt.brandColors?.primary || '#0ea5e9', accent: b.colors?.accent || opt.brandColors?.accent || '#22c55e' },
+          watermark: b.watermark || opt.watermark,
         }));
+        if (b.headerText) setHeader(String(b.headerText));
+        if (b.footerText) setFooter(String(b.footerText));
       }
     }).catch(() => {});
     unsubProps = service.listenToCollection('props', (data) => {
@@ -328,6 +339,10 @@ const PropsPdfExportPage: React.FC = () => {
       setProps([]);
       setLoading(false);
     });
+    // Presets listener
+    unsubPresets = service.listenToCollection(`shows/${currentShowId}/exportPresets`, (docs: any[]) => {
+      setPresets(docs.map(d => ({ id: d.id, name: d.data?.name || d.id, data: d.data?.options })));
+    }, () => {});
     return () => { if (unsubShow) unsubShow(); if (unsubProps) unsubProps(); };
   }, [service, currentShowId]);
 
@@ -350,7 +365,7 @@ const PropsPdfExportPage: React.FC = () => {
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [pdfOptions.layout, showPreview]);
+  }, [pdfOptions.orientation, showPreview]);
 
   const handlePreviewKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!showPreview || pageHtmls.length === 0) return;
@@ -407,12 +422,24 @@ const PropsPdfExportPage: React.FC = () => {
         margin: 0,
         filename: `${showTitle || 'props-catalog'}.pdf`,
         html2canvas: { scale: 2 },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: pdfOptions.layout || 'portrait' }
+        jsPDF: { unit: 'pt', format: 'a4', orientation: pdfOptions.orientation || 'portrait' }
       })
       .save()
       .then(() => {
         document.body.removeChild(container);
       });
+  };
+
+  const savePreset = async () => {
+    if (!currentShowId) return;
+    const name = presetName?.trim() || `Preset ${new Date().toLocaleString()}`;
+    await service.addDocument(`shows/${currentShowId}/exportPresets`, { name, options: pdfOptions } as any);
+    setPresetName('');
+  };
+
+  const applyPreset = async (id: string) => {
+    const found = presets.find(p => p.id === id);
+    if (found?.data) setPdfOptions({ ...pdfOptions, ...found.data });
   };
 
   // Manage Blob URL for current page
@@ -449,41 +476,77 @@ const PropsPdfExportPage: React.FC = () => {
           {/* Left panel: options */}
           <div className="w-full md:w-1/2 max-w-md">
             <h2 className="text-2xl font-bold mb-2">Export Props List to PDF</h2>
-            <div>
-              <label className="font-semibold block mb-1">Fields to include:</label>
-              <div className="grid grid-cols-2 gap-2">
-                {allFields.map(f => (
-                  <label key={f} className="text-sm flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={pdfOptions.selectedFields[f]}
-                      onChange={e => setPdfOptions(opt => ({
-                        ...opt,
-                        selectedFields: { ...opt.selectedFields, [f]: e.target.checked }
-                      }))}
-                      className="accent-pb-primary bg-pb-darker border border-pb-primary rounded focus:ring-2 focus:ring-pb-primary"
-                    />
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </label>
-                ))}
+            <div className="rounded-2xl border border-pb-primary/20 bg-pb-darker/40 p-4">
+              <div className="flex items-center justify-between mb-1">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 font-semibold text-white/90 hover:text-white transition"
+                  onClick={() => setFieldsOpen(o => !o)}
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={`transition-transform ${fieldsOpen ? 'rotate-90' : ''}`}
+                  >
+                    <path d="M8 5l8 7-8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span>Fields to include:</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  {fieldsOpen && (
+                    <>
+                      <button
+                        type="button"
+                        className="text-sm px-2 py-1 rounded bg-pb-primary/20 text-white hover:bg-pb-primary/30"
+                        onClick={() => setPdfOptions(opt => ({ ...opt, selectedFields: Object.fromEntries(allFields.map(f => [f, true])) as any }))}
+                      >Select all</button>
+                      <button
+                        type="button"
+                        className="text-sm px-2 py-1 rounded bg-pb-primary/20 text-white hover:bg-pb-primary/30"
+                        onClick={() => setPdfOptions(opt => ({ ...opt, selectedFields: Object.fromEntries(allFields.map(f => [f, false])) as any }))}
+                      >Clear all</button>
+                    </>
+                  )}
+                </div>
               </div>
+              {fieldsOpen && (
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {allFields.map(f => (
+                    <label key={f} className="text-sm flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={pdfOptions.selectedFields[f]}
+                        onChange={e => setPdfOptions(opt => ({
+                          ...opt,
+                          selectedFields: { ...opt.selectedFields, [f]: e.target.checked }
+                        }))}
+                        className="accent-pb-primary bg-pb-darker border border-pb-primary/30 rounded focus:ring-2 focus:ring-pb-primary"
+                      />
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="font-semibold block mb-1">Logo:</label>
               <input type="file" accept="image/*" onChange={e => setLogo(e.target.files?.[0] || null)}
-                className="block w-full text-sm text-pb-gray file:bg-pb-primary file:text-white file:rounded file:border-0 file:px-3 file:py-1 file:mr-3 file:cursor-pointer bg-pb-darker border border-pb-primary rounded focus:outline-none focus:ring-2 focus:ring-pb-primary" />
+                className="block w-full text-sm text-pb-gray file:bg-pb-primary file:text-white file:rounded file:border-0 file:px-3 file:py-1 file:mr-3 file:cursor-pointer bg-pb-darker/60 border border-pb-primary/20 rounded focus:outline-none focus:ring-2 focus:ring-pb-primary" />
             </div>
             <div>
               <label className="font-semibold block mb-1">Header Text:</label>
-              <input type="text" className="w-full border border-pb-primary rounded px-2 py-1 bg-pb-darker text-white placeholder:text-pb-gray focus:outline-none focus:ring-2 focus:ring-pb-primary" value={header} onChange={e => setHeader(e.target.value)} placeholder="Header..." />
+              <input type="text" className={inputClass} value={header} onChange={e => setHeader(e.target.value)} placeholder="Header..." />
             </div>
             <div>
               <label className="font-semibold block mb-1">Footer Text:</label>
-              <input type="text" className="w-full border border-pb-primary rounded px-2 py-1 bg-pb-darker text-white placeholder:text-pb-gray focus:outline-none focus:ring-2 focus:ring-pb-primary" value={footer} onChange={e => setFooter(e.target.value)} placeholder="Footer..." />
+              <input type="text" className={inputClass} value={footer} onChange={e => setFooter(e.target.value)} placeholder="Footer..." />
             </div>
             <div>
               <label className="font-semibold block mb-1">Order Props By:</label>
-              <select className="w-full border border-pb-primary rounded px-2 py-1 bg-pb-darker text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" value={ordering} onChange={e => setOrdering(e.target.value as any)}>
+              <select className={selectClass} value={ordering} onChange={e => setOrdering(e.target.value as any)}>
                 <option value="act_scene">Act & Scene</option>
                 <option value="alphabetical">Alphabetical</option>
               </select>
@@ -491,7 +554,7 @@ const PropsPdfExportPage: React.FC = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-300 mb-1">Layout & Orientation:</label>
               <select
-                className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className={selectClass}
                 value={pdfOptions.layout as any}
                 onChange={e => setPdfOptions({ ...pdfOptions, layout: e.target.value as PdfLayout })}
               >
@@ -502,7 +565,7 @@ const PropsPdfExportPage: React.FC = () => {
               </select>
               <div className="mt-2">
                 <select
-                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className={selectClass}
                   value={pdfOptions.orientation}
                   onChange={e => setPdfOptions({ ...pdfOptions, orientation: e.target.value as 'portrait'|'landscape' })}
                 >
@@ -514,13 +577,13 @@ const PropsPdfExportPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="font-semibold block mb-1">Heading font</label>
-                <select className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white" value={pdfOptions.fonts.heading} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, heading: e.target.value } })}>
+                <select className={selectClass} value={pdfOptions.fonts.heading} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, heading: e.target.value } })}>
                   <option>Inter</option><option>Roboto</option><option>Merriweather</option><option>Source Serif Pro</option><option>Poppins</option>
                 </select>
               </div>
               <div>
                 <label className="font-semibold block mb-1">Body font</label>
-                <select className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white" value={pdfOptions.fonts.body} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, body: e.target.value } })}>
+                <select className={selectClass} value={pdfOptions.fonts.body} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, body: e.target.value } })}>
                   <option>Inter</option><option>Roboto</option><option>Open Sans</option><option>Source Sans Pro</option><option>Lato</option>
                 </select>
               </div>
@@ -528,11 +591,11 @@ const PropsPdfExportPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-2 mt-2">
               <div>
                 <label className="font-semibold block mb-1">Primary color</label>
-                <input type="color" value={pdfOptions.brandColors?.primary} onChange={e => setPdfOptions({ ...pdfOptions, brandColors: { ...(pdfOptions.brandColors||{}), primary: e.target.value } })} />
+                <input type="color" value={pdfOptions.brandColors?.primary} onChange={e => setPdfOptions({ ...pdfOptions, brandColors: { ...(pdfOptions.brandColors||{}), primary: e.target.value } })} className="h-10 w-16 bg-pb-darker/60 border border-pb-primary/20 rounded" />
               </div>
               <div>
                 <label className="font-semibold block mb-1">Accent color</label>
-                <input type="color" value={pdfOptions.brandColors?.accent} onChange={e => setPdfOptions({ ...pdfOptions, brandColors: { ...(pdfOptions.brandColors||{}), accent: e.target.value } })} />
+                <input type="color" value={pdfOptions.brandColors?.accent} onChange={e => setPdfOptions({ ...pdfOptions, brandColors: { ...(pdfOptions.brandColors||{}), accent: e.target.value } })} className="h-10 w-16 bg-pb-darker/60 border border-pb-primary/20 rounded" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2">
@@ -547,19 +610,39 @@ const PropsPdfExportPage: React.FC = () => {
             </div>
             <div className="flex gap-2 mt-4">
               <button
-                className="px-4 py-2 rounded bg-pb-primary text-white font-semibold shadow hover:bg-pb-secondary transition-colors w-full"
+                className="px-4 py-2 rounded-lg bg-pb-primary text-white font-semibold shadow hover:bg-pb-secondary transition-colors w-full"
                 onClick={handlePreview}
               >
                 Preview PDF
               </button>
               {showPreview && (
                 <button
-                  className="px-4 py-2 rounded bg-pb-accent text-white font-semibold shadow hover:bg-pb-secondary transition-colors w-full"
+                  className="px-4 py-2 rounded-lg bg-pb-accent text-white font-semibold shadow hover:bg-pb-secondary transition-colors w-full"
                   onClick={handleDownload}
                 >
                   Download PDF
                 </button>
               )}
+            </div>
+            {/* Presets */}
+            <div className="mt-4 rounded-2xl border border-pb-primary/20 bg-pb-darker/40 p-4">
+              <div className="font-semibold mb-2">Presets</div>
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {presets.map(p => (
+                  <button
+                    key={p.id}
+                    className="px-3 py-1 rounded-full border border-pb-primary/30 bg-pb-primary/10 text-white hover:bg-pb-primary/20"
+                    onClick={() => applyPreset(p.id)}
+                  >{p.name}</button>
+                ))}
+                {presets.length === 0 && (
+                  <div className="text-sm text-pb-gray">No presets yet. Configure options and save one below.</div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input className={`flex-1 ${inputClass}`} placeholder="Preset name" value={presetName} onChange={e => setPresetName(e.target.value)} />
+                <button className="px-4 py-2 rounded-lg bg-pb-primary text-white hover:bg-pb-secondary" onClick={savePreset}>Save preset</button>
+              </div>
             </div>
           </div>
           {/* Right panel: PDF preview */}
@@ -573,15 +656,15 @@ const PropsPdfExportPage: React.FC = () => {
                 style={{ width: '100%' }}
               >
                 {/* Top pager */}
-                <div className="flex items-center justify-center gap-4 mb-3 sticky top-0 bg-[#18183a] py-2 z-10">
+                <div className="flex items-center justify-center gap-4 mb-3 sticky top-0 bg-pb-darker/60 border-b border-pb-primary/10 py-2 z-10">
                   <button
-                    className="btn btn-secondary px-4 py-2 rounded disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg bg-pb-primary/20 text-white hover:bg-pb-primary/30 disabled:opacity-50"
                     onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                     disabled={currentPage === 0}
                   >Previous</button>
                   <span className="text-white text-lg">Page {currentPage + 1} of {pageHtmls.length}</span>
                   <button
-                    className="btn btn-secondary px-4 py-2 rounded disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg bg-pb-primary/20 text-white hover:bg-pb-primary/30 disabled:opacity-50"
                     onClick={() => setCurrentPage(p => Math.min(pageHtmls.length - 1, p + 1))}
                     disabled={currentPage === pageHtmls.length - 1}
                   >Next</button>
@@ -614,13 +697,13 @@ const PropsPdfExportPage: React.FC = () => {
                 {/* Bottom pager */}
                 <div className="flex items-center justify-center gap-4 mt-1 mb-0">
                   <button
-                    className="btn btn-secondary px-4 py-2 rounded disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg bg-pb-primary/20 text-white hover:bg-pb-primary/30 disabled:opacity-50"
                     onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                     disabled={currentPage === 0}
                   >Previous</button>
                   <span className="text-white text-lg">Page {currentPage + 1} of {pageHtmls.length}</span>
                   <button
-                    className="btn btn-secondary px-4 py-2 rounded disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg bg-pb-primary/20 text-white hover:bg-pb-primary/30 disabled:opacity-50"
                     onClick={() => setCurrentPage(p => Math.min(pageHtmls.length - 1, p + 1))}
                     disabled={currentPage === pageHtmls.length - 1}
                   >Next</button>

@@ -61,6 +61,10 @@ const BrandingStudioPage: React.FC = () => {
             <label className="block mb-1">Footer Text</label>
             <input className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-3 py-2 text-white" value={brand.footerText || ''} onChange={e => setBrand(b => ({ ...b, footerText: e.target.value }))} />
           </div>
+          <div className="md:col-span-2">
+            <label className="block mb-1">Watermark</label>
+            <input className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-3 py-2 text-white" placeholder="e.g. CONFIDENTIAL" value={brand.watermark || ''} onChange={e => setBrand(b => ({ ...b, watermark: e.target.value }))} />
+          </div>
         </div>
         <div className="mt-4 flex gap-2">
           <button className="px-4 py-2 rounded bg-pb-primary text-white" onClick={save} disabled={saving}>{saving ? 'Saving...' : 'Save Brand'}</button>

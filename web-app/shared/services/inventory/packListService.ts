@@ -526,7 +526,8 @@ export class DigitalPackListService implements PackListService {
 
     const labels: PackingLabel[] = [];
     for (const container of packList.containers) {
-      const containerUrl = `${this.baseUrl}/container/${packList.id}/${container.id}`;
+      const publicOrigin = this.baseUrl.includes('app.') ? this.baseUrl.replace('app.', '') : this.baseUrl;
+      const containerUrl = `${publicOrigin}/c/${container.id}`;
       const qrCode = await this.qrService.generateQRCode({
         type: 'container',
         id: container.id,

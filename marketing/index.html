@@ -82,6 +82,21 @@
         </div>
       </section>
 
+      <!-- Public container viewer route -->
+      <section id="public-container" style="display:none; margin:32px 0">
+        <div class="card" style="padding:18px">
+          <h2 style="margin:0 0 8px">Container</h2>
+          <div id="pc-error" class="muted" style="display:none"></div>
+          <div id="pc-loading" class="muted">Loading…</div>
+          <div id="pc-content" style="display:none">
+            <div id="pc-name" style="font-weight:800;font-size:20px;margin-bottom:6px"></div>
+            <div id="pc-meta" class="muted" style="margin-bottom:12px"></div>
+            <div id="pc-props"></div>
+            <div style="margin-top:12px" id="pc-app-cta"></div>
+          </div>
+        </div>
+      </section>
+
       <section style="margin:48px 0">
         <h2>Mobile app</h2>
         <p class="muted" style="margin:8px 0 20px">iOS & Android. Fast offline-first UX; syncs when back online.</p>
@@ -221,6 +236,70 @@
         });
       </script>
     </div>
+    <script>
+      (function(){
+        // Simple router for /c/:id path on marketing site
+        var path = window.location.pathname || '';
+        var match = path.match(/^\/c\/([A-Za-z0-9_-]+)/);
+        if (!match) return;
+        var containerId = match[1];
+        // Show the public container section and hide marketing hero
+        document.querySelector('#public-container').style.display = 'block';
+        document.querySelector('.hero') && (document.querySelector('.hero').style.display = 'none');
+        var loading = document.getElementById('pc-loading');
+        var errorEl = document.getElementById('pc-error');
+        var content = document.getElementById('pc-content');
+        var nameEl = document.getElementById('pc-name');
+        var metaEl = document.getElementById('pc-meta');
+        var propsEl = document.getElementById('pc-props');
+        var ctaEl = document.getElementById('pc-app-cta');
+
+        // If user is logged in on app domain, redirect there for richer view
+        try {
+          var appUrl = 'https://app.thepropslist.uk/c/' + containerId;
+          // Best-effort check: if localStorage key from app exists, redirect
+          if (localStorage.getItem('tps-app-session')) {
+            window.location.replace(appUrl);
+            return;
+          }
+        } catch (e) {}
+
+        // Fetch minimal public data via public Cloud Function endpoint
+        // Expect a function deployed at https://app.thepropslist.uk/api/public/container?id=...
+        fetch('https://app.thepropslist.uk/api/public/container?id=' + encodeURIComponent(containerId))
+          .then(function(r){ if (!r.ok) throw new Error('Not found'); return r.json(); })
+          .then(function(data){
+            loading.style.display = 'none';
+            content.style.display = 'block';
+            nameEl.textContent = data.name || ('Container ' + containerId);
+            metaEl.textContent = [data.status, (data.propCount + ' props')].filter(Boolean).join(' · ');
+            if (Array.isArray(data.props) && data.props.length) {
+              var list = document.createElement('ul');
+              list.style.listStyle = 'none'; list.style.padding = '0'; list.style.margin = '0';
+              data.props.forEach(function(p){
+                var li = document.createElement('li');
+                li.className = 'muted';
+                li.style.padding = '6px 0';
+                li.textContent = (p.name || 'Prop') + (p.quantity ? (' × ' + p.quantity) : '');
+                list.appendChild(li);
+              });
+              propsEl.appendChild(list);
+            } else {
+              propsEl.innerHTML = '<div class="muted">No public item details.</div>';
+            }
+            var link = document.createElement('a');
+            link.href = 'https://app.thepropslist.uk/login?next=' + encodeURIComponent('/c/' + containerId);
+            link.className = 'cta';
+            link.textContent = 'Open in app';
+            ctaEl.appendChild(link);
+          })
+          .catch(function(){
+            loading.style.display = 'none';
+            errorEl.style.display = 'block';
+            errorEl.textContent = 'Container not found or not public.';
+          });
+      })();
+    </script>
   </body>
   </html>
 

@@ -344,6 +344,49 @@ export const createBillingPortalSession = onCall({ region: "us-central1" }, asyn
   return { url: session.url } as any;
 });
 
+// --- Public container info for marketing site (/c/:id) ---
+export const publicContainerInfo = onRequest({ region: "us-central1" }, async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+  const id = (req.query.id as string) || "";
+  if (!id) {
+    res.status(400).json({ error: "missing id" });
+    return;
+  }
+  try {
+    const snap = await admin.firestore().collection("packLists").get();
+    let found: any = null;
+    snap.forEach((doc) => {
+      if (found) return;
+      const data = doc.data();
+      const containers = Array.isArray(data.containers) ? data.containers : [];
+      const match = containers.find((c: any) => c && c.id === id);
+      if (match) found = match;
+    });
+    if (!found) {
+      res.status(404).json({ error: "not found" });
+      return;
+    }
+    const publicData = {
+      id,
+      name: found.name || "Container",
+      status: found.status || "unknown",
+      propCount: Array.isArray(found.props) ? found.props.reduce((s: number, p: any) => s + (p.quantity || 0), 0) : 0,
+      props: Array.isArray(found.props)
+        ? found.props.slice(0, 50).map((p: any) => ({ name: p.name || "", quantity: p.quantity || 0 }))
+        : [],
+    } as any;
+    res.json(publicData);
+  } catch (err) {
+    logger.error("publicContainerInfo error", { err });
+    res.status(500).json({ error: "internal" });
+  }
+});
+
 // --- Simple marketing waitlist collector ---
 export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res) => {
   // Minimal CORS (allow marketing site origins)

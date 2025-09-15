@@ -71,6 +71,7 @@ const PropsListPage: React.FC = () => {
   const [showPdfDialog, setShowPdfDialog] = useState(false);
   const [pdfOptions, setPdfOptions] = useState<PdfGenerationOptions>(defaultPdfOptions);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
 
   // Extract unique acts and scenes from props
   const acts = Array.from(new Set(props.map(p => p.act).filter(a => a != null))).sort((a, b) => (a ?? 0) - (b ?? 0));
@@ -147,6 +148,79 @@ const PropsListPage: React.FC = () => {
     }});
   };
 
+  const handleDownloadCsv = async () => {
+    try {
+      setDownloadingCsv(true);
+      const csvFields: { key: keyof Prop | string; label: string }[] = [
+        { key: 'id', label: 'ID' },
+        { key: 'name', label: 'Name' },
+        { key: 'description', label: 'Description' },
+        { key: 'category', label: 'Category' },
+        { key: 'status', label: 'Status' },
+        { key: 'quantity', label: 'Quantity' },
+        { key: 'act', label: 'Act' },
+        { key: 'scene', label: 'Scene' },
+        { key: 'location', label: 'Location' },
+        { key: 'manufacturer', label: 'Manufacturer' },
+        { key: 'model', label: 'Model' },
+        { key: 'serialNumber', label: 'Serial Number' },
+        { key: 'color', label: 'Color' },
+        { key: 'style', label: 'Style' },
+        { key: 'condition', label: 'Condition' },
+        { key: 'purchaseUrl', label: 'Purchase URL' },
+        { key: 'images', label: 'Image URLs' },
+        { key: 'digitalAssets', label: 'File URLs' },
+        { key: 'videos', label: 'Video URLs' },
+      ];
+
+      const escapeCsv = (val: any): string => {
+        if (val === undefined || val === null) return '""';
+        const s = String(val).replace(/"/g, '""');
+        return `"${s}"`;
+      };
+
+      const arrayToUrls = (arr: any[] | undefined): string => {
+        if (!Array.isArray(arr)) return '';
+        const urls = arr
+          .map((item: any) => {
+            if (!item) return '';
+            if (typeof item === 'string') return item;
+            if (typeof item.url === 'string') return item.url;
+            return '';
+          })
+          .filter(Boolean);
+        return urls.join(' ');
+      };
+
+      const headerRow = csvFields.map(f => escapeCsv(f.label)).join(',');
+      const rows = filteredProps.map(p => {
+        const values = csvFields.map(field => {
+          const key = field.key as any;
+          if (key === 'images') return escapeCsv(arrayToUrls(p.images as any));
+          if (key === 'digitalAssets') return escapeCsv(arrayToUrls(p.digitalAssets as any));
+          if (key === 'videos') return escapeCsv(arrayToUrls(p.videos as any));
+          const v = (p as any)[key];
+          // Handle nested objects for act/scene
+          if ((key === 'act' || key === 'scene') && v && typeof v === 'object' && 'name' in v) return escapeCsv(v.name);
+          return escapeCsv(v);
+        });
+        return values.join(',');
+      });
+      const csv = [headerRow, ...rows].join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'props-export.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloadingCsv(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="relative min-h-[70vh] flex flex-col justify-center items-center bg-gradient-to-br from-pb-primary/40 via-pb-darker/80 to-pb-accent/30 rounded-xl shadow-xl p-6">
@@ -220,12 +294,15 @@ const PropsListPage: React.FC = () => {
         )}
         <h2 className="text-2xl font-bold mb-6 self-start">Props List</h2>
         <div className="w-full max-w-3xl flex justify-end mb-4">
-          <Link
-            to="/props/pdf-export"
-            className="btn btn-primary"
-          >
-            Download PDF
-          </Link>
+          {userProfile && (userProfile.role === 'god' || userProfile.role === 'admin' || userProfile.role === 'editor' || userProfile.role === 'props_supervisor' || userProfile.role === 'art_director') && (
+            <button
+              onClick={handleDownloadCsv}
+              disabled={downloadingCsv}
+              className="px-4 py-2 rounded-lg bg-pb-primary text-white font-semibold shadow hover:bg-pb-secondary disabled:opacity-60"
+            >
+              {downloadingCsv ? 'Preparing CSV…' : 'Download CSV'}
+            </button>
+          )}
         </div>
         {showPdfDialog && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
