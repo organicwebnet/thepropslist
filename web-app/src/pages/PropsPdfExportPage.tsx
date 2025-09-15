@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Prop } from '../../shared/types/props';
-import type { PdfGenerationOptions } from '../../shared/types/pdf';
+import type { PdfGenerationOptions, PdfLayout } from '../../shared/types/pdf';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useShowSelection } from '../contexts/ShowSelectionContext';
 import { useFirebase } from '../contexts/FirebaseContext';
@@ -15,12 +15,17 @@ const allFields: (keyof Prop)[] = [
 
 const defaultPdfOptions: PdfGenerationOptions = {
   selectedFields: Object.fromEntries(allFields.map(f => [f, true])) as Record<keyof Prop, boolean>,
-  layout: 'portrait',
+  layout: 'classic',
   columns: 1,
   imageCount: 1,
   imageWidthOption: 'medium',
   showFilesQR: true,
   showVideosQR: true,
+  fonts: { heading: 'Inter', body: 'Inter' },
+  brandColors: { primary: '#0ea5e9', accent: '#22c55e' },
+  includeTitlePage: true,
+  includeContacts: false,
+  orientation: 'portrait',
   title: '',
 };
 
@@ -427,15 +432,61 @@ const PropsPdfExportPage: React.FC = () => {
               </select>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-300 mb-1">Page Orientation:</label>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Layout & Orientation:</label>
               <select
                 className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                value={pdfOptions.layout}
-                onChange={e => setPdfOptions({ ...pdfOptions, layout: e.target.value as 'portrait' | 'landscape' })}
+                value={pdfOptions.layout as any}
+                onChange={e => setPdfOptions({ ...pdfOptions, layout: e.target.value as PdfLayout })}
               >
-                <option value="portrait">Portrait (A4)</option>
-                <option value="landscape">Landscape (A4)</option>
+                <option value="classic">Classic (single column)</option>
+                <option value="compact">Compact (two column)</option>
+                <option value="gallery">Gallery (image-forward)</option>
+                <option value="technical">Technical (specs grid)</option>
               </select>
+              <div className="mt-2">
+                <select
+                  className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  value={pdfOptions.orientation}
+                  onChange={e => setPdfOptions({ ...pdfOptions, orientation: e.target.value as 'portrait'|'landscape' })}
+                >
+                  <option value="portrait">Portrait (A4)</option>
+                  <option value="landscape">Landscape (A4)</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="font-semibold block mb-1">Heading font</label>
+                <select className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white" value={pdfOptions.fonts.heading} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, heading: e.target.value } })}>
+                  <option>Inter</option><option>Roboto</option><option>Merriweather</option><option>Source Serif Pro</option><option>Poppins</option>
+                </select>
+              </div>
+              <div>
+                <label className="font-semibold block mb-1">Body font</label>
+                <select className="w-full bg-[#1A1A1A] border border-gray-800 rounded-md px-4 py-2 text-white" value={pdfOptions.fonts.body} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, body: e.target.value } })}>
+                  <option>Inter</option><option>Roboto</option><option>Open Sans</option><option>Source Sans Pro</option><option>Lato</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div>
+                <label className="font-semibold block mb-1">Primary color</label>
+                <input type="color" value={pdfOptions.brandColors?.primary} onChange={e => setPdfOptions({ ...pdfOptions, brandColors: { ...(pdfOptions.brandColors||{}), primary: e.target.value } })} />
+              </div>
+              <div>
+                <label className="font-semibold block mb-1">Accent color</label>
+                <input type="color" value={pdfOptions.brandColors?.accent} onChange={e => setPdfOptions({ ...pdfOptions, brandColors: { ...(pdfOptions.brandColors||{}), accent: e.target.value } })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" checked={pdfOptions.includeTitlePage} onChange={e => setPdfOptions({ ...pdfOptions, includeTitlePage: e.target.checked })} />
+                Include title page
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input type="checkbox" checked={pdfOptions.includeContacts} onChange={e => setPdfOptions({ ...pdfOptions, includeContacts: e.target.checked })} />
+                Include contacts sheet
+              </label>
             </div>
             <div className="flex gap-2 mt-4">
               <button

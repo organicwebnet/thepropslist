@@ -1,9 +1,10 @@
-import { onCall } from "firebase-functions/v2/https";
+import { onCall, onRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import fetch from "cross-fetch";
 import * as logger from "firebase-functions/logger";
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import Stripe from "stripe";
 
 // Initialize Admin SDK once
 try {
@@ -183,6 +184,210 @@ export const onFeedbackCreated = onDocumentCreated("feedback/{id}", async (event
     logger.info("Created GitHub issue from feedback", { id, issueNumber });
   } catch (err) {
     logger.error("GitHub integration error", { err });
+  }
+});
+
+// --- Stripe Billing (Webhook + Customer Portal) ---
+const cfg = (functions as any)?.config ? (functions as any).config() : {};
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || cfg?.stripe?.secret;
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || cfg?.stripe?.webhook_secret;
+// Optional price ids if you want to map to friendly plan names
+const PRICE_STARTER = process.env.PRICE_STARTER || cfg?.stripe?.plan_starter_price;
+const PRICE_STANDARD = process.env.PRICE_STANDARD || cfg?.stripe?.plan_standard_price;
+const PRICE_PRO = process.env.PRICE_PRO || cfg?.stripe?.plan_pro_price;
+
+let stripe: Stripe | null = null;
+if (STRIPE_SECRET_KEY) {
+  stripe = new Stripe(STRIPE_SECRET_KEY, {
+    apiVersion: "2024-06-20" as any,
+  });
+} else {
+  logger.warn("Stripe secret key not configured; billing endpoints will be inert.");
+}
+
+function mapPlan(priceId?: string | null): string | undefined {
+  if (!priceId) return undefined;
+  if (PRICE_STARTER && priceId === PRICE_STARTER) return "starter";
+  if (PRICE_STANDARD && priceId === PRICE_STANDARD) return "standard";
+  if (PRICE_PRO && priceId === PRICE_PRO) return "pro";
+  return undefined;
+}
+
+export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, res) => {
+  try {
+    if (!stripe || !STRIPE_WEBHOOK_SECRET) {
+      res.status(200).send("stripe not configured");
+      return;
+    }
+    const sig = req.headers["stripe-signature"] as string;
+    const event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET);
+
+    // Helper to upsert profile by email
+    const upsertByEmail = async (email: string, data: any) => {
+      const snap = await admin.firestore().collection("userProfiles").where("email", "==", email).limit(1).get();
+      if (snap.empty) return;
+      const doc = snap.docs[0];
+      await doc.ref.set(data, { merge: true });
+    };
+
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const customerId = (session.customer as string) || "";
+        const subscriptionId = (session.subscription as string) || "";
+        const email = session.customer_details?.email || session.client_reference_id || "";
+        let planPriceId: string | undefined;
+        try {
+          if (subscriptionId && stripe) {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId);
+            planPriceId = sub.items.data[0]?.price?.id;
+          }
+        } catch {}
+        const plan = mapPlan(planPriceId);
+        const update = {
+          stripeCustomerId: customerId || undefined,
+          subscriptionId: subscriptionId || undefined,
+          planPriceId: planPriceId || undefined,
+          plan: plan || undefined,
+          subscriptionStatus: session.status || "active",
+          currentPeriodEnd: session.expires_at || undefined,
+          lastStripeEventTs: Date.now(),
+        } as any;
+        if (email) await upsertByEmail(email, update);
+        break;
+      }
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription;
+        const customerId = (sub.customer as string) || "";
+        const status = sub.status;
+        const planPriceId = sub.items.data[0]?.price?.id;
+        const plan = mapPlan(planPriceId);
+        const currentPeriodEnd = typeof sub.current_period_end === "number" ? sub.current_period_end : undefined;
+        // Lookup customer email to find profile
+        let email = "";
+        try {
+          if (stripe && customerId) {
+            const cust = await stripe.customers.retrieve(customerId);
+            email = (cust as any)?.email || "";
+          }
+        } catch {}
+        const update = {
+          stripeCustomerId: customerId || undefined,
+          subscriptionId: sub.id,
+          subscriptionStatus: status,
+          planPriceId: planPriceId || undefined,
+          plan: plan || undefined,
+          currentPeriodEnd,
+          cancelAtPeriodEnd: sub.cancel_at_period_end || false,
+          lastStripeEventTs: Date.now(),
+        } as any;
+        if (email) {
+          const snap = await admin.firestore().collection("userProfiles").where("email", "==", email).limit(1).get();
+          if (!snap.empty) await snap.docs[0].ref.set(update, { merge: true });
+        }
+        break;
+      }
+      case "invoice.payment_succeeded":
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId = (invoice.customer as string) || "";
+        let email = "";
+        try {
+          if (stripe && customerId) {
+            const cust = await stripe.customers.retrieve(customerId);
+            email = (cust as any)?.email || "";
+          }
+        } catch {}
+        if (email) {
+          await upsertByEmail(email, { lastStripeEventTs: Date.now() });
+        }
+        break;
+      }
+      default:
+        break;
+    }
+    res.status(200).send("ok");
+  } catch (err) {
+    logger.error("stripe webhook error", { err });
+    res.status(400).send(`webhook error`);
+  }
+});
+
+export const createBillingPortalSession = onCall({ region: "us-central1" }, async (req) => {
+  if (!req.auth) throw new Error("unauthenticated");
+  if (!stripe) throw new Error("Stripe not configured");
+  const uid = req.auth.uid;
+  const db = admin.firestore();
+  const profileRef = db.doc(`userProfiles/${uid}`);
+  const profileSnap = await profileRef.get();
+  const profile = profileSnap.exists ? (profileSnap.data() as any) : {};
+  let customerId: string | undefined = profile?.stripeCustomerId;
+
+  if (!customerId) {
+    // Try to find by email
+    const user = await admin.auth().getUser(uid).catch(() => undefined);
+    const email = (profile?.email || user?.email) as string | undefined;
+    if (email && stripe) {
+      const list = await stripe.customers.list({ email, limit: 1 });
+      if (list.data.length > 0) customerId = list.data[0].id;
+    }
+    if (customerId) await profileRef.set({ stripeCustomerId: customerId }, { merge: true });
+  }
+  if (!customerId) throw new Error("No Stripe customer");
+
+  const returnUrl = process.env.BILLING_RETURN_URL || cfg?.app?.billing_return_url || "https://app.thepropslist.uk/profile";
+  const session = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: returnUrl,
+  });
+  return { url: session.url } as any;
+});
+
+// --- Simple marketing waitlist collector ---
+export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res) => {
+  // Minimal CORS (allow marketing site origins)
+  const origin = req.headers.origin || "";
+  const allowedOrigins = [
+    "https://thepropslist-marketing.web.app",
+    "https://thepropslist.uk",
+    "https://www.thepropslist.uk",
+  ];
+  if (allowedOrigins.includes(origin as string)) {
+    res.setHeader("Access-Control-Allow-Origin", origin as string);
+  }
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).json({ ok: false, error: "method-not-allowed" });
+    return;
+  }
+  try {
+    const body = (req.body || {}) as any;
+    const email = (body.email || "").toString().trim().toLowerCase();
+    const name = (body.name || "").toString().trim();
+    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      res.status(400).json({ ok: false, error: "invalid-email" });
+      return;
+    }
+    const doc = {
+      email,
+      name: name || null,
+      createdAt: Date.now(),
+      userAgent: req.headers["user-agent"] || null,
+      referer: req.headers.referer || null,
+      ip: (req.headers["x-forwarded-for"] as string) || null,
+    } as any;
+    await admin.firestore().collection("waitlist").add(doc);
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    logger.error("joinWaitlist error", { err });
+    res.status(500).json({ ok: false });
   }
 });
 

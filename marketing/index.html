@@ -4,63 +4,222 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>The Props List — Theater Props Management</title>
+    <link rel="icon" type="image/png" href="/logo.png?v=2" />
     <style>
-      body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b12;color:#e5e7eb}
+      :root{
+        --bg:#0b0b12;--text:#e5e7eb;--muted:#9ca3af;--primary:#06b6d4;--accent:#22c55e;--card:#111827;--card-border:#1f2937
+      }
+      body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+      /* animated gradient backdrop */
+      .backdrop{position:fixed;inset:-20%;z-index:-3;filter:blur(70px);opacity:.6;background:radial-gradient(600px 300px at 10% 10%, #06b6d4 25%, transparent),radial-gradient(500px 250px at 90% 20%, #22c55e 20%, transparent),radial-gradient(700px 320px at 50% 110%, #7c3aed 18%, transparent)}
+      /* bold rainbow top band */
+      .top-gradient{position:fixed;top:-160px;left:-12vw;right:-12vw;height:520px;z-index:-2;filter:saturate(1.6);background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 14%,#facc15 28%,#22c55e 42%,#06b6d4 56%,#3b82f6 70%,#a855f7 86%,#ec4899 100%);box-shadow:0 50px 140px rgba(0,0,0,.45)}
+      /* bold rainbow top band */
+      .top-gradient{position:fixed;top:-120px;left:-10vw;right:-10vw;height:380px;z-index:-1;filter:saturate(1.3);background:linear-gradient(90deg,#ff6b6b 0%,#f59e0b 16%,#facc15 32%,#22c55e 48%,#06b6d4 64%,#3b82f6 80%,#a855f7 100%);box-shadow:0 40px 120px rgba(0,0,0,.35);transform:skewY(-6deg)}
+      @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-12px)}100%{transform:translateY(0)}}
+      .float{animation:float 6s ease-in-out infinite}
       a{color:#06b6d4;text-decoration:none}
       .container{max-width:1100px;margin:0 auto;padding:24px}
-      .hero{padding:56px 0}
-      .cta{display:inline-block;background:#06b6d4;color:#0b0b12;font-weight:700;padding:12px 18px;border-radius:8px}
-      .muted{color:#9ca3af}
+      .hero{padding:90px 0 40px;position:relative}
+      /* remove moving diagonal band to avoid scroll seam */
+      .hero:after{display:none}
+      .wash{background:radial-gradient(800px 400px at 0% 20%,#22c55e 10%,transparent),radial-gradient(700px 320px at 90% 0%,#06b6d4 10%,transparent),radial-gradient(900px 360px at 60% 100%,#a855f7 10%,transparent)}
+      .hero .wash{position:absolute;inset:0;z-index:-1;opacity:.35;}
+      .hero h1{font-size:68px;line-height:1.02;margin:0 0 16px;background:linear-gradient(90deg,#ffffff 10%,#a5f3fc 40%,#c7d2fe 70%,#f5d0fe 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+      .hero h1{text-shadow:0 6px 20px rgba(0,0,0,.65)}
+      .cta{display:inline-block;background:var(--primary);color:#0b0b12;font-weight:800;padding:12px 18px;border-radius:10px}
+      .muted{color:var(--muted)}
       .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
-      .card{background:#111827;border:1px solid #1f2937;border-radius:10px;padding:20px}
-      header{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #1f2937}
+      .card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:14px}
+      header{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--card-border);position:relative;z-index:1}
+      header nav a{color:#f8fafc;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+      .brand-title{display:flex;flex-direction:column;line-height:0.95;margin-left:8px;font-weight:900;font-size:24px;color:#ffffff;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+      /* readable hero text panel */
+      .hero-text{color:whitesmoke;width:100%;padding:16px 18px;border-radius:12px}
+      .hero-text h1{ color:white}
+      .hero-text p{margin-bottom:16px}
+      .line{color:#9ca3af;text-decoration:line-through;margin-right:8px}
+      .badge{background:#22c55e;color:#0b0b12;border-radius:999px;padding:4px 6px;font-weight:800;font-size:12px;margin-left:8px}
+      /* hero panel (full-width, minimal chrome) */
+      .hero-card{position:relative;z-index:1;margin:0;padding:0;border:0;background:transparent;box-shadow:none;overflow:visible;width:100%}
+      .hero-card:before{display:none}
     </style>
   </head>
   <body>
+    <div class="float" style="background:#f59e0b;color:#0b0b12;text-align:center;padding:8px 16px;font-weight:700">
+      Beta: The Props List is in open beta — things may change. .
+    </div>
+    <div class="top-gradient"></div>
+    <div class="backdrop"></div>
     <div class="container">
       <header>
-        <div style="font-weight:800">The Props List</div>
-        <nav style="display:flex;gap:16px">
-          <a href="/app/login">App Login</a>
-          <a href="/app/signup">Start free</a>
-        </nav>
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="/logo.png?v=2" alt="The Props List" style="height:72px;width:auto;display:block" />
+          <div class="brand-title"><span>The</span><span>Props</span><span>List</span></div>
+        </div>
+        <!--<nav style="display:flex;gap:16px">
+          <a href="https://app.thepropslist.uk/login">Dashboard</a>
+        </nav> -->
       </header>
 
       <section class="hero">
-        <h1 style="font-size:42px;line-height:1.1;margin:0 0 12px">Manage theater props, packing and teams — all in one place</h1>
-        <p class="muted" style="margin:0 0 24px">Invite your team, track props, approve changes and export what you need. Built for productions of every size.</p>
-        <a class="cta" href="/app/signup">Start free</a>
+        <div class="wash"></div>
+        <div class="scrim" style="position:absolute;inset:0;background:radial-gradient(800px 400px at 30% 20%, rgba(0,0,0,.55), transparent 60%), linear-gradient(to bottom, rgba(0,0,0,.5), rgba(0,0,0,.2) 40%, transparent);z-index:-1"></div>
+        <div class="hero-card">
+          <div style="display:grid;grid-template-columns:1fr;gap:24px;align-items:center">
+          <div class="hero-text">
+            <h1>Manage theatre props — share the load with our app</h1>
+            <p class="muted" style="margin:0 0 12px;max-width:720px">Coming soon. Leave your email to be notified at launch.</p>
+            <form id="waitlistForm" style="display:flex;gap:10px;flex-wrap:wrap">
+              <input id="wlEmail" type="email" placeholder="you@example.com" required style="padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b0f14;color:#fff;min-width:260px" />
+              <input id="wlName" type="text" placeholder="Name (optional)" style="padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b0f14;color:#fff;min-width:220px" />
+              <button class="cta" type="submit">Notify me</button>
+              <span id="wlMsg" class="muted" style="align-self:center"></span>
+            </form>
+          </div>
+          <div></div>
+        </div>
+        </div>
+      </section>
+
+      <section style="margin:48px 0">
+        <h2>Mobile app</h2>
+        <p class="muted" style="margin:8px 0 20px">iOS & Android. Fast offline-first UX; syncs when back online.</p>
+        <div class="grid">
+          <div class="card">
+            <h3>Shopping list</h3>
+            <p class="muted">Collect buying options with prices, links and photos straight from your phone.</p>
+          </div>
+          <div class="card">
+            <h3>Designer sign‑off</h3>
+            <p class="muted">Submit items for approval. Designers/supervisors approve or request changes in one tap.</p>
+          </div>
+          <div class="card">
+            <h3>Auto‑create props</h3>
+            <p class="muted">Approved items become new props automatically with images, notes and cost details.</p>
+          </div>
+        </div>
       </section>
 
       <section style="margin:32px 0">
         <div class="grid">
           <div class="card"><h3>Props & Inventory</h3><p class="muted">Track every item with images, locations and status. Export clean PDFs.</p></div>
-          <div class="card"><h3>Packing & Labels</h3><p class="muted">Packing lists and labels with fragile / glass / this way up / heavy icons.</p></div>
-          <div class="card"><h3>Approvals</h3><p class="muted">Supervisors approve purchase/maintenance/change requests.</p></div>
+          <div class="card"><h3>Packing, Labels & QR</h3><p class="muted">Generate labels and QR codes. Organize storage and transport with clear icons.</p></div>
+          <div class="card"><h3>Props Bible</h3><p class="muted">One‑click PDF/print pack — your complete props bible for rehearsals and handover.</p></div>
           <div class="card"><h3>Invite your team</h3><p class="muted">Viewers, editors, supervisors and art directors — fine-grained access.</p></div>
         </div>
       </section>
 
       <section style="margin:48px 0">
         <h2>Pricing</h2>
+        <div style="display:flex;align-items:center;gap:12px;margin:12px 0 24px">
+          <span class="muted">Billed monthly</span>
+          <label style="position:relative;display:inline-block;width:52px;height:28px">
+            <input id="billingToggle" type="checkbox" style="opacity:0;width:0;height:0" />
+            <span id="toggleSlider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#1f2937;border-radius:28px;transition:.2s"></span>
+            <span style="position:absolute;height:22px;width:22px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s" id="toggleKnob"></span>
+          </label>
+          <span style="color:#22c55e;font-weight:700">Billed yearly (save ~10%)</span>
+        </div>
         <div class="grid">
-          <div class="card">
+          <div class="card" style="border-color:#9ca3af;background:linear-gradient(180deg,rgba(156,163,175,0.09),transparent)">
+            <h3>Free</h3>
+            <p class="muted">1 active show (1 year). TPS branded PDFs. Up to 1 teammate.</p>
+            <p><b>£0</b></p>
+          </div>
+          <div class="card" style="border-color:#22c55e;background:linear-gradient(180deg,rgba(34,197,94,0.09),transparent)">
             <h3>Starter</h3>
-            <p class="muted">1 active show (1 year), limited props/users, branded PDFs.</p>
-            <p><b>£9/mo</b> or £90/yr</p>
+            <p class="muted">1 active show, TPS branded PDFs. Up to 5 team members.</p>
+            <p id="starterPrice"><b>£9/mo</b> or £90/yr</p>
           </div>
-          <div class="card">
+          <div class="card" style="border-color:#06b6d4;background:linear-gradient(180deg,rgba(6,182,212,0.09),transparent)">
             <h3>Standard</h3>
-            <p class="muted">Up to 2 shows, unlimited props/users, unbranded PDFs, CSV export.</p>
-            <p><b>£19/mo</b> or £190/yr</p>
+            <p class="muted">Up to 2 shows, unbranded PDFs, CSV export. Unlimited team members.</p>
+            <p id="standardPrice"><b>£19/mo</b> or £190/yr</p>
           </div>
-          <div class="card">
+          <div class="card" style="border-color:#f59e0b;background:linear-gradient(180deg,rgba(245,158,11,0.09),transparent)">
             <h3>Pro</h3>
-            <p class="muted">Unlimited shows and features for larger organizations.</p>
-            <p><b>£39/mo</b> or £390/yr</p>
+            <p class="muted">Unlimited shows and priority support. Unlimited team members.</p>
+            <p id="proPrice"><b>£39/mo</b> or £390/yr</p>
           </div>
         </div>
       </section>
+      <script>
+        (function() {
+          const toggle = document.getElementById('billingToggle');
+          const knob = document.getElementById('toggleKnob');
+          const slider = document.getElementById('toggleSlider');
+          const monthlyNums = { starter: 9, standard: 19, pro: 39 };
+          const prices = {
+            monthly: { starter: '£9/mo', standard: '£19/mo', pro: '£39/mo' },
+            yearly: { starter: '£90/yr', standard: '£190/yr', pro: '£390/yr' }
+          };
+          const links = {
+            monthly: {
+              starter: 'https://buy.stripe.com/test_starter_link_month',
+              standard: 'https://buy.stripe.com/test_standard_link_month',
+              pro: 'https://buy.stripe.com/test_pro_link_month'
+            },
+            yearly: {
+              starter: 'https://buy.stripe.com/test_starter_link_year',
+              standard: 'https://buy.stripe.com/test_standard_link_year',
+              pro: 'https://buy.stripe.com/test_pro_link_year'
+            }
+          };
+          function setMode(mode){
+            if (mode === 'yearly') {
+              const yf = {
+                starter: monthlyNums.starter * 12,
+                standard: monthlyNums.standard * 12,
+                pro: monthlyNums.pro * 12
+              };
+              const yd = {
+                starter: Math.round(yf.starter * 0.9),
+                standard: Math.round(yf.standard * 0.9),
+                pro: Math.round(yf.pro * 0.9)
+              };
+              document.getElementById('starterPrice').innerHTML = '<span class="line">£'+ yf.starter +'/yr</span> <b>£'+ yd.starter +'/yr</b> <span class="badge">Save 10% yearly</span>';
+              document.getElementById('standardPrice').innerHTML = '<span class="line">£'+ yf.standard +'/yr</span> <b>£'+ yd.standard +'/yr</b> <span class="badge">Save 10% yearly</span>';
+              document.getElementById('proPrice').innerHTML = '<span class="line">£'+ yf.pro +'/yr</span> <b>£'+ yd.pro +'/yr</b> <span class="badge">Save 10% yearly</span>';
+            } else {
+              document.getElementById('starterPrice').innerHTML = '<b>' + prices[mode].starter + '</b>';
+              document.getElementById('standardPrice').innerHTML = '<b>' + prices[mode].standard + '</b>';
+              document.getElementById('proPrice').innerHTML = '<b>' + prices[mode].pro + '</b>';
+            }
+            const sc = document.getElementById('starterCta') as HTMLAnchorElement | null;
+            const stc = document.getElementById('standardCta') as HTMLAnchorElement | null;
+            const pc = document.getElementById('proCta') as HTMLAnchorElement | null;
+            if (sc) sc.setAttribute('href', links[mode].starter);
+            if (stc) stc.setAttribute('href', links[mode].standard);
+            if (pc) pc.setAttribute('href', links[mode].pro);
+          }
+          toggle.addEventListener('change', function(){
+            const mode = this.checked ? 'yearly' : 'monthly';
+            knob.style.transform = this.checked ? 'translateX(24px)' : 'translateX(0)';
+            slider.style.background = this.checked ? '#06b6d4' : '#1f2937';
+            setMode(mode);
+          });
+          setMode('monthly');
+        })();
+        // Waitlist submit
+        const form = document.getElementById('waitlistForm');
+        form?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = (document.getElementById('wlEmail') as HTMLInputElement).value.trim();
+          const name = (document.getElementById('wlName') as HTMLInputElement).value.trim();
+          const msg = document.getElementById('wlMsg');
+          msg!.textContent = 'Sending...';
+          try {
+            const res = await fetch('https://us-central1-props-bible-app-1c1cb.cloudfunctions.net/joinWaitlist', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name })
+            });
+            const json = await res.json();
+            msg!.textContent = json.ok ? 'Thanks! We will be in touch.' : 'Error. Please try again.';
+          } catch(err) {
+            msg!.textContent = 'Error. Please try again.';
+          }
+        });
+      </script>
     </div>
   </body>
   </html>
