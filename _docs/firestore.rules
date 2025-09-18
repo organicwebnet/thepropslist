@@ -84,13 +84,18 @@ service cloud.firestore {
         get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid);
     }
     match /todo_boards/{boardId} {
-      allow read, write: if request.auth != null;
+      // Only board owner/members or system admins can read/update boards
+      allow read: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
+      allow create: if request.auth != null; // any authenticated user can create a board
+      allow update, delete: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
     }
     match /todo_boards/{boardId}/lists/{listId} {
-      allow read, write: if request.auth != null;
+      // Lists are readable/writable only by board owner/members or admins
+      allow read, write: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
     }
     match /todo_boards/{boardId}/lists/{listId}/cards/{cardId} {
-      allow read, write: if request.auth != null;
+      // Cards are readable/writable only by board owner/members or admins
+      allow read, write: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
     }
     match /todo_boards/{boardId}/members/{memberId} {
       allow read, write: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
