@@ -60,6 +60,14 @@ jobs:
       working-directory: web-app
       run: npm run build
 
+    - name: Lint web-app
+      working-directory: web-app
+      run: npm run lint
+
+    - name: Type-check web-app
+      working-directory: web-app
+      run: npx tsc -p tsconfig.json
+
     - name: Install functions dependencies
       working-directory: functions
       run: npm ci
