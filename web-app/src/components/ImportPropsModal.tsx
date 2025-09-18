@@ -91,8 +91,6 @@ const ImportPropsModal: React.FC<{ open: boolean; onClose: () => void; onImporte
   const [copied, setCopied] = useState(false);
   const importLockRef = useRef<boolean>(false);
 
-  if (!open) return null;
-
   const mappedIdx = useMemo(() => {
     const idx: Partial<Record<MappingKey, number>> = {};
     (Object.keys(mapping) as MappingKey[]).forEach((k) => {
@@ -183,7 +181,10 @@ Output only the CSV (no commentary).`;
       await navigator.clipboard.writeText(prompt);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch (err) {
+      // Fallback: ignore copy failures silently
+      console.warn('Clipboard copy failed', err);
+    }
   };
 
   const doImport = async () => {
@@ -224,6 +225,8 @@ Output only the CSV (no commentary).`;
       importLockRef.current = false;
     }
   };
+
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[1000] bg-black/60 flex items-center justify-center p-4">
