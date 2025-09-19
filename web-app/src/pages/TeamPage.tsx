@@ -60,7 +60,7 @@ const TeamPage: React.FC = () => {
         .map(d => ({ ...(d.data as any), id: d.id }))
         .filter((d: any) => d.showId === id && (d.status === 'pending' || !d.status));
       setInvites(list);
-    }, () => {}, { where: [['showId', '==', id as any]] });
+    }, () => { /* ignore */ }, { where: [['showId', '==', id as any]] });
     return () => { if (unsub) unsub(); };
   }, [service, id]);
 
@@ -153,7 +153,7 @@ const TeamPage: React.FC = () => {
     if (!inv.id) return;
     try {
       await service.setDocument('invitations', inv.id, { ...inv, status: 'revoked' } as any, { merge: true });
-    } catch {}
+    } catch (err) { /* ignore */ }
   };
 
   const handleRoleChange = async (email: string, role: 'editor' | 'viewer') => {

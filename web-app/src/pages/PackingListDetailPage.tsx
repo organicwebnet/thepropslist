@@ -133,7 +133,7 @@ const PackingListDetailPage: React.FC = () => {
     const containerIdx = containers.findIndex((c) => c.id === containerId);
     if (containerIdx === -1) return;
     // Remove prop from any container it's in
-    let newContainers = containers.map((c) => ({ ...c, props: c.props.filter((p) => p.propId !== propId) }));
+    const newContainers = containers.map((c) => ({ ...c, props: c.props.filter((p) => p.propId !== propId) }));
     // Add prop to the target container
     newContainers[containerIdx].props.push({ propId, quantity: 1 });
     setContainers(newContainers);

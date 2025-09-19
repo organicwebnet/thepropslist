@@ -14,7 +14,7 @@ const BrandingStudioPage: React.FC = () => {
     if (!currentShowId) return;
     const unsub = service.listenToDocument(`shows/${currentShowId}/brand/default`, (doc: any) => {
       if (doc?.data) setBrand({ ...(doc.data as BrandProfile) });
-    }, (e: any) => {});
+    }, (_e: any) => { /* ignore */ });
     return () => { if (unsub) unsub(); };
   }, [service, currentShowId]);
 

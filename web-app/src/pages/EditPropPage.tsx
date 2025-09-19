@@ -162,11 +162,11 @@ const EditPropPage: React.FC = () => {
         try {
           const sceneDocs = await firebaseService.getDocuments('scenes', { where: [['showId', '==', form.showId as string]] });
           scenes = sceneDocs.map((doc: any) => ({ id: doc.id, name: doc.data.name ?? doc.data.title }));
-        } catch { /* ignore */ }
+        } catch (err) { /* ignore */ }
       }
       const normalizedScenes = (scenes || []).map((s: any, i: number) => ({ id: String(s?.id ?? s?.name ?? s?.title ?? i), name: s?.name ?? s?.title ?? String(s) }));
       setSceneOptions(normalizedScenes);
-    } catch {
+    } catch (err) {
       // ignore
     }
   };

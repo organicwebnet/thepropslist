@@ -322,7 +322,7 @@ const ContainerDetailPage: React.FC = () => {
                           const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
                           await serviceInst.removePropFromContainer(packListId, container.id, p.propId);
                           // When removed, set prop status to on-hold
-                          try { await service.updateDocument('props', p.propId, { status: 'on-hold', lastStatusUpdate: new Date().toISOString() }); } catch {}
+                          try { await service.updateDocument('props', p.propId, { status: 'on-hold', lastStatusUpdate: new Date().toISOString() }); } catch (err) { /* ignore */ }
                           const refreshed = await serviceInst.getPackList(packListId);
                           const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
                           setContainer(updated);
@@ -645,7 +645,7 @@ const ContainerDetailPage: React.FC = () => {
               </div>
               <div className="mt-4 flex justify-end gap-2">
                 <button className="btn" onClick={() => setLabelOpen(false)}>Close</button>
-                <button className="btn btn-primary" onClick={() => { try { window.print(); } catch {} }}>Print</button>
+              <button className="btn btn-primary" onClick={() => { try { window.print(); } catch (err) { /* ignore */ } }}>Print</button>
               </div>
             </div>
           </div>
