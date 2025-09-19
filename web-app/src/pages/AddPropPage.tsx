@@ -119,11 +119,11 @@ const AddPropPage: React.FC = () => {
       try {
         const m = await firebaseService.getDocuments('makers');
         setMakers(m.map((d: any) => ({ id: d.id, name: d.data?.name || 'Maker' })));
-      } catch {}
+      } catch (err) { /* ignore */ }
       try {
         const h = await firebaseService.getDocuments('hire_companies');
         setHireCompanies(h.map((d: any) => ({ id: d.id, name: d.data?.name || 'Hire Company' })));
-      } catch {}
+      } catch (err) { /* ignore */ }
     })();
   }, [firebaseService]);
 
@@ -159,7 +159,7 @@ const AddPropPage: React.FC = () => {
     setError(null);
     try {
       // Persist new maker / hire company if user typed a new one
-      let payload: any = { ...form };
+      const payload: any = { ...form };
       if (form.source === 'made') {
         const makerName = (form as any).makerName?.trim();
         if (!((form as any).makerId) && makerName) {
@@ -167,7 +167,7 @@ const AddPropPage: React.FC = () => {
             const newId = await firebaseService.addDocument('makers', { name: makerName });
             payload.makerId = newId;
             setMakers(prev => [...prev, { id: String(newId), name: makerName }]);
-          } catch {}
+          } catch (err) { /* ignore */ }
         }
       }
       if (form.source === 'hired') {
@@ -177,7 +177,7 @@ const AddPropPage: React.FC = () => {
             const newId = await firebaseService.addDocument('hire_companies', { name: hireCompanyName });
             payload.hireCompanyId = newId;
             setHireCompanies(prev => [...prev, { id: String(newId), name: hireCompanyName }]);
-          } catch {}
+          } catch (err) { /* ignore */ }
         }
       }
 

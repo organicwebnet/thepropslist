@@ -209,8 +209,8 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   offline(): OfflineSync {
     // Provide a stub implementation for now
     return {
-      enableSync: async () => {},
-      disableSync: async () => {},
+      enableSync: async () => { /* noop */ },
+      disableSync: async () => { /* noop */ },
       getSyncStatus: async () => false,
     };
   }

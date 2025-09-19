@@ -183,8 +183,8 @@ const PropDetailPage: React.FC = () => {
     setLightboxOpen(true);
   };
   const closeLightbox = () => setLightboxOpen(false);
-  const showPrev = () => setLightboxIndex(i => (i - 1 + galleryImages.length) % galleryImages.length);
-  const showNext = () => setLightboxIndex(i => (i + 1) % galleryImages.length);
+  const showPrev = React.useCallback(() => setLightboxIndex(i => (i - 1 + galleryImages.length) % galleryImages.length), [galleryImages.length]);
+  const showNext = React.useCallback(() => setLightboxIndex(i => (i + 1) % galleryImages.length), [galleryImages.length]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];

@@ -53,9 +53,7 @@ const ContainerDetailPage: React.FC = () => {
               const collabs = Array.isArray(sdata?.collaborators) ? sdata.collaborators : [];
               const sup = collabs.find((c: any) => c?.role === 'props_supervisor');
               if (sup?.name) supervisorName = String(sup.name);
-            } catch {
-              // noop
-            }
+            } catch (err) { /* ignore */ }
             // Fallback: find in team map by role and fetch profile name
             if (!supervisorName && sdata?.team && typeof sdata.team === 'object') {
               try {
@@ -77,9 +75,7 @@ const ContainerDetailPage: React.FC = () => {
             if (typeof to === 'string' && to.trim()) setToAddress(to.trim());
             if (typeof from === 'string' && from.trim()) setFromAddress(from.trim());
           }
-        } catch {
-          // noop
-        }
+        } catch (err) { /* ignore */ }
 
         // Read addresses from pack list shipping config if present
         try {
@@ -88,9 +84,7 @@ const ContainerDetailPage: React.FC = () => {
           if (ship?.toAddress) setToAddress(ship.toAddress);
           if (ship?.fromAddress) setFromAddress(ship.fromAddress);
           if (ship?.tourLabel) setTourLabel(ship.tourLabel);
-        } catch {
-          // noop
-        }
+        } catch (err) { /* ignore */ }
         const allProps = await inventoryService.listProps();
         setPropsList(allProps);
         setLoading(false);

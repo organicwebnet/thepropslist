@@ -310,8 +310,8 @@ const PropsPdfExportPage: React.FC = () => {
       return;
     }
     setLoading(true);
-    let unsubProps: (() => void) | undefined;
-    let unsubPresets: (() => void) | undefined;
+    const unsubPropsRef: { fn?: () => void } = {};
+    const unsubPresetsRef: { fn?: () => void } = {};
     const unsubShow = service.listenToDocument('shows/' + currentShowId, doc => {
       setShowTitle(doc.data?.name || '');
       setShowData(doc.data || null);
@@ -331,7 +331,7 @@ const PropsPdfExportPage: React.FC = () => {
         if (b.footerText) setFooter(String(b.footerText));
       }
     }).catch(() => {});
-    unsubProps = service.listenToCollection('props', (data) => {
+    unsubPropsRef.fn = service.listenToCollection('props', (data) => {
       setProps(data.filter(doc => doc.data.showId === currentShowId).map(doc => ({ ...(doc.data as Prop), id: doc.id })));
       setLoading(false);
     }, err => {
@@ -339,10 +339,10 @@ const PropsPdfExportPage: React.FC = () => {
       setLoading(false);
     });
     // Presets listener
-    unsubPresets = service.listenToCollection(`shows/${currentShowId}/exportPresets`, (docs: any[]) => {
+    unsubPresetsRef.fn = service.listenToCollection(`shows/${currentShowId}/exportPresets`, (docs: any[]) => {
       setPresets(docs.map(d => ({ id: d.id, name: d.data?.name || d.id, data: d.data?.options })));
     }, () => {});
-    return () => { if (unsubShow) unsubShow(); if (unsubProps) unsubProps(); if (unsubPresets) unsubPresets(); };
+    return () => { if (unsubShow) unsubShow(); if (unsubPropsRef.fn) unsubPropsRef.fn(); if (unsubPresetsRef.fn) unsubPresetsRef.fn(); };
   }, [service, currentShowId]);
 
   useEffect(() => {
