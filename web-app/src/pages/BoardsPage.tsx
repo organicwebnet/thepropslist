@@ -68,8 +68,7 @@ const BoardsPage: React.FC = () => {
       setShowTitle("");
       return;
     }
-    let unsub: (() => void) | undefined;
-    unsub = service.listenToDocument<Show>(
+    const unsub = service.listenToDocument<Show>(
       `shows/${currentShowId}`,
       doc => setShowTitle(doc.data?.name || ""),
       () => setShowTitle("")
@@ -175,8 +174,7 @@ function BoardsPageContent() {
       setShowTitle("");
       return;
     }
-    let unsub: (() => void) | undefined;
-    unsub = service.listenToDocument<Show>(
+    const unsub = service.listenToDocument<Show>(
       `shows/${currentShowId}`,
       doc => setShowTitle(doc.data?.name || ""),
       () => setShowTitle("")

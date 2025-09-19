@@ -8,6 +8,7 @@ import { Prop, PropFormData, propCategories, PropCategory, PropImage, DigitalAss
 import { Plus, UploadCloud, Trash2 } from 'lucide-react';
 import { ImageUpload } from '../components/ImageUpload';
 import { DigitalAssetForm } from '../components/DigitalAssetForm';
+import ImportPropsModal from '../components/ImportPropsModal';
 
 const initialForm: PropFormData = {
   name: '',
@@ -45,12 +46,14 @@ const AddPropPage: React.FC = () => {
   const [statusTouched, setStatusTouched] = useState(false);
   const [makers, setMakers] = useState<{ id: string; name: string }[]>([]);
   const [hireCompanies, setHireCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [importOpen, setImportOpen] = useState(false);
+  const [showImportNudge, setShowImportNudge] = useState(() => localStorage.getItem('hideImportNudge') !== '1');
 
   // Fetch shows for assignment
   useEffect(() => {
     firebaseService.getDocuments('shows').then(docs => {
       setShowOptions(docs.map(doc => ({ id: doc.id, name: doc.data.name })));
-    });
+    }).catch(() => undefined);
   }, [firebaseService]);
 
   // Fetch acts/scenes from the show document (with fallback) when show changes
@@ -83,7 +86,7 @@ const AddPropPage: React.FC = () => {
         } catch { setSceneOptions([]); }
       }
     })();
-  }, [form.showId, form.act, firebaseService]);
+  }, [firebaseService, form.showId]);
 
   const handleActChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -143,6 +146,11 @@ const AddPropPage: React.FC = () => {
     });
   };
 
+  const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setForm(prev => ({ ...(prev as any), [name]: checked } as any));
+  };
+
   // TODO: Implement image and digital asset upload logic
 
   const handleSubmit = async (e: React.FormEvent, addAnother?: boolean) => {
@@ -188,6 +196,8 @@ const AddPropPage: React.FC = () => {
     }
   };
 
+  const [addAnother, setAddAnother] = useState(false);
+
   return (
     <DashboardLayout>
       <div className="flex flex-col min-h-screen w-full max-w-6xl mx-auto p-6">
@@ -196,6 +206,15 @@ const AddPropPage: React.FC = () => {
             View Props List
           </Link>
         </div>
+        {showImportNudge && (
+          <div className="mb-4 p-4 rounded-lg border border-pb-primary/30 bg-pb-darker/50 flex items-center justify-between">
+            <div className="text-white">Have a spreadsheet already? Import props and fill in details later.</div>
+            <div className="flex gap-2">
+              <button className="px-3 py-2 rounded-lg bg-pb-primary text-white hover:bg-pb-accent" onClick={() => setImportOpen(true)}>Import Props</button>
+              <button className="px-3 py-2 rounded-lg border border-pb-primary/30 text-white hover:bg-white/10" onClick={() => { localStorage.setItem('hideImportNudge', '1'); setShowImportNudge(false); }}>Dismiss</button>
+            </div>
+          </div>
+        )}
         <motion.form
           onSubmit={(e) => handleSubmit(e)}
           onKeyDown={(e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'enter') { handleSubmit(e); } }}
@@ -377,6 +396,33 @@ const AddPropPage: React.FC = () => {
             </div>
             
           </div>
+          {/* Transit Handling Flags */}
+          <fieldset className="border border-pb-primary/20 rounded-lg p-4">
+            <legend className="px-2 text-sm text-pb-primary">Transit Handling</legend>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="fragile" checked={!!(form as any).fragile} onChange={handleToggle} />
+                <span>Fragile / Handle with care</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="thisWayUp" checked={!!(form as any).thisWayUp} onChange={handleToggle} />
+                <span>This way up</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="keepDry" checked={!!(form as any).keepDry} onChange={handleToggle} />
+                <span>Keep dry</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="doNotTilt" checked={!!(form as any).doNotTilt} onChange={handleToggle} />
+                <span>Do not tilt</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="batteryHazard" checked={!!(form as any).batteryHazard} onChange={handleToggle} />
+                <span>Battery hazard</span>
+              </label>
+            </div>
+          </fieldset>
+
           <div className="flex items-center justify-between pt-2">
             <button type="button" className="text-sm text-pb-primary underline" onClick={() => setShowAdvanced(v => !v)}>
               {showAdvanced ? 'Hide advanced fields' : 'Show advanced fields'}
@@ -426,6 +472,9 @@ const AddPropPage: React.FC = () => {
           </div>
         </motion.form>
       </div>
+      {importOpen && (
+        <ImportPropsModal open={importOpen} onClose={() => setImportOpen(false)} onImported={() => setImportOpen(false)} />
+      )}
     </DashboardLayout>
   );
 };

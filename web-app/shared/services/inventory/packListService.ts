@@ -39,6 +39,7 @@ export class FirebaseError extends Error {
 export interface PackingContainer {
   id: string;
   type?: string;
+  parentId?: string | null;
   name: string;
   description?: string;
   dimensions?: {
@@ -77,6 +78,13 @@ export interface PackList {
   description?: string;
   showId?: string;
   ownerId?: string;
+  // Shipping mode and optional addresses. If mode === 'courier', to/from may be filled.
+  shipping?: {
+    mode: 'courier' | 'tour';
+    toAddress?: string;
+    fromAddress?: string;
+    tourLabel?: string; // used when mode === 'tour'
+  };
   containers: PackingContainer[];
   status: 'draft' | 'in_progress' | 'completed';
   labels: string[];
@@ -91,6 +99,7 @@ export interface PackList {
 export interface PackListFilters {
   status?: PackList['status'][];
   showId?: string;
+  ownerId?: string;
   labels?: string[];
   updatedAfter?: Date;
 }
@@ -223,9 +232,6 @@ export class DigitalPackListService implements PackListService {
   }
 
   async listPackLists(filters?: PackListFilters): Promise<PackList[]> {
-    if (!filters?.showId) {
-      throw new Error('showId filter is required to list pack lists');
-    }
     try {
       let q: Query<PackListDocument> = this.getCollection();
       const conditions = [];
@@ -236,6 +242,9 @@ export class DigitalPackListService implements PackListService {
         }
         if (filters.showId) {
           conditions.push(where('showId', '==' as WhereFilterOp, filters.showId));
+        }
+        if (filters.ownerId) {
+          conditions.push(where('ownerId', '==' as WhereFilterOp, filters.ownerId));
         }
         if (filters.labels?.length) {
           conditions.push(where('labels', 'array-contains-any' as WhereFilterOp, filters.labels));

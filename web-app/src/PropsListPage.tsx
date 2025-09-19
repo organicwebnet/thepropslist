@@ -5,10 +5,11 @@ import { useFirebase } from './contexts/FirebaseContext';
 import { propCategories, PropLifecycleStatus, Prop } from '../shared/types/props';
 import { FirebaseDocument } from '../shared/services/firebase/types';
 import { useShowSelection } from './contexts/ShowSelectionContext';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PropCardWeb from './PropCardWeb';
 import jsPDF from 'jspdf';
 import type { PdfGenerationOptions } from '../shared/types/pdf';
+import ImportPropsModal from './components/ImportPropsModal';
 
 const defaultPdfOptions: PdfGenerationOptions = {
   selectedFields: {
@@ -63,6 +64,7 @@ const PropsListPage: React.FC = () => {
   const [props, setProps] = useState<Prop[]>([]);
   const { service: firebaseService, isInitialized, error: firebaseInitError } = useFirebase();
   const { currentShowId } = useShowSelection();
+  const { userProfile } = useWebAuth();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('');
   const [status, setStatus] = useState<string>('');
@@ -72,10 +74,19 @@ const PropsListPage: React.FC = () => {
   const [pdfOptions, setPdfOptions] = useState<PdfGenerationOptions>(defaultPdfOptions);
   const [downloading, setDownloading] = useState(false);
   const [downloadingCsv, setDownloadingCsv] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Extract unique acts and scenes from props
   const acts = Array.from(new Set(props.map(p => p.act).filter(a => a != null))).sort((a, b) => (a ?? 0) - (b ?? 0));
   const scenes = Array.from(new Set(props.map(p => p.scene).filter(s => s != null))).sort((a, b) => (a ?? 0) - (b ?? 0));
+
+  useEffect(() => {
+    // Auto-open import modal via /props?import=1
+    const params = new URLSearchParams(location.search);
+    if (params.get('import') === '1') setImportOpen(true);
+  }, [location.search]);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -293,7 +304,17 @@ const PropsListPage: React.FC = () => {
           </div>
         )}
         <h2 className="text-2xl font-bold mb-6 self-start">Props List</h2>
-        <div className="w-full max-w-3xl flex justify-end mb-4">
+        <div className="w-full max-w-3xl flex justify-between mb-4 gap-2">
+          <div>
+            {currentShowId && (
+              <button
+                onClick={() => setImportOpen(true)}
+                className="px-4 py-2 rounded-lg bg-pb-primary text-white font-semibold shadow hover:bg-pb-secondary"
+              >
+                Import Props
+              </button>
+            )}
+          </div>
           {userProfile && (userProfile.role === 'god' || userProfile.role === 'admin' || userProfile.role === 'editor' || userProfile.role === 'props_supervisor' || userProfile.role === 'art_director') && (
             <button
               onClick={handleDownloadCsv}
@@ -381,6 +402,13 @@ const PropsListPage: React.FC = () => {
         >
           <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </Link>
+        {importOpen && (
+          <ImportPropsModal
+            open={importOpen}
+            onClose={() => { setImportOpen(false); if (location.search.includes('import=1')) navigate('/props', { replace: true }); }}
+            onImported={() => { setImportOpen(false); if (location.search.includes('import=1')) navigate('/props', { replace: true }); }}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

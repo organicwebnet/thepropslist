@@ -13,6 +13,7 @@ export interface CardData {
   activityLog?: { id: string; type: string; userId: string; timestamp: string; details?: any }[];
   attachments?: string[];
   completed?: boolean;
+  status?: 'not_started' | 'in_progress' | 'done';
   propId?: string;
   color?: string;
   images?: PropImage[];

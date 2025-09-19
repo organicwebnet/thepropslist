@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap } from 'lucide-react';
+import NotificationBell from './components/NotificationBell';
 import { useWebAuth } from './contexts/WebAuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useShowSelection } from "./contexts/ShowSelectionContext";
@@ -62,6 +63,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const isBoardsPage = location.pathname.startsWith('/boards');
 
   React.useEffect(() => {
+    const onResize = () => {
+      const w = window.innerWidth;
+      // Auto-collapse on tablet widths (<1024px)
+      setNavCollapsed(prev => (w < 1024 ? true : prev));
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  React.useEffect(() => {
     const cls = 'route-boards';
     if (isBoardsPage) document.body.classList.add(cls); else document.body.classList.remove(cls);
     return () => { document.body.classList.remove(cls); };
@@ -72,8 +84,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       setShowTitle("");
       return;
     }
-    let unsub: (() => void) | undefined;
-    unsub = service.listenToDocument<Show>(
+    const unsub = service.listenToDocument<Show>(
       `shows/${currentShowId}`,
       doc => setShowTitle(doc.data?.name || ""),
       () => setShowTitle("")
@@ -119,6 +130,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             <span className="text-sm text-pb-gray">Welcome, {userProfile.displayName}</span>
           )}
           <Link to="/feedback" className="text-xs text-pb-primary underline">Report a bug</Link>
+          <NotificationBell />
           <Link to="/profile" className="relative block">
             <img
               src={userProfile?.photoURL || '/public/icon.png'}
@@ -157,7 +169,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className={`${navCollapsed ? 'w-16 p-2' : 'w-64 p-4'} bg-pb-darker/30 backdrop-blur-sm border-r border-pb-primary/20 space-y-4 transition-all duration-300`}
+          className={`${navCollapsed ? 'w-16 p-2' : 'w-64 p-4'} hidden md:block bg-pb-darker/30 backdrop-blur-sm border-r border-pb-primary/20 space-y-4 transition-all duration-300`}
         >
           {/* Collapse toggle */}
           <div className="flex items-center justify-between mb-2">
@@ -180,6 +192,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               {[
                 { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/' },
                 { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props' },
+                { icon: FileText, text: 'Import Props', subtext: 'CSV import', link: '/props?import=1' },
                 { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export' },
                 { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists' },
                 { icon: Theater, text: 'Show Management', subtext: 'Manage productions and venues', link: '/shows' },
@@ -195,7 +208,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                       transition={{ delay: index * 0.1 }}
                       className={`${navCollapsed ? 'justify-center' : ''} flex items-center space-x-3 p-3 rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 transition-colors cursor-pointer group`}
                     >
-                      <div className={`$${'{'}navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors`}>
+                      <div className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors`}>
                         <item.icon className="w-4 h-4 text-pb-primary" />
                       </div>
                       {!navCollapsed && (

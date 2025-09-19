@@ -3,7 +3,7 @@ import { useFirebase } from "../../contexts/FirebaseContext";
 import ListColumn from "./ListColumn";
 import type { BoardData, ListData, CardData } from "../../types/taskManager";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay } from '@dnd-kit/core';
-import { arrayMove, SortableContext, horizontalListSortingStrategy, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 
 interface BoardProps {
   boardId: string;
@@ -60,7 +60,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
       unsubLists();
       unsubCards.forEach(unsub => unsub());
     };
-  }, [boardId, lists.length]);
+  }, [boardId, lists.length, service]);
 
   // Drag-to-scroll handlers
   useEffect(() => {
@@ -266,7 +266,6 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
         await service.updateDocument('todo_boards', boardId, { listIds: updated });
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to add list', err);
     }
   };

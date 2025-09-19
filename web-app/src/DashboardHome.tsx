@@ -90,9 +90,8 @@ const DashboardHome: React.FC = () => {
   // Fetch cards from all boards/lists for the show
   useEffect(() => {
     if (!currentShowId) return;
-    let unsubBoards: (() => void) | undefined;
-    let unsubCards: (() => void)[] = [];
-    unsubBoards = service.listenToCollection(
+    const unsubCards: (() => void)[] = [];
+    const unsubBoards = service.listenToCollection(
       'todo_boards',
       docs => {
         const filteredBoards = docs.filter(b => (b.data as any).showId === currentShowId);
@@ -114,17 +113,14 @@ const DashboardHome: React.FC = () => {
                         ...cardsDocs.map(cd => ({ ...(cd.data as CardData), id: cd.id, listId: (list as any).id }))
                       ];
                     });
-                  },
-                  () => {}
+                  }
                 );
                 unsubCards.push(unsub);
               });
-            },
-            () => {}
+            }
           );
         });
-      },
-      () => {}
+      }
     );
     return () => { if (unsubBoards) unsubBoards(); unsubCards.forEach(u => u && u()); };
   }, [service, currentShowId]);

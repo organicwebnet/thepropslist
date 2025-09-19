@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { DigitalPackListService, PackList, PackingContainer } from '../../shared/services/inventory/packListService';
 import { DigitalInventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService';
@@ -12,13 +12,16 @@ const PackingListDetailPage: React.FC = () => {
   const { packListId } = useParams<{ packListId: string }>();
   const navigate = useNavigate();
   const [packList, setPackList] = useState<PackList | null>(null);
-  const [containers, setContainers] = useState<Array<{ id: string; name: string; type?: string; description?: string; props: { propId: string; quantity: number }[]; dimensions?: { width: number; height: number; depth: number; unit: 'cm' | 'in' } }>>([]);
+  const [containers, setContainers] = useState<Array<{ id: string; name: string; type?: string; parentId?: string | null; description?: string; props: { propId: string; quantity: number }[]; dimensions?: { width: number; height: number; depth: number; unit: 'cm' | 'in' } }>>([]);
   const [propsList, setPropsList] = useState<InventoryProp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [containerForm, setContainerForm] = useState<{ description?: string; type?: string; length?: string; width?: string; height?: string; unit?: 'cm' | 'in' }>({ description: '', type: '', length: '', width: '', height: '', unit: 'cm' });
   const [formError, setFormError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [bulkPlaceOpen, setBulkPlaceOpen] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   useEffect(() => {
     if (!packListId) return;
@@ -95,6 +98,7 @@ const PackingListDetailPage: React.FC = () => {
         id: refCode,
         name: refCode,
         type: containerForm.type || '',
+        parentId: null,
         description: containerForm.description || '',
         dimensions: (parsedWidth && parsedHeight && parsedLength)
           ? { width: parsedWidth, height: parsedHeight, depth: parsedLength, unit: containerForm.unit || 'cm' }
@@ -193,6 +197,40 @@ const PackingListDetailPage: React.FC = () => {
         <div className="flex items-center gap-4 mb-6">
           <button className="btn btn-secondary" onClick={() => navigate(-1)}>&larr; Back</button>
           <h1 className="text-2xl font-bold">Packing List: {packList.name}</h1>
+        </div>
+        {/* Bulk actions bar */}
+        <div className="bg-gray-900 rounded-xl border border-pb-primary/20 p-3 mb-4 flex items-center gap-3">
+          <div className="text-sm text-white font-medium">Bulk actions</div>
+          <div className="text-xs text-gray-400">Selected: {Object.values(selected).filter(Boolean).length}</div>
+          <button
+            className="ml-auto px-3 py-2 rounded-lg bg-pb-primary text-white hover:bg-pb-accent transition disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={Object.values(selected).filter(Boolean).length === 0}
+            onClick={() => setBulkPlaceOpen(true)}
+          >
+            Place on…
+          </button>
+          <button
+            className="px-3 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={Object.values(selected).filter(Boolean).length === 0 || bulkSaving}
+            onClick={async () => {
+              if (!packListId) return;
+              setBulkSaving(true);
+              try {
+                const svc = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                const ids = Object.keys(selected).filter(id => selected[id]);
+                for (const id of ids) {
+                  await svc.updateContainer(packListId, id, { parentId: null } as any);
+                }
+                const refreshed = await svc.getPackList(packListId);
+                setPackList(refreshed);
+                setContainers(refreshed.containers || []);
+              } finally {
+                setBulkSaving(false);
+              }
+            }}
+          >
+            Clear parent
+          </button>
         </div>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="flex gap-8 items-start">
@@ -298,13 +336,31 @@ const PackingListDetailPage: React.FC = () => {
                   {containers.map((container) => (
                     <li key={container.id} className="py-2">
                       <div
-                        className="font-medium text-white mb-1 flex items-center gap-2"
-                        style={{ background: '#23272f', borderRadius: 6, padding: 6 }}
+                        className="font-medium text-white mb-1 flex items-center gap-2 rounded-xl border border-gray-700 bg-[#23272f] px-4 py-3"
                       >
-                        {container.name}
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-primary"
+                          checked={!!selected[container.id]}
+                          onChange={(e) => setSelected(prev => ({ ...prev, [container.id]: e.target.checked }))}
+                          title="Select for bulk actions"
+                        />
+                        <span className="text-white font-medium">{container.name}</span>
                         {container.type && <span className="text-xs text-gray-400">({container.type})</span>}
+                        {container.parentId && (
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-lg bg-gray-800/70 border border-gray-600 text-gray-100">on: {(() => {
+                            const p = containers.find(c => c.id === container.parentId);
+                            return p ? (p.name + (p.type ? ` (${p.type})` : '')) : container.parentId;
+                          })()}</span>
+                        )}
+                        <Link
+                          to={`/packing-lists/${packListId}/containers/${container.id}`}
+                          className="ml-auto text-xs text-pb-primary underline"
+                        >
+                          Details & Label
+                        </Link>
                         <button
-                          className="ml-auto btn btn-sm btn-primary"
+                          className="btn btn-sm btn-primary ml-2"
                           onClick={async () => {
                             if (!packListId) return;
                             try {
@@ -317,6 +373,7 @@ const PackingListDetailPage: React.FC = () => {
                                   description: container.description,
                                   props: container.props,
                                   dimensions: container.dimensions,
+                                  parentId: container.parentId || null,
                                 });
                               } else {
                                 const { id: _ignore, ...toCreate } = container as any;
@@ -334,8 +391,9 @@ const PackingListDetailPage: React.FC = () => {
                         </button>
                       </div>
                       {container.description && <div className="text-xs text-gray-400 mb-1">{container.description}</div>}
-                      <DroppableContainer container={container}>
+                      <div className="rounded-xl border border-indigo-500/60 bg-indigo-950/30 p-3">
                         <div className="font-semibold text-xs text-gray-300 mb-1">Props in this container:</div>
+                        <DroppableContainer container={container}>
                         {container.props.length === 0 ? (
                           <div className="text-xs text-gray-500">Drag props here to add them to the container.</div>
                         ) : (
@@ -354,7 +412,8 @@ const PackingListDetailPage: React.FC = () => {
                             })}
                           </ul>
                         )}
-                      </DroppableContainer>
+                        </DroppableContainer>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -363,6 +422,91 @@ const PackingListDetailPage: React.FC = () => {
           </div>
           </div>
         </DndContext>
+        {/* Bulk Place modal */}
+        {bulkPlaceOpen && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
+            <div className="bg-gray-900 text-white rounded-xl shadow-xl w-full max-w-lg p-5 border border-pb-primary/30">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-semibold text-lg">Place selected on…</div>
+                <button className="text-gray-300 hover:text-white" onClick={() => setBulkPlaceOpen(false)}>✕</button>
+              </div>
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                {containers.filter(c => !selected[c.id]).length === 0 && (
+                  <div className="text-gray-400">No other containers available.</div>
+                )}
+                {containers.filter(c => !selected[c.id]).map(p => (
+                  <div key={p.id} className="flex items-center justify-between bg-gray-800/70 rounded-lg px-3 py-2 border border-gray-700">
+                    <div>
+                      <div className="font-medium">{p.name}</div>
+                      <div className="text-xs text-gray-400">{p.type || 'container'} · {p.id}</div>
+                    </div>
+                    <button
+                      className="px-3 py-1.5 rounded-lg bg-pb-primary text-white hover:bg-pb-accent transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={bulkSaving}
+                      onClick={async () => {
+                        if (!packListId) return;
+                        setBulkSaving(true);
+                        try {
+                          const svc = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                          const ids = Object.keys(selected).filter(id => selected[id]);
+                          for (const id of ids) {
+                            await svc.updateContainer(packListId, id, { parentId: p.id } as any);
+                          }
+                          const refreshed = await svc.getPackList(packListId);
+                          setPackList(refreshed);
+                          setContainers(refreshed.containers || []);
+                          setBulkPlaceOpen(false);
+                        } finally {
+                          setBulkSaving(false);
+                        }
+                      }}
+                    >
+                      Place here
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="text-sm mb-2">Quick create parent:</div>
+                <div className="flex gap-2">
+                  {['pallet','skip','crate'].map(t => (
+                    <button
+                      key={t}
+                      className="px-3 py-1.5 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={bulkSaving}
+                      onClick={async () => {
+                        if (!packListId) return;
+                        setBulkSaving(true);
+                        try {
+                          const svc = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                          const newId = await svc.addContainer(packListId, {
+                            name: `${t.charAt(0).toUpperCase()+t.slice(1)} ${String((containers||[]).filter(c=>c.type===t).length+1)}`,
+                            type: t,
+                            labels: [],
+                            props: [],
+                            status: 'empty'
+                          } as any);
+                          const ids = Object.keys(selected).filter(id => selected[id]);
+                          for (const id of ids) {
+                            await svc.updateContainer(packListId, id, { parentId: newId } as any);
+                          }
+                          const refreshed = await svc.getPackList(packListId);
+                          setPackList(refreshed);
+                          setContainers(refreshed.containers || []);
+                          setBulkPlaceOpen(false);
+                        } finally {
+                          setBulkSaving(false);
+                        }
+                      }}
+                    >
+                      {t.charAt(0).toUpperCase()+t.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

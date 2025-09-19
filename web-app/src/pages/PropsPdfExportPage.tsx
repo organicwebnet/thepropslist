@@ -310,10 +310,9 @@ const PropsPdfExportPage: React.FC = () => {
       return;
     }
     setLoading(true);
-    let unsubShow: (() => void) | undefined;
     let unsubProps: (() => void) | undefined;
     let unsubPresets: (() => void) | undefined;
-    unsubShow = service.listenToDocument('shows/' + currentShowId, doc => {
+    const unsubShow = service.listenToDocument('shows/' + currentShowId, doc => {
       setShowTitle(doc.data?.name || '');
       setShowData(doc.data || null);
       setPdfOptions(opt => ({ ...opt, title: doc.data?.name || '' }));
@@ -343,7 +342,7 @@ const PropsPdfExportPage: React.FC = () => {
     unsubPresets = service.listenToCollection(`shows/${currentShowId}/exportPresets`, (docs: any[]) => {
       setPresets(docs.map(d => ({ id: d.id, name: d.data?.name || d.id, data: d.data?.options })));
     }, () => {});
-    return () => { if (unsubShow) unsubShow(); if (unsubProps) unsubProps(); };
+    return () => { if (unsubShow) unsubShow(); if (unsubProps) unsubProps(); if (unsubPresets) unsubPresets(); };
   }, [service, currentShowId]);
 
   useEffect(() => {
@@ -385,7 +384,7 @@ const PropsPdfExportPage: React.FC = () => {
       if (logoUrlRef.current) URL.revokeObjectURL(logoUrlRef.current);
       logoUrlRef.current = logoUrl;
     }
-    let sortedProps = [...props];
+    const sortedProps = [...props];
     if (ordering === 'alphabetical') {
       sortedProps.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     } else {

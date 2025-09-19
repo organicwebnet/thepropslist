@@ -219,7 +219,7 @@ const PropDetailPage: React.FC = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [lightboxOpen, galleryImages.length]);
+  }, [lightboxOpen, galleryImages.length, showNext, showPrev]);
 
   // Keep lightboxIndex in range if images array changes while open
   useEffect(() => {

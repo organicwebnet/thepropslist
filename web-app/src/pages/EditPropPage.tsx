@@ -596,6 +596,32 @@ const EditPropPage: React.FC = () => {
             </div>
             </div>
           </fieldset>
+          {/* Transit Handling Flags */}
+          <fieldset className="border border-pb-primary/20 rounded-lg p-4">
+            <legend className="px-2 text-sm text-pb-primary">Transit Handling</legend>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="fragile" checked={!!(form as any).fragile} onChange={handleToggle} />
+                <span>Fragile / Handle with care</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="thisWayUp" checked={!!(form as any).thisWayUp} onChange={handleToggle} />
+                <span>This way up</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="keepDry" checked={!!(form as any).keepDry} onChange={handleToggle} />
+                <span>Keep dry</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="doNotTilt" checked={!!(form as any).doNotTilt} onChange={handleToggle} />
+                <span>Do not tilt</span>
+              </label>
+              <label className="inline-flex items-center gap-2 text-pb-gray">
+                <input type="checkbox" name="batteryHazard" checked={!!(form as any).batteryHazard} onChange={handleToggle} />
+                <span>Battery hazard</span>
+              </label>
+            </div>
+          </fieldset>
           <fieldset className="border border-pb-primary/20 rounded-lg p-4">
             <legend className="px-2 text-sm text-pb-primary">Media & Assets</legend>
             <div className="space-y-4">

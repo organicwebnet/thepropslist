@@ -148,6 +148,13 @@ export interface PropFormData {
   assignedTo?: string[]; // Array of user IDs assigned for maintenance/repair
   repairDeadline?: string;
   showId?: string;
+
+  // Transit handling flags for shipping symbols
+  fragile?: boolean;            // show Fragile / Handle with care
+  thisWayUp?: boolean;          // show This Way Up
+  keepDry?: boolean;            // show Keep Dry
+  doNotTilt?: boolean;          // show Do Not Tilt
+  batteryHazard?: boolean;      // show Battery label when applicable
 }
 
 export interface Prop {
@@ -274,6 +281,13 @@ export interface Prop {
   estimatedDeliveryDate?: string; // ISO date string for expected delivery
   courier?: string; // Name of the courier
   trackingNumber?: string; // Tracking number for the delivery
+
+  // Transit handling flags for shipping symbols (mirrors PropFormData)
+  fragile?: boolean;
+  thisWayUp?: boolean;
+  keepDry?: boolean;
+  doNotTilt?: boolean;
+  batteryHazard?: boolean;
 }
 
 export type PropUpdateFormData = Partial<PropFormData>;

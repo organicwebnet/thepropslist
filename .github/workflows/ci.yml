@@ -60,6 +60,16 @@ jobs:
       working-directory: web-app
       run: npm run build
 
+    - name: Install Playwright Browsers
+      working-directory: web-app
+      run: npx playwright install --with-deps
+
+    - name: Run Playwright smoke tests (preview build)
+      working-directory: web-app
+      env:
+        BASE_URL: https://props-bible-app-1c1cb.web.app
+      run: npx playwright test --config=playwright.config.ts --reporter=line
+
     - name: Lint web-app
       working-directory: web-app
       run: npm run lint

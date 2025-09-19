@@ -18,11 +18,13 @@ const PackingListPage: React.FC = () => {
   const { user, loading: webAuthLoading } = useWebAuth();
 
   useEffect(() => {
-    if (!currentShowId) return;
+    if (webAuthLoading) return;
+    if (!user) return;
     setLoading(true);
     const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+    const filters = currentShowId ? { showId: currentShowId } : { ownerId: user.uid };
     // TODO: Replace with real-time listener if available
-    packListService.listPackLists({ showId: currentShowId })
+    packListService.listPackLists(filters as any)
       .then((lists: PackList[]) => {
         setPackingLists(lists);
         setLoading(false);
@@ -31,7 +33,7 @@ const PackingListPage: React.FC = () => {
         setError(err.message);
         setLoading(false);
       });
-  }, [currentShowId, service]);
+  }, [currentShowId, service, user, webAuthLoading]);
 
   const handleCreatePackingList = async (e: React.FormEvent) => {
     console.log('handleCreatePackingList called');
@@ -92,18 +94,6 @@ const PackingListPage: React.FC = () => {
 
   if (webAuthLoading) return <div>Loading...</div>;
   if (!user) return <div>Please sign in to create a packing list.</div>;
-
-  if (!currentShowId) {
-    return (
-      <DashboardLayout>
-        <div className="max-w-7xl mx-auto p-8">
-          <h2 className="text-2xl font-bold mb-6">Select a Show</h2>
-          {/* TODO: Show selector component here */}
-          <button onClick={() => setCurrentShowId(prompt('Enter show ID:') || null)} className="btn btn-primary">Set Show</button>
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>

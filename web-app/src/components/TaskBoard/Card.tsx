@@ -35,7 +35,7 @@ const Popover: React.FC<{ open: boolean; onClose: () => void; title: string; chi
 function renderDescriptionWithLinks(description: string) {
   if (!description) return null;
   // Regex for [@Name](prop:prop1) and similar, and for @@User
-  const mentionRegex = /\[@([^\]]+)\]\((prop|container|user):([^\)]+)\)|@@([a-zA-Z0-9_]+)/g;
+  const mentionRegex = /\[@([^\]]+)\]\((prop|container|user):([^)]*)\)|@@([a-zA-Z0-9_]+)/g;
   const parts = [];
   let lastIndex = 0;
   let match;
@@ -102,13 +102,13 @@ function renderDescriptionWithLinks(description: string) {
 function parseMentions(text: string) {
   const items: { type: 'prop' | 'container' | 'user'; id?: string; label: string }[] = [];
   if (!text) return items;
-  const bracket = /\[@([^\]]+)\]\((prop|container|user):([^\)]+)\)/g;
+  const bracket = /\[@([^\]]+)\]\((prop|container|user):([^)]*)\)/g;
   let m;
   while ((m = bracket.exec(text)) !== null) {
     items.push({ type: m[2] as any, id: m[3], label: m[1] });
   }
   // Optional explicit user syntax beginning with @@username
-  const explicitUser = /(^|\s)@@([A-Za-z0-9_\-\.]+)/g;
+  const explicitUser = /(^|\s)@@([A-Za-z0-9_.-]+)/g;
   while ((m = explicitUser.exec(text)) !== null) {
     const label = (m[2] || '').trim();
     if (label) items.push({ type: 'user', label });
@@ -196,6 +196,24 @@ const CardDetailModal: React.FC<{
 
   // Add completed state
   const [completed, setCompleted] = useState(card.completed || false);
+  const [status, setStatus] = useState<'not_started' | 'in_progress' | 'done'>(card.status || (card.completed ? 'done' : 'not_started'));
+  // Keep completed in sync when status is changed directly
+  useEffect(() => {
+    setCompleted(status === 'done');
+  }, [status]);
+
+  // Derive status from checklist changes
+  useEffect(() => {
+    if (!checklists || checklists.length === 0) {
+      if (!completed) setStatus('not_started');
+      return;
+    }
+    const total = checklists.length;
+    const done = checklists.filter(c => !!c.checked).length;
+    if (done === 0 && !completed) setStatus('not_started');
+    else if (done > 0 && done < total && !completed) setStatus('in_progress');
+    else if (done === total || completed) setStatus('done');
+  }, [checklists, completed]);
   // @mention for TITLE
   const [showMentionMenuTitle, setShowMentionMenuTitle] = useState(false);
   const [mentionTypeTitle, setMentionTypeTitle] = useState<'prop' | 'container' | 'user' | null>(null);
@@ -251,7 +269,7 @@ const CardDetailModal: React.FC<{
     if (JSON.stringify(labels) !== JSON.stringify(card.labels)) logActivity('Labels changed', {});
     if (JSON.stringify(checklists) !== JSON.stringify(card.checklist)) logActivity('Checklist changed', {});
     const attachmentUrls = (attachments || []).map((a: any) => typeof a === 'string' ? a : a.url);
-    onUpdateCard(card.id, { title, description, color: cardColor, assignedTo: members, completed, activityLog, dueDate, labels, checklist: checklists, images, attachments: attachmentUrls as any });
+    onUpdateCard(card.id, { title, description, color: cardColor, assignedTo: members, completed, status, activityLog, dueDate, labels, checklist: checklists, images, attachments: attachmentUrls as any });
     onClose();
   };
 
@@ -328,7 +346,7 @@ const CardDetailModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div
-        className="relative rounded-2xl shadow-2xl flex flex-row overflow-y-auto max-h-[98vh] min-h-[700px] border border-gray-300"
+        className="relative rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-y-auto max-h-[98vh] min-h-[560px] md:min-h-[700px] border border-gray-300 w-[95vw] max-w-[1100px]"
         style={{ background: cardColor, transition: 'background 0.3s' }}
       >
         {/* Close (X) button top right of modal */}
@@ -362,13 +380,16 @@ const CardDetailModal: React.FC<{
           )}
           {/* Title */}
           <div className="flex items-center gap-2 mb-1 relative">
-            <input
-              type="checkbox"
-              checked={completed}
-              onChange={() => setCompleted(c => !c)}
-              className="w-5 h-5 accent-pb-success rounded"
-              title="Mark card as completed"
-            />
+            {/* Status toggle (click to cycle: not_started → in_progress → done) */}
+            <button
+              type="button"
+              onClick={() => setStatus(s => (s === 'not_started' ? 'in_progress' : s === 'in_progress' ? 'done' : 'not_started'))}
+              className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-white/60 text-white/90 bg-transparent hover:bg-white/10 transition"
+              aria-label={`Status: ${status}`}
+              title={`Status: ${status} (click to change)`}
+            >
+              {status === 'done' ? '✓' : status === 'in_progress' ? '◐' : ''}
+            </button>
             <textarea
               className={`rounded-lg px-3 py-1.5 text-2xl font-bold bg-transparent shadow-none focus:ring-2 focus:ring-pb-primary focus:outline-none placeholder:text-gray-300 text-white resize-none leading-snug overflow-hidden ${completed ? 'line-through opacity-60' : ''}`}
               value={title}
@@ -841,7 +862,7 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially, o
         onKeyPress={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            handleOpen({ preventDefault: () => {} } as React.MouseEvent);
+            handleOpen({ preventDefault: () => undefined } as React.MouseEvent);
           }
         }}
       >
@@ -864,7 +885,13 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially, o
             />
           </div>
         )}
-        <div className="font-semibold" style={{ color: '#fff' }}>{card.title}</div>
+        <div className="flex items-center gap-2">
+          {/* Status indicator (Cursor-style): circle for not started, half-filled radial for in-progress, check circle for done */}
+          <span aria-label={card.status || 'not_started'} title={card.status || 'not_started'} className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 text-gray-200">
+            {card.status === 'done' ? '✓' : card.status === 'in_progress' ? '◐' : ''}
+          </span>
+          <div className="font-semibold" style={{ color: '#fff' }}>{card.title}</div>
+        </div>
     {card.description && (
           <div className="text-xs mt-1" style={{ color: '#fff' }}>{renderDescriptionWithLinks(card.description)}</div>
     )}

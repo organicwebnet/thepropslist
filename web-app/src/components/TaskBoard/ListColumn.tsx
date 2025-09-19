@@ -41,15 +41,21 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
       try {
         const p = await service.getDocuments<any>('props');
         setPropsList(p.map(d => ({ id: d.id, name: d.data?.name || 'Prop' })));
-      } catch {}
+      } catch {
+        // noop
+      }
       try {
         const c = await service.getDocuments<any>('packing_boxes');
         setContainersList(c.map(d => ({ id: d.id, name: d.data?.name || 'Box' })));
-      } catch {}
+      } catch {
+        // noop
+      }
       try {
         const u = await service.getDocuments<any>('users');
         setUsersList(u.map(d => ({ id: d.id, name: d.data?.displayName || d.data?.name || d.data?.email || 'User' })));
-      } catch {}
+      } catch {
+        // noop
+      }
     })();
   }, [service]);
 
