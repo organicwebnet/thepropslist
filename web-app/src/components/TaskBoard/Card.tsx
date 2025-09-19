@@ -859,10 +859,10 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially, o
         onClick={handleOpen}
         tabIndex={0}
         role="button"
-        onKeyPress={e => {
+        onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            handleOpen({ preventDefault: () => undefined } as React.MouseEvent);
+            handleOpen(e as any);
           }
         }}
       >

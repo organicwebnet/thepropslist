@@ -90,7 +90,7 @@ const DashboardHome: React.FC = () => {
   // Fetch cards from all boards/lists for the show
   useEffect(() => {
     if (!currentShowId) return;
-    const unsubCards: (() => void)[] = [];
+    let unsubCards: (() => void)[] = [];
     const unsubBoards = service.listenToCollection(
       'todo_boards',
       docs => {

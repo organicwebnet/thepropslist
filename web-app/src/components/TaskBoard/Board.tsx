@@ -56,9 +56,9 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
       );
     }
     return () => {
-      unsubBoard();
-      unsubLists();
-      unsubCards.forEach(unsub => unsub());
+      if (unsubBoard) unsubBoard();
+      if (unsubLists) unsubLists();
+      unsubCards.forEach(unsub => unsub && unsub());
     };
   }, [boardId, lists.length, service]);
 
