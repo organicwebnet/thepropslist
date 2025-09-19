@@ -70,6 +70,18 @@ jobs:
         BASE_URL: https://props-bible-app-1c1cb.web.app
       run: npx playwright test --config=playwright.config.ts --reporter=line
 
+    - name: Lighthouse CI (Homepage, Login, Props)
+      env:
+        BASE_URL: https://props-bible-app-1c1cb.web.app
+      run: |
+        npx -y @lhci/cli@0.13.x collect \
+          --numberOfRuns=1 \
+          --url="$BASE_URL/" \
+          --url="$BASE_URL/login" \
+          --url="$BASE_URL/props"
+        npx -y @lhci/cli@0.13.x assert || true
+        npx -y @lhci/cli@0.13.x upload --target=temporary-public-storage || true
+
     - name: Lint web-app
       working-directory: web-app
       run: npm run lint
