@@ -29,8 +29,10 @@ const ShoppingListPage = lazy(() => import('./pages/ShoppingListPage'));
 import ProfilePage from './pages/ProfilePage';
 import FeedbackPage from './pages/FeedbackPage';
 import PropDetailMockPage from './pages/PropDetailMockPage';
+import SubscriberStatsPage from './pages/SubscriberStatsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import JoinInvitePage from './pages/JoinInvitePage';
+import CompleteSignup from './pages/CompleteSignup';
 
 function App() {
   const { user } = useWebAuth();
@@ -41,6 +43,7 @@ function App() {
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
           <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
+          <Route path="/complete-signup" element={<CompleteSignup />} />
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
           <Route path="/props/pdf-export" element={<ProtectedRoute><PropsPdfExportPage /></ProtectedRoute>} />
           <Route path="/branding" element={<ProtectedRoute><BrandingStudioPage /></ProtectedRoute>} />
@@ -59,6 +62,7 @@ function App() {
           <Route path="/join/:token" element={<JoinInvitePage />} />
           <Route path="/packing-lists" element={<ProtectedRoute><PackingListPage /></ProtectedRoute>} />
           <Route path="/packing-lists/:packListId" element={<ProtectedRoute><PackingListDetailPage /></ProtectedRoute>} />
+          <Route path="/admin/subscribers" element={<ProtectedRoute><SubscriberStatsPage /></ProtectedRoute>} />
           <Route path="/packing-lists/:packListId/containers/:containerId" element={<ProtectedRoute><ContainerDetailPage /></ProtectedRoute>} />
           {/* Public container viewer: scan or link goes here */}
           <Route path="/c/:containerId" element={<PublicContainerPage />} />

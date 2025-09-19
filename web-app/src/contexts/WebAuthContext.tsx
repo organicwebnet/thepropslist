@@ -7,11 +7,17 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink,
+  EmailAuthProvider,
+  linkWithCredential,
   GoogleAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { buildVerificationEmailDoc } from '../services/EmailService';
 import { auth, db } from '../firebase';
 // If you implement caching, import your webCache here
 // import { webCache } from '../services/webCache';
@@ -41,6 +47,12 @@ interface WebAuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  startEmailVerification: (email: string) => Promise<void>;
+  isEmailLinkInUrl: (url: string) => boolean;
+  completeEmailVerification: (email: string, url?: string) => Promise<void>;
+  finalizeSignup: (displayName: string, password: string) => Promise<void>;
+  startCodeVerification: (email: string) => Promise<void>;
+  verifyCode: (email: string, code: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
@@ -124,7 +136,35 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         }
         return profileData;
       } else {
-        // Create default profile for new users
+        // If invite-only mode is enabled, require a valid invitation before creating a profile
+        const inviteOnly = String(import.meta.env.VITE_INVITE_ONLY || '').toLowerCase() === 'true';
+        if (inviteOnly) {
+          try {
+            const emailToCheck = (user?.email || '').toLowerCase();
+            const invitesRef = collection(db, 'invitations');
+            const q = query(invitesRef, where('email', '==', emailToCheck));
+            const snap = await getDocs(q);
+            const hasInvite = !snap.empty;
+            if (!hasInvite) {
+              setError('Signups are invite‑only. Please request an invite to join.');
+              await signOut(auth);
+              setUser(null);
+              setUserProfile(null);
+              setCurrentOrganization(null);
+              return null;
+            }
+          } catch (invErr) {
+            console.warn('Invite check failed; denying profile creation for safety', invErr);
+            setError('Unable to verify invitation. Please try again later or request a new invite.');
+            await signOut(auth);
+            setUser(null);
+            setUserProfile(null);
+            setCurrentOrganization(null);
+            return null;
+          }
+        }
+
+        // Create default profile for new users (open signup or invited)
         const defaultProfile: UserProfile = {
           uid,
           email: user?.email || '',
@@ -190,6 +230,72 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
     }
   };
 
+  // Email link verification flow
+  const actionCodeSettings = {
+    // Send users back to this url to finish sign-in
+    url: `${window.location.origin}/complete-signup`,
+    handleCodeInApp: true
+  } as const;
+
+  const startEmailVerification = async (email: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      // Persist for redirect flow
+      window.localStorage.setItem('propsbible_signup_email', email);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isEmailLinkInUrl = (url: string) => {
+    try {
+      return isSignInWithEmailLink(auth, url);
+    } catch {
+      return false;
+    }
+  };
+
+  const completeEmailVerification = async (email: string, url?: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const href = url || window.location.href;
+      await signInWithEmailLink(auth, email, href);
+      // onAuthStateChanged will load/create profile (subject to invite-only rules)
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const finalizeSignup = async (displayName: string, password: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      if (!user || !user.email) throw new Error('No verified user session.');
+      // Attach password credential
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await linkWithCredential(user, credential).catch(async (e: any) => {
+        // If already has password provider, fall back to updateProfile only
+        if (!String(e?.code || '').includes('already-in-use')) throw e;
+      });
+      await updateProfile(user, { displayName });
+      await loadUserProfile(user.uid);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
@@ -203,6 +309,69 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         setError(error.message);
         throw error;
       }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Code-based verification using Firestore + email queue
+  const codeCollection = 'pending_signups';
+
+  const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+  const hashCode = async (code: string) => {
+    // Simple SHA-256 hashing in browser
+    const enc = new TextEncoder();
+    const buf = await crypto.subtle.digest('SHA-256', enc.encode(code));
+    const arr = Array.from(new Uint8Array(buf));
+    return arr.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const startCodeVerification = async (email: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const code = generateCode();
+      const codeHash = await hashCode(code);
+      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+      const attempts = 0;
+      await setDoc(doc(db, codeCollection, email.toLowerCase()), {
+        codeHash,
+        expiresAt,
+        attempts,
+        createdAt: Timestamp.now()
+      });
+      // enqueue email
+      try {
+        const emailDoc = buildVerificationEmailDoc(email, code);
+        await setDoc(doc(collection(db, 'emails')), emailDoc);
+      } catch (mailErr) {
+        console.warn('Failed to queue verification email', mailErr);
+      }
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyCode = async (email: string, code: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const ref = doc(db, codeCollection, email.toLowerCase());
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return false;
+      const data = snap.data() as any;
+      if (Date.now() > (data.expiresAt || 0)) return false;
+      const providedHash = await hashCode(code);
+      const isMatch = providedHash === data.codeHash;
+      // Basic attempt tracking
+      await updateDoc(ref, { attempts: (data.attempts || 0) + 1 });
+      return isMatch;
+    } catch (error: any) {
+      setError(error.message);
+      return false;
     } finally {
       setLoading(false);
     }

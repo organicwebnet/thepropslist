@@ -82,3 +82,41 @@ export function buildReminderEmailDoc(toEmail: string, params: InviteEmailParams
 }
 
 
+// Email verification (code-based) helpers
+export function buildVerificationEmailDoc(toEmail: string, code: string) {
+  const subject = `Your ${DEFAULT_APP_NAME} verification code`;
+  const html = `
+    <div style="background:#0b0b12;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#111827;border-radius:10px;border:1px solid #1f2937;overflow:hidden;">
+        <tr>
+          <td style="padding:20px 24px;background:#0f172a;border-bottom:1px solid #1f2937;">
+            <div style="font-size:18px;font-weight:700;color:#ffffff;">${DEFAULT_APP_NAME}</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px;">
+            <p style="margin:0 0 12px 0;">Here is your verification code:</p>
+            <p style="margin:0 0 16px 0;font-size:28px;letter-spacing:6px;font-weight:800;color:#ffffff;">${code}</p>
+            <p style="margin:0 0 12px 0;color:#cbd5e1;font-size:14px;">The code expires in 10 minutes and can be used once.</p>
+            <p style="margin:0;color:#9ca3af;font-size:13px;">If you didn’t request this, you can ignore this email.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 24px;background:#0f172a;border-top:1px solid #1f2937;color:#94a3b8;font-size:12px;">
+            <div>Sent by ${DEFAULT_APP_NAME} • thepropslist.uk</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+  const text = `Your ${DEFAULT_APP_NAME} verification code: ${code}\nIt expires in 10 minutes.`;
+  return {
+    from: { email: DEFAULT_FROM_EMAIL, name: DEFAULT_FROM_NAME },
+    to: [{ email: toEmail, name: 'User' }],
+    subject,
+    html,
+    text,
+    replyTo: { email: DEFAULT_FROM_EMAIL, name: DEFAULT_FROM_NAME },
+  } as any;
+}
+
