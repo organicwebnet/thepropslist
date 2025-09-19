@@ -1,10 +1,9 @@
 import { FirebaseService } from '../firebase/types.ts';
 import { InventoryService } from './inventoryService.ts';
-import { QRCodeService, QRCodeData } from '../qr/qrService.ts';
+import { QRCodeService } from '../qr/qrService.ts';
 import { 
   DocumentData, 
   CollectionReference, 
-  DocumentReference,
   QueryDocumentSnapshot,
   Firestore,
   collection,
@@ -17,7 +16,6 @@ import {
   query,
   where,
   WhereFilterOp,
-  getFirestore,
   Query,
   WithFieldValue,
   PartialWithFieldValue,

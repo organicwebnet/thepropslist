@@ -16,8 +16,6 @@ import { FirebaseError } from './types.ts';
 
 // Corrected paths for application-specific types using tsconfig aliases if you have them
 // Example: import type { Prop } from '@/shared/types/props';
-import type { Prop } from '../../types/props';
-import type { Show } from '../../../types';
 
 /**
  * An abstract base class for Firebase services.

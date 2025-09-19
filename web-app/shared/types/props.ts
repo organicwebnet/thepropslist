@@ -1,5 +1,5 @@
 import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle.ts';
-import { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firestore';
+// Removed unused Firebase native types
 import { Address } from './address.ts';
 
 // Re-export master types from src/types/index.ts

@@ -8,18 +8,6 @@ import { useShowSelection } from "./contexts/ShowSelectionContext";
 import type { Show } from "./types/Show";
 import { useFirebase } from "./contexts/FirebaseContext";
 
-// Animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      duration: 0.5
-    }
-  }
-};
-
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
   visible: {
@@ -27,23 +15,6 @@ const itemVariants = {
     opacity: 1,
     transition: {
       duration: 0.5
-    }
-  }
-};
-
-const cardVariants = {
-  hidden: { scale: 0.95, opacity: 0 },
-  visible: {
-    scale: 1,
-    opacity: 1,
-    transition: {
-      duration: 0.4
-    }
-  },
-  hover: {
-    scale: 1.02,
-    transition: {
-      duration: 0.2
     }
   }
 };

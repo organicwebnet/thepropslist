@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from './PropsBibleHomepage';
 import { useWebAuth } from './contexts/WebAuthContext';
 import { useFirebase } from './contexts/FirebaseContext';
-import { propCategories, PropLifecycleStatus, Prop } from '../shared/types/props';
+import { propCategories, Prop } from '../shared/types/props';
 import { FirebaseDocument } from '../shared/services/firebase/types';
 import { useShowSelection } from './contexts/ShowSelectionContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -130,10 +130,7 @@ const PropsListPage: React.FC = () => {
     return () => unsubscribe();
   }, [firebaseService, isInitialized, firebaseInitError, currentShowId]);
 
-  const handleAddProp = () => {
-    // TODO: Route to add prop form
-    alert('Add Prop (not implemented)');
-  };
+  // Removed unused handler
 
   // Filtered props
   const filteredProps = props.filter((prop) => {

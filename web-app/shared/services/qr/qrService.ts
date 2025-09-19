@@ -75,7 +75,7 @@ export class PropQRCodeService implements QRCodeService {
     }
   }
 
-  async generateBatchQRCodes(dataList: QRCodeData[], options: QRCodeOptions = {}): Promise<string[]> {
+  async generateBatchQRCodes(dataList: QRCodeData[], _options: QRCodeOptions = {}): Promise<string[]> {
     try {
       return Promise.all(
         dataList.map(data => this.generateQRCode(data, options))
@@ -131,13 +131,13 @@ export class PropQRCodeService implements QRCodeService {
     }
   }
 
-  private async generateQRCodeImage(data: string, options: QRCodeOptions): Promise<string> {
+  private async generateQRCodeImage(_data: string, _options: QRCodeOptions): Promise<string> {
     // Placeholder for actual QR code generation
     // You would implement this using your chosen QR code library
     return 'data:image/png;base64,...';
   }
 
-  private async decodeQRCode(imageData: Blob): Promise<string> {
+  private async decodeQRCode(_imageData: Blob): Promise<string> {
     // Placeholder for actual QR code scanning
     // You would implement this using your chosen QR code scanning library
     return '{"propId":"...","name":"...","category":"..."}';

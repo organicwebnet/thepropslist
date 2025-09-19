@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { ImagePlus, Link, X, Loader2, Image as ImageIcon, Star, Trash2, AlertTriangle } from 'lucide-react';
-import { useFirebase } from '../contexts/FirebaseContext';
+// Removed unused useFirebase import
 import type { PropImage } from '../types/props';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadImages } from '../../shared/services/firebase/firebase';
@@ -18,7 +18,6 @@ export function ImageUpload({ onImagesChange, currentImages = [], disabled = fal
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const firebase = useFirebase();
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (disabled) return;

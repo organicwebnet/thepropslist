@@ -78,29 +78,4 @@ export async function uploadImages(files: File[], path: string): Promise<{
   };
 }
 
-/**
- * Validates a file before upload
- * @param file The file to validate
- * @returns An error message if validation fails, null if validation passes
- */
-function validateFile(file: File): string | null {
-  if (!file.type.startsWith('image/')) {
-    return 'Invalid file type. Only images are allowed.';
-  }
-
-  const maxFileSize = 5 * 1024 * 1024; // 5MB
-  if (file.size > maxFileSize) {
-    return 'File exceeds maximum size of 5MB.';
-  }
-
-  return null;
-}
-
-/**
- * Generates a unique filename for storage
- * @param originalFilename The original filename
- * @returns A unique filename
- */
-function generateUniqueFilename(originalFilename: string): string {
-  return `${uuidv4()}-${originalFilename}`;
-} 
+// Removed unused helper functions validateFile and generateUniqueFilename

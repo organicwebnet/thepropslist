@@ -26,18 +26,8 @@ import PropsBibleHomepage from '../PropsBibleHomepage';
 
 const BoardsPage: React.FC = () => {
   const { service } = useFirebase();
-  const [showForm, setShowForm] = useState(false);
-  const [boardName, setBoardName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [boards, setBoards] = useState<BoardData[]>([]);
-  const [selectedBoardId, setSelectedBoardId] = useState<string | null>(null);
   const { currentShowId } = useShowSelection();
-  const [showTitle, setShowTitle] = useState<string>("");
   const { user } = useWebAuth();
-
-  console.log("[BoardsPage] currentShowId:", currentShowId);
-  console.log("[BoardsPage] Current user:", user);
 
   useEffect(() => {
     // Listen to boards collection, filter by showId if selected

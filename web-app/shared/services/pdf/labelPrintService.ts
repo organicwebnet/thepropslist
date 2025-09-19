@@ -102,7 +102,7 @@ export class LabelPrintService {
   async printLabels(labels: PackingLabel[], options: LabelPrintOptions = {}): Promise<void> {
     const html = this.generateHtml(labels);
 
-    if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') {
       // For web, create a temporary iframe to handle printing
       const iframe = document.createElement('iframe');
       iframe.style.display = 'none';
@@ -121,7 +121,7 @@ export class LabelPrintService {
         const pdf = new jsPDF();
         pdf.html(html, {
           callback: () => {
-        if (Platform.OS === 'android') {
+        if (typeof window === 'undefined') {
               // Sharing not supported on Android in web context
               console.log('Sharing not supported on Android');
         } else {

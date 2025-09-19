@@ -5,7 +5,9 @@ import './index.css'
 import { FirebaseProvider } from './contexts/FirebaseContext'
 import { WebAuthProvider } from './contexts/WebAuthContext'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootEl = document.getElementById('root');
+if (!rootEl) throw new Error('Root element #root not found');
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <FirebaseProvider>
       <WebAuthProvider>

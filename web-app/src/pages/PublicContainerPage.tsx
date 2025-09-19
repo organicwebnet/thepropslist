@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import './Public.css';
 
 type PackedProp = { name: string; quantity?: number; id?: string; category?: string };

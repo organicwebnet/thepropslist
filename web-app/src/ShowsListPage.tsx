@@ -11,7 +11,7 @@ const ShowsListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shows, setShows] = useState<Show[]>([]);
-  const { userProfile, user } = useWebAuth();
+  const { user } = useWebAuth();
   const { service: firebaseService, isInitialized, error: firebaseInitError }: FirebaseContextType = useFirebase();
   const navigate = useNavigate();
   const { currentShowId, setCurrentShowId } = useShowSelection();

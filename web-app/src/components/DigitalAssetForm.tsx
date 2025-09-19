@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { PlusCircle, X, FileText, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import type { DigitalAsset } from '../types/props';
-import { useFirebase } from '../contexts/FirebaseContext.tsx';
 
 interface DigitalAssetFormProps {
   assets: DigitalAsset[];
@@ -11,7 +10,6 @@ interface DigitalAssetFormProps {
 }
 
 export function DigitalAssetForm({ assets = [], onChange, disabled = false }: DigitalAssetFormProps) {
-  const { service } = useFirebase();
   const [validating, setValidating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'pending'>>({});

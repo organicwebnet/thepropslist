@@ -1,5 +1,4 @@
 import React from 'react';
-import { globalStyles } from '../styles/globalStyles';
 
 interface RichTextEditorProps {
   value: string;

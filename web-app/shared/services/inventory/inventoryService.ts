@@ -1,4 +1,4 @@
-import { FirebaseService, FirebaseError, FirebaseDocument } from '../firebase/types.ts';
+import { FirebaseService, FirebaseError } from '../firebase/types.ts';
 import { VisionAPIService } from '../ai/vision.ts';
 import { QRCodeService, QRCodeData } from '../qr/qrService.ts';
 import { 
@@ -12,8 +12,7 @@ import {
   query as webQuery,
   where as webWhere,
   getDocs as webGetDocs,
-  orderBy as webOrderBy,
-  limit as webLimit
+  
 } from 'firebase/firestore';
 
 export interface PropLocation {

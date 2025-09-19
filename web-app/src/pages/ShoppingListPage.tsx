@@ -2,7 +2,7 @@ import React, { useState, ChangeEvent } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { ImageCarousel } from '../components/ImageCarousel';
 import { Plus, Package, ShoppingBag, Briefcase } from 'lucide-react';
-import { useRef } from 'react';
+// Removed unused useRef import
 import type { Prop } from '../types/props';
 
 // Types for shopping items and options

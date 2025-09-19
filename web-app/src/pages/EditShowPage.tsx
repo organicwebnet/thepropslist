@@ -259,7 +259,8 @@ const EditShowPage: React.FC = () => {
         ...show,
         logoImage: logoUrl ? { url: logoUrl } : undefined,
       };
-      await firebaseService.updateDocument('shows', id!, showData);
+      if (!id) throw new Error('Missing show id');
+      await firebaseService.updateDocument('shows', id, showData);
       setSaving(false);
       navigate(`/shows/${id}`);
     } catch (err: any) {

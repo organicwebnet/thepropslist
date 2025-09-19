@@ -57,7 +57,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [type, showAddModal]);
+  }, [type, showAddModal, firebaseService]);
 
   const handleSelect = (id: string) => {
     if (allowMultiple) {

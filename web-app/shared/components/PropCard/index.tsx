@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
-import { formatDistanceToNow } from 'date-fns';
 import type { Prop } from '../../types';
 import { lifecycleStatusLabels } from '../../../types/lifecycle.ts';
 import { Feather } from '@expo/vector-icons';
-import { PrintLabelButton } from './PrintLabelButton.tsx';
 
 interface PropCardProps {
   prop: Prop;

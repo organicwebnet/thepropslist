@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { getAuth, type User } from 'firebase/auth';
-import { getFirestore, type DocumentData, collection, query, where, onSnapshot, getDoc, doc } from 'firebase/firestore';
+import { type User } from 'firebase/auth';
 import { app, auth, db } from '../firebase';
 import {
   FirebaseService as FirebaseServiceInterface,
