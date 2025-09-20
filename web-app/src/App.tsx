@@ -42,7 +42,7 @@ const HelpPage = lazy(() => import('./pages/HelpPage'));
 const PropDetailMockPage = lazy(() => import('./pages/PropDetailMockPage'));
 const SubscriberStatsPage = lazy(() => import('./pages/SubscriberStatsPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
-const SubscriptionTest = lazy(() => import('../components/__tests__/SubscriptionTest'));
+// const SubscriptionTest = lazy(() => import('../../src/components/__tests__/SubscriptionTest'));
 const JoinInvitePage = lazy(() => import('./pages/JoinInvitePage'));
 
 function App() {
@@ -76,7 +76,7 @@ function App() {
           <Route path="/shows/:id" element={<ShowDetailPage />} />
           <Route path="/shows/:id/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
-          <Route path="/test/subscription" element={<ProtectedRoute><SubscriptionTest /></ProtectedRoute>} />
+          {/* <Route path="/test/subscription" element={<ProtectedRoute><SubscriptionTest /></ProtectedRoute>} /> */}
           <Route path="/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />
           <Route path="/join/:token" element={<JoinInvitePage />} />
           <Route path="/packing-lists" element={<ProtectedRoute><PackingListPage /></ProtectedRoute>} />
