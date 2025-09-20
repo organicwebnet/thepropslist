@@ -95,6 +95,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="help"
+        options={{
+          title: 'Help',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="help-circle" size={24} color={color} />
+          ),
+        }}
+      />
       {/* Hide all nested routes from tab bar */}
       <Tabs.Screen
         name="todos/index"

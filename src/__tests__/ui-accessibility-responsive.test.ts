@@ -662,3 +662,4 @@ describe('Responsive Design Tests', () => {
     });
   });
 });
+

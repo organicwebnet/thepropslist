@@ -17,7 +17,46 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist'
+    outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          'ui-vendor': ['framer-motion', 'lucide-react'],
+          'pdf-vendor': ['jspdf', 'html2pdf.js'],
+          'dnd-vendor': ['@dnd-kit/core', '@dnd-kit/sortable'],
+          
+          // Feature chunks
+          'props': [
+            './src/PropsListPage.tsx',
+            './src/pages/PropDetailPage.tsx',
+            './src/pages/AddPropPage.tsx',
+            './src/pages/EditPropPage.tsx'
+          ],
+          'shows': [
+            './src/ShowsListPage.tsx',
+            './src/pages/ShowDetailPage.tsx',
+            './src/pages/AddShowPage.tsx',
+            './src/pages/EditShowPage.tsx',
+            './src/pages/TeamPage.tsx'
+          ],
+          'boards': [
+            './src/pages/BoardsPage.tsx'
+          ],
+          'packing': [
+            './src/pages/PackingListPage.tsx',
+            './src/pages/PackingListDetailPage.tsx',
+            './src/pages/ContainerDetailPage.tsx'
+          ],
+          'pdf-export': [
+            './src/pages/PropsPdfExportPage.tsx'
+          ]
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
   },
   resolve: {
     alias: {

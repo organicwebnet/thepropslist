@@ -15,6 +15,7 @@ const RBACTest: React.FC = () => {
       'canEditProps',
       'canDeleteProps',
       'canManageUsers',
+      'canEditShows',
     ];
 
     for (const permissionKey of permissionsToTest) {
@@ -48,6 +49,8 @@ const RBACTest: React.FC = () => {
             <h3 style={{ margin: '0 0 8px', color: '#166534' }}>User Info</h3>
             <p style={{ margin: '0 0 4px' }}><strong>Email:</strong> {user.email}</p>
             <p style={{ margin: '0 0 4px' }}><strong>Role:</strong> {userProfile?.role || 'No role'}</p>
+            <p style={{ margin: '0 0 4px' }}><strong>Groups:</strong> {userProfile?.groups ? JSON.stringify(userProfile.groups) : 'None'}</p>
+            <p style={{ margin: '0 0 4px' }}><strong>Plan:</strong> {userProfile?.plan || 'No plan'}</p>
           </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>

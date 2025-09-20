@@ -1045,9 +1045,9 @@ const TaskBoardDetailScreen = () => {
             <Ionicons name="cube-outline" size={24} color="#a3a3a3" />
             <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Packing</DefaultText>
           </Pressable>
-          <Pressable onPress={() => router.navigate('/(tabs)/profile')} style={styles.navItem}>
-            <Ionicons name="person" size={24} color="#a3a3a3" />
-            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Profile</DefaultText>
+          <Pressable onPress={() => router.navigate('/(tabs)/help')} style={styles.navItem}>
+            <Ionicons name="help-circle" size={24} color="#a3a3a3" />
+            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Help</DefaultText>
           </Pressable>
         </View>
       </LinearGradient>

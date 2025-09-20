@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap } from 'lucide-react';
+import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap, HelpCircle } from 'lucide-react';
 import NotificationBell from './components/NotificationBell';
 import { useWebAuth } from './contexts/WebAuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -78,6 +78,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { icon: Theater, text: 'Show Management', subtext: 'Manage productions and venues', link: '/shows' },
     { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards' },
     { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping' },
+    { icon: HelpCircle, text: 'Help', subtext: 'Documentation and support', link: '/help' },
   ] as Array<{ icon: any; text: string; subtext: string; link?: string }>;
   if (userProfile?.role === 'god') {
     navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers' });

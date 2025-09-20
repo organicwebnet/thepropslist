@@ -485,3 +485,4 @@ describe('UI Visual Regression Tests', () => {
     });
   });
 });
+
