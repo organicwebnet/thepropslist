@@ -67,7 +67,11 @@ jest.mock('react-native-reanimated', () => ({
 }));
 
 // Silence the warning: Animated: `useNativeDriver` is not supported
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+try {
+  jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+} catch (e) {
+  // Ignore if React Native is not available (web environment)
+}
 
 // Mock expo-font
 jest.mock('expo-font');

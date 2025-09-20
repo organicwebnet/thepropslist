@@ -18,6 +18,7 @@ const AdminUsersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [seedingRoles, setSeedingRoles] = useState(false);
   const [seedOutput, setSeedOutput] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,6 +59,23 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleSeedRoleBasedTestUsers = async () => {
+    try {
+      setSeedingRoles(true);
+      setError(null);
+      setSeedOutput(null);
+      const fn = httpsCallable<any, { ok: boolean; users: Array<{ email: string; password: string; uid: string; role: string; permissions: any }> }>(getFunctions(), 'seedRoleBasedTestUsers');
+      const res = await fn({});
+      const users = res?.data?.users || [];
+      const text = users.map((u: any) => `${u.email} | ${u.password} | ${u.role} | ${JSON.stringify(u.permissions)}`).join('\n');
+      setSeedOutput(text || 'No users returned');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to seed role-based test users');
+    } finally {
+      setSeedingRoles(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto">
@@ -65,7 +83,10 @@ const AdminUsersPage: React.FC = () => {
           <h1 className="text-xl font-bold text-white">Users (Admin)</h1>
           <div className="flex items-center gap-3">
             <button onClick={handleSeedTestUsers} disabled={seeding} className="px-3 py-1.5 rounded bg-pb-primary text-white font-semibold">
-              {seeding ? 'Seeding…' : 'Seed Test Users'}
+              {seeding ? 'Seeding…' : 'Seed Subscription Test Users'}
+            </button>
+            <button onClick={handleSeedRoleBasedTestUsers} disabled={seedingRoles} className="px-3 py-1.5 rounded bg-green-600 text-white font-semibold">
+              {seedingRoles ? 'Seeding…' : 'Seed Role-Based Users'}
             </button>
             <div className="text-sm text-pb-gray">Tip: Deleting here removes profile docs only. To free an email for reuse, delete the Auth account in Firebase Console.</div>
           </div>

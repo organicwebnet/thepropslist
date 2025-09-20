@@ -1,38 +1,49 @@
 import React, { Suspense, lazy } from 'react';
-import PropsBibleHomepage from './PropsBibleHomepage';
-import PropsListPage from './PropsListPage';
-import DashboardHome from './DashboardHome';
-import ShowsListPage from './ShowsListPage';
 import './index.css';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import ForgotPassword from './pages/ForgotPassword';
 import { useWebAuth } from './contexts/WebAuthContext';
-import ShowDetailPage from './pages/ShowDetailPage';
-import TeamPage from './pages/TeamPage';
-import AdminUsersPage from './pages/AdminUsersPage';
-import AddShowPage from './pages/AddShowPage';
-import EditShowPage from './pages/EditShowPage';
 import { ShowSelectionProvider } from './contexts/ShowSelectionContext';
-import PropDetailPage from './pages/PropDetailPage';
-import EditPropPage from './pages/EditPropPage';
-import AddPropPage from './pages/AddPropPage';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// Core components that are always needed
+import PropsBibleHomepage from './PropsBibleHomepage';
+import DashboardHome from './DashboardHome';
+
+// Lazy load all page components for better performance
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const CompleteSignup = lazy(() => import('./pages/CompleteSignup'));
+
+const PropsListPage = lazy(() => import('./PropsListPage'));
+const PropDetailPage = lazy(() => import('./pages/PropDetailPage'));
+const EditPropPage = lazy(() => import('./pages/EditPropPage'));
+const AddPropPage = lazy(() => import('./pages/AddPropPage'));
+const PropsPdfExportPage = lazy(() => import('./pages/PropsPdfExportPage'));
+
+const ShowsListPage = lazy(() => import('./ShowsListPage'));
+const ShowDetailPage = lazy(() => import('./pages/ShowDetailPage'));
+const AddShowPage = lazy(() => import('./pages/AddShowPage'));
+const EditShowPage = lazy(() => import('./pages/EditShowPage'));
+const TeamPage = lazy(() => import('./pages/TeamPage'));
+
 const BoardsPage = lazy(() => import('./pages/BoardsPage'));
-import PackingListPage from './pages/PackingListPage';
+
+const PackingListPage = lazy(() => import('./pages/PackingListPage'));
 const PackingListDetailPage = lazy(() => import('./pages/PackingListDetailPage'));
 const ContainerDetailPage = lazy(() => import('./pages/ContainerDetailPage'));
-import PublicContainerPage from './pages/PublicContainerPage';
-const PropsPdfExportPage = lazy(() => import('./pages/PropsPdfExportPage'));
+const PublicContainerPage = lazy(() => import('./pages/PublicContainerPage'));
+
 const BrandingStudioPage = lazy(() => import('./pages/BrandingStudioPage'));
 const ShoppingListPage = lazy(() => import('./pages/ShoppingListPage'));
-import ProfilePage from './pages/ProfilePage';
-import FeedbackPage from './pages/FeedbackPage';
-import PropDetailMockPage from './pages/PropDetailMockPage';
-import SubscriberStatsPage from './pages/SubscriberStatsPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import JoinInvitePage from './pages/JoinInvitePage';
-import CompleteSignup from './pages/CompleteSignup';
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
+const HelpPage = lazy(() => import('./pages/HelpPage'));
+const PropDetailMockPage = lazy(() => import('./pages/PropDetailMockPage'));
+const SubscriberStatsPage = lazy(() => import('./pages/SubscriberStatsPage'));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
+const SubscriptionTest = lazy(() => import('../components/__tests__/SubscriptionTest'));
+const JoinInvitePage = lazy(() => import('./pages/JoinInvitePage'));
 
 function App() {
   const { user } = useWebAuth();
@@ -40,13 +51,11 @@ function App() {
     <ShowSelectionProvider>
       <BrowserRouter>
         <Suspense fallback={
-          <div 
-            style={{ padding: 24 }} 
-            role="status" 
-            aria-live="polite" 
-            aria-label="Loading page"
-          >
-            Loading…
+          <div className="min-h-screen w-full bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary mx-auto mb-4"></div>
+              <p className="text-pb-light text-lg">Loading...</p>
+            </div>
           </div>
         }>
         <Routes>
@@ -67,6 +76,7 @@ function App() {
           <Route path="/shows/:id" element={<ShowDetailPage />} />
           <Route path="/shows/:id/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><AdminUsersPage /></ProtectedRoute>} />
+          <Route path="/test/subscription" element={<ProtectedRoute><SubscriptionTest /></ProtectedRoute>} />
           <Route path="/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />
           <Route path="/join/:token" element={<JoinInvitePage />} />
           <Route path="/packing-lists" element={<ProtectedRoute><PackingListPage /></ProtectedRoute>} />
@@ -78,6 +88,7 @@ function App() {
           <Route path="/shopping" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
           {/* Mock preview routes for screenshots */}
           <Route path="/mock/prop-detail" element={user ? <PropDetailMockPage /> : <Navigate to="/login" replace />} />
           <Route path="/mock/prop-detail/:id" element={user ? <PropDetailMockPage /> : <Navigate to="/login" replace />} />

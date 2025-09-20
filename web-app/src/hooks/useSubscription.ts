@@ -15,6 +15,7 @@ export interface SubscriptionInfo {
     boards: number;
     packingBoxes: number;
     collaboratorsPerShow: number;
+    props: number;
   };
 }
 
@@ -23,13 +24,14 @@ const DEFAULT_LIMITS: SubscriptionInfo['limits'] = {
   boards: 2,
   packingBoxes: 20,
   collaboratorsPerShow: 3,
+  props: 10,
 };
 
 const PLAN_LIMITS: Record<PlanKey, SubscriptionInfo['limits']> = {
-  free: { shows: 1, boards: 2, packingBoxes: 20, collaboratorsPerShow: 3 },
-  starter: { shows: 3, boards: 5, packingBoxes: 200, collaboratorsPerShow: 5 },
-  standard: { shows: 10, boards: 20, packingBoxes: 1000, collaboratorsPerShow: 15 },
-  pro: { shows: 100, boards: 200, packingBoxes: 10000, collaboratorsPerShow: 100 },
+  free: { shows: 1, boards: 2, packingBoxes: 20, collaboratorsPerShow: 3, props: 10 },
+  starter: { shows: 3, boards: 5, packingBoxes: 200, collaboratorsPerShow: 5, props: 50 },
+  standard: { shows: 10, boards: 20, packingBoxes: 1000, collaboratorsPerShow: 15, props: 100 },
+  pro: { shows: 100, boards: 200, packingBoxes: 10000, collaboratorsPerShow: 100, props: 1000 },
   unknown: DEFAULT_LIMITS,
 };
 

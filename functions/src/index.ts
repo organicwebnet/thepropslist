@@ -505,6 +505,141 @@ export const seedTestUsers = onCall({ region: "us-central1" }, async (req) => {
   return { ok: true, users: out } as any;
 });
 
+// --- Seed role-based test users (god/system-admin only) ---
+export const seedRoleBasedTestUsers = onCall({ region: "us-central1" }, async (req) => {
+  if (!req.auth) throw new Error("unauthenticated");
+  const uid = req.auth.uid;
+  const db = admin.firestore();
+  
+  // Check role from userProfiles OR fallback to users. Also allow custom claim 'admin'
+  const prof = await db.doc(`userProfiles/${uid}`).get();
+  let me = prof.exists ? (prof.data() as any) : {};
+  if (!me || Object.keys(me).length === 0) {
+    const userDoc = await db.doc(`users/${uid}`).get();
+    if (userDoc.exists) me = { ...(userDoc.data() as any) };
+  }
+  const token = (req as any).auth?.token || {};
+  const isGod = String(me?.role || '').toLowerCase() === 'god';
+  const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
+  if (!isGod && !isSystemAdmin) throw new Error("forbidden");
+
+  const roleBasedUsers = [
+    { 
+      email: 'test_god@thepropslist.test', 
+      role: 'god', 
+      groups: { 'system-admin': true },
+      permissions: {
+        canEditProps: true,
+        canDeleteProps: true,
+        canManageUsers: true,
+        canEditShows: true,
+        canCreateProps: true
+      }
+    },
+    { 
+      email: 'test_props_supervisor@thepropslist.test', 
+      role: 'props_supervisor',
+      groups: {},
+      permissions: {
+        canEditProps: true,
+        canDeleteProps: true,
+        canManageUsers: true,
+        canEditShows: true,
+        canCreateProps: true
+      }
+    },
+    { 
+      email: 'test_stage_manager@thepropslist.test', 
+      role: 'stage_manager',
+      groups: {},
+      permissions: {
+        canEditProps: true,
+        canDeleteProps: false,
+        canManageUsers: false,
+        canEditShows: false,
+        canCreateProps: true
+      }
+    },
+    { 
+      email: 'test_prop_maker@thepropslist.test', 
+      role: 'prop_maker',
+      groups: {},
+      permissions: {
+        canEditProps: true,
+        canDeleteProps: false,
+        canManageUsers: false,
+        canEditShows: false,
+        canCreateProps: true
+      }
+    },
+    { 
+      email: 'test_viewer@thepropslist.test', 
+      role: 'viewer',
+      groups: {},
+      permissions: {
+        canEditProps: false,
+        canDeleteProps: false,
+        canManageUsers: false,
+        canEditShows: false,
+        canCreateProps: false
+      }
+    }
+  ];
+  
+  const password = String(req.data?.password || 'PropsList-Test1!');
+  const out: any[] = [];
+  
+  for (const userConfig of roleBasedUsers) {
+    let userRecord: admin.auth.UserRecord | null = null;
+    try {
+      const existing = await admin.auth().getUserByEmail(userConfig.email);
+      userRecord = existing;
+    } catch {
+      userRecord = await admin.auth().createUser({ 
+        email: userConfig.email, 
+        password, 
+        emailVerified: true, 
+        displayName: userConfig.email.split('@')[0] 
+      });
+    }
+    if (!userRecord) continue;
+    
+    const userId = userRecord.uid;
+    
+    // Create user document
+    await db.doc(`users/${userId}`).set({ 
+      uid: userId, 
+      email: userConfig.email, 
+      displayName: userRecord.displayName || userConfig.email.split('@')[0], 
+      role: userConfig.role, 
+      createdAt: Date.now(), 
+      lastLogin: null,
+      permissions: userConfig.permissions
+    }, { merge: true });
+    
+    // Create user profile document
+    await db.doc(`userProfiles/${userId}`).set({ 
+      email: userConfig.email, 
+      role: userConfig.role, 
+      groups: userConfig.groups, 
+      plan: 'pro', // Give all role-based test users pro plan for testing
+      subscriptionStatus: 'active', 
+      lastStripeEventTs: Date.now(),
+      permissions: userConfig.permissions
+    }, { merge: true });
+    
+    out.push({ 
+      email: userConfig.email, 
+      password, 
+      uid: userId, 
+      role: userConfig.role,
+      permissions: userConfig.permissions
+    });
+  }
+  
+  return { ok: true, users: out } as any;
+});
+
 // --- Admin: Subscription stats (god/system-admin only) ---
 export const getSubscriptionStats = onCall({ region: "us-central1" }, async (req) => {
   if (!req.auth) throw new Error("unauthenticated");
