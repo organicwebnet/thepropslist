@@ -157,6 +157,13 @@ service cloud.firestore {
         );
     }
 
+    // Notifications: user can read own notifications; writes by self or system-admin
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if isSystemAdmin() || (request.auth != null && request.resource.data.userId == request.auth.uid);
+      allow update, delete: if isSystemAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+    }
+
     // --- Collaborative Team & Role-Based Access Rules (ACTIVE) ---
     // These rules assume each show document has a 'team' map: { [userId]: role }
     // Remove or comment out any function definitions and .where() usage (not supported in Firestore rules)

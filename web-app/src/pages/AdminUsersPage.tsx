@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 type UserDoc = {
   uid?: string;
@@ -16,6 +17,8 @@ const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<{ id: string; data: UserDoc }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
+  const [seedOutput, setSeedOutput] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = service.listenToCollection<UserDoc>('users', (docs) => {
@@ -38,13 +41,40 @@ const AdminUsersPage: React.FC = () => {
     }
   };
 
+  const handleSeedTestUsers = async () => {
+    try {
+      setSeeding(true);
+      setError(null);
+      setSeedOutput(null);
+      const fn = httpsCallable<any, { ok: boolean; users: Array<{ email: string; password: string; uid: string; plan: string }> }>(getFunctions(), 'seedTestUsers');
+      const res = await fn({});
+      const users = res?.data?.users || [];
+      const text = users.map((u: any) => `${u.email} | ${u.password} | ${u.plan}`).join('\n');
+      setSeedOutput(text || 'No users returned');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to seed test users');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold text-white">Users (Admin)</h1>
-          <div className="text-sm text-pb-gray">Tip: Deleting here removes profile docs only. To free an email for reuse, delete the Auth account in Firebase Console.</div>
+          <div className="flex items-center gap-3">
+            <button onClick={handleSeedTestUsers} disabled={seeding} className="px-3 py-1.5 rounded bg-pb-primary text-white font-semibold">
+              {seeding ? 'Seeding…' : 'Seed Test Users'}
+            </button>
+            <div className="text-sm text-pb-gray">Tip: Deleting here removes profile docs only. To free an email for reuse, delete the Auth account in Firebase Console.</div>
+          </div>
         </div>
+        {seedOutput && (
+          <div className="mb-4 rounded border border-pb-primary/20 bg-pb-darker/40 p-3 text-sm text-white whitespace-pre-wrap">
+            {seedOutput}
+          </div>
+        )}
         {loading ? (
           <div className="text-pb-gray">Loading users…</div>
         ) : error ? (

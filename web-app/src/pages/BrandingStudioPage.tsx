@@ -3,6 +3,7 @@ import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useShowSelection } from '../contexts/ShowSelectionContext';
 import type { BrandProfile } from '../../shared/types/brand';
+import SubFootnote from '../components/SubFootnote';
 
 const BrandingStudioPage: React.FC = () => {
   const { service } = useFirebase();
@@ -32,6 +33,7 @@ const BrandingStudioPage: React.FC = () => {
     <DashboardLayout>
       <div className="max-w-3xl mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4">Branding Studio</h1>
+        <SubFootnote features={["Brand colors", "Fonts", "Headers/Footers", "Watermarking"]} />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block mb-1">Heading Font</label>

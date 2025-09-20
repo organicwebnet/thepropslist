@@ -84,6 +84,9 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
       {...attributes}
       {...listeners}
       className={`bg-pb-darker rounded-md shadow-lg border border-pb-primary/30 flex flex-col flex-shrink-0 transition-all duration-300 ${collapsed ? '!w-10 min-w-[2.5rem] min-h-[22rem] p-0 bg-pb-primary/20 relative items-center justify-center' : 'p-4 min-w-[18rem] w-[20rem]'}`}
+      role="list"
+      aria-label={`List: ${list.title}`}
+      tabIndex={0}
     >
       <div className={`flex items-center justify-between mb-4 w-full ${collapsed ? 'mb-0' : ''}`} style={collapsed ? { height: 'auto' } : {}}>
         {collapsed ? (
@@ -120,12 +123,12 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
       {!collapsed && (
         <>
           <SortableContext items={Array.isArray(cards) ? cards.map(card => `${cardIdPrefix}${card.id}`) : []} strategy={verticalListSortingStrategy}>
-            <div className="flex flex-col gap-3 mb-4">
+            <div className="flex flex-col gap-3 mb-4" role="group" aria-label="Cards in this list">
               {cards.map(card => (
-                <div key={card.id} className="relative">
+                <div key={card.id} className="relative" role="listitem">
                   {/* paperclip icon if has attachments */}
                   {Array.isArray(card.attachments) && card.attachments.length > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-pb-primary text-white text-[10px] rounded-full px-1.5 py-0.5" title="Has attachments">📎</span>
+                    <span className="absolute -top-2 -right-2 bg-pb-primary text-white text-[10px] rounded-full px-1.5 py-0.5" title="Has attachments" aria-label="Has attachments">📎</span>
                   )}
                   <Card card={card} onUpdateCard={onUpdateCard} dndId={`${cardIdPrefix}${card.id}`} openInitially={selectedCardId === card.id} />
                 </div>

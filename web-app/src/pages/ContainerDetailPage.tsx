@@ -6,6 +6,7 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import { DigitalPackListService, PackList, PackingContainer } from '../../shared/services/inventory/packListService';
 import { DigitalInventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService';
 import { getSymbolUrl, symbolLabel } from '../utils/transport';
+import SubFootnote from '../components/SubFootnote';
 
 const ContainerDetailPage: React.FC = () => {
   const { service } = useFirebase();
@@ -203,6 +204,7 @@ const ContainerDetailPage: React.FC = () => {
             Delete Container
           </button>
         </div>
+        <SubFootnote features={["Custom packing labels", "Bulk print", "Shipping templates"]} />
 
         <div className="bg-gray-900 rounded-xl shadow p-4 mb-6">
           <h2 className="font-semibold mb-2 text-lg">Details</h2>

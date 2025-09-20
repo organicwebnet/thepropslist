@@ -1,0 +1,103 @@
+# Avoid LLM patterns
+
+## Remove LLM patterns
+- Avoid repeating sentence structures like “X is a Y that does Z.”
+- Don’t start every sentence with “It’s important to…” or “This means that…”
+- Don’t overuse “In conclusion,” “Ultimately,” “As such,” etc.
+- Avoid vague intensifiers like “very,” “really,” “quite,” “rather.”
+- Don’t use “simply,” “just,” “easily,” “obviously,” or “clearly.”
+
+## Use punctuation and formatting
+- Use em dashes (—), colons, parentheses, and semicolons to vary rhythm.
+- Use short paragraphs and bullets to break up dense text.
+- Use bold and italics for emphasis and structure.
+
+## Be precise
+- Avoid generic phrases like “a wide range of,” “numerous,” “some,” “many.”
+- Prefer specific numbers, examples, or comparisons.
+- Don’t say “things,” “stuff,” “aspects,” “elements,” “features.”
+
+## Be original
+- Don’t echo the prompt. Don’t say “This article explores…” or “In this post…”
+- Don’t summarize what you’re about to say. Just say it.
+- Don’t use “Let’s dive in,” “Read on to learn more,” “In today’s world…”
+
+## Cite carefully
+- Don’t say “According to research…” or “Studies show…” without a source.
+- Don’t say “Experts agree…” or “It’s well known…” unless you can back it up.
+- Link to primary sources, not summaries or aggregators.
+
+---
+
+# Voice and tone
+
+- Write like a person. Use contractions. Avoid jargon.
+- Prefer short, punchy sentences. Vary rhythm and structure.
+- Use active voice. Avoid “is being,” “has been,” “will be.”
+- Don’t hedge. Avoid “might,” “could,” “may,” “can be.”
+- Avoid vague adjectives: “great,” “robust,” “innovative,” “unique.”
+- Prefer verbs over adjectives: “build faster” vs “lightning fast.”
+- Don’t say “we believe,” “we think,” “we strive.” Just say what we do.
+- Don’t say “our mission is to…” or “we’re passionate about…” Say what we deliver.
+- Don’t say “users can easily…” or “simply click…” Just describe the action.
+- Prefer “you” over “users.” Speak directly.
+- Don’t say “the user can…” or “the developer should…” Say “you.”
+
+## Examples
+- ❌ “Our mission is to simplify workflows.”
+- ✅ “Build workflows in minutes.”
+
+## Titles
+- Avoid “How to,” “Guide to,” “Understanding,” “Exploring,” “Introduction to.”
+- Avoid “X in 2023,” “X 101,” “X explained,” “X: Everything you need to know.”
+- Avoid “The future of,” “The power of,” “The rise of,” “The art of.”
+- Avoid “Why X matters,” “Why you should care about X,” “Why X is important.”
+- Avoid “What is X?” or “What you need to know about X.”
+- Prefer specific, benefit-driven titles: “Build a workflow in 3 minutes,” “Add auth in 5 lines,” “Fix flaky tests with one config.”
+
+---
+
+# Banned words
+
+- accurate → remove  
+- agile → remove  
+- assistance → "help"  
+- attempt → "try"  
+- battle tested → remove  
+- best practices → "proven approaches"  
+- blazing fast/lightning fast → "build XX% faster"  
+- business logic → remove  
+- cognitive load → remove  
+- commence → "start"  
+- delve → "go into"  
+- disrupt/disruptive → remove  
+- facilitate → "help" or "ease"  
+- game-changing → specific benefit  
+- great → remove or be specific  
+- implement → "do"  
+- individual → "man" or "woman"  
+- initiate → "start"  
+- innovative → remove  
+- just → remove  
+- leverage → "use"  
+- mission-critical → "important"  
+- modern/modernized → remove  
+- must-have → remove  
+- out of the box → remove  
+- revolutionary → remove  
+- robust → remove  
+- simple/simplify → remove  
+- transform/transformative → remove  
+- unique → remove  
+- virtually/quite/rather/really → remove  
+- reimagine → remove  
+- a bit → remove  
+- easy/easily → remove  
+- obviously → remove  
+- clearly → remove  
+- simply → remove  
+- stuff/things → be specific  
+- very → remove  
+- really → remove  
+- quite → remove  
+- rather → remove

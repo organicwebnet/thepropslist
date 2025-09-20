@@ -102,7 +102,8 @@ export const sendInviteEmail = onCall(async (req) => {
 const runtimeConfig = functions?.config ? functions.config() : {};
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN || runtimeConfig?.feedback?.github_token;
 const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || runtimeConfig?.feedback?.github_repo || "";
-export const onFeedbackCreated = onDocumentCreated("feedback/{id}", async (event) => {
+// NOTE: use a unique name to avoid collisions with existing HTTP functions
+export const feedbackIssueBridge = onDocumentCreated("feedback/{id}", async (event) => {
     const snap = event.data;
     if (!snap)
         return;
@@ -164,7 +165,8 @@ export const onFeedbackCreated = onDocumentCreated("feedback/{id}", async (event
     }
 });
 // EU-region Firestore trigger to match Firestore (eur3) and avoid Eventarc/Run region mismatch
-export const onFeedbackCreatedEU = functionsV1
+// NOTE: renamed (EU) to avoid function type-change collisions
+export const feedbackToGithubEU = functionsV1
     .region('europe-west1')
     .firestore.document('feedback/{id}')
     .onCreate(async (snap, context) => {
@@ -368,7 +370,8 @@ export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, re
 export const createBillingPortalSession = onCall({ region: "us-central1" }, async (req) => {
     if (!req.auth)
         throw new Error("unauthenticated");
-    if (!stripe)
+    const s = await ensureStripe();
+    if (!s)
         throw new Error("Stripe not configured");
     const uid = req.auth.uid;
     const db = admin.firestore();
@@ -380,8 +383,8 @@ export const createBillingPortalSession = onCall({ region: "us-central1" }, asyn
         // Try to find by email
         const user = await admin.auth().getUser(uid).catch(() => undefined);
         const email = (profile?.email || user?.email);
-        if (email && stripe) {
-            const list = await stripe.customers.list({ email, limit: 1 });
+        if (email && s) {
+            const list = await s.customers.list({ email, limit: 1 });
             if (list.data.length > 0)
                 customerId = list.data[0].id;
         }
@@ -391,11 +394,123 @@ export const createBillingPortalSession = onCall({ region: "us-central1" }, asyn
     if (!customerId)
         throw new Error("No Stripe customer");
     const returnUrl = process.env.BILLING_RETURN_URL || cfg?.app?.billing_return_url || "https://app.thepropslist.uk/profile";
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await s.billingPortal.sessions.create({
         customer: customerId,
         return_url: returnUrl,
     });
     return { url: session.url };
+});
+// --- Create Stripe Checkout session for new/upgrades ---
+export const createCheckoutSession = onCall({ region: "us-central1" }, async (req) => {
+    if (!req.auth)
+        throw new Error("unauthenticated");
+    const s = await ensureStripe();
+    if (!s)
+        throw new Error("Stripe not configured");
+    const uid = req.auth.uid;
+    const priceId = String(req.data?.priceId || "").trim();
+    if (!priceId)
+        throw new Error("priceId required");
+    const db = admin.firestore();
+    const profileRef = db.doc(`userProfiles/${uid}`);
+    const snap = await profileRef.get();
+    const profile = snap.exists ? snap.data() : {};
+    // Ensure customer by email
+    const user = await admin.auth().getUser(uid).catch(() => undefined);
+    const email = (profile?.email || user?.email);
+    let customerId = profile?.stripeCustomerId;
+    if (!customerId && email) {
+        const list = await s.customers.list({ email, limit: 1 });
+        customerId = list.data[0]?.id;
+    }
+    if (!customerId && email) {
+        const cust = await s.customers.create({ email });
+        customerId = cust.id;
+    }
+    if (customerId)
+        await profileRef.set({ stripeCustomerId: customerId }, { merge: true });
+    const successUrl = process.env.CHECKOUT_SUCCESS_URL || cfg?.app?.checkout_success_url || "https://app.thepropslist.uk/profile";
+    const cancelUrl = process.env.CHECKOUT_CANCEL_URL || cfg?.app?.checkout_cancel_url || "https://app.thepropslist.uk/profile";
+    const session = await s.checkout.sessions.create({
+        mode: "subscription",
+        customer: customerId,
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        allow_promotion_codes: true,
+    });
+    return { url: session.url };
+});
+// --- Seed test users (god/system-admin only) ---
+export const seedTestUsers = onCall({ region: "us-central1" }, async (req) => {
+    if (!req.auth)
+        throw new Error("unauthenticated");
+    const uid = req.auth.uid;
+    const db = admin.firestore();
+    // Check role from userProfiles OR fallback to users. Also allow custom claim 'admin'
+    const prof = await db.doc(`userProfiles/${uid}`).get();
+    let me = prof.exists ? prof.data() : {};
+    if (!me || Object.keys(me).length === 0) {
+        const userDoc = await db.doc(`users/${uid}`).get();
+        if (userDoc.exists)
+            me = { ...userDoc.data() };
+    }
+    const token = req.auth?.token || {};
+    const isGod = String(me?.role || '').toLowerCase() === 'god';
+    const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
+    if (!isGod && !isSystemAdmin)
+        throw new Error("forbidden");
+    const base = [
+        { email: 'test_free@thepropslist.test', plan: 'free' },
+        { email: 'test_starter@thepropslist.test', plan: 'starter' },
+        { email: 'test_standard@thepropslist.test', plan: 'standard' },
+        { email: 'test_pro@thepropslist.test', plan: 'pro' },
+    ];
+    const password = String(req.data?.password || 'PropsList-Test1!');
+    const out = [];
+    for (const { email, plan } of base) {
+        let userRecord = null;
+        try {
+            const existing = await admin.auth().getUserByEmail(email);
+            userRecord = existing;
+        }
+        catch {
+            userRecord = await admin.auth().createUser({ email, password, emailVerified: true, displayName: email.split('@')[0] });
+        }
+        if (!userRecord)
+            continue;
+        const userId = userRecord.uid;
+        await db.doc(`users/${userId}`).set({ uid: userId, email, displayName: userRecord.displayName || email.split('@')[0], role: 'user', createdAt: Date.now(), lastLogin: null }, { merge: true });
+        await db.doc(`userProfiles/${userId}`).set({ email, role: 'user', groups: {}, plan, subscriptionStatus: 'active', lastStripeEventTs: Date.now() }, { merge: true });
+        out.push({ email, password, uid: userId, plan });
+    }
+    return { ok: true, users: out };
+});
+// --- Admin: Subscription stats (god/system-admin only) ---
+export const getSubscriptionStats = onCall({ region: "us-central1" }, async (req) => {
+    if (!req.auth)
+        throw new Error("unauthenticated");
+    const uid = req.auth.uid;
+    const db = admin.firestore();
+    const profileSnap = await db.doc(`userProfiles/${uid}`).get();
+    const profile = profileSnap.exists ? profileSnap.data() : {};
+    const isGod = profile?.role === "god";
+    const isSystemAdmin = !!(profile?.groups && profile.groups["system-admin"] === true);
+    if (!isGod && !isSystemAdmin)
+        throw new Error("forbidden");
+    const usersSnap = await db.collection("userProfiles").get();
+    const byPlan = {};
+    const byStatus = {};
+    let total = 0;
+    usersSnap.forEach((doc) => {
+        const d = doc.data();
+        total += 1;
+        const plan = (d.plan || d.subscriptionPlan || "unknown").toString();
+        const status = (d.subscriptionStatus || "unknown").toString();
+        byPlan[plan] = (byPlan[plan] || 0) + 1;
+        byStatus[status] = (byStatus[status] || 0) + 1;
+    });
+    return { total, byPlan, byStatus };
 });
 // --- Public container info for marketing site (/c/:id) ---
 export const publicContainerInfo = onRequest({ region: "us-central1", timeoutSeconds: 120, memory: "512MiB", minInstances: 1 }, async (req, res) => {
@@ -524,7 +639,8 @@ export const publicContainerInfo = onRequest({ region: "us-central1", timeoutSec
     }
 });
 // Gen1 fallback for public container info to bypass Cloud Run startup issues
-export const publicContainerInfoV1 = functionsV1.https.onRequest(async (req, res) => {
+// Renamed to avoid version-downgrade conflicts if a V2 function with the same name ever existed
+export const publicContainerInfoLegacyV1 = functionsV1.https.onRequest(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     if (req.method === "OPTIONS") {

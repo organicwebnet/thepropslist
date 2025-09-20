@@ -370,18 +370,54 @@ const PropsListPage: React.FC = () => {
           </div>
         )}
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-64">
-            <svg className="animate-spin h-10 w-10 text-pb-primary mb-2" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>
+          <div 
+            className="flex flex-col items-center justify-center h-64"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading props"
+          >
+            <svg 
+              className="animate-spin h-10 w-10 text-pb-primary mb-2" 
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
             <div className="text-pb-gray mt-2">Loading props...</div>
           </div>
         ) : error ? (
-          <div className="flex flex-col items-center justify-center h-64">
-            <svg className="h-10 w-10 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
+          <div 
+            className="flex flex-col items-center justify-center h-64"
+            role="alert"
+            aria-live="assertive"
+          >
+            <svg 
+              className="h-10 w-10 text-red-500 mb-2" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+            </svg>
             <div className="text-red-500 font-semibold">{error}</div>
           </div>
         ) : filteredProps.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64">
-            <svg className="h-10 w-10 text-pb-gray mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l9 6 9-6" /></svg>
+          <div 
+            className="flex flex-col items-center justify-center h-64"
+            role="status"
+            aria-live="polite"
+          >
+            <svg 
+              className="h-10 w-10 text-pb-gray mb-2" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l9 6 9-6" />
+            </svg>
             <div className="text-pb-gray">No props found.</div>
           </div>
         ) : (

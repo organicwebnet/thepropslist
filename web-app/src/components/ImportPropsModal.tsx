@@ -229,21 +229,41 @@ Output only the CSV (no commentary).`;
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[1000] bg-black/60 flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 z-[1000] bg-black/60 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="import-modal-title"
+      aria-describedby="import-modal-description"
+    >
       <div className="bg-white text-black rounded-xl shadow-xl w-full max-w-3xl p-5">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-xl font-bold">Import Props from CSV</div>
-          <button className="text-gray-600 hover:text-black" onClick={onClose}>
+          <div id="import-modal-title" className="text-xl font-bold">Import Props from CSV</div>
+          <button 
+            className="text-gray-600 hover:text-black" 
+            onClick={onClose}
+            aria-label="Close import modal"
+          >
             ✕
           </button>
         </div>
         <div className="space-y-4">
+          <div id="import-modal-description" className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded p-3">
+            Tip: If your spreadsheet is messy, paste the "AI prompt" and your table into your AI assistant to get a clean CSV matching our columns. Then upload that CSV here.
+          </div>
           <div className="flex items-center gap-3 flex-wrap">
-            <input ref={fileRef} type="file" accept=".csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
+            <input 
+              ref={fileRef} 
+              type="file" 
+              accept=".csv" 
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
+              aria-label="Select CSV file to import"
+            />
             <a
               className="text-pb-primary underline"
               href={`data:text/csv;charset=utf-8,${encodeURIComponent('name,description,category,quantity,price,act,scene,tags,location,status,imageUrl\nChair,,Furniture,1,0,,,stage left,available_in_storage,')}`}
               download="props-template.csv"
+              aria-label="Download CSV template file"
             >
               Download template
             </a>
@@ -252,24 +272,24 @@ Output only the CSV (no commentary).`;
               onClick={copyAiPrompt}
               className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-800 hover:bg-gray-100"
               title="Copy an AI prompt to help reformat your data"
+              aria-label="Copy AI prompt to clipboard"
             >
               {copied ? 'AI prompt copied' : 'Copy AI prompt'}
             </button>
           </div>
-          <div className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded p-3">
-            Tip: If your spreadsheet is messy, paste the “AI prompt” and your table into your AI assistant to get a clean CSV matching our columns. Then upload that CSV here.
-          </div>
           {!!headers.length && (
             <div className="border border-gray-200 rounded-lg p-3">
               <div className="font-semibold mb-2">Map columns</div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3" role="group" aria-label="Column mapping">
                 {(['name','description','category','quantity','price','act','scene','tags','location','status','imageUrl'] as MappingKey[]).map((k) => (
                   <div key={k} className="flex items-center gap-2">
-                    <div className="w-28 text-sm font-medium capitalize">{k.replace(/([A-Z])/g, ' $1')}</div>
+                    <label htmlFor={`mapping-${k}`} className="w-28 text-sm font-medium capitalize">{k.replace(/([A-Z])/g, ' $1')}</label>
                     <select
+                      id={`mapping-${k}`}
                       className="flex-1 border rounded px-2 py-1"
                       value={mapping[k] || ''}
                       onChange={(e) => setMapping((prev) => ({ ...prev, [k]: e.target.value || undefined }))}
+                      aria-label={`Map ${k} column`}
                     >
                       <option value="">—</option>
                       {headers.map((h) => (
@@ -286,11 +306,11 @@ Output only the CSV (no commentary).`;
           {!!headers.length && (
             <div className="border border-gray-200 rounded-lg p-3 overflow-x-auto text-sm">
               <div className="font-semibold mb-2">Preview</div>
-              <table className="min-w-full">
+              <table className="min-w-full" role="table" aria-label="CSV data preview">
                 <thead>
                   <tr>
                     {headers.map((h) => (
-                      <th key={h} className="text-left px-2 py-1 border-b border-gray-200">
+                      <th key={h} className="text-left px-2 py-1 border-b border-gray-200" scope="col">
                         {h}
                       </th>
                     ))}
@@ -310,15 +330,21 @@ Output only the CSV (no commentary).`;
               </table>
             </div>
           )}
-          {!!errors.length && <div className="text-red-600 text-sm">{errors.join(' ')}</div>}
+          {!!errors.length && <div className="text-red-600 text-sm" role="alert" aria-live="polite">{errors.join(' ')}</div>}
           <div className="flex justify-end gap-2">
-            <button className="px-3 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 disabled:opacity-60" onClick={onClose} disabled={importing}>
+            <button 
+              className="px-3 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 disabled:opacity-60" 
+              onClick={onClose} 
+              disabled={importing}
+              aria-label="Cancel import"
+            >
               Cancel
             </button>
             <button
               className="px-3 py-2 rounded-lg bg-pb-primary text-white hover:bg-pb-accent disabled:opacity-60"
               onClick={doImport}
               disabled={importing || !headers.length}
+              aria-label={importing ? 'Importing props' : 'Import props from CSV'}
             >
               {importing ? 'Importing…' : 'Import'}
             </button>

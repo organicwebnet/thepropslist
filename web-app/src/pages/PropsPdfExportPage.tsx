@@ -5,6 +5,7 @@ import DashboardLayout from '../PropsBibleHomepage';
 import { useShowSelection } from '../contexts/ShowSelectionContext';
 import { useFirebase } from '../contexts/FirebaseContext';
 import html2pdf from 'html2pdf.js';
+import SubFootnote from '../components/SubFootnote';
 
 
 const allFields: (keyof Prop)[] = [
@@ -709,6 +710,9 @@ const PropsPdfExportPage: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+          <div className="md:col-span-2 mt-4">
+            <SubFootnote features={["Branded PDFs", "Custom fonts", "Watermarking"]} />
           </div>
         </div>
       )}

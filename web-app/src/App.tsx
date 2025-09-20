@@ -39,7 +39,16 @@ function App() {
   return (
     <ShowSelectionProvider>
       <BrowserRouter>
-        <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
+        <Suspense fallback={
+          <div 
+            style={{ padding: 24 }} 
+            role="status" 
+            aria-live="polite" 
+            aria-label="Loading page"
+          >
+            Loading…
+          </div>
+        }>
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
           <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />

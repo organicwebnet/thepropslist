@@ -68,6 +68,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
+  // Build sidebar items and append god-only entries
+  const navItems = [
+    { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/' },
+    { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props' },
+    { icon: FileText, text: 'Import Props', subtext: 'CSV import', link: '/props?import=1' },
+    { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export' },
+    { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists' },
+    { icon: Theater, text: 'Show Management', subtext: 'Manage productions and venues', link: '/shows' },
+    { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards' },
+    { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping' },
+  ] as Array<{ icon: any; text: string; subtext: string; link?: string }>;
+  if (userProfile?.role === 'god') {
+    navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers' });
+  }
+
   return (
     <div className="min-h-screen bg-gradient-dark text-white overflow-x-hidden">
       {/* Header */}
@@ -160,16 +175,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           {/* Quick Actions */}
           <div>
             <div className={navCollapsed ? 'space-y-2' : 'space-y-2'}>
-              {[
-                { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/' },
-                { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props' },
-                { icon: FileText, text: 'Import Props', subtext: 'CSV import', link: '/props?import=1' },
-                { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export' },
-                { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists' },
-                { icon: Theater, text: 'Show Management', subtext: 'Manage productions and venues', link: '/shows' },
-                { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards' },
-                { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping' },
-              ].map((item, index) => (
+              {navItems.map((item, index) => (
                 item.link ? (
                   <Link to={item.link} key={index} className="block" title={item.text} aria-label={item.text}>
                     <motion.div

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "../PropsBibleHomepage";
 import { motion } from "framer-motion";
-import { Calendar } from "lucide-react";
+import { Calendar, Gem } from "lucide-react";
 import { useFirebase } from "../contexts/FirebaseContext";
 import type { BoardData } from "../types/taskManager";
 import Board from "../components/TaskBoard/Board";
@@ -23,6 +23,8 @@ import EditShowPage from "../pages/EditShowPage";
 import ShowDetailPage from "../pages/ShowDetailPage";
 import JoinInvitePage from "../pages/JoinInvitePage";
 import PropsBibleHomepage from '../PropsBibleHomepage';
+import { useSubscription } from '../hooks/useSubscription';
+import UpgradeModal from '../components/UpgradeModal';
 
 const BoardsPage: React.FC = () => {
   const { service } = useFirebase();
@@ -131,6 +133,8 @@ function BoardsPageContent() {
   const { currentShowId } = useShowSelection();
   const [showTitle, setShowTitle] = useState<string>("");
   const { user } = useWebAuth();
+  const { limits } = useSubscription();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   console.log("[BoardsPage] currentShowId:", currentShowId);
   console.log("[BoardsPage] Current user:", user);
@@ -226,12 +230,17 @@ function BoardsPageContent() {
                   <h1 className="text-2xl font-bold text-white">{boards[0]?.title || 'Board'}</h1>
                 )}
               </div>
-              <div className="shrink-0">
+              <div className="shrink-0 flex items-center gap-3">
+                <div className="text-sm text-pb-gray" title={`Boards used: ${boards.length} of ${limits.boards}`}>{boards.length}/{limits.boards}</div>
                 <button
-                  className="bg-pb-primary text-white px-4 py-2 rounded hover:bg-pb-secondary transition"
-                  onClick={() => setShowForm(v => !v)}
+                  className={`${boards.length >= limits.boards ? 'bg-pb-primary/20 text-pb-gray cursor-not-allowed' : 'bg-pb-primary text-white hover:bg-pb-secondary'} px-4 py-2 rounded transition`}
+                  title={boards.length >= limits.boards ? 'Upgrade to create more boards' : 'Create a new board'}
+                  onClick={() => {
+                    if (boards.length >= limits.boards) { setUpgradeOpen(true); return; }
+                    setShowForm(v => !v);
+                  }}
                 >
-                  New Board
+                  {boards.length >= limits.boards ? (<span className="inline-flex items-center gap-2"><Gem className="w-4 h-4" /> New Board</span>) : 'New Board'}
                 </button>
               </div>
             </div>
@@ -282,10 +291,14 @@ function BoardsPageContent() {
           <div className="text-center text-pb-gray">No boards yet. Create your first board.</div>
           <div className="flex justify-center mt-4">
             <button
-              className="bg-pb-primary text-white px-4 py-2 rounded hover:bg-pb-secondary transition"
-              onClick={() => setShowForm(true)}
+              className={`${boards.length >= limits.boards ? 'bg-pb-primary/20 text-pb-gray cursor-not-allowed' : 'bg-pb-primary text-white hover:bg-pb-secondary'} px-4 py-2 rounded transition`}
+              title={boards.length >= limits.boards ? 'Upgrade to create more boards' : 'Create a new board'}
+              onClick={() => {
+                if (boards.length >= limits.boards) { setUpgradeOpen(true); return; }
+                setShowForm(true);
+              }}
             >
-              Create Board
+              {boards.length >= limits.boards ? (<span className="inline-flex items-center gap-2"><Gem className="w-4 h-4" /> Create Board</span>) : 'Create Board'}
             </button>
           </div>
           {showForm && (
@@ -312,6 +325,14 @@ function BoardsPageContent() {
         </motion.div>
       )}
     </DashboardLayout>
+  );
+  return (
+    <>
+      {content}
+      {upgradeOpen && (
+        <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} reason={`You have reached your plan's board limit. Upgrade to create more boards.`} />
+      )}
+    </>
   );
 }
 

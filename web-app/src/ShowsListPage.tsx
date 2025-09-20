@@ -4,8 +4,10 @@ import { useWebAuth } from './contexts/WebAuthContext';
 import { useFirebase, FirebaseContextType } from './contexts/FirebaseContext';
 import type { Show } from '../types/Show.ts';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Gem } from 'lucide-react';
 import { useShowSelection } from './contexts/ShowSelectionContext';
+import { useSubscription } from './hooks/useSubscription';
+import UpgradeModal from './components/UpgradeModal';
 
 const ShowsListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -15,6 +17,8 @@ const ShowsListPage: React.FC = () => {
   const { service: firebaseService, isInitialized, error: firebaseInitError }: FirebaseContextType = useFirebase();
   const navigate = useNavigate();
   const { currentShowId, setCurrentShowId } = useShowSelection();
+  const { limits } = useSubscription();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -61,14 +65,21 @@ const ShowsListPage: React.FC = () => {
       <div className="relative min-h-[70vh] flex flex-col justify-center items-center bg-gradient-to-br from-pb-primary/40 via-pb-darker/80 to-pb-accent/30 rounded-xl shadow-xl p-6">
         <div className="flex w-full justify-between items-center mb-6">
           <h2 className="text-2xl font-bold self-start">Shows List</h2>
-          <button
-            onClick={() => navigate('/shows/new')}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-            aria-label="Add New Show"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Show</span>
-          </button>
+            <div className="flex items-center gap-3">
+            <div className="text-sm text-pb-gray" title={`Shows used: ${shows.length} of ${limits.shows}`}>{shows.length}/{limits.shows}</div>
+            <button
+              onClick={() => {
+                if (shows.length >= limits.shows) { setUpgradeOpen(true); return; }
+                navigate('/shows/new');
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${shows.length >= limits.shows ? 'bg-pb-primary/20 text-pb-gray cursor-not-allowed' : 'bg-pb-primary hover:bg-pb-accent text-white'} shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50`}
+              title={shows.length >= limits.shows ? 'Upgrade to create more shows' : 'Create a new show'}
+              aria-label="Add New Show"
+            >
+              {shows.length >= limits.shows ? <Gem className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              <span className="hidden sm:inline">Add Show</span>
+            </button>
+          </div>
         </div>
         {loading ? (
           <div className="flex flex-col items-center justify-center h-64">
@@ -124,6 +135,9 @@ const ShowsListPage: React.FC = () => {
           </div>
         )}
       </div>
+      {upgradeOpen && (
+        <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} reason={`You have reached your plan's show limit. Upgrade to create more shows.`} />
+      )}
     </DashboardLayout>
   );
 };

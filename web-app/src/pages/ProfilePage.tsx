@@ -3,6 +3,8 @@ import { useWebAuth } from '../contexts/WebAuthContext';
 import DashboardLayout from '../PropsBibleHomepage';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useSubscription } from '../hooks/useSubscription';
 
 const ProfilePage: React.FC = () => {
   const { user, userProfile, updateUserProfile, refreshProfile } = useWebAuth();
@@ -25,6 +27,15 @@ const ProfilePage: React.FC = () => {
     { value: 'assistant-designer', label: 'Assistant Designer' },
   ];
   const [role, setRole] = useState<string>(userProfile?.role || 'propmaker');
+  const { plan, status, limits, currentPeriodEnd } = useSubscription();
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const env: any = (import.meta as any).env || {};
+  const starterPriceId = env.VITE_STARTER_PRICE_ID || '';
+  const standardPriceId = env.VITE_STANDARD_PRICE_ID || '';
+  const proPriceId = env.VITE_PRO_PRICE_ID || '';
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,10 +78,99 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  const handleManageSubscription = async () => {
+    try {
+      setBillingLoading(true);
+      setBillingError(null);
+      const fn = httpsCallable<any, { url: string }>(getFunctions(), 'createBillingPortalSession');
+      const res = await fn({});
+      const url = res?.data?.url;
+      if (url) {
+        window.location.href = url;
+      } else {
+        setBillingError('Failed to open billing portal');
+      }
+    } catch (e: any) {
+      setBillingError(e?.message || 'Failed to open billing portal');
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleStartCheckout = async (priceId: string) => {
+    try {
+      setCheckoutLoading(true);
+      setCheckoutError(null);
+      const fn = httpsCallable<any, { url: string }>(getFunctions(), 'createCheckoutSession');
+      const res = await fn({ priceId });
+      const url = res?.data?.url;
+      if (url) {
+        window.location.href = url;
+      } else {
+        setCheckoutError('Failed to start checkout');
+      }
+    } catch (e: any) {
+      setCheckoutError(e?.message || 'Failed to start checkout');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="w-full max-w-5xl mx-auto py-10 px-4">
         <h1 className="text-2xl font-bold mb-6 text-white">Profile Details</h1>
+        <div className="bg-pb-darker/60 rounded-2xl p-6 border border-pb-primary/20 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-sm text-pb-gray">Subscription</div>
+              <div className="text-white font-semibold">Plan: {plan.toUpperCase()} · Status: {status}</div>
+              <div className="text-xs text-pb-gray mt-1">Limits — Shows: {limits.shows}, Boards: {limits.boards}, Boxes: {limits.packingBoxes}</div>
+              {currentPeriodEnd && (
+                <div className="text-xs text-pb-gray mt-1">Renews: {new Date(currentPeriodEnd * 1000).toLocaleString()}</div>
+              )}
+            </div>
+            {status === 'exempt' ? (
+              <div className="text-xs text-pb-gray ml-4">You are exempt from subscription limits (god).</div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button onClick={handleManageSubscription} disabled={billingLoading} className="px-3 py-2 rounded bg-pb-primary text-white font-semibold">
+                  {billingLoading ? 'Opening…' : 'Manage Subscription'}
+                </button>
+                <button onClick={() => handleStartCheckout((import.meta as any).env?.VITE_STARTER_PRICE_ID || '')} disabled={checkoutLoading} className="px-3 py-2 rounded bg-pb-accent text-white font-semibold">
+                  {checkoutLoading ? 'Starting…' : 'Upgrade'}
+                </button>
+              </div>
+            )}
+          </div>
+          {billingError && <div className="text-red-400 text-sm">{billingError}</div>}
+          {checkoutError && <div className="text-red-400 text-sm">{checkoutError}</div>}
+          {status !== 'exempt' && (
+            <div className="mt-3 text-sm">
+              <div className="text-pb-gray mb-2">Choose a plan to start checkout:</div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className={`px-3 py-1.5 rounded ${starterPriceId ? 'bg-pb-primary text-white' : 'bg-pb-primary/20 text-pb-gray cursor-not-allowed'}`}
+                  title={starterPriceId ? 'Start Starter checkout' : 'Set VITE_STARTER_PRICE_ID to enable'}
+                  onClick={() => starterPriceId && handleStartCheckout(starterPriceId)}
+                  disabled={!starterPriceId || checkoutLoading}
+                >Starter</button>
+                <button
+                  className={`px-3 py-1.5 rounded ${standardPriceId ? 'bg-pb-primary text-white' : 'bg-pb-primary/20 text-pb-gray cursor-not-allowed'}`}
+                  title={standardPriceId ? 'Start Standard checkout' : 'Set VITE_STANDARD_PRICE_ID to enable'}
+                  onClick={() => standardPriceId && handleStartCheckout(standardPriceId)}
+                  disabled={!standardPriceId || checkoutLoading}
+                >Standard</button>
+                <button
+                  className={`px-3 py-1.5 rounded ${proPriceId ? 'bg-pb-primary text-white' : 'bg-pb-primary/20 text-pb-gray cursor-not-allowed'}`}
+                  title={proPriceId ? 'Start Pro checkout' : 'Set VITE_PRO_PRICE_ID to enable'}
+                  onClick={() => proPriceId && handleStartCheckout(proPriceId)}
+                  disabled={!proPriceId || checkoutLoading}
+                >Pro</button>
+              </div>
+            </div>
+          )}
+        </div>
         <form onSubmit={handleSave} className="bg-pb-darker/60 rounded-2xl p-6 border border-pb-primary/20">
           <div className="mb-6 grid grid-cols-1 md:grid-cols-[120px,1fr] gap-6 items-center">
             <div className="relative w-24 h-24">

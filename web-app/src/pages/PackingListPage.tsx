@@ -5,6 +5,7 @@ import { useShowSelection } from '../contexts/ShowSelectionContext';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useNavigate } from 'react-router-dom';
 import { useWebAuth } from '../contexts/WebAuthContext';
+import SubFootnote from '../components/SubFootnote';
 
 const PackingListPage: React.FC = () => {
   const { service } = useFirebase();
@@ -99,6 +100,7 @@ const PackingListPage: React.FC = () => {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto p-8">
         <h1 className="text-2xl font-bold mb-6">Packing Lists</h1>
+        <SubFootnote features={["Packing labels", "Shipping QR codes", "Advanced packing tools"]} />
         <form onSubmit={handleCreatePackingList} className="flex flex-col gap-2 mb-6 max-w-lg">
           <label htmlFor="new-list-name" className="text-white font-semibold mb-1">Create New List</label>
           <div className="flex gap-2">

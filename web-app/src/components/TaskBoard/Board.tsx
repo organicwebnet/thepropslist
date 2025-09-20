@@ -320,6 +320,9 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
               ref={listsRowRef}
               className="flex items-start gap-3 h-full cursor-grab w-max px-6 lg:px-10 overscroll-contain"
               style={{ WebkitOverflowScrolling: 'touch' }}
+              role="region"
+              aria-label="Task board lists"
+              tabIndex={0}
             >
                   {Array.isArray(board.listIds) && board.listIds.length > 0
                     ? board.listIds.map(listId => {
@@ -436,6 +439,9 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
             ref={listsRowRef}
             className="flex items-start gap-6 h-full cursor-grab w-max pr-10 overscroll-contain p-0 m-0"
             style={{ WebkitOverflowScrolling: 'touch' }}
+            role="region"
+            aria-label="Task board lists"
+            tabIndex={0}
           >
             {Array.isArray(board.listIds) && board.listIds.length > 0
               ? board.listIds.map(listId => {

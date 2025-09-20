@@ -67,10 +67,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const newProfile: Omit<UserProfile, 'id'> = {
           email: user?.email || '',
           displayName: user?.displayName || 'New User',
-          role: UserRole.EDITOR,
+          role: UserRole.VIEWER,
           createdAt: new Date(),
           updatedAt: new Date(),
-          permissions: DEFAULT_ROLE_PERMISSIONS[UserRole.EDITOR],
+          permissions: DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER],
         };
         // Use setDocument to create the profile with the user's UID as the document ID
         await firebaseService.setDocument('userProfiles', userId, newProfile);

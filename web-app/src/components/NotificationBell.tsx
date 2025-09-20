@@ -17,10 +17,17 @@ const NotificationBell: React.FC = () => {
     const svc = new NotificationService(service);
     let mounted = true;
     const load = async () => {
-      const all = await svc.listForUser(user.uid, { max: 20 });
-      if (!mounted) return;
-      setItems(all);
-      setUnread(all.filter(n => !n.read).length);
+      try {
+        const all = await svc.listForUser(user.uid, { max: 20 });
+        if (!mounted) return;
+        setItems(all);
+        setUnread(all.filter(n => !n.read).length);
+      } catch (e) {
+        // Swallow permission/availability errors silently during setup
+        if (!mounted) return;
+        setItems([]);
+        setUnread(0);
+      }
     };
     load();
     const id = setInterval(load, 15000);
