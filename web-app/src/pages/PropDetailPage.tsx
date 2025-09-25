@@ -400,7 +400,11 @@ const PropDetailPage: React.FC = () => {
     const id = target === 'overview' ? 'overview' : `ov-${target}`;
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    try { window.history.replaceState(null, '', `#${target}`); } catch {}
+    try { 
+      window.history.replaceState(null, '', `#${target}`); 
+    } catch (error) {
+      console.warn('Failed to update history state:', error);
+    }
   };
 
   // Collapsible Section UI (local component)
@@ -514,7 +518,11 @@ const PropDetailPage: React.FC = () => {
                             setTimeout(() => {
                               const notesInput = document.querySelector<HTMLInputElement | HTMLTextAreaElement>('#status-notes-input, [name="statusNotes"], textarea[placeholder="Status notes"], input[placeholder="Status notes"]');
                               if (notesInput) {
-                                try { notesInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
+                                try { 
+                                  notesInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+                                } catch (error) {
+                                  console.warn('Failed to scroll into view:', error);
+                                }
                                 notesInput.focus();
                               }
                             }, 300);

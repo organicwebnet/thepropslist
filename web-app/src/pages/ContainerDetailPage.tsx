@@ -434,7 +434,11 @@ const ContainerDetailPage: React.FC = () => {
                               await serviceInst.addPropToContainer(packListId, container.id, p.id, 1);
                               const inventoryService = new DigitalInventoryService(service, null as any, null as any);
                               await inventoryService.updateLocation(p.id, { type: 'storage', name: container.name, details: `Container ${container.name}` });
-                              try { await service.updateDocument('props', p.id, { status: 'in-container', lastStatusUpdate: new Date().toISOString() }); } catch {}
+                              try { 
+                                await service.updateDocument('props', p.id, { status: 'in-container', lastStatusUpdate: new Date().toISOString() }); 
+                              } catch (error) {
+                                console.warn('Failed to update prop status:', error);
+                              }
                               const refreshed = await serviceInst.getPackList(packListId);
                               const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
                               setContainer(updated);

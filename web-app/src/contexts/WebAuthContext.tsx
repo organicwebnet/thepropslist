@@ -13,6 +13,7 @@ import {
   EmailAuthProvider,
   linkWithCredential,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   sendPasswordResetEmail
 } from 'firebase/auth';
@@ -47,6 +48,7 @@ interface WebAuthContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   startEmailVerification: (email: string) => Promise<void>;
   isEmailLinkInUrl: (url: string) => boolean;
   completeEmailVerification: (email: string, url?: string) => Promise<void>;
@@ -314,16 +316,64 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
     }
   };
 
+  const signInWithApple = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const provider = new OAuthProvider('apple.com');
+      provider.addScope('email');
+      provider.addScope('name');
+      
+      // Apple Sign-In requires specific parameters for web
+      const result = await signInWithPopup(auth, provider);
+      
+      // Handle Apple's privacy features - email and name might be hidden
+      if (result.user) {
+        const user = result.user;
+        
+        // If Apple provided a name, update the user profile
+        if (result.additionalUserInfo?.profile?.name) {
+          const name = result.additionalUserInfo.profile.name as any;
+          const displayName = name.firstName && name.lastName 
+            ? `${name.firstName} ${name.lastName}`.trim()
+            : user.displayName || 'Apple User';
+          
+          if (displayName !== user.displayName) {
+            await updateProfile(user, { displayName });
+          }
+        }
+        
+        // Handle Apple's private email relay
+        if (user.email && user.email.includes('@privaterelay.appleid.com')) {
+          console.log('Apple private email relay detected:', user.email);
+          // You might want to store this information for user reference
+        }
+      }
+    } catch (error: any) {
+      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+        setError(error.message);
+        throw error;
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Code-based verification using Firestore + email queue
   const codeCollection = 'pending_signups';
 
   const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
   const hashCode = async (code: string) => {
-    // Simple SHA-256 hashing in browser
-    const enc = new TextEncoder();
-    const buf = await crypto.subtle.digest('SHA-256', enc.encode(code));
-    const arr = Array.from(new Uint8Array(buf));
-    return arr.map(b => b.toString(16).padStart(2, '0')).join('');
+    try {
+      // Simple SHA-256 hashing in browser
+      const enc = new TextEncoder();
+      const buf = await crypto.subtle.digest('SHA-256', enc.encode(code));
+      const arr = Array.from(new Uint8Array(buf));
+      return arr.map(byte => byte.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      console.error('HashCode error:', error);
+      throw new Error(`Hash generation failed: ${error.message}`);
+    }
   };
 
   const startCodeVerification = async (email: string) => {
@@ -343,12 +393,16 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       // enqueue email
       try {
         const emailDoc = buildVerificationEmailDoc(email, code);
-        await setDoc(doc(collection(db, 'emails')), emailDoc);
+        console.log('Creating email document:', emailDoc);
+        await setDoc(doc(db, 'emails', Date.now().toString()), emailDoc);
+        console.log('Email document created successfully');
       } catch (mailErr) {
-        console.warn('Failed to queue verification email', mailErr);
+        console.error('Failed to queue verification email', mailErr);
+        // Don't throw the error, but log it properly
       }
     } catch (error: any) {
-      setError(error.message);
+      console.error('Code verification start error:', error);
+      setError(`Failed to send code: ${error.message || 'Unknown error'}`);
       throw error;
     } finally {
       setLoading(false);
@@ -446,6 +500,13 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         signIn,
         signUp,
         signInWithGoogle,
+        signInWithApple,
+        startEmailVerification,
+        isEmailLinkInUrl,
+        completeEmailVerification,
+        finalizeSignup,
+        startCodeVerification,
+        verifyCode,
         signOut: handleSignOut,
         resetPassword,
         updateUserProfile,

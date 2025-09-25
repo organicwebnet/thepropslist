@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Verification - The Props List</title>
+    <link rel="icon" type="image/png" href="/logo.png?v=2" />
+    <style>
+      :root{
+        --bg:#0b0b12;--text:#e5e7eb;--muted:#9ca3af;--primary:#06b6d4;--accent:#22c55e;--card:#111827;--card-border:#1f2937
+      }
+      body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);padding:40px 20px}
+      .container{max-width:800px;margin:0 auto}
+      .card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:24px;margin:20px 0}
+      h1{color:var(--primary);margin-bottom:16px}
+      .muted{color:var(--muted)}
+      .code{background:#1f2937;padding:12px;border-radius:8px;font-family:monospace;margin:12px 0;word-break:break-all}
+      .back-link{color:var(--primary);text-decoration:none;display:inline-block;margin-bottom:20px}
+      .back-link:hover{text-decoration:underline}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="/" class="back-link">← Back to The Props List</a>
+      
+      <div class="card">
+        <h1>Google Verification</h1>
+        <p class="muted">This page is used for Google Search Console verification and other Google services.</p>
+        
+        <h2>Verification Methods</h2>
+        
+        <h3>HTML Meta Tag</h3>
+        <p class="muted">Add this meta tag to your site's head section:</p>
+        <div class="code">
+          &lt;meta name="google-site-verification" content="YOUR_VERIFICATION_CODE" /&gt;
+        </div>
+        
+        <h3>HTML File Upload</h3>
+        <p class="muted">Upload this file to your site's root directory:</p>
+        <div class="code">
+          google[YOUR_VERIFICATION_CODE].html
+        </div>
+        
+        <h3>DNS TXT Record</h3>
+        <p class="muted">Add this TXT record to your domain's DNS:</p>
+        <div class="code">
+          google-site-verification=YOUR_VERIFICATION_CODE
+        </div>
+        
+        <h2>Current Status</h2>
+        <p class="muted">Verification status will be displayed here once configured.</p>
+      </div>
+    </div>
+  </body>
+</html>

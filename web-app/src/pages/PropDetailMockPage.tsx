@@ -61,7 +61,11 @@ export default function PropDetailMockPage() {
   const handleNavClick = (section: SectionId) => (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault(); setOpenSections(prev => ({ ...prev, [section]: true }));
     document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    try { window.history.replaceState(null, '', `#${section}`); } catch {}
+    try { 
+      window.history.replaceState(null, '', `#${section}`); 
+    } catch (error) {
+      console.warn('Failed to update history state:', error);
+    }
   };
 
   return (

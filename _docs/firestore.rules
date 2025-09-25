@@ -213,8 +213,21 @@ service cloud.firestore {
     }
     // Allow enqueuing emails for MailerSend/Trigger Email extensions
     match /emails/{emailId} {
-      allow create: if request.auth != null;  // enqueue for MailerSend extension
+      allow create: if true;  // Allow anyone to create emails (for signup verification)
       allow read, update, delete: if false;
+    }
+    
+    // Alternative rule for emails collection (more permissive)
+    match /emails/{document=**} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+    
+    // Allow verification code storage for signup process
+    match /pending_signups/{email} {
+      allow create: if true;  // Allow anyone to create verification codes
+      allow read, update: if true;  // Allow reading and updating verification codes
+      allow delete: if true;  // Allow cleanup of expired codes
     }
     match /tasks/{taskId} {
       allow read, write: if isSystemAdmin() || (request.auth != null && (

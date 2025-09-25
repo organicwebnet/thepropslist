@@ -24,6 +24,16 @@ module.exports = ({ config }) => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.propsbible",
+      buildNumber: "1",
+      infoPlist: {
+        NSCameraUsageDescription: "This app needs access to camera to take photos of props and scan QR codes.",
+        NSPhotoLibraryUsageDescription: "This app needs access to photo library to select and save prop images.",
+        NSMicrophoneUsageDescription: "This app needs access to microphone for video recording of prop setup instructions.",
+        NSLocationWhenInUseUsageDescription: "This app needs access to location to help with venue and prop location tracking.",
+        NSContactsUsageDescription: "This app needs access to contacts to help with team member management.",
+        NSFaceIDUsageDescription: "This app uses Face ID for secure authentication.",
+        UIBackgroundModes: ["background-fetch", "remote-notification"]
+      },
       ...(hasIosPlist ? { googleServicesFile: iosPlist } : {})
     },
     android: {
@@ -60,7 +70,15 @@ module.exports = ({ config }) => {
     scheme: "propsbible",
     plugins: [
       "@react-native-firebase/app",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            useFrameworks: "static"
+          }
+        }
+      ]
     ],
     experiments: {
       tsconfigPaths: true,

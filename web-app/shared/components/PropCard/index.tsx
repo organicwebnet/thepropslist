@@ -13,7 +13,7 @@ interface PropCardProps {
 }
 
 // Helper to check if the source is a valid structure for RN <Image>
-function isValidImageSource(source: any): source is { uri: string } {
+function _isValidImageSource(source: any): source is { uri: string } {
   return typeof source === 'object' && source !== null && typeof source.uri === 'string';
 }
 

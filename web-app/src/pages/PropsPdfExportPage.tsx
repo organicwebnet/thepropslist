@@ -331,7 +331,9 @@ const PropsPdfExportPage: React.FC = () => {
         if (b.headerText) setHeader(String(b.headerText));
         if (b.footerText) setFooter(String(b.footerText));
       }
-    }).catch(() => {});
+    }).catch((error) => {
+      console.warn('Failed to load show data:', error);
+    });
     unsubPropsRef.fn = service.listenToCollection('props', (data) => {
       setProps(data.filter(doc => doc.data.showId === currentShowId).map(doc => ({ ...(doc.data as Prop), id: doc.id })));
       setLoading(false);
@@ -342,7 +344,9 @@ const PropsPdfExportPage: React.FC = () => {
     // Presets listener
     unsubPresetsRef.fn = service.listenToCollection(`shows/${currentShowId}/exportPresets`, (docs: any[]) => {
       setPresets(docs.map(d => ({ id: d.id, name: d.data?.name || d.id, data: d.data?.options })));
-    }, () => {});
+    }, (error) => {
+      console.warn('Failed to load export presets:', error);
+    });
     return () => { if (unsubShow) unsubShow(); if (unsubPropsRef.fn) unsubPropsRef.fn(); if (unsubPresetsRef.fn) unsubPresetsRef.fn(); };
   }, [service, currentShowId]);
 

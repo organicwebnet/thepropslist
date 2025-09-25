@@ -54,8 +54,16 @@ const EditPropPage: React.FC = () => {
     const tryFocus = () => {
       const el = document.getElementById(targetId) as (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null);
       if (el) {
-        try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-        try { el.focus(); } catch {}
+        try { 
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+        } catch (error) {
+          console.warn('Failed to scroll into view:', error);
+        }
+        try { 
+          el.focus(); 
+        } catch (error) {
+          console.warn('Failed to focus element:', error);
+        }
         return true;
       }
       return false;
@@ -83,8 +91,16 @@ const EditPropPage: React.FC = () => {
     if (!targetId) return;
     const el = document.getElementById(targetId) as (HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null);
     if (el) {
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch {}
-      try { el.focus(); } catch {}
+      try { 
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+      } catch (error) {
+        console.warn('Failed to scroll into view:', error);
+      }
+      try { 
+        el.focus(); 
+      } catch (error) {
+        console.warn('Failed to focus element:', error);
+      }
     }
   }, [loading, searchParams]);
 

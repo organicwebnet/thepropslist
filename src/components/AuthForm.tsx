@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import type { AuthError } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import { appleAuthService } from '../services/AppleAuthService';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -51,6 +52,35 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
     setLoading(true);
     setError('Google Sign-In not yet implemented for this platform setup.');
     setLoading(false);
+  };
+
+  const handleAppleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      if (!appleAuthService.isAvailable()) {
+        setError('Apple Sign-In is only available on iOS devices');
+        return;
+      }
+
+      const result = await appleAuthService.signIn();
+      
+      if (result.success && result.user) {
+        // TODO: Integrate with Firebase Auth
+        // For now, we'll show a success message
+        setError(null);
+        setSuccess('Apple Sign-In successful! Integration with Firebase pending.');
+        // You would typically call Firebase Auth here to create/link the account
+        // await firebaseService.signInWithApple(result.user);
+      } else {
+        setError(result.error || 'Apple Sign-In failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Apple Sign-In error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const validateForm = () => {
@@ -336,6 +366,18 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
                 </Text>
               </TouchableOpacity>
 
+              {/* Apple Sign In Button */}
+              <TouchableOpacity
+                style={styles.appleButton}
+                onPress={handleAppleSignIn}
+                disabled={loading}
+              >
+                <Ionicons name="logo-apple" size={20} color="#fff" />
+                <Text style={styles.appleButtonText}>
+                  Sign {mode === 'signin' ? 'in' : 'up'} with Apple
+                </Text>
+              </TouchableOpacity>
+
               {/* Mode Switch */}
               <View style={styles.switchContainer}>
                 <Text style={styles.switchText}>
@@ -556,6 +598,24 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     color: '#d1d5db',
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 12,
+  },
+  appleButton: {
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#374151',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  appleButtonText: {
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 12,

@@ -7,6 +7,7 @@ import * as functions from "firebase-functions";
 import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import type Stripe from "stripe";
+import * as nodemailer from "nodemailer";
 
 // Initialize Admin SDK once
 try {
@@ -15,13 +16,17 @@ try {
   // no-op if already initialized
 }
 
-// Providers: Brevo (preferred) or MailerSend (fallback)
+// Providers: Gmail SMTP (preferred), Brevo, or MailerSend (fallback)
+// Gmail SMTP configuration
+const GMAIL_USER = process.env.GMAIL_USER || (functions as any)?.config ? (functions as any).config().gmail?.user : undefined;
+const GMAIL_PASS = process.env.GMAIL_PASS || (functions as any)?.config ? (functions as any).config().gmail?.pass : undefined;
+
 // Brevo API: https://api.brevo.com/v3/smtp/email
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL;
 const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || "The Props List";
 
-// MailerSend HTTP API integration (fallback if Brevo not configured)
+// MailerSend HTTP API integration (fallback if others not configured)
 const MS_API_KEY = process.env.MAILERSEND_API_KEY;
 const MS_FROM_EMAIL = process.env.MAILERSEND_FROM_EMAIL;
 const MS_FROM_NAME = process.env.MAILERSEND_FROM_NAME || "The Props List";
@@ -126,6 +131,324 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOK
 const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || runtimeConfig?.feedback?.github_repo || "";
 
 // NOTE: use a unique name to avoid collisions with existing HTTP functions
+// Email processing function for verification codes and invites
+export const processEmail = onDocumentCreated({
+  document: "emails/{id}",
+  region: "us-central1",
+  timeoutSeconds: 60,
+  memory: "256MiB"
+}, async (event) => {
+  const snap = event.data;
+  if (!snap) return;
+  const id = event.params?.id as string;
+  const data = snap.data() as any;
+
+  // Skip if already processed
+  if (data?.processed || data?.delivery?.state) {
+    return;
+  }
+
+  const { from, to, subject, html, text } = data;
+  
+  if (!from?.email || !to?.[0]?.email || !subject) {
+    logger.warn("Invalid email document", { id, from: from?.email, to: to?.[0]?.email, subject });
+    return;
+  }
+
+  const toEmail = to[0].email;
+  const fromEmail = from.email;
+  const fromName = from.name || "The Props List";
+
+  try {
+    // Mark as processing
+    await snap.ref.set({ 
+      processed: true, 
+      processingAt: admin.firestore.FieldValue.serverTimestamp(),
+      delivery: { state: "processing" }
+    }, { merge: true });
+
+    // Prefer Gmail SMTP if configured (fastest delivery)
+    if (GMAIL_USER && GMAIL_PASS) {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: GMAIL_USER,
+          pass: GMAIL_PASS
+        }
+      });
+
+      const mailOptions = {
+        from: `"${fromName}" <${GMAIL_USER}>`,
+        to: toEmail,
+        subject: subject,
+        html: html,
+        text: text
+      };
+
+      const result = await transporter.sendMail(mailOptions);
+      logger.info("Email sent via Gmail SMTP", { id, toEmail, messageId: result.messageId });
+      await snap.ref.set({ 
+        delivery: { 
+          state: "sent", 
+          provider: "gmail-smtp",
+          messageId: result.messageId,
+          sentAt: admin.firestore.FieldValue.serverTimestamp()
+        }
+      }, { merge: true });
+      return;
+    }
+
+    // Fallback to Brevo if configured
+    if (BREVO_API_KEY && BREVO_FROM_EMAIL) {
+      const body = {
+        sender: { email: BREVO_FROM_EMAIL, name: fromName },
+        to: [{ email: toEmail }],
+        subject,
+        htmlContent: html,
+        textContent: text,
+      } as any;
+
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": BREVO_API_KEY,
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify(body),
+      } as any);
+
+      if (!(res as any).ok) {
+        const text = await (res as any).text().catch(() => "");
+        logger.error("Brevo send failed", { status: (res as any).status, text, id });
+        await snap.ref.set({ 
+          delivery: { 
+            state: "failed", 
+            error: `Brevo error: ${(res as any).status}`,
+            failedAt: admin.firestore.FieldValue.serverTimestamp()
+          }
+        }, { merge: true });
+        return;
+      }
+      
+      const result = await (res as any).json();
+      logger.info("Email sent via Brevo", { id, toEmail, messageId: result?.messageId });
+      await snap.ref.set({ 
+        delivery: { 
+          state: "sent", 
+          provider: "brevo",
+          messageId: result?.messageId,
+          sentAt: admin.firestore.FieldValue.serverTimestamp()
+        }
+      }, { merge: true });
+      return;
+    }
+
+    // Fallback to MailerSend
+    if (MS_API_KEY && MS_FROM_EMAIL) {
+      const body = {
+        from: {
+          email: MS_FROM_EMAIL,
+          name: fromName,
+        },
+        to: [{ email: toEmail }],
+        subject,
+        html,
+        text,
+      } as any;
+
+      const res = await fetch("https://api.mailersend.com/v1/email", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${MS_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      } as any);
+
+      if (!(res as any).ok) {
+        const text = await (res as any).text().catch(() => "");
+        logger.error("MailerSend send failed", { status: (res as any).status, text, id });
+        await snap.ref.set({ 
+          delivery: { 
+            state: "failed", 
+            error: `MailerSend error: ${(res as any).status}`,
+            failedAt: admin.firestore.FieldValue.serverTimestamp()
+          }
+        }, { merge: true });
+        return;
+      }
+      
+      const result = await (res as any).json();
+      logger.info("Email sent via MailerSend", { id, toEmail, messageId: result?.message_id });
+      await snap.ref.set({ 
+        delivery: { 
+          state: "sent", 
+          provider: "mailersend",
+          messageId: result?.message_id,
+          sentAt: admin.firestore.FieldValue.serverTimestamp()
+        }
+      }, { merge: true });
+      return;
+    }
+
+    // No email provider configured
+    logger.error("No email provider configured (Brevo or MailerSend)", { id, toEmail });
+    await snap.ref.set({ 
+      delivery: { 
+        state: "failed", 
+        error: "No email provider configured",
+        failedAt: admin.firestore.FieldValue.serverTimestamp()
+      }
+    }, { merge: true });
+
+  } catch (err) {
+    logger.error("Email processing error", { err, id, toEmail });
+    await snap.ref.set({ 
+      delivery: { 
+        state: "failed", 
+        error: err instanceof Error ? err.message : "Unknown error",
+        failedAt: admin.firestore.FieldValue.serverTimestamp()
+      }
+    }, { merge: true });
+  }
+});
+
+// Direct email sending endpoint to avoid cold start delays
+export const sendEmailDirect = onRequest({
+  region: "us-central1",
+  timeoutSeconds: 30,
+  memory: "256MiB"
+}, async (req, res) => {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
+  try {
+    const { from, to, subject, html, text } = req.body;
+    
+    if (!from?.email || !to?.[0]?.email || !subject) {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+
+    const toEmail = to[0].email;
+    const fromEmail = from.email;
+    const fromName = from.name || "The Props List";
+
+    // Prefer Gmail SMTP if configured (fastest delivery)
+    if (GMAIL_USER && GMAIL_PASS) {
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: GMAIL_USER,
+          pass: GMAIL_PASS
+        }
+      });
+
+      const mailOptions = {
+        from: `"${fromName}" <${GMAIL_USER}>`,
+        to: toEmail,
+        subject: subject,
+        html: html,
+        text: text
+      };
+
+      const result = await transporter.sendMail(mailOptions);
+      logger.info("Email sent via Gmail SMTP", { toEmail, messageId: result.messageId });
+      res.json({ success: true, provider: "gmail-smtp", messageId: result.messageId });
+      return;
+    }
+
+    // Fallback to Brevo if configured
+    if (BREVO_API_KEY && BREVO_FROM_EMAIL) {
+      const body = {
+        sender: { email: BREVO_FROM_EMAIL, name: fromName },
+        to: [{ email: toEmail }],
+        subject,
+        htmlContent: html,
+        textContent: text,
+      } as any;
+
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": BREVO_API_KEY,
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify(body),
+      } as any);
+
+      if (!(response as any).ok) {
+        const errorText = await (response as any).text().catch(() => "");
+        logger.error("Brevo send failed", { status: (response as any).status, errorText });
+        res.status(500).json({ error: "Email sending failed" });
+        return;
+      }
+      
+      const result = await (response as any).json();
+      logger.info("Email sent via Brevo", { toEmail, messageId: result?.messageId });
+      res.json({ success: true, provider: "brevo", messageId: result?.messageId });
+      return;
+    }
+
+    // Fallback to MailerSend
+    if (MS_API_KEY && MS_FROM_EMAIL) {
+      const body = {
+        from: {
+          email: MS_FROM_EMAIL,
+          name: fromName,
+        },
+        to: [{ email: toEmail }],
+        subject,
+        html,
+        text,
+      } as any;
+
+      const response = await fetch("https://api.mailersend.com/v1/email", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${MS_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      } as any);
+
+      if (!(response as any).ok) {
+        const errorText = await (response as any).text().catch(() => "");
+        logger.error("MailerSend send failed", { status: (response as any).status, errorText });
+        res.status(500).json({ error: "Email sending failed" });
+        return;
+      }
+      
+      const result = await (response as any).json();
+      logger.info("Email sent via MailerSend", { toEmail, messageId: result?.message_id });
+      res.json({ success: true, provider: "mailersend", messageId: result?.message_id });
+      return;
+    }
+
+    // No email provider configured
+    logger.error("No email provider configured (Brevo or MailerSend)", { toEmail });
+    res.status(500).json({ error: "No email provider configured" });
+
+  } catch (err) {
+    logger.error("Direct email sending error", { err });
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export const feedbackIssueBridge = onDocumentCreated("feedback/{id}", async (event) => {
   const snap = event.data;
   if (!snap) return;

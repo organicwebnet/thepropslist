@@ -36,6 +36,8 @@ Before setting up the project, ensure you have:
 - **Git**: For version control
 - **Android Studio**: For Android development (includes Android SDK and emulator)
 - **Java Development Kit (JDK)**: Version 17 (required for Android builds)
+- **Xcode**: For iOS development (macOS only, version 14.0+)
+- **CocoaPods**: For iOS dependencies (`sudo gem install cocoapods`)
 
 ### Android Development Setup
 
@@ -49,6 +51,16 @@ Before setting up the project, ensure you have:
    export PATH=$PATH:$ANDROID_HOME/platform-tools
    ```
 4. **Create an AVD**: Set up an Android Virtual Device in Android Studio
+
+### iOS Development Setup
+
+1. **Install Xcode**: Download from Mac App Store (macOS only)
+2. **Install CocoaPods**: `sudo gem install cocoapods`
+3. **Set up iOS Simulator**: Included with Xcode
+4. **Configure Firebase**: Add `GoogleService-Info.plist` to `ios/` directory
+5. **Run setup script**: `./scripts/setup-ios.sh` (macOS) or `scripts/setup-ios.bat` (Windows)
+
+> **Note**: iOS development requires macOS. For detailed iOS setup instructions, see [_docs/IOS_SETUP.md](_docs/IOS_SETUP.md)
 
 ## Setup Instructions
 

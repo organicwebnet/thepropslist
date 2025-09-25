@@ -8,7 +8,7 @@ import type {
     CustomWriteBatch, 
     DocumentData, 
     FirebaseDocument, 
-    CustomDocumentReference, 
+    _CustomDocumentReference, 
     QueryOptions,
     CustomUserCredential
 } from './types.ts';
@@ -92,16 +92,16 @@ export abstract class BaseFirebaseService implements FirebaseService {
   }
 
   // Stubs to satisfy FirebaseService interface
-  async updateCard(boardId: string, listId: string, cardId: string, updates: Partial<any>): Promise<void> { throw new Error('Not implemented'); }
-  async deleteCard(boardId: string, listId: string, cardId: string): Promise<void> { throw new Error('Not implemented'); }
-  async reorderCardsInList(boardId: string, listId: string, orderedCards: any[]): Promise<void> { throw new Error('Not implemented'); }
-  async getBoardMembers(boardId: string): Promise<any[]> { return []; }
-  async addBoardMember(boardId: string, userId: string, role: string): Promise<void> { throw new Error('Not implemented'); }
-  async removeBoardMember(boardId: string, userId: string): Promise<void> { throw new Error('Not implemented'); }
-  async addList(boardId: string, listData: any): Promise<any> { return Promise.resolve({} as any); }
-  async addCard(boardId: string, listId: string, cardData: any): Promise<any> { return Promise.resolve({} as any); }
-  async moveCardToList(boardId: string, cardId: string, fromListId: string, toListId: string, newOrder: number): Promise<void> { throw new Error('Not implemented'); }
-  async reorderLists(boardId: string, orderedLists: any[]): Promise<void> { return Promise.resolve(); }
+  async updateCard(_boardId: string, _listId: string, _cardId: string, _updates: Partial<any>): Promise<void> { throw new Error('Not implemented'); }
+  async deleteCard(_boardId: string, _listId: string, _cardId: string): Promise<void> { throw new Error('Not implemented'); }
+  async reorderCardsInList(_boardId: string, _listId: string, _orderedCards: any[]): Promise<void> { throw new Error('Not implemented'); }
+  async getBoardMembers(_boardId: string): Promise<any[]> { return []; }
+  async addBoardMember(_boardId: string, _userId: string, _role: string): Promise<void> { throw new Error('Not implemented'); }
+  async removeBoardMember(_boardId: string, _userId: string): Promise<void> { throw new Error('Not implemented'); }
+  async addList(_boardId: string, _listData: any): Promise<any> { return Promise.resolve({} as any); }
+  async addCard(_boardId: string, _listId: string, _cardData: any): Promise<any> { return Promise.resolve({} as any); }
+  async moveCardToList(_boardId: string, _cardId: string, _fromListId: string, _toListId: string, _newOrder: number): Promise<void> { throw new Error('Not implemented'); }
+  async reorderLists(_boardId: string, _orderedLists: any[]): Promise<void> { return Promise.resolve(); }
 
   // --- Error Handling ---
   protected handleError(message: string, error: unknown): FirebaseError {

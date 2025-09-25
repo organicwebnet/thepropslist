@@ -17,29 +17,29 @@ function buildInviteHtml(params: InviteEmailParams): string {
   const name = params.inviteeName ? ` ${params.inviteeName}` : '';
   const roleLine = params.jobRoleLabel ? `${params.role} (${params.jobRoleLabel})` : params.role;
   return `
-    <div style="background:#0b0b12;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#111827;border-radius:10px;border:1px solid #1f2937;overflow:hidden;">
+    <div style="background:#ffffff;padding:32px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#000000;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #d1d5db;overflow:hidden;box-shadow:0 10px 25px -5px rgba(0,0,0,0.1);">
         <tr>
-          <td style="padding:20px 24px;background:#0f172a;border-bottom:1px solid #1f2937;">
-            <div style="font-size:18px;font-weight:700;color:#ffffff;">${params.appName || DEFAULT_APP_NAME}</div>
+          <td style="padding:24px 32px;background:#ffffff;border-bottom:2px solid #3b82f6;">
+            <div style="font-size:24px;font-weight:700;color:#1f2937;text-align:center;">${params.appName || DEFAULT_APP_NAME}</div>
           </td>
         </tr>
         <tr>
-          <td style="padding:24px;">
-            <p style="margin:0 0 12px 0;">Hello${name},</p>
-            <p style="margin:0 0 16px 0;">You’ve been invited as <strong>${roleLine}</strong> on <strong>${params.showName}</strong>.</p>
-            <p style="margin:0 0 24px 0;">Click the button below to accept your invite.</p>
-            <p style="margin:0 0 24px 0;">
+          <td style="padding:32px;">
+            <p style="margin:0 0 16px 0;color:#000000;font-size:16px;line-height:1.5;">Hello${name},</p>
+            <p style="margin:0 0 20px 0;color:#000000;font-size:16px;line-height:1.5;">You've been invited as <strong>${roleLine}</strong> on <strong>${params.showName}</strong>.</p>
+            <p style="margin:0 0 24px 0;color:#000000;font-size:16px;line-height:1.5;">Click the button below to accept your invite.</p>
+            <p style="margin:0 0 32px 0;text-align:center;">
               <a href="${params.inviteUrl}"
-                 style="display:inline-block;background:#06b6d4;color:#0b0b12;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:8px;">Accept invite</a>
+                 style="display:inline-block;background:#3b82f6;color:#ffffff;text-decoration:none;font-weight:700;padding:16px 32px;border-radius:8px;font-size:16px;">Accept Invite</a>
             </p>
-            <p style="margin:0;color:#9ca3af;font-size:13px;">If the button doesn’t work, copy and paste this link into your browser:<br/>
-            <span style="word-break:break-all;color:#cbd5e1;">${params.inviteUrl}</span></p>
+            <p style="margin:0;color:#6b7280;font-size:14px;line-height:1.5;">If the button doesn't work, copy and paste this link into your browser:<br/>
+            <span style="word-break:break-all;color:#374151;font-family:monospace;">${params.inviteUrl}</span></p>
           </td>
         </tr>
         <tr>
-          <td style="padding:16px 24px;background:#0f172a;border-top:1px solid #1f2937;color:#94a3b8;font-size:12px;">
-            <div>Sent by ${params.appName || DEFAULT_APP_NAME} • thepropslist.uk</div>
+          <td style="padding:20px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px;text-align:center;">
+            <div>Sent by ${params.appName || DEFAULT_APP_NAME} • <a href="https://thepropslist.uk" style="color:#3b82f6;text-decoration:none;">thepropslist.uk</a></div>
           </td>
         </tr>
       </table>
@@ -86,24 +86,26 @@ export function buildReminderEmailDoc(toEmail: string, params: InviteEmailParams
 export function buildVerificationEmailDoc(toEmail: string, code: string) {
   const subject = `Your ${DEFAULT_APP_NAME} verification code`;
   const html = `
-    <div style="background:#0b0b12;padding:24px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#e5e7eb;">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#111827;border-radius:10px;border:1px solid #1f2937;overflow:hidden;">
+    <div style="background:#ffffff;padding:32px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#000000;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #d1d5db;overflow:hidden;box-shadow:0 10px 25px -5px rgba(0,0,0,0.1);">
         <tr>
-          <td style="padding:20px 24px;background:#0f172a;border-bottom:1px solid #1f2937;">
-            <div style="font-size:18px;font-weight:700;color:#ffffff;">${DEFAULT_APP_NAME}</div>
+          <td style="padding:24px 32px;background:#ffffff;border-bottom:2px solid #3b82f6;">
+            <div style="font-size:24px;font-weight:700;color:#1f2937;text-align:center;">${DEFAULT_APP_NAME}</div>
           </td>
         </tr>
         <tr>
-          <td style="padding:24px;">
-            <p style="margin:0 0 12px 0;">Here is your verification code:</p>
-            <p style="margin:0 0 16px 0;font-size:28px;letter-spacing:6px;font-weight:800;color:#ffffff;">${code}</p>
-            <p style="margin:0 0 12px 0;color:#cbd5e1;font-size:14px;">The code expires in 10 minutes and can be used once.</p>
-            <p style="margin:0;color:#9ca3af;font-size:13px;">If you didn’t request this, you can ignore this email.</p>
+          <td style="padding:32px;">
+            <p style="margin:0 0 16px 0;color:#000000;font-size:16px;line-height:1.5;">Here is your verification code:</p>
+            <div style="margin:24px 0;padding:24px;background:#f9fafb;border:3px solid #3b82f6;border-radius:12px;text-align:center;">
+              <p style="margin:0;font-size:36px;letter-spacing:8px;font-weight:900;color:#1f2937;font-family:monospace;">${code}</p>
+            </div>
+            <p style="margin:0 0 16px 0;color:#374151;font-size:15px;line-height:1.5;">The code expires in 10 minutes and can be used once.</p>
+            <p style="margin:0;color:#6b7280;font-size:14px;line-height:1.5;">If you didn't request this, you can ignore this email.</p>
           </td>
         </tr>
         <tr>
-          <td style="padding:16px 24px;background:#0f172a;border-top:1px solid #1f2937;color:#94a3b8;font-size:12px;">
-            <div>Sent by ${DEFAULT_APP_NAME} • thepropslist.uk</div>
+          <td style="padding:20px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px;text-align:center;">
+            <div>Sent by ${DEFAULT_APP_NAME} • <a href="https://thepropslist.uk" style="color:#3b82f6;text-decoration:none;">thepropslist.uk</a></div>
           </td>
         </tr>
       </table>

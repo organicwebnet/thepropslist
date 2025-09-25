@@ -1,4 +1,5 @@
 Review the changes on code-review.md
+quality of code is more important than completeingthat task quickly so please take your time to complete the task i dont mind if you take longer to come up with a better quality product. i do mind if you rush through the task and dont complete it to a satisfactory standard becauces your trying to reduce the time on task. take your time do your research and product the best quality code you can quality is king!!
 
 - Think through how data flows in the app. Explain new patterns if they exist and why.
 - Are there any changes that could affect infrastructure?
