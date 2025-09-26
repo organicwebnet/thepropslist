@@ -46,8 +46,8 @@ a:hover {
   filter: blur(70px);
   opacity: 0.6;
   background: radial-gradient(600px 300px at 10% 10%, #06b6d4 25%, transparent),
-              radial-gradient(500px 250px at 90% 20%, #22c55e 20%, transparent),
-              radial-gradient(700px 320px at 50% 110%, #7c3aed 18%, transparent);
+              radial-gradient(700px 550px at 90% 20%, #22c55e 20%, transparent),
+              radial-gradient(700px 820px at 50% 110%, #7c3aed 18%, transparent);
 }
 
 .top-gradient {
