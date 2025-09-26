@@ -173,3 +173,4 @@ console.log('🚀 Ready for Production!');
 console.log('========================');
 console.log('Once you complete the manual configuration steps above,');
 console.log('your Apple Sign-In implementation will be ready for production deployment.');
+
