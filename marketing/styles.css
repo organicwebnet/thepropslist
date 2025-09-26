@@ -94,7 +94,9 @@ header {
 .header-logo {
   height: 72px;
   width: auto;
+  max-width: 200px;
   display: block;
+  object-fit: contain;
 }
 
 .brand-title {
@@ -471,6 +473,7 @@ header {
   
   .header-logo {
     height: 60px;
+    max-width: 150px;
   }
 }
 
