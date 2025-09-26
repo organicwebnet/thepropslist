@@ -40,11 +40,15 @@
     <div class="backdrop"></div>
     <div class="container">
       <header>
-        <div class="flex flex-center gap-10">
-          <img src="/logo.png?v=2" alt="The Props List" style="height:72px;width:auto;display:block" />
-          <div class="brand-title"><span>The</span><span>Props</span><span>List</span></div>
+        <div class="header-brand">
+          <img src="/logo.png?v=2" alt="The Props List" class="header-logo" />
+          <div class="brand-title">
+            <span>The</span>
+            <span>Props</span>
+            <span>List</span>
+          </div>
         </div>
-        <nav class="flex gap-16">
+        <nav class="header-nav">
           <a href="/">Home</a>
           <a href="/propive/">PROPIVE</a>
           <a href="https://app.thepropslist.uk/login">Dashboard</a>
@@ -52,14 +56,18 @@
       </header>
 
       <section class="hero">
-        <div style="position:relative;z-index:1">
-          <a href="/" class="back-link">← Back to Home</a>
-          <h1>Theater Industry News</h1>
-          <p class="muted" style="font-size:20px;max-width:600px">Stay updated with the latest theater technology, prop-making innovations, and industry insights.</p>
+        <div class="hero-card">
+          <div class="hero-content">
+            <div class="hero-text">
+              <a href="/" class="back-link">← Back to Home</a>
+              <h1>Theater Industry News</h1>
+              <p class="muted">Stay updated with the latest theater technology, prop-making innovations, and industry insights.</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section style="margin:48px 0">
+      <section class="section">
         <div class="grid">
           <article class="card">
             <div class="category-badge">Technology</div>
