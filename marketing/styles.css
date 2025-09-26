@@ -33,7 +33,7 @@ a:hover {
 
 /* Layout */
 .container {
-  max-width: 1400px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 24px;
 }
@@ -239,7 +239,8 @@ header {
 
 .grid--4-cols {
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 16px;
+  min-width: 0;
 }
 
 /* Cards */
@@ -249,6 +250,8 @@ header {
   border-radius: 14px;
   padding: 14px;
   transition: transform 0.2s, box-shadow 0.2s;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .card:hover {
