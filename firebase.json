@@ -3,23 +3,73 @@
     "source": "functions",
     "runtime": "nodejs20"
   },
-  "hosting": {
-    "public": "marketing",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "redirects": [
-      { "source": "/app/**", "destination": "https://app.thepropslist.uk/:splat", "type": 301 },
-      { "source": "/login", "destination": "https://app.thepropslist.uk/login", "type": 301 },
-      { "source": "/signup", "destination": "https://app.thepropslist.uk/signup", "type": 301 }
-    ],
-    "rewrites": [
-      { "source": "/help/**", "destination": "/help/index.html" },
-      { "source": "**", "destination": "/index.html" }
-    ]
-  },
+  "hosting": [
+    {
+      "target": "app",
+      "public": "web-app/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-XSS-Protection",
+              "value": "1; mode=block"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(), geolocation=()"
+            },
+            {
+              "key": "Strict-Transport-Security",
+              "value": "max-age=31536000; includeSubDomains; preload"
+            },
+            {
+              "key": "Content-Security-Policy",
+              "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://www.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com; frame-src 'self' https://*.google.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        { "source": "**", "destination": "/index.html" }
+      ]
+    },
+    {
+      "target": "marketing",
+      "public": "marketing",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "redirects": [
+        { "source": "/app/**", "destination": "https://app.thepropslist.uk/:splat", "type": 301 },
+        { "source": "/login", "destination": "https://app.thepropslist.uk/login", "type": 301 },
+        { "source": "/signup", "destination": "https://app.thepropslist.uk/signup", "type": 301 }
+      ],
+      "rewrites": [
+        { "source": "/help/**", "destination": "/help/index.html" },
+        { "source": "**", "destination": "/index.html" }
+      ]
+    }
+  ],
   
   "emulators": {
     "auth": {
