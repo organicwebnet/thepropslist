@@ -65,6 +65,7 @@
         { "source": "/signup", "destination": "https://app.thepropslist.uk/signup", "type": 301 }
       ],
       "rewrites": [
+        { "source": "/help/**", "destination": "/help/index.html" },
         { "source": "**", "destination": "/index.html" }
       ]
     }
