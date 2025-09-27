@@ -1436,5 +1436,5 @@ export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res
 });
 
 // Export the contact form function
-export { submitContactForm } from './contact';
+export { submitContactForm } from './contact.js';
 

@@ -1407,3 +1407,5 @@ export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res
         res.status(500).json({ ok: false });
     }
 });
+// Export the contact form function
+export { submitContactForm } from './contact.js';

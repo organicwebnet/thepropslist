@@ -14,6 +14,8 @@
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
+    "screenshots": "node scripts/generate-help-screenshots.js",
+    "screenshots:test": "playwright test tests/screenshot-generator.spec.ts",
     "deploy": "npm run build && cd .. && firebase deploy --only hosting:app",
     "deploy:preview": "npm run build && cd .. && firebase hosting:channel:deploy preview"
   },

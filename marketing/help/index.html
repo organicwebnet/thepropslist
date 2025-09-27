@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Help Documentation — The Props List</title>
+    <link rel="icon" type="image/png" href="/logo.png?v=2" />
+    <link rel="stylesheet" href="../styles.css" />
+    <style>
+      /* Help Documentation Specific Styles */
+      .help-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 2rem;
+        min-height: calc(100vh - 200px);
+      }
+      
+      .help-sidebar {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 2rem;
+      }
+      
+      .help-sidebar h2 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #1f2937;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1rem;
+      }
+      
+      .help-nav {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      
+      .help-nav li {
+        margin-bottom: 0.25rem;
+      }
+      
+      .help-nav a {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        color: #6b7280;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+      }
+      
+      .help-nav a:hover {
+        background: #e5e7eb;
+        color: #374151;
+      }
+      
+      .help-nav a.active {
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-weight: 500;
+      }
+      
+      .help-nav a svg {
+        width: 16px;
+        height: 16px;
+        margin-right: 0.5rem;
+      }
+      
+      .help-content {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      
+      .help-content h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 0.5rem;
+      }
+      
+      .help-content .subtitle {
+        font-size: 1.25rem;
+        color: #6b7280;
+        margin-bottom: 2rem;
+      }
+      
+      .help-section {
+        margin-bottom: 3rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      
+      .help-section:last-child {
+        border-bottom: none;
+      }
+      
+      .help-section h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+      }
+      
+      .help-section h2 svg {
+        width: 24px;
+        height: 24px;
+        margin-right: 0.75rem;
+        color: #3b82f6;
+      }
+      
+      .help-section h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #111827;
+        margin: 1.5rem 0 0.75rem 0;
+      }
+      
+      .help-section p {
+        color: #6b7280;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+      }
+      
+      .help-section ul, .help-section ol {
+        color: #6b7280;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+      }
+      
+      .help-section li {
+        margin-bottom: 0.5rem;
+      }
+      
+      .screenshot {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 1.5rem 0;
+        text-align: center;
+      }
+      
+      .screenshot img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 6px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      
+      .screenshot-caption {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-style: italic;
+        margin-top: 0.5rem;
+      }
+      
+      .support-box {
+        background: #dbeafe;
+        border: 1px solid #93c5fd;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+      }
+      
+      .support-box h3 {
+        color: #1e40af;
+        margin-bottom: 0.75rem;
+      }
+      
+      .support-box p {
+        color: #1e40af;
+        margin-bottom: 1rem;
+      }
+      
+      .support-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+      }
+      
+      .btn-primary {
+        background: #3b82f6;
+        color: white;
+      }
+      
+      .btn-primary:hover {
+        background: #2563eb;
+      }
+      
+      .btn-secondary {
+        background: white;
+        color: #3b82f6;
+        border: 1px solid #3b82f6;
+      }
+      
+      .btn-secondary:hover {
+        background: #f8fafc;
+      }
+      
+      @media (max-width: 768px) {
+        .help-container {
+          grid-template-columns: 1fr;
+          padding: 1rem;
+        }
+        
+        .help-sidebar {
+          position: static;
+          order: 2;
+        }
+        
+        .help-content {
+          order: 1;
+        }
+        
+        .help-content h1 {
+          font-size: 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top-gradient"></div>
+    <div class="backdrop"></div>
+    <div class="container">
+      <header>
+        <div class="header-brand">
+          <img src="/logo.png?v=2" alt="The Props List" class="header-logo" />
+          <div class="brand-title">
+            <span>The</span>
+            <span>Props</span>
+            <span>List</span>
+          </div>
+        </div>
+        <nav class="header-nav">
+          <a href="/news/">News</a>
+          <a href="/contact/">Contact</a>
+          <a href="/help/">Help</a>
+        </nav>
+      </header>
+
+      <div class="help-container">
+        <aside class="help-sidebar">
+          <h2>Documentation</h2>
+          <ul class="help-nav">
+            <li><a href="#getting-started" class="active">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+              Get Started
+            </a></li>
+            <li><a href="#props-management">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Props Management
+            </a></li>
+            <li><a href="#shows-management">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              Shows Management
+            </a></li>
+            <li><a href="#packing-lists">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+              Packing Lists
+            </a></li>
+            <li><a href="#task-management">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+              Task Management
+            </a></li>
+            <li><a href="#team-collaboration">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H16c-.8 0-1.54.37-2.01.99L12 11l-1.99-2.01A2.5 2.5 0 0 0 8 8H5.46c-.8 0-1.54.37-2.01.99L1 15.5V22h2v-6h2.5l2.54-7.63A1.5 1.5 0 0 1 9.46 8H12c.8 0 1.54.37 2.01.99L16 11l1.99-2.01A2.5 2.5 0 0 1 20 8h2.54c.8 0 1.54.37 2.01.99L27 15.5V22h-7z"/></svg>
+              Team Collaboration
+            </a></li>
+            <li><a href="#export-reports">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Export & Reports
+            </a></li>
+            <li><a href="#mobile-app">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-1.99.9-1.99 2v18c0 1.1.89 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+              Mobile App
+            </a></li>
+          </ul>
+        </aside>
+
+        <main class="help-content">
+          <h1>The Props List</h1>
+          <p class="subtitle">Theater Props Management Tool</p>
+          <p>Everything you need to manage your theater props like a pro.</p>
+
+          <section id="getting-started" class="help-section">
+            <h2>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+              Get Started
+            </h2>
+            
+            <h3>Create Your First Show</h3>
+            <p>Start by adding a show to organize your props and tasks.</p>
+            <ol>
+              <li>Click "Show Management" in the sidebar</li>
+              <li>Click "Add New Show"</li>
+              <li>Enter show name, dates, and venue</li>
+              <li>Save your show</li>
+            </ol>
+            
+            <div class="screenshot">
+              <img src="/screenshots/help-docs/shows-management.png" alt="Show Management Dashboard" />
+              <div class="screenshot-caption">The Show Management dashboard where you can create and manage your productions</div>
+            </div>
+
+            <h3>Add Props</h3>
+            <p>Track every prop in your production.</p>
+            <ol>
+              <li>Go to "Props Inventory"</li>
+              <li>Click "Add Prop"</li>
+              <li>Fill in prop details (name, description, condition)</li>
+              <li>Assign to a show</li>
+            </ol>
+            
+            <div class="screenshot">
+              <img src="/screenshots/help-docs/props-list.png" alt="Props Inventory Page" />
+              <div class="screenshot-caption">The Props Inventory page where you can add and manage all your props</div>
+            </div>
+          </section>
+
+          <section id="props-management" class="help-section">
+            <h2>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              Props Management
+            </h2>
+            
+            <h3>Adding Props</h3>
+            <p>Learn how to add and manage props effectively.</p>
+            <ul>
+              <li>Use descriptive names and detailed descriptions</li>
+              <li>Set appropriate status (in-development, ready, needs-repair)</li>
+              <li>Add photos for visual reference</li>
+              <li>Assign props to specific shows</li>
+            </ul>
+            
+            <div class="screenshot">
+              <img src="/screenshots/help-docs/add-prop.png" alt="Add Prop Form" />
+              <div class="screenshot-caption">The Add Prop form where you can enter detailed information about each prop</div>
+            </div>
+
+            <h3>Prop Status</h3>
+            <p>Track the lifecycle of your props.</p>
+            <ul>
+              <li><strong>In Development:</strong> Prop is being created or modified</li>
+              <li><strong>Ready:</strong> Prop is complete and ready for use</li>
+              <li><strong>Needs Repair:</strong> Prop requires maintenance</li>
+              <li><strong>Retired:</strong> Prop is no longer in use</li>
+            </ul>
+            
+            <div class="screenshot">
+              <img src="/screenshots/help-docs/prop-detail.png" alt="Prop Detail Page" />
+              <div class="screenshot-caption">The Prop Detail page showing status, photos, and maintenance information</div>
+            </div>
+          </section>
+
+          <section id="shows-management" class="help-section">
+            <h2>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              Shows Management
+            </h2>
+            
+            <h3>Creating Shows</h3>
+            <p>Set up shows to organize your productions.</p>
+            <ul>
+              <li>Enter show name, dates, and venue information</li>
+              <li>Add team members and assign roles</li>
+              <li>Set up packing lists for different locations</li>
+              <li>Create task boards for production management</li>
+            </ul>
+          </section>
+
+          <section id="packing-lists" class="help-section">
+            <h2>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+              Packing Lists
+            </h2>
+            
+            <h3>Creating Packing Lists</h3>
+            <p>Organize props for different locations and scenes.</p>
+            <ul>
+              <li>Create containers for different locations (stage, storage, etc.)</li>
+              <li>Add props to containers with quantities</li>
+              <li>Generate QR codes for easy scanning</li>
+              <li>Share packing lists with team members</li>
+            </ul>
+          </section>
+
+          <section id="task-management" class="help-section">
+            <h2>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+              Task Management
+            </h2>
+            
+            <h3>Using Task Boards</h3>
+            <p>Manage production tasks with drag-and-drop boards.</p>
+            <ul>
+              <li>Create columns for different task statuses</li>
+              <li>Add tasks with descriptions and due dates</li>
+              <li>Assign tasks to team members</li>
+              <li>Drag tasks between columns to update status</li>
+            </ul>
+            
+            <div class="screenshot">
+              <img src="/screenshots/help-docs/task-boards.png" alt="Task Board Interface" />
+              <div class="screenshot-caption">The Task Board interface with drag-and-drop functionality for managing production tasks</div>
+            </div>
+          </section>
+
+          <section id="team-collaboration" class="help-section">
+            <h2>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H16c-.8 0-1.54.37-2.01.99L12 11l-1.99-2.01A2.5 2.5 0 0 0 8 8H5.46c-.8 0-1.54.37-2.01.99L1 15.5V22h2v-6h2.5l2.54-7.63A1.5 1.5 0 0 1 9.46 8H12c.8 0 1.54.37 2.01.99L16 11l1.99-2.01A2.5 2.5 0 0 1 20 8h2.54c.8 0 1.54.37 2.01.99L27 15.5V22h-7z"/></svg>
+              Team Collaboration
+            </h2>
+            
+            <h3>Managing Team Members</h3>
+            <p>Invite and manage your production team.</p>
+            <ul>
+              <li>Invite team members via email</li>
+              <li>Assign roles and permissions</li>
+              <li>Collaborate on props and tasks</li>
+              <li>Share packing lists and documents</li>
+            </ul>
+          </section>
+
+          <section id="export-reports" class="help-section">
+            <h2>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Export & Reports
+            </h2>
+            
+            <h3>PDF Export</h3>
+            <p>Generate professional prop lists and reports.</p>
+            <ul>
+              <li>Export props lists with custom branding</li>
+              <li>Include photos and detailed descriptions</li>
+              <li>Generate packing lists for different locations</li>
+              <li>Create maintenance reports</li>
+            </ul>
+            
+            <div class="screenshot">
+              <img src="/screenshots/help-docs/pdf-export.png" alt="PDF Export Interface" />
+              <div class="screenshot-caption">The PDF Export interface for generating professional prop lists and reports</div>
+            </div>
+          </section>
+
+          <section id="mobile-app" class="help-section">
+            <h2>
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-1.99.9-1.99 2v18c0 1.1.89 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+              Mobile App
+            </h2>
+            
+            <h3>Coming Soon</h3>
+            <p>A mobile app is currently in development to provide on-the-go access to your props management.</p>
+            <ul>
+              <li>Scan QR codes on packing containers</li>
+              <li>Update prop status from anywhere</li>
+              <li>Take photos and add them to props</li>
+              <li>Access your props inventory offline</li>
+            </ul>
+            
+            <div class="support-box">
+              <p><strong>Stay tuned!</strong> The mobile app will be available soon for iOS and Android devices.</p>
+            </div>
+          </section>
+
+          <div class="support-box">
+            <h3>Still Need Help?</h3>
+            <p>Can't find what you're looking for? Our support team is ready to help.</p>
+            <div class="support-buttons">
+              <a href="/contact/" class="btn btn-primary">Contact Support</a>
+              <a href="mailto:support@thepropslist.com" class="btn btn-secondary">Email Support</a>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      // Simple navigation highlighting
+      document.addEventListener('DOMContentLoaded', function() {
+        const navLinks = document.querySelectorAll('.help-nav a');
+        const sections = document.querySelectorAll('.help-section');
+        
+        function updateActiveNav() {
+          let current = '';
+          sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.clientHeight;
+            if (window.scrollY >= (sectionTop - 200)) {
+              current = section.getAttribute('id');
+            }
+          });
+          
+          navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+              link.classList.add('active');
+            }
+          });
+        }
+        
+        window.addEventListener('scroll', updateActiveNav);
+        updateActiveNav();
+      });
+    </script>
+  </body>
+</html>

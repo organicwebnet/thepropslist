@@ -7,6 +7,15 @@
   --accent: #22c55e;
   --card: #111827;
   --card-border: #1f2937;
+  
+  /* Help page light theme variables */
+  --help-bg: #ffffff;
+  --help-text: #111827;
+  --help-muted: #6b7280;
+  --help-primary: #3b82f6;
+  --help-accent: #dbeafe;
+  --help-card: #f8fafc;
+  --help-border: #e5e7eb;
 }
 
 /* Base Styles */
