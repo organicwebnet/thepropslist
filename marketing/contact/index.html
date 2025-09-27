@@ -55,10 +55,10 @@
         </div>
         <nav class="header-nav">
           <a href="/">Home</a>
-          <a href="/news/">News</a>
+          <!--<a href="/news/">News</a>
           <a href="/contact/">Contact</a>
           <a href="/propive/">PROPIVE</a>
-          <a href="https://app.thepropslist.uk/login">Dashboard</a>
+          <a href="https://app.thepropslist.uk/login">Dashboard</a>-->
         </nav>
       </header>
 
@@ -82,19 +82,17 @@
             <form id="contactForm" class="contact-form">
               <!-- Honeypot field for spam protection -->
               <input type="text" name="website" id="website" style="display: none;" tabindex="-1" autocomplete="off">
-              
+            
               <div class="form-group">
                 <label for="name">Name *</label>
                 <input type="text" id="name" name="name" required class="form-input" placeholder="Your full name">
                 <div class="error-message" id="nameError"></div>
               </div>
-
               <div class="form-group">
                 <label for="email">Email *</label>
                 <input type="email" id="email" name="email" required class="form-input" placeholder="your@email.com">
                 <div class="error-message" id="emailError"></div>
               </div>
-
               <div class="form-group">
                 <label for="subject">Subject *</label>
                 <select id="subject" name="subject" required class="form-input">
@@ -108,13 +106,11 @@
                 </select>
                 <div class="error-message" id="subjectError"></div>
               </div>
-
               <div class="form-group">
                 <label for="message">Message *</label>
                 <textarea id="message" name="message" required class="form-input" rows="6" placeholder="Tell us what's on your mind..."></textarea>
                 <div class="error-message" id="messageError"></div>
               </div>
-
               <!-- Simple math CAPTCHA -->
               <div class="form-group">
                 <label for="captcha">Security Check *</label>
@@ -125,59 +121,18 @@
                 </div>
                 <div class="error-message" id="captchaError"></div>
               </div>
-
               <div class="form-group">
                 <label class="checkbox-label">
                   <input type="checkbox" id="newsletter" name="newsletter" class="checkbox-input">
                   <span class="checkbox-text">Subscribe to our newsletter for updates about The Props List</span>
                 </label>
               </div>
-
               <button type="submit" class="cta" id="submitBtn">
                 <span class="btn-text">Send Message</span>
                 <span class="btn-loading" style="display: none;">Sending...</span>
               </button>
-
               <div id="formMessage" class="form-message"></div>
             </form>
-          </div>
-
-          <!-- Contact Information -->
-          <div class="card">
-            <h2>Get in touch</h2>
-            <div class="contact-info">
-              <div class="contact-item">
-                <h3>Email</h3>
-                <p><a href="mailto:hello@thepropslist.uk">hello@thepropslist.uk</a></p>
-                <p class="muted">We typically respond within 24 hours</p>
-              </div>
-
-              <div class="contact-item">
-                <h3>Response Time</h3>
-                <p>General inquiries: 24-48 hours</p>
-                <p>Technical support: 12-24 hours</p>
-                <p>Urgent issues: Same day</p>
-              </div>
-
-              <div class="contact-item">
-                <h3>What to include</h3>
-                <ul class="muted">
-                  <li>Your name and contact information</li>
-                  <li>Clear description of your question or issue</li>
-                  <li>Any relevant screenshots or error messages</li>
-                  <li>Your browser and device information (for technical issues)</li>
-                </ul>
-              </div>
-
-              <div class="contact-item">
-                <h3>Social Media</h3>
-                <div class="social-links">
-                  <a href="#" class="social-link">Twitter</a>
-                  <a href="#" class="social-link">LinkedIn</a>
-                  <a href="#" class="social-link">GitHub</a>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
