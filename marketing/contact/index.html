@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us - The Props List</title>
+  <meta name="description" content="Get in touch with The Props List team. We'd love to hear from you about our theater prop management app.">
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="icon" href="/icon.png">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="header-content">
+        <div class="header-brand">
+          <img src="/logo.png?v=2" alt="The Props List" class="header-logo" />
+          <div class="brand-title">
+            <span>The</span>
+            <span>Props</span>
+            <span>List</span>
+          </div>
+        </div>
+        <nav class="header-nav">
+          <a href="/">Home</a>
+          <a href="/news/">News</a>
+          <a href="/propive/">PROPIVE</a>
+          <a href="/contact/">Contact</a>
+          <a href="https://app.thepropslist.uk/login">Dashboard</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-card">
+        <div class="hero-content">
+          <div class="hero-text">
+            <a href="/" class="back-link">← Back to Home</a>
+            <h1>Contact Us</h1>
+            <p class="muted">Have questions about The Props List? Want to share feedback or suggestions? We'd love to hear from you!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 48px; align-items: start;">
+          <!-- Contact Form -->
+          <div class="card">
+            <h2>Send us a message</h2>
+            <form id="contactForm" class="contact-form">
+              <!-- Honeypot field for spam protection -->
+              <input type="text" name="website" id="website" style="display: none;" tabindex="-1" autocomplete="off">
+              
+              <div class="form-group">
+                <label for="name">Name *</label>
+                <input type="text" id="name" name="name" required class="form-input" placeholder="Your full name">
+                <div class="error-message" id="nameError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" name="email" required class="form-input" placeholder="your@email.com">
+                <div class="error-message" id="emailError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="subject">Subject *</label>
+                <select id="subject" name="subject" required class="form-input">
+                  <option value="">Select a subject</option>
+                  <option value="general">General Inquiry</option>
+                  <option value="support">Technical Support</option>
+                  <option value="feedback">Feedback & Suggestions</option>
+                  <option value="partnership">Partnership Opportunity</option>
+                  <option value="press">Press & Media</option>
+                  <option value="other">Other</option>
+                </select>
+                <div class="error-message" id="subjectError"></div>
+              </div>
+
+              <div class="form-group">
+                <label for="message">Message *</label>
+                <textarea id="message" name="message" required class="form-input" rows="6" placeholder="Tell us what's on your mind..."></textarea>
+                <div class="error-message" id="messageError"></div>
+              </div>
+
+              <!-- Simple math CAPTCHA -->
+              <div class="form-group">
+                <label for="captcha">Security Check *</label>
+                <div class="captcha-container">
+                  <span id="captchaQuestion">What is 5 + 3?</span>
+                  <input type="number" id="captcha" name="captcha" required class="form-input" placeholder="Answer">
+                  <button type="button" id="newCaptcha" class="btn-secondary">New Question</button>
+                </div>
+                <div class="error-message" id="captchaError"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="newsletter" name="newsletter" class="checkbox-input">
+                  <span class="checkbox-text">Subscribe to our newsletter for updates about The Props List</span>
+                </label>
+              </div>
+
+              <button type="submit" class="cta" id="submitBtn">
+                <span class="btn-text">Send Message</span>
+                <span class="btn-loading" style="display: none;">Sending...</span>
+              </button>
+
+              <div id="formMessage" class="form-message"></div>
+            </form>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="card">
+            <h2>Get in touch</h2>
+            <div class="contact-info">
+              <div class="contact-item">
+                <h3>Email</h3>
+                <p><a href="mailto:hello@thepropslist.uk">hello@thepropslist.uk</a></p>
+                <p class="muted">We typically respond within 24 hours</p>
+              </div>
+
+              <div class="contact-item">
+                <h3>Response Time</h3>
+                <p>General inquiries: 24-48 hours</p>
+                <p>Technical support: 12-24 hours</p>
+                <p>Urgent issues: Same day</p>
+              </div>
+
+              <div class="contact-item">
+                <h3>What to include</h3>
+                <ul class="muted">
+                  <li>Your name and contact information</li>
+                  <li>Clear description of your question or issue</li>
+                  <li>Any relevant screenshots or error messages</li>
+                  <li>Your browser and device information (for technical issues)</li>
+                </ul>
+              </div>
+
+              <div class="contact-item">
+                <h3>Social Media</h3>
+                <div class="social-links">
+                  <a href="#" class="social-link">Twitter</a>
+                  <a href="#" class="social-link">LinkedIn</a>
+                  <a href="#" class="social-link">GitHub</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="/logo.png?v=2" alt="The Props List" class="footer-logo" />
+          <div class="brand-title">
+            <span>The</span>
+            <span>Props</span>
+            <span>List</span>
+          </div>
+        </div>
+        <div class="footer-links">
+          <a href="/">Home</a>
+          <a href="/news/">News</a>
+          <a href="/propive/">PROPIVE</a>
+          <a href="/contact/">Contact</a>
+          <a href="https://app.thepropslist.uk/login">Dashboard</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p class="muted">&copy; 2025 The Props List. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Anti-spam and form handling
+    class ContactForm {
+      constructor() {
+        this.form = document.getElementById('contactForm');
+        this.submitBtn = document.getElementById('submitBtn');
+        this.btnText = this.submitBtn.querySelector('.btn-text');
+        this.btnLoading = this.submitBtn.querySelector('.btn-loading');
+        this.formMessage = document.getElementById('formMessage');
+        this.honeypot = document.getElementById('website');
+        this.captchaQuestion = document.getElementById('captchaQuestion');
+        this.captchaInput = document.getElementById('captcha');
+        this.newCaptchaBtn = document.getElementById('newCaptcha');
+        
+        this.captchaAnswer = 0;
+        this.submissionCount = 0;
+        this.lastSubmission = 0;
+        
+        this.init();
+      }
+
+      init() {
+        this.generateCaptcha();
+        this.setupEventListeners();
+        this.setupRateLimiting();
+      }
+
+      setupEventListeners() {
+        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        this.newCaptchaBtn.addEventListener('click', () => this.generateCaptcha());
+        
+        // Real-time validation
+        const inputs = this.form.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+          input.addEventListener('blur', () => this.validateField(input));
+          input.addEventListener('input', () => this.clearError(input));
+        });
+      }
+
+      setupRateLimiting() {
+        // Check localStorage for submission history
+        const submissions = JSON.parse(localStorage.getItem('contactSubmissions') || '[]');
+        this.submissionCount = submissions.length;
+        
+        // Remove submissions older than 1 hour
+        const oneHourAgo = Date.now() - (60 * 60 * 1000);
+        const recentSubmissions = submissions.filter(time => time > oneHourAgo);
+        localStorage.setItem('contactSubmissions', JSON.stringify(recentSubmissions));
+        this.submissionCount = recentSubmissions.length;
+      }
+
+      generateCaptcha() {
+        const operations = [
+          { op: '+', fn: (a, b) => a + b },
+          { op: '-', fn: (a, b) => a - b },
+          { op: '*', fn: (a, b) => a * b }
+        ];
+        
+        const operation = operations[Math.floor(Math.random() * operations.length)];
+        const a = Math.floor(Math.random() * 10) + 1;
+        const b = Math.floor(Math.random() * 10) + 1;
+        
+        this.captchaAnswer = operation.fn(a, b);
+        this.captchaQuestion.textContent = `What is ${a} ${operation.op} ${b}?`;
+        this.captchaInput.value = '';
+      }
+
+      validateField(field) {
+        const value = field.value.trim();
+        const fieldName = field.name;
+        const errorElement = document.getElementById(fieldName + 'Error');
+        
+        let isValid = true;
+        let errorMessage = '';
+
+        switch (fieldName) {
+          case 'name':
+            if (!value) {
+              errorMessage = 'Name is required';
+              isValid = false;
+            } else if (value.length < 2) {
+              errorMessage = 'Name must be at least 2 characters';
+              isValid = false;
+            } else if (!/^[a-zA-Z\s'-]+$/.test(value)) {
+              errorMessage = 'Name contains invalid characters';
+              isValid = false;
+            }
+            break;
+            
+          case 'email':
+            if (!value) {
+              errorMessage = 'Email is required';
+              isValid = false;
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              errorMessage = 'Please enter a valid email address';
+              isValid = false;
+            }
+            break;
+            
+          case 'subject':
+            if (!value) {
+              errorMessage = 'Please select a subject';
+              isValid = false;
+            }
+            break;
+            
+          case 'message':
+            if (!value) {
+              errorMessage = 'Message is required';
+              isValid = false;
+            } else if (value.length < 10) {
+              errorMessage = 'Message must be at least 10 characters';
+              isValid = false;
+            } else if (value.length > 1000) {
+              errorMessage = 'Message must be less than 1000 characters';
+              isValid = false;
+            }
+            break;
+            
+          case 'captcha':
+            if (!value) {
+              errorMessage = 'Please answer the security question';
+              isValid = false;
+            } else if (parseInt(value) !== this.captchaAnswer) {
+              errorMessage = 'Incorrect answer. Please try again.';
+              isValid = false;
+            }
+            break;
+        }
+
+        if (isValid) {
+          this.clearError(field);
+        } else {
+          this.showError(field, errorMessage);
+        }
+
+        return isValid;
+      }
+
+      showError(field, message) {
+        const errorElement = document.getElementById(field.name + 'Error');
+        errorElement.textContent = message;
+        field.classList.add('error');
+      }
+
+      clearError(field) {
+        const errorElement = document.getElementById(field.name + 'Error');
+        errorElement.textContent = '';
+        field.classList.remove('error');
+      }
+
+      async handleSubmit(e) {
+        e.preventDefault();
+        
+        // Rate limiting check
+        if (this.submissionCount >= 3) {
+          this.showMessage('Too many submissions. Please wait before trying again.', 'error');
+          return;
+        }
+
+        // Honeypot check
+        if (this.honeypot.value) {
+          console.log('Spam detected - honeypot filled');
+          return;
+        }
+
+        // Validate all fields
+        const fields = ['name', 'email', 'subject', 'message', 'captcha'];
+        let isValid = true;
+        
+        fields.forEach(fieldName => {
+          const field = document.getElementById(fieldName);
+          if (!this.validateField(field)) {
+            isValid = false;
+          }
+        });
+
+        if (!isValid) {
+          this.showMessage('Please fix the errors above.', 'error');
+          return;
+        }
+
+        // Show loading state
+        this.setLoading(true);
+        this.clearMessage();
+
+        try {
+          // Simulate form submission (replace with actual endpoint)
+          await this.submitForm();
+          
+          // Record submission
+          const submissions = JSON.parse(localStorage.getItem('contactSubmissions') || '[]');
+          submissions.push(Date.now());
+          localStorage.setItem('contactSubmissions', JSON.stringify(submissions));
+          this.submissionCount = submissions.length;
+          
+          this.showMessage('Thank you! Your message has been sent successfully. We\'ll get back to you soon.', 'success');
+          this.form.reset();
+          this.generateCaptcha();
+          
+        } catch (error) {
+          console.error('Form submission error:', error);
+          this.showMessage('Sorry, there was an error sending your message. Please try again or email us directly.', 'error');
+        } finally {
+          this.setLoading(false);
+        }
+      }
+
+      async submitForm() {
+        const formData = new FormData(this.form);
+        const data = Object.fromEntries(formData.entries());
+        
+        // Remove honeypot from data
+        delete data.website;
+        
+        // Send to Firebase Cloud Function
+        const response = await fetch('https://europe-west1-props-bible-app-1c1cb.cloudfunctions.net/submitContactForm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to submit form');
+        }
+
+        const result = await response.json();
+        return result;
+      }
+
+      setLoading(loading) {
+        if (loading) {
+          this.btnText.style.display = 'none';
+          this.btnLoading.style.display = 'inline';
+          this.submitBtn.disabled = true;
+        } else {
+          this.btnText.style.display = 'inline';
+          this.btnLoading.style.display = 'none';
+          this.submitBtn.disabled = false;
+        }
+      }
+
+      showMessage(message, type) {
+        this.formMessage.textContent = message;
+        this.formMessage.className = `form-message ${type}`;
+        this.formMessage.style.display = 'block';
+      }
+
+      clearMessage() {
+        this.formMessage.style.display = 'none';
+        this.formMessage.textContent = '';
+      }
+    }
+
+    // Initialize the contact form when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      new ContactForm();
+    });
+  </script>
+</body>
+</html>
