@@ -1,5 +1,5 @@
 :root{
-  --bg:#0b0b12;--text:#e5e7eb;--muted:#9ca3af;--primary:#06b6d4;--accent:#22c55e;--card:#111827;--card-border:#1f2937
+  --bg:#0b0b12;--text:#e5e7eb;--muted:#e6e9ef;--primary:#06b6d4;--accent:#22c55e;--card:#111827;--card-border:#1f2937
 }
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
 /* animated gradient backdrop */
@@ -19,6 +19,8 @@ a{color:#06b6d4;text-decoration:none}
 .card{background:var(--card);border:1px solid var(--card-border);border-radius:14px;padding:20px;transition:transform 0.2s, box-shadow 0.2s}
 .card:hover{transform:translateY(-4px);box-shadow:0 8px 25px rgba(0,0,0,.3)}
 header{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--card-border);position:relative;z-index:1}
+.header-brand{display:flex;align-items:center;gap:10px}
+.header-logo{height:72px;width:auto;max-width:200px;display:block;object-fit:contain}
 header nav a{color:#f8fafc;text-shadow:0 2px 8px rgba(0,0,0,.6);margin:0 8px}
 .brand-title{display:flex;flex-direction:column;line-height:0.95;margin-left:8px;font-weight:900;font-size:24px;color:#ffffff;text-shadow:0 2px 8px rgba(0,0,0,.6)}
 .article-meta{color:var(--muted);font-size:16px;margin-bottom:24px}
@@ -41,6 +43,20 @@ header nav a{color:#f8fafc;text-shadow:0 2px 8px rgba(0,0,0,.6);margin:0 8px}
 .article-hero{padding:60px 0 40px;position:relative}
 .article-hero h1{font-size:48px;line-height:1.1;margin:0 0 16px;background:linear-gradient(90deg,#ffffff 10%,#a5f3fc 40%,#c7d2fe 70%,#f5d0fe 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 6px 20px rgba(0,0,0,.65)}
 .article-container{max-width:800px;margin:0 auto;padding:24px}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container{padding:16px}
+  .hero h1{font-size:48px}
+  .header-nav{flex-direction:column;gap:8px}
+  .grid{grid-template-columns:1fr}
+}
+
+@media (max-width: 480px) {
+  .hero h1{font-size:36px}
+  .brand-title{font-size:20px}
+  .header-logo{height:60px;max-width:150px}
+}
 
 /* Utility classes */
 .flex{display:flex}
