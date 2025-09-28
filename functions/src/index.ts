@@ -1459,7 +1459,7 @@ export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res
 });
 
 // --- Image Optimization Functions ---
-import * as sharp from 'sharp';
+import sharp from 'sharp';
 
 // Image optimization function
 export const optimizeImage = onRequest({ 
