@@ -17,9 +17,25 @@ try {
 }
 
 // Providers: Gmail SMTP (preferred), Brevo, or MailerSend (fallback)
-// Gmail SMTP configuration
-const GMAIL_USER = process.env.GMAIL_USER || (functions as any)?.config ? (functions as any).config().gmail?.user : undefined;
-const GMAIL_PASS = process.env.GMAIL_PASS || (functions as any)?.config ? (functions as any).config().gmail?.pass : undefined;
+// Gmail SMTP configuration - will be set via secrets
+let GMAIL_USER: string | undefined;
+let GMAIL_PASS: string | undefined;
+
+// Initialize secrets
+const initializeSecrets = async () => {
+  try {
+    const { defineSecret } = await import("firebase-functions/params");
+    const gmailUserSecret = defineSecret("GMAIL_USER");
+    const gmailPassSecret = defineSecret("GMAIL_PASS");
+    
+    GMAIL_USER = gmailUserSecret.value();
+    GMAIL_PASS = gmailPassSecret.value();
+  } catch (error) {
+    logger.warn("Failed to initialize secrets, using environment variables", { error });
+    GMAIL_USER = process.env.GMAIL_USER;
+    GMAIL_PASS = process.env.GMAIL_PASS;
+  }
+};
 
 // Brevo API: https://api.brevo.com/v3/smtp/email
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
@@ -125,10 +141,9 @@ export const sendInviteEmail = onCall(async (req) => {
 // Required environment variables:
 //   GITHUB_TOKEN: a repo-scoped PAT with issues:write
 //   GITHUB_REPO:  "owner/repo" (e.g., organicwebnet/the_props_bible)
-// Read from environment variables OR functions config (set via `firebase functions:config:set feedback.github_token=...`)
-const runtimeConfig = (functions as any)?.config ? (functions as any).config() : {};
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN || runtimeConfig?.feedback?.github_token;
-const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || runtimeConfig?.feedback?.github_repo || "";
+// Read from environment variables
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN;
+const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || "";
 
 // NOTE: use a unique name to avoid collisions with existing HTTP functions
 // Email processing function for verification codes and invites
@@ -136,8 +151,12 @@ export const processEmail = onDocumentCreated({
   document: "emails/{id}",
   region: "us-central1",
   timeoutSeconds: 60,
-  memory: "256MiB"
+  memory: "256MiB",
+  secrets: ["GMAIL_USER", "GMAIL_PASS"]
 }, async (event) => {
+  // Initialize secrets first
+  await initializeSecrets();
+  
   const snap = event.data;
   if (!snap) return;
   const id = event.params?.id as string;
@@ -318,8 +337,12 @@ export const processEmail = onDocumentCreated({
 export const sendEmailDirect = onRequest({
   region: "us-central1",
   timeoutSeconds: 30,
-  memory: "256MiB"
+  memory: "256MiB",
+  secrets: ["GMAIL_USER", "GMAIL_PASS"]
 }, async (req, res) => {
+  // Initialize secrets first
+  await initializeSecrets();
+  
   // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");

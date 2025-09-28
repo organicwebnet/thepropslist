@@ -31,7 +31,7 @@ const TaskBoardsListScreen = () => {
         setLoading(false);
       },
       {
-        where: [['memberIds', 'array-contains', user.uid]],
+        where: [['sharedWith', 'array-contains', user.uid]],
       }
     );
 

@@ -1,6 +1,8 @@
 Review the changes on code-review.md
 quality of code is more important than completeingthat task quickly so please take your time to complete the task i dont mind if you take longer to come up with a better quality product. i do mind if you rush through the task and dont complete it to a satisfactory standard becauces your trying to reduce the time on task. take your time do your research and product the best quality code you can quality is king!!
 
+- is there any redundat code or files in the codebase?
+- is the code well written?
 - Think through how data flows in the app. Explain new patterns if they exist and why.
 - Are there any changes that could affect infrastructure?
 - Error empty, loading, error, and offline states.
@@ -11,6 +13,6 @@ quality of code is more important than completeingthat task quickly so please ta
 - Were there schema changes which could require a database migration?
 - Consider auth flows or permissions? Run /security-review.
 - If an API is set up, does this change require adding a new one?
-- i18n is set up — are these strings added localized and new routes internationalized?
+- If i18n is set up — are these strings added localized and new routes internationalized?
 - Are there places we should use caching?
-- Are we missing critical oily or logging on backend changes?
+- Are we missing critical o11y or logging on backend changes?

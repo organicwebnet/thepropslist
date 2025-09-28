@@ -278,7 +278,10 @@ const TaskBoardDetailScreen = () => {
       },
     );
 
-    firebaseService.getBoardMembers(boardId).then(setMembers).catch(console.error);
+    firebaseService.getBoardMembers(boardId).then(setMembers).catch((err) => {
+      console.error('Error loading board members:', err);
+      setMembers([]); // Set empty array on error
+    });
 
     return () => {
       unsubscribeBoard();

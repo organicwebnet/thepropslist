@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { DefaultText } from '../../src/components/DefaultText';
+import { StyledText } from '../../src/components/StyledText';
 
 const HelpPage = () => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['getting-started']));
@@ -42,23 +42,23 @@ const HelpPage = () => {
       content: (
         <View style={styles.sectionContent}>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Create Your First Show</DefaultText>
-            <DefaultText style={styles.subsectionText}>Start by adding a show to organize your props and tasks.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Create Your First Show</StyledText>
+            <StyledText style={styles.subsectionText}>Start by adding a show to organize your props and tasks.</StyledText>
             <View style={styles.stepList}>
-              <DefaultText style={styles.stepText}>1. Tap "Shows" in the bottom navigation</DefaultText>
-              <DefaultText style={styles.stepText}>2. Tap the "+" button to add a new show</DefaultText>
-              <DefaultText style={styles.stepText}>3. Enter show name, dates, and venue</DefaultText>
-              <DefaultText style={styles.stepText}>4. Save your show</DefaultText>
+              <StyledText style={styles.stepText}>1. Tap "Shows" in the bottom navigation</StyledText>
+              <StyledText style={styles.stepText}>2. Tap the "+" button to add a new show</StyledText>
+              <StyledText style={styles.stepText}>3. Enter show name, dates, and venue</StyledText>
+              <StyledText style={styles.stepText}>4. Save your show</StyledText>
             </View>
           </View>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Add Props</DefaultText>
-            <DefaultText style={styles.subsectionText}>Track every prop in your production.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Add Props</StyledText>
+            <StyledText style={styles.subsectionText}>Track every prop in your production.</StyledText>
             <View style={styles.stepList}>
-              <DefaultText style={styles.stepText}>1. Go to "Props" tab</DefaultText>
-              <DefaultText style={styles.stepText}>2. Tap "Add Prop"</DefaultText>
-              <DefaultText style={styles.stepText}>3. Fill in prop details</DefaultText>
-              <DefaultText style={styles.stepText}>4. Assign to a show</DefaultText>
+              <StyledText style={styles.stepText}>1. Go to "Props" tab</StyledText>
+              <StyledText style={styles.stepText}>2. Tap "Add Prop"</StyledText>
+              <StyledText style={styles.stepText}>3. Fill in prop details</StyledText>
+              <StyledText style={styles.stepText}>4. Assign to a show</StyledText>
             </View>
           </View>
         </View>
@@ -71,23 +71,23 @@ const HelpPage = () => {
       content: (
         <View style={styles.sectionContent}>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Add Props</DefaultText>
-            <DefaultText style={styles.subsectionText}>Track every item in your production.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Add Props</StyledText>
+            <StyledText style={styles.subsectionText}>Track every item in your production.</StyledText>
             <View style={styles.bulletList}>
-              <DefaultText style={styles.bulletText}>• Name and description</DefaultText>
-              <DefaultText style={styles.bulletText}>• Condition and location</DefaultText>
-              <DefaultText style={styles.bulletText}>• Photos and notes</DefaultText>
-              <DefaultText style={styles.bulletText}>• Show assignment</DefaultText>
+              <StyledText style={styles.bulletText}>• Name and description</StyledText>
+              <StyledText style={styles.bulletText}>• Condition and location</StyledText>
+              <StyledText style={styles.bulletText}>• Photos and notes</StyledText>
+              <StyledText style={styles.bulletText}>• Show assignment</StyledText>
             </View>
           </View>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Take Photos</DefaultText>
-            <DefaultText style={styles.subsectionText}>Document props with photos for easy identification.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Take Photos</StyledText>
+            <StyledText style={styles.subsectionText}>Document props with photos for easy identification.</StyledText>
             <View style={styles.stepList}>
-              <DefaultText style={styles.stepText}>1. Open a prop</DefaultText>
-              <DefaultText style={styles.stepText}>2. Tap the camera icon</DefaultText>
-              <DefaultText style={styles.stepText}>3. Take or select photos</DefaultText>
-              <DefaultText style={styles.stepText}>4. Save your changes</DefaultText>
+              <StyledText style={styles.stepText}>1. Open a prop</StyledText>
+              <StyledText style={styles.stepText}>2. Tap the camera icon</StyledText>
+              <StyledText style={styles.stepText}>3. Take or select photos</StyledText>
+              <StyledText style={styles.stepText}>4. Save your changes</StyledText>
             </View>
           </View>
         </View>
@@ -100,23 +100,23 @@ const HelpPage = () => {
       content: (
         <View style={styles.sectionContent}>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Create Shows</DefaultText>
-            <DefaultText style={styles.subsectionText}>Set up productions with dates and venues.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Create Shows</StyledText>
+            <StyledText style={styles.subsectionText}>Set up productions with dates and venues.</StyledText>
             <View style={styles.bulletList}>
-              <DefaultText style={styles.bulletText}>• Show name and description</DefaultText>
-              <DefaultText style={styles.bulletText}>• Performance dates</DefaultText>
-              <DefaultText style={styles.bulletText}>• Venue information</DefaultText>
-              <DefaultText style={styles.bulletText}>• Team members</DefaultText>
+              <StyledText style={styles.bulletText}>• Show name and description</StyledText>
+              <StyledText style={styles.bulletText}>• Performance dates</StyledText>
+              <StyledText style={styles.bulletText}>• Venue information</StyledText>
+              <StyledText style={styles.bulletText}>• Team members</StyledText>
             </View>
           </View>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Manage Teams</DefaultText>
-            <DefaultText style={styles.subsectionText}>Invite crew members and assign roles.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Manage Teams</StyledText>
+            <StyledText style={styles.subsectionText}>Invite crew members and assign roles.</StyledText>
             <View style={styles.stepList}>
-              <DefaultText style={styles.stepText}>1. Open your show</DefaultText>
-              <DefaultText style={styles.stepText}>2. Tap "Team" tab</DefaultText>
-              <DefaultText style={styles.stepText}>3. Send invite links</DefaultText>
-              <DefaultText style={styles.stepText}>4. Assign roles and permissions</DefaultText>
+              <StyledText style={styles.stepText}>1. Open your show</StyledText>
+              <StyledText style={styles.stepText}>2. Tap "Team" tab</StyledText>
+              <StyledText style={styles.stepText}>3. Send invite links</StyledText>
+              <StyledText style={styles.stepText}>4. Assign roles and permissions</StyledText>
             </View>
           </View>
         </View>
@@ -129,23 +129,23 @@ const HelpPage = () => {
       content: (
         <View style={styles.sectionContent}>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Create Packing Lists</DefaultText>
-            <DefaultText style={styles.subsectionText}>Organize props for transport and storage.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Create Packing Lists</StyledText>
+            <StyledText style={styles.subsectionText}>Organize props for transport and storage.</StyledText>
             <View style={styles.stepList}>
-              <DefaultText style={styles.stepText}>1. Go to "Packing" tab</DefaultText>
-              <DefaultText style={styles.stepText}>2. Tap "Create New List"</DefaultText>
-              <DefaultText style={styles.stepText}>3. Name your list (e.g., "Act 1 Props")</DefaultText>
-              <DefaultText style={styles.stepText}>4. Add containers and props</DefaultText>
+              <StyledText style={styles.stepText}>1. Go to "Packing" tab</StyledText>
+              <StyledText style={styles.stepText}>2. Tap "Create New List"</StyledText>
+              <StyledText style={styles.stepText}>3. Name your list (e.g., "Act 1 Props")</StyledText>
+              <StyledText style={styles.stepText}>4. Add containers and props</StyledText>
             </View>
           </View>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Organize Containers</DefaultText>
-            <DefaultText style={styles.subsectionText}>Group props in boxes, bags, or bins.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Organize Containers</StyledText>
+            <StyledText style={styles.subsectionText}>Group props in boxes, bags, or bins.</StyledText>
             <View style={styles.bulletList}>
-              <DefaultText style={styles.bulletText}>• Create containers with names</DefaultText>
-              <DefaultText style={styles.bulletText}>• Add props to containers</DefaultText>
-              <DefaultText style={styles.bulletText}>• Generate QR codes for tracking</DefaultText>
-              <DefaultText style={styles.bulletText}>• Share public links for crew access</DefaultText>
+              <StyledText style={styles.bulletText}>• Create containers with names</StyledText>
+              <StyledText style={styles.bulletText}>• Add props to containers</StyledText>
+              <StyledText style={styles.bulletText}>• Generate QR codes for tracking</StyledText>
+              <StyledText style={styles.bulletText}>• Share public links for crew access</StyledText>
             </View>
           </View>
         </View>
@@ -158,23 +158,23 @@ const HelpPage = () => {
       content: (
         <View style={styles.sectionContent}>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Track Purchases</DefaultText>
-            <DefaultText style={styles.subsectionText}>Keep track of props and materials you need to buy.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Track Purchases</StyledText>
+            <StyledText style={styles.subsectionText}>Keep track of props and materials you need to buy.</StyledText>
             <View style={styles.stepList}>
-              <DefaultText style={styles.stepText}>1. Go to "Shopping" tab</DefaultText>
-              <DefaultText style={styles.stepText}>2. Tap "Add Item"</DefaultText>
-              <DefaultText style={styles.stepText}>3. Enter item details and budget</DefaultText>
-              <DefaultText style={styles.stepText}>4. Mark as purchased when done</DefaultText>
+              <StyledText style={styles.stepText}>1. Go to "Shopping" tab</StyledText>
+              <StyledText style={styles.stepText}>2. Tap "Add Item"</StyledText>
+              <StyledText style={styles.stepText}>3. Enter item details and budget</StyledText>
+              <StyledText style={styles.stepText}>4. Mark as purchased when done</StyledText>
             </View>
           </View>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Budget Tracking</DefaultText>
-            <DefaultText style={styles.subsectionText}>Monitor spending across your show.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Budget Tracking</StyledText>
+            <StyledText style={styles.subsectionText}>Monitor spending across your show.</StyledText>
             <View style={styles.bulletList}>
-              <DefaultText style={styles.bulletText}>• Set budget limits per item</DefaultText>
-              <DefaultText style={styles.bulletText}>• Track actual vs. planned costs</DefaultText>
-              <DefaultText style={styles.bulletText}>• View spending summaries</DefaultText>
-              <DefaultText style={styles.bulletText}>• Export purchase reports</DefaultText>
+              <StyledText style={styles.bulletText}>• Set budget limits per item</StyledText>
+              <StyledText style={styles.bulletText}>• Track actual vs. planned costs</StyledText>
+              <StyledText style={styles.bulletText}>• View spending summaries</StyledText>
+              <StyledText style={styles.bulletText}>• Export purchase reports</StyledText>
             </View>
           </View>
         </View>
@@ -187,30 +187,30 @@ const HelpPage = () => {
       content: (
         <View style={styles.sectionContent}>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Common Issues</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Common Issues</StyledText>
             <View style={styles.issueList}>
               <View style={styles.issueItem}>
-                <DefaultText style={styles.issueQuestion}>Props not showing up?</DefaultText>
-                <DefaultText style={styles.issueAnswer}>Check your show filter. Make sure you've selected the right show from the dropdown.</DefaultText>
+                <StyledText style={styles.issueQuestion}>Props not showing up?</StyledText>
+                <StyledText style={styles.issueAnswer}>Check your show filter. Make sure you've selected the right show from the dropdown.</StyledText>
               </View>
               <View style={styles.issueItem}>
-                <DefaultText style={styles.issueQuestion}>Can't upload photos?</DefaultText>
-                <DefaultText style={styles.issueAnswer}>Photos must be under 5MB. Try compressing large images or use a different format.</DefaultText>
+                <StyledText style={styles.issueQuestion}>Can't upload photos?</StyledText>
+                <StyledText style={styles.issueAnswer}>Photos must be under 5MB. Try compressing large images or use a different format.</StyledText>
               </View>
               <View style={styles.issueItem}>
-                <DefaultText style={styles.issueQuestion}>Team members can't access?</DefaultText>
-                <DefaultText style={styles.issueAnswer}>Check their email invitation. They need to accept the invite and create an account.</DefaultText>
+                <StyledText style={styles.issueQuestion}>Team members can't access?</StyledText>
+                <StyledText style={styles.issueAnswer}>Check their email invitation. They need to accept the invite and create an account.</StyledText>
               </View>
             </View>
           </View>
           <View style={styles.subsection}>
-            <DefaultText style={styles.subsectionTitle}>Get Support</DefaultText>
-            <DefaultText style={styles.subsectionText}>Need more help? We're here for you.</DefaultText>
+            <StyledText style={styles.subsectionTitle}>Get Support</StyledText>
+            <StyledText style={styles.subsectionText}>Need more help? We're here for you.</StyledText>
             <View style={styles.bulletList}>
-              <DefaultText style={styles.bulletText}>• Tap "Report a bug" in the header</DefaultText>
-              <DefaultText style={styles.bulletText}>• Email support@thepropslist.com</DefaultText>
-              <DefaultText style={styles.bulletText}>• Check our FAQ for quick answers</DefaultText>
-              <DefaultText style={styles.bulletText}>• Join our community forum</DefaultText>
+              <StyledText style={styles.bulletText}>• Tap "Report a bug" in the header</StyledText>
+              <StyledText style={styles.bulletText}>• Email support@thepropslist.com</StyledText>
+              <StyledText style={styles.bulletText}>• Check our FAQ for quick answers</StyledText>
+              <StyledText style={styles.bulletText}>• Join our community forum</StyledText>
             </View>
           </View>
         </View>
@@ -224,12 +224,12 @@ const HelpPage = () => {
       style={styles.container}
     >
       <View style={styles.header}>
-        <DefaultText style={styles.headerTitle}>Help Center</DefaultText>
+        <StyledText style={styles.headerTitle}>Help Center</StyledText>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.intro}>
-          <DefaultText style={styles.introTitle}>Everything you need to manage your theater props like a pro.</DefaultText>
+          <StyledText style={styles.introTitle}>Everything you need to manage your theater props like a pro.</StyledText>
         </View>
 
         <View style={styles.sectionsContainer}>
@@ -246,7 +246,7 @@ const HelpPage = () => {
                     <View style={styles.sectionIcon}>
                       <Ionicons name={section.icon} size={20} color="#c084fc" />
                     </View>
-                    <DefaultText style={styles.sectionTitle}>{section.title}</DefaultText>
+                    <StyledText style={styles.sectionTitle}>{section.title}</StyledText>
                   </View>
                   <Ionicons 
                     name={isExpanded ? "chevron-down" : "chevron-forward"} 
@@ -266,16 +266,16 @@ const HelpPage = () => {
         </View>
 
         <View style={styles.supportSection}>
-          <DefaultText style={styles.supportTitle}>Still Need Help?</DefaultText>
-          <DefaultText style={styles.supportText}>
+          <StyledText style={styles.supportTitle}>Still Need Help?</StyledText>
+          <StyledText style={styles.supportText}>
             Can't find what you're looking for? Our support team is ready to help.
-          </DefaultText>
+          </StyledText>
           <View style={styles.supportButtons}>
             <Pressable onPress={handleReportBug} style={styles.supportButton}>
-              <DefaultText style={styles.supportButtonText}>Report a Bug</DefaultText>
+              <StyledText style={styles.supportButtonText}>Report a Bug</StyledText>
             </Pressable>
             <Pressable onPress={handleEmailSupport} style={[styles.supportButton, styles.supportButtonSecondary]}>
-              <DefaultText style={styles.supportButtonSecondaryText}>Email Support</DefaultText>
+              <StyledText style={styles.supportButtonSecondaryText}>Email Support</StyledText>
             </Pressable>
           </View>
         </View>

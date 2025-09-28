@@ -124,11 +124,24 @@ export default function PropFinderScreen() {
           } as PackingBox;
           setScannedBox(fetchedBox);
           const contains = targetProp ? !!fetchedBox.props?.some(p => p.propId === targetProp.id) : false;
+          
           if (targetProp) {
             setScannedBoxes(prev => [
               { box: fetchedBox, containsTargetProp: contains, scannedAt: Date.now() },
               ...prev,
             ].sort((a, b) => b.scannedAt - a.scannedAt));
+            
+            // Provide audio/visual feedback for prop search
+            if (contains) {
+              // Found the prop! Show success message
+              setError(null);
+              // You could add haptic feedback here: Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } else {
+              setError(`Container ${fetchedBox.id} does not contain "${targetProp.name}". Keep scanning...`);
+            }
+          } else {
+            // Container mode - just show the contents
+            setError(null);
           }
         } else {
           setError(`Box with ID ${data.id} not found.`);
@@ -189,6 +202,15 @@ export default function PropFinderScreen() {
     if (finderMode === 'container') {
       return (
         <>
+          <View style={s.instructionContainer}>
+            <StyledText style={s.instructionText}>
+              Use Case 1: Find what's in a container
+            </StyledText>
+            <StyledText style={s.instructionSubtext}>
+              Scan a container label or enter the 5-digit GUID to see what props are inside
+            </StyledText>
+          </View>
+          
           <TouchableOpacity style={s.scanButton} onPress={() => { setError(null); setScannerPurpose('container'); setShowScanner(true); }} disabled={isProcessingScan}>
             {isProcessingScan ? (
               <ActivityIndicator color={currentThemeColors.card} />
@@ -199,15 +221,17 @@ export default function PropFinderScreen() {
               </>
             )}
           </TouchableOpacity>
+          
           <View style={s.manualLookupRow}>
             <TextInput
               style={s.manualInput}
-              placeholder="Enter container GUID"
+              placeholder="Enter 5-digit container GUID"
               placeholderTextColor={currentThemeColors.textSecondary}
               value={manualCode}
               onChangeText={(t) => { setManualCode(t.trim()); setManualLookupBox(null); }}
               autoCapitalize="none"
               autoCorrect={false}
+              maxLength={5}
             />
             <TouchableOpacity
               onPress={async () => {
@@ -240,26 +264,36 @@ export default function PropFinderScreen() {
               )}
             </TouchableOpacity>
           </View>
+          
           {scannedBox && renderBoxDetails(scannedBox)}
           {manualLookupBox && renderBoxDetails(manualLookupBox)}
         </>
       );
     }
 
-    // Prop mode: show which containers hold the selected prop
+    // Prop mode: find which container has a specific prop
     return (
       <>
-        <View style={{ gap: 10 }}>
-          <TouchableOpacity style={[s.scanButton, { backgroundColor: '#3A8CC1' }]} onPress={() => { setError(null); setScannerPurpose('prop'); setShowScanner(true); }}>
-            <MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{ marginRight: 8 }} />
-            <StyledText style={s.scanButtonText}>Scan Prop Label</StyledText>
-          </TouchableOpacity>
+        <View style={s.instructionContainer}>
+          <StyledText style={s.instructionText}>
+            Use Case 2: Find a specific prop
+          </StyledText>
+          <StyledText style={s.instructionSubtext}>
+            Search for a prop, then scan containers to find where it's located
+          </StyledText>
         </View>
+
         {targetProp ? (
           (() => {
             const matches = (allBoxesForShow || []).filter(b => Array.isArray(b.props) && b.props.some(p => p.propId === targetProp.id));
             return (
               <View>
+                <View style={s.selectedPropContainer}>
+                  <StyledText style={s.selectedPropTitle}>Looking for:</StyledText>
+                  <StyledText style={s.selectedPropName}>{targetProp.name}</StyledText>
+                  {targetProp.category && <StyledText style={s.selectedPropCategory}>{targetProp.category}</StyledText>}
+                </View>
+
                 {matches.length > 0 ? (
                   <>
                     <StyledText style={[s.boxStatusText, { marginBottom: 6 }]}>Found in container(s):</StyledText>
@@ -274,12 +308,25 @@ export default function PropFinderScreen() {
                     ))}
                   </>
                 ) : (
-                  hasSearchedProp ? (<StyledText style={s.infoText}>No container found for this prop.</StyledText>) : null
+                  hasSearchedProp ? (
+                    <View style={s.notFoundContainer}>
+                      <StyledText style={s.infoText}>No container found for this prop.</StyledText>
+                      <StyledText style={s.infoSubtext}>Try scanning containers to locate it</StyledText>
+                    </View>
+                  ) : null
                 )}
 
+                <TouchableOpacity 
+                  style={[s.scanButton, { backgroundColor: '#3A8CC1', marginTop: 16 }]} 
+                  onPress={() => { setError(null); setScannerPurpose('container'); setShowScanner(true); }}
+                >
+                  <MaterialCommunityIcons name="qrcode-scan" size={20} color={currentThemeColors.card} style={{ marginRight: 8 }} />
+                  <StyledText style={s.scanButtonText}>Scan Container to Find Prop</StyledText>
+                </TouchableOpacity>
+
                 {/* Show current location metadata */}
-                <View style={[s.scannedBoxItem, { borderColor: currentThemeColors.border, borderWidth: 1 }]}> 
-                  <StyledText style={[s.boxStatusText, { fontWeight: '600' }]}>Current Location</StyledText>
+                <View style={[s.scannedBoxItem, { borderColor: currentThemeColors.border, borderWidth: 1, marginTop: 16 }]}> 
+                  <StyledText style={[s.boxStatusText, { fontWeight: '600' }]}>Current Location Info</StyledText>
                   <StyledText style={s.boxContentPreview}>Current: {targetProp.currentLocation || '-'}</StyledText>
                   <StyledText style={s.boxContentPreview}>Storage: {targetProp.location || '-'}</StyledText>
                   {targetProp.assignment?.type === 'location' && (
@@ -293,7 +340,10 @@ export default function PropFinderScreen() {
             );
           })()
         ) : (
-          <StyledText style={s.infoText}>Pick a prop to locate its container.</StyledText>
+          <View style={s.noPropSelectedContainer}>
+            <StyledText style={s.infoText}>Search for a prop above to get started</StyledText>
+            <StyledText style={s.infoSubtext}>Once you select a prop, you can scan containers to find where it's located</StyledText>
+          </View>
         )}
       </>
     );
@@ -651,5 +701,72 @@ const styles = (colors: typeof lightTheme.colors) => StyleSheet.create({
   boldText: {
     fontWeight: 'bold',
     color: colors.text,
+  },
+  instructionContainer: {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  instructionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  instructionSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  selectedPropContainer: {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  selectedPropTitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  selectedPropName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  selectedPropCategory: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  notFoundContainer: {
+    backgroundColor: colors.card,
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  noPropSelectedContainer: {
+    backgroundColor: colors.card,
+    padding: 20,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  infoSubtext: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 4,
   }
 }); 

@@ -48,6 +48,10 @@
         }
       ],
       "rewrites": [
+        { "source": "/contact/**", "destination": "/contact/index.html" },
+        { "source": "/news/**", "destination": "/news/index.html" },
+        { "source": "/help/**", "destination": "/help/index.html" },
+        { "source": "/propive/**", "destination": "/propive/index.html" },
         { "source": "**", "destination": "/index.html" }
       ]
     },
@@ -65,7 +69,10 @@
         { "source": "/signup", "destination": "https://app.thepropslist.uk/signup", "type": 301 }
       ],
       "rewrites": [
+        { "source": "/contact/**", "destination": "/contact/index.html" },
+        { "source": "/news/**", "destination": "/news/index.html" },
         { "source": "/help/**", "destination": "/help/index.html" },
+        { "source": "/propive/**", "destination": "/propive/index.html" },
         { "source": "**", "destination": "/index.html" }
       ]
     }
