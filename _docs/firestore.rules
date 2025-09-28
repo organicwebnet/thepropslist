@@ -90,18 +90,27 @@ service cloud.firestore {
         get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid);
     }
     match /todo_boards/{boardId} {
-      // Only board owner/members or system admins can read/update boards
-      allow read: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
-      allow create: if request.auth != null; // any authenticated user can create a board
-      allow update, delete: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
+      // User must be in sharedWith to read/update/delete.
+      allow read, update, delete: if isSystemAdmin() || (
+        request.auth != null &&
+        resource.data.sharedWith != null &&
+        request.auth.uid in resource.data.sharedWith
+      );
+      // On create, creator must be owner and be in sharedWith.
+      allow create: if isSystemAdmin() || (
+        request.auth != null &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.sharedWith != null &&
+        request.auth.uid in request.resource.data.sharedWith
+      );
     }
     match /todo_boards/{boardId}/lists/{listId} {
-      // Lists are readable/writable only by board owner/members or admins
       allow read, write: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
     }
     match /todo_boards/{boardId}/lists/{listId}/cards/{cardId} {
-      // Cards are readable/writable only by board owner/members or admins
-      allow read, write: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
+      allow read: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
+      allow update, delete: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
+      allow create: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
     }
     match /todo_boards/{boardId}/members/{memberId} {
       allow read, write: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
@@ -273,8 +282,10 @@ service cloud.firestore {
     // Remove or comment out any function definitions and .where() usage (not supported in Firestore rules)
 
     function isBoardMember(boardId) {
-      return get(/databases/$(database)/documents/todo_boards/$(boardId)).data.ownerId == request.auth.uid || 
-             request.auth.uid in get(/databases/$(database)/documents/todo_boards/$(boardId)).data.sharedWith;
+      return exists(/databases/$(database)/documents/todo_boards/$(boardId)) && (
+        get(/databases/$(database)/documents/todo_boards/$(boardId)).data.ownerId == request.auth.uid || 
+        request.auth.uid in get(/databases/$(database)/documents/todo_boards/$(boardId)).data.sharedWith
+      );
     }
 
     // Check for system-admin role without using unsupported map.get()

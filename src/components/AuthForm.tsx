@@ -16,6 +16,7 @@ import type { AuthError } from 'firebase/auth';
 import { useAuth } from '../contexts/AuthContext';
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { appleAuthService } from '../services/AppleAuthService';
+import { googleSignInService } from '../services/GoogleSignInService';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -50,8 +51,23 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    setError('Google Sign-In not yet implemented for this platform setup.');
-    setLoading(false);
+    setError(null);
+    
+    try {
+      const result = await googleSignInService.signIn();
+      
+      if (result.success && result.user) {
+        setError(null);
+        setSuccess('Google Sign-In successful!');
+        onClose(); // Close the auth form on successful sign-in
+      } else {
+        setError(result.error || 'Google Sign-In failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Google Sign-In error occurred');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAppleSignIn = async () => {

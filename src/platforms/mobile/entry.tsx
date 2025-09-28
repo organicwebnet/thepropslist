@@ -6,6 +6,7 @@ import { AuthProvider } from '../../contexts/AuthContext';
 import { FontProvider } from '../../contexts/FontContext'; // Re-enabled for StyledText compatibility
 import { ThemeProvider } from '../../contexts/ThemeContext';
 import { FirebaseProvider } from './contexts/FirebaseContext';
+import { GoogleSignInInitializer } from '../../components/GoogleSignInInitializer';
 // import { useFonts } from '../../shared/hooks/useFonts'; // Assuming font loading hook is separate
 
 // Main application component wrapper
@@ -27,9 +28,11 @@ const MainApp = () => {
     <AuthProvider>
       <ThemeProvider>
         <FirebaseProvider>
-          <FontProvider>
-            <App />
-          </FontProvider>
+          <GoogleSignInInitializer>
+            <FontProvider>
+              <App />
+            </FontProvider>
+          </GoogleSignInInitializer>
         </FirebaseProvider>
       </ThemeProvider>
     </AuthProvider>
