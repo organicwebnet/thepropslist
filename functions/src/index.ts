@@ -1458,6 +1458,193 @@ export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res
   }
 });
 
+// --- Image Optimization Functions ---
+import * as sharp from 'sharp';
+
+// Image optimization function
+export const optimizeImage = onRequest({ 
+  region: "us-central1",
+  timeoutSeconds: 60,
+  memory: "1GiB"
+}, async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  
+  if (req.method === "OPTIONS") {
+    res.status(204).send("");
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
+  try {
+    const { imageUrl, format = 'webp', quality = 80, width, height } = req.body;
+    
+    if (!imageUrl) {
+      res.status(400).json({ error: "imageUrl is required" });
+      return;
+    }
+
+    // Fetch the original image
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status}`);
+    }
+    
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+    
+    // Process with Sharp
+    let sharpInstance = sharp(imageBuffer);
+    
+    // Resize if dimensions provided
+    if (width || height) {
+      sharpInstance = sharpInstance.resize(width, height, {
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+    }
+    
+    // Convert to requested format
+    let outputBuffer: Buffer;
+    let contentType: string;
+    
+    switch (format.toLowerCase()) {
+      case 'webp':
+        outputBuffer = await sharpInstance
+          .webp({ quality, effort: 6 })
+          .toBuffer();
+        contentType = 'image/webp';
+        break;
+      case 'jpeg':
+      case 'jpg':
+        outputBuffer = await sharpInstance
+          .jpeg({ quality, progressive: true })
+          .toBuffer();
+        contentType = 'image/jpeg';
+        break;
+      case 'png':
+        outputBuffer = await sharpInstance
+          .png({ quality, progressive: true })
+          .toBuffer();
+        contentType = 'image/png';
+        break;
+      case 'avif':
+        outputBuffer = await sharpInstance
+          .avif({ quality, effort: 6 })
+          .toBuffer();
+        contentType = 'image/avif';
+        break;
+      default:
+        throw new Error(`Unsupported format: ${format}`);
+    }
+    
+    // Upload optimized image to Firebase Storage
+    const bucket = admin.storage().bucket();
+    const fileName = `optimized/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${format}`;
+    const file = bucket.file(fileName);
+    
+    await file.save(outputBuffer, {
+      metadata: {
+        contentType,
+        cacheControl: 'public, max-age=31536000', // 1 year cache
+        metadata: {
+          originalUrl: imageUrl,
+          optimizedAt: new Date().toISOString(),
+          format,
+          quality: quality.toString()
+        }
+      }
+    });
+    
+    // Make file publicly accessible
+    await file.makePublic();
+    
+    const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+    
+    res.json({
+      success: true,
+      optimizedUrl: publicUrl,
+      originalSize: imageBuffer.length,
+      optimizedSize: outputBuffer.length,
+      compressionRatio: Math.round((1 - outputBuffer.length / imageBuffer.length) * 100),
+      format,
+      quality
+    });
+    
+  } catch (error) {
+    logger.error("Image optimization error", { error });
+    res.status(500).json({ 
+      error: "Image optimization failed",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Batch image optimization for existing images
+export const batchOptimizeImages = onCall({ region: "us-central1" }, async (req) => {
+  if (!req.auth) throw new Error("unauthenticated");
+  
+  const { collection = 'props', limit = 10, format = 'webp', quality = 80 } = req.data || {};
+  
+  const db = admin.firestore();
+  const snapshot = await db.collection(collection)
+    .where('images', '!=', null)
+    .limit(limit)
+    .get();
+  
+  const results = [];
+  
+  for (const doc of snapshot.docs) {
+    const data = doc.data();
+    const images = data.images || [];
+    
+    for (const image of images) {
+      if (image.url && !image.optimizedUrl) {
+        try {
+          // Call the optimization function
+          const response = await fetch(`${process.env.FUNCTIONS_URL || 'http://localhost:5001'}/optimizeImage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageUrl: image.url,
+              format,
+              quality
+            })
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            results.push({
+              docId: doc.id,
+              imageId: image.id,
+              originalUrl: image.url,
+              optimizedUrl: result.optimizedUrl,
+              compressionRatio: result.compressionRatio
+            });
+            
+            // Update the document with optimized URL
+            await doc.ref.update({
+              [`images.${images.indexOf(image)}.optimizedUrl`]: result.optimizedUrl
+            });
+          }
+        } catch (error) {
+          logger.error("Batch optimization error", { docId: doc.id, imageId: image.id, error });
+        }
+      }
+    }
+  }
+  
+  return { 
+    success: true, 
+    processed: results.length,
+    results 
+  };
+});
+
 // Export the contact form function
 export { submitContactForm } from './contact.js';
 

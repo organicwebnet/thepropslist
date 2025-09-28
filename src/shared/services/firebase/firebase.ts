@@ -46,20 +46,64 @@ export async function uploadImages(files: File[], path: string): Promise<{
         return;
       }
 
+      // Convert to WebP if possible (web only)
+      let processedFile = file;
+      let contentType = file.type;
+      
+      try {
+        if (typeof window !== 'undefined' && file.type !== 'image/webp') {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          const img = new Image();
+          
+          await new Promise((resolve, reject) => {
+            img.onload = () => {
+              canvas.width = img.width;
+              canvas.height = img.height;
+              ctx?.drawImage(img, 0, 0);
+              
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  processedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), {
+                    type: 'image/webp'
+                  });
+                  contentType = 'image/webp';
+                }
+                resolve(blob);
+              }, 'image/webp', 0.8);
+            };
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+          });
+        }
+      } catch (conversionError) {
+        console.warn('WebP conversion failed, using original format:', conversionError);
+        // Keep original file if conversion fails
+      }
+
       // Generate a unique filename to avoid collisions
-      const uniqueFilename = `${uuidv4()}-${file.name}`;
+      const uniqueFilename = `${uuidv4()}-${processedFile.name}`;
       const storageRef = ref(storage, `${path}/${uniqueFilename}`);
 
-      // Upload the file
-      const snapshot = await uploadBytes(storageRef, file);
+      // Upload the file with metadata
+      const metadata = {
+        contentType,
+        customMetadata: {
+          'uploaded-by': 'props-bible-app',
+          'original-type': file.type,
+          'optimized': contentType === 'image/webp' ? 'true' : 'false'
+        }
+      };
+
+      const snapshot = await uploadBytes(storageRef, processedFile, metadata);
       const downloadURL = await getDownloadURL(snapshot.ref);
 
       successful.push({
         url: downloadURL,
         filename: uniqueFilename,
         originalName: file.name,
-        size: file.size,
-        type: file.type
+        size: processedFile.size,
+        type: contentType
       });
     } catch (error) {
       failed.push({
