@@ -1,35 +1,8 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { PricingConfig, PricingPlan, DEFAULT_PRICING_CONFIG, getDefaultFeaturesForPlan } from '../shared/types/pricing';
 
-export interface StripePlan {
-  id: string;
-  name: string;
-  description: string;
-  price: {
-    monthly: number;
-    yearly: number;
-    currency: string;
-  };
-  features: string[];
-  limits: {
-    shows: number;
-    boards: number;
-    packingBoxes: number;
-    collaboratorsPerShow: number;
-    props: number;
-  };
-  priceId: {
-    monthly: string;
-    yearly: string;
-  };
-  popular: boolean;
-  color: string;
-}
-
-export interface PricingConfig {
-  plans: StripePlan[];
-  currency: string;
-  billingInterval: 'monthly' | 'yearly';
-}
+// Re-export for backward compatibility
+export type StripePlan = PricingPlan;
 
 class StripeService {
   private pricingConfig: PricingConfig | null = null;
@@ -64,7 +37,7 @@ class StripeService {
       if (result.data && result.data.plans && Array.isArray(result.data.plans)) {
         this.pricingConfig = result.data as PricingConfig;
         this.lastFetch = now;
-        console.log('Successfully fetched latest pricing from Stripe:', this.pricingConfig);
+        // Successfully fetched latest pricing from Stripe
         return this.pricingConfig;
       } else {
         throw new Error('Invalid pricing data received from Stripe');
@@ -92,110 +65,24 @@ class StripeService {
     const proPriceIdMonthly = env.VITE_PRO_PRICE_ID_MONTHLY || env.VITE_PRO_PRICE_ID || '';
     const proPriceIdYearly = env.VITE_PRO_PRICE_ID_YEARLY || '';
 
-    return {
-      currency: 'USD',
-      billingInterval: 'monthly',
-      plans: [
-        {
-          id: 'free',
-          name: 'Free',
-          description: 'Perfect for small productions',
-          price: { monthly: 0, yearly: 0, currency: 'USD' },
-          features: [
-            '1 Show',
-            '2 Task Boards', 
-            '20 Packing Boxes',
-            '3 Collaborators per Show',
-            '10 Props',
-            'Basic Support'
-          ],
-          limits: {
-            shows: 1,
-            boards: 2,
-            packingBoxes: 20,
-            collaboratorsPerShow: 3,
-            props: 10
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: false,
-          color: 'bg-gray-500'
-        },
-        {
-          id: 'starter',
-          name: 'Starter',
-          description: 'Great for growing productions',
-          price: { monthly: 9, yearly: 90, currency: 'USD' },
-          features: [
-            '3 Shows',
-            '5 Task Boards',
-            '200 Packing Boxes',
-            '5 Collaborators per Show', 
-            '50 Props',
-            'Email Support'
-          ],
-          limits: {
-            shows: 3,
-            boards: 5,
-            packingBoxes: 200,
-            collaboratorsPerShow: 5,
-            props: 50
-          },
-          priceId: { monthly: starterPriceIdMonthly, yearly: starterPriceIdYearly },
-          popular: false,
-          color: 'bg-blue-500'
-        },
-        {
-          id: 'standard',
-          name: 'Standard',
-          description: 'Perfect for professional productions',
-          price: { monthly: 19, yearly: 190, currency: 'USD' },
-          features: [
-            '10 Shows',
-            '20 Task Boards',
-            '1000 Packing Boxes',
-            '15 Collaborators per Show', 
-            '100 Props',
-            'Priority Support',
-            'Custom Branding'
-          ],
-          limits: {
-            shows: 10,
-            boards: 20,
-            packingBoxes: 1000,
-            collaboratorsPerShow: 15,
-            props: 100
-          },
-          priceId: { monthly: standardPriceIdMonthly, yearly: standardPriceIdYearly },
-          popular: true,
-          color: 'bg-purple-500'
-        },
-        {
-          id: 'pro',
-          name: 'Pro',
-          description: 'For large-scale productions',
-          price: { monthly: 39, yearly: 390, currency: 'USD' },
-          features: [
-            '100 Shows',
-            '200 Task Boards',
-            '10000 Packing Boxes',
-            '100 Collaborators per Show',
-            '1000 Props',
-            '24/7 Support',
-            'Custom Branding'
-          ],
-          limits: {
-            shows: 100,
-            boards: 200,
-            packingBoxes: 10000,
-            collaboratorsPerShow: 100,
-            props: 1000
-          },
-          priceId: { monthly: proPriceIdMonthly, yearly: proPriceIdYearly },
-          popular: false,
-          color: 'bg-yellow-500'
-        }
-      ]
-    };
+    // Use shared default configuration and override with environment-specific price IDs
+    const config = { ...DEFAULT_PRICING_CONFIG };
+    
+    // Update price IDs from environment variables
+    config.plans = config.plans.map(plan => {
+      switch (plan.id) {
+        case 'starter':
+          return { ...plan, priceId: { monthly: starterPriceIdMonthly, yearly: starterPriceIdYearly } };
+        case 'standard':
+          return { ...plan, priceId: { monthly: standardPriceIdMonthly, yearly: standardPriceIdYearly } };
+        case 'pro':
+          return { ...plan, priceId: { monthly: proPriceIdMonthly, yearly: proPriceIdYearly } };
+        default:
+          return plan;
+      }
+    });
+
+    return config;
   }
 
   /**

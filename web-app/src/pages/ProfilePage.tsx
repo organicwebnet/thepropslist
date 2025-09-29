@@ -7,6 +7,8 @@ import { useSubscription } from '../hooks/useSubscription';
 import { updatePassword, updateEmail, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase';
 import { stripeService, type StripePlan } from '../services/StripeService';
+import { calculateDiscount } from '../shared/types/pricing';
+import { PricingModalErrorBoundary } from '../components/PricingModalErrorBoundary';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
@@ -808,27 +810,50 @@ const ProfilePage: React.FC = () => {
       {/* Pricing Modal */}
       <AnimatePresence>
         {showPricingModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          >
+          <PricingModalErrorBoundary onRetry={() => {
+            // Retry loading pricing config
+            const retryLoadPricing = async () => {
+              try {
+                setPricingLoading(true);
+                const config = await stripeService.refreshPricingConfig();
+                setPricingConfig(config.plans);
+              } catch (error) {
+                console.error('Failed to retry pricing config:', error);
+              } finally {
+                setPricingLoading(false);
+              }
+            };
+            retryLoadPricing();
+          }}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               className="bg-pb-darker rounded-2xl border border-pb-primary/20 p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="pricing-modal-title"
+              aria-describedby="pricing-modal-description"
             >
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-semibold text-white">Choose Your Plan</h3>
+                <h3 id="pricing-modal-title" className="text-2xl font-semibold text-white">Choose Your Plan</h3>
                 <button
                   onClick={() => setShowPricingModal(false)}
                   className="text-pb-gray hover:text-white"
+                  aria-label="Close pricing modal"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
+              <p id="pricing-modal-description" className="text-pb-gray mb-6">
+                Select a subscription plan that fits your production needs. All plans include core features with different limits and support levels.
+              </p>
 
               {/* Discount Code Input */}
               <div className="mb-6">
@@ -909,6 +934,9 @@ const ProfilePage: React.FC = () => {
                             ? 'border-pb-primary bg-pb-primary/10'
                             : 'border-pb-gray/30 bg-pb-darker/50'
                         }`}
+                        role="article"
+                        aria-labelledby={`plan-${planData.id}-title`}
+                        aria-describedby={`plan-${planData.id}-description`}
                       >
                         {planData.popular && (
                           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -922,28 +950,25 @@ const ProfilePage: React.FC = () => {
                           <div className={`w-12 h-12 ${planData.color} rounded-lg flex items-center justify-center mx-auto mb-3`}>
                             <PlanIcon className="w-6 h-6 text-white" />
                           </div>
-                          <h4 className="text-xl font-semibold text-white">{planData.name}</h4>
-                          <p className="text-sm text-pb-gray mb-2">{planData.description}</p>
+                          <h4 id={`plan-${planData.id}-title`} className="text-xl font-semibold text-white">{planData.name}</h4>
+                          <p id={`plan-${planData.id}-description`} className="text-sm text-pb-gray mb-2">{planData.description}</p>
                           <div className="mt-2">
                             <span className="text-3xl font-bold text-white">${planData.price.monthly}</span>
                             <span className="text-pb-gray">/month</span>
                           </div>
-                          {planData.price.yearly > 0 && planData.price.monthly > 0 && (
-                            <div className="text-sm text-pb-gray">
-                              or ${planData.price.yearly}/year 
-                              {(() => {
-                                const monthlyTotal = planData.price.monthly * 12;
-                                const yearlyPrice = planData.price.yearly;
-                                const savings = monthlyTotal - yearlyPrice;
-                                const discountPercent = Math.round((savings / monthlyTotal) * 100);
-                                return savings > 0 ? (
+                          {planData.price.yearly > 0 && planData.price.monthly > 0 && (() => {
+                            const { savings, discountPercent } = calculateDiscount(planData.price.monthly, planData.price.yearly);
+                            return (
+                              <div className="text-sm text-pb-gray">
+                                or ${planData.price.yearly}/year 
+                                {savings > 0 && (
                                   <span className="text-green-400 font-medium">
                                     {' '}(save ${savings} - {discountPercent}% off)
                                   </span>
-                                ) : null;
-                              })()}
-                            </div>
-                          )}
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                         
                         <ul className="space-y-2 mb-6">
@@ -970,6 +995,7 @@ const ProfilePage: React.FC = () => {
                                   ? 'bg-pb-primary text-white hover:bg-pb-secondary'
                                   : 'border border-pb-primary text-pb-primary hover:bg-pb-primary hover:text-white'
                               }`}
+                              aria-label={`Subscribe to ${planData.name} plan monthly for $${planData.price.monthly} per month`}
                             >
                               {planData.id === plan 
                                 ? 'Current Plan' 
@@ -990,17 +1016,15 @@ const ProfilePage: React.FC = () => {
                                   ? 'bg-pb-gray/30 text-pb-gray cursor-not-allowed'
                                   : 'border border-green-500 text-green-400 hover:bg-green-500 hover:text-white'
                               }`}
+                              aria-label={`Subscribe to ${planData.name} plan yearly for $${planData.price.yearly} per year`}
                             >
                               {planData.id === plan 
                                 ? 'Current Plan' 
                                 : (() => {
-                                    const monthlyTotal = planData.price.monthly * 12;
-                                    const yearlyPrice = planData.price.yearly;
-                                    const savings = monthlyTotal - yearlyPrice;
-                                    const discountPercent = Math.round((savings / monthlyTotal) * 100);
+                                    const { savings, discountPercent } = calculateDiscount(planData.price.monthly, planData.price.yearly);
                                     return savings > 0 
-                                      ? `Yearly - $${yearlyPrice} (Save $${savings} - ${discountPercent}% off)`
-                                      : `Yearly - $${yearlyPrice}`;
+                                      ? `Yearly - $${planData.price.yearly} (Save $${savings} - ${discountPercent}% off)`
+                                      : `Yearly - $${planData.price.yearly}`;
                                   })()
                               }
                             </button>
@@ -1019,6 +1043,7 @@ const ProfilePage: React.FC = () => {
               )}
             </motion.div>
           </motion.div>
+          </PricingModalErrorBoundary>
         )}
       </AnimatePresence>
     </div>

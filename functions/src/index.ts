@@ -890,30 +890,31 @@ export const getStripePromotionCodes = onCall({ region: "us-central1" }, async (
   }
 });
 
+// Import shared pricing configuration
+const DEFAULT_PLAN_FEATURES: Record<string, string[]> = {
+  'free': [
+    '1 Show', '2 Task Boards', '20 Packing Boxes',
+    '3 Collaborators per Show', '10 Props', 'Basic Support'
+  ],
+  'starter': [
+    '3 Shows', '5 Task Boards', '200 Packing Boxes',
+    '5 Collaborators per Show', '50 Props', 'Email Support'
+  ],
+  'standard': [
+    '10 Shows', '20 Task Boards', '1000 Packing Boxes',
+    '15 Collaborators per Show', '100 Props', 'Priority Support',
+    'Custom Branding'
+  ],
+  'pro': [
+    '100 Shows', '200 Task Boards', '10000 Packing Boxes',
+    '100 Collaborators per Show', '1000 Props', '24/7 Support',
+    'Custom Branding'
+  ]
+};
+
 // Helper function to get default features for a plan
 function getDefaultFeaturesForPlan(planId: string): string[] {
-  const defaultFeatures: Record<string, string[]> = {
-    'free': [
-      '1 Show', '2 Task Boards', '20 Packing Boxes',
-      '3 Collaborators per Show', '10 Props', 'Basic Support'
-    ],
-    'starter': [
-      '3 Shows', '5 Task Boards', '200 Packing Boxes',
-      '5 Collaborators per Show', '50 Props', 'Email Support'
-    ],
-    'standard': [
-      '10 Shows', '20 Task Boards', '1000 Packing Boxes',
-      '15 Collaborators per Show', '100 Props', 'Priority Support',
-      'Custom Branding'
-    ],
-    'pro': [
-      '100 Shows', '200 Task Boards', '10000 Packing Boxes',
-      '100 Collaborators per Show', '1000 Props', '24/7 Support',
-      'Custom Branding'
-    ]
-  };
-  
-  return defaultFeatures[planId] || [];
+  return DEFAULT_PLAN_FEATURES[planId] || [];
 }
 
 // --- Get pricing configuration from Stripe ---
@@ -921,6 +922,7 @@ export const getPricingConfig = onCall({ region: "us-central1" }, async (req) =>
   const s = await ensureStripe();
   if (!s) {
     // Return static configuration if Stripe is not configured
+    // Return shared default configuration as fallback
     return {
       currency: 'USD',
       billingInterval: 'monthly',
@@ -930,10 +932,7 @@ export const getPricingConfig = onCall({ region: "us-central1" }, async (req) =>
           name: 'Free',
           description: 'Perfect for small productions',
           price: { monthly: 0, yearly: 0, currency: 'USD' },
-          features: [
-            '1 Show', '2 Task Boards', '20 Packing Boxes',
-            '3 Collaborators per Show', '10 Props', 'Basic Support'
-          ],
+          features: getDefaultFeaturesForPlan('free'),
           limits: {
             shows: 1, boards: 2, packingBoxes: 20,
             collaboratorsPerShow: 3, props: 10
@@ -947,10 +946,7 @@ export const getPricingConfig = onCall({ region: "us-central1" }, async (req) =>
           name: 'Starter', 
           description: 'Great for growing productions',
           price: { monthly: 9, yearly: 90, currency: 'USD' },
-          features: [
-            '3 Shows', '5 Task Boards', '200 Packing Boxes',
-            '5 Collaborators per Show', '50 Props', 'Email Support'
-          ],
+          features: getDefaultFeaturesForPlan('starter'),
           limits: {
             shows: 3, boards: 5, packingBoxes: 200,
             collaboratorsPerShow: 5, props: 50
@@ -964,11 +960,7 @@ export const getPricingConfig = onCall({ region: "us-central1" }, async (req) =>
           name: 'Standard',
           description: 'Perfect for professional productions', 
           price: { monthly: 19, yearly: 190, currency: 'USD' },
-          features: [
-            '10 Shows', '20 Task Boards', '1000 Packing Boxes',
-            '15 Collaborators per Show', '100 Props', 'Priority Support',
-            'Custom Branding'
-          ],
+          features: getDefaultFeaturesForPlan('standard'),
           limits: {
             shows: 10, boards: 20, packingBoxes: 1000,
             collaboratorsPerShow: 15, props: 100
@@ -982,11 +974,7 @@ export const getPricingConfig = onCall({ region: "us-central1" }, async (req) =>
           name: 'Pro',
           description: 'For large-scale productions',
           price: { monthly: 39, yearly: 390, currency: 'USD' },
-          features: [
-            '100 Shows', '200 Task Boards', '10000 Packing Boxes',
-            '100 Collaborators per Show', '1000 Props', '24/7 Support',
-            'Custom Branding'
-          ],
+          features: getDefaultFeaturesForPlan('pro'),
           limits: {
             shows: 100, boards: 200, packingBoxes: 10000,
             collaboratorsPerShow: 100, props: 1000

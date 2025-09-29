@@ -1,37 +1,6 @@
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-
-export interface PricingConfig {
-  id: string;
-  name: string;
-  description: string;
-  price: {
-    monthly: number;
-    yearly: number;
-    currency: string;
-  };
-  features: string[];
-  limits: {
-    shows: number;
-    boards: number;
-    packingBoxes: number;
-    collaboratorsPerShow: number;
-    props: number;
-  };
-  priceId: {
-    monthly: string;
-    yearly: string;
-  };
-  popular: boolean;
-  color: string;
-  active: boolean;
-}
-
-export interface AdminPricingData {
-  plans: PricingConfig[];
-  lastUpdated: string;
-  updatedBy: string;
-}
+import { PricingPlan, AdminPricingData, DEFAULT_PRICING_CONFIG } from '../shared/types/pricing';
 
 class AdminPricingService {
   private readonly COLLECTION = 'adminPricing';
@@ -120,111 +89,15 @@ class AdminPricingService {
    * Get default pricing configuration
    */
   getDefaultPricingConfig(): AdminPricingData {
+    // Use shared default configuration and add active flag for admin interface
+    const plansWithActiveFlag: PricingPlan[] = DEFAULT_PRICING_CONFIG.plans.map(plan => ({
+      ...plan,
+      active: true
+    }));
+
     return {
-      plans: [
-        {
-          id: 'free',
-          name: 'Free',
-          description: 'Perfect for small productions',
-          price: { monthly: 0, yearly: 0, currency: 'USD' },
-          features: [
-            '1 Show',
-            '2 Task Boards', 
-            '20 Packing Boxes',
-            '3 Collaborators per Show',
-            '10 Props',
-            'Basic Support'
-          ],
-          limits: {
-            shows: 1,
-            boards: 2,
-            packingBoxes: 20,
-            collaboratorsPerShow: 3,
-            props: 10
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: false,
-          color: 'bg-gray-500',
-          active: true
-        },
-        {
-          id: 'starter',
-          name: 'Starter',
-          description: 'Great for growing productions',
-          price: { monthly: 9, yearly: 90, currency: 'USD' },
-          features: [
-            '3 Shows',
-            '5 Task Boards',
-            '200 Packing Boxes', 
-            '5 Collaborators per Show',
-            '50 Props',
-            'Email Support'
-          ],
-          limits: {
-            shows: 3,
-            boards: 5,
-            packingBoxes: 200,
-            collaboratorsPerShow: 5,
-            props: 50
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: false,
-          color: 'bg-blue-500',
-          active: true
-        },
-        {
-          id: 'standard',
-          name: 'Standard',
-          description: 'Perfect for professional productions',
-          price: { monthly: 19, yearly: 190, currency: 'USD' },
-          features: [
-            '10 Shows',
-            '20 Task Boards',
-            '1000 Packing Boxes',
-            '15 Collaborators per Show', 
-            '100 Props',
-            'Priority Support',
-            'Custom Branding'
-          ],
-          limits: {
-            shows: 10,
-            boards: 20,
-            packingBoxes: 1000,
-            collaboratorsPerShow: 15,
-            props: 100
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: true,
-          color: 'bg-purple-500',
-          active: true
-        },
-        {
-          id: 'pro',
-          name: 'Pro',
-          description: 'For large-scale productions',
-          price: { monthly: 39, yearly: 390, currency: 'USD' },
-          features: [
-            '100 Shows',
-            '200 Task Boards',
-            '10000 Packing Boxes',
-            '100 Collaborators per Show',
-            '1000 Props',
-            '24/7 Support',
-            'Custom Branding'
-          ],
-          limits: {
-            shows: 100,
-            boards: 200,
-            packingBoxes: 10000,
-            collaboratorsPerShow: 100,
-            props: 1000
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: false,
-          color: 'bg-yellow-500',
-          active: true
-        }
-      ],
+      ...DEFAULT_PRICING_CONFIG,
+      plans: plansWithActiveFlag,
       lastUpdated: new Date().toISOString(),
       updatedBy: 'system'
     };
