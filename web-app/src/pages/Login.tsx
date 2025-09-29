@@ -191,7 +191,7 @@ export default function Login() {
             </form>
             {/* Links for sign up and forgot password */}
             <div className="flex flex-col items-center mt-6 space-y-2">
-              <Link to="/signup" className="text-pb-primary hover:underline text-sm font-medium">Don't have an account? Sign up</Link>
+              <a href="https://thepropslist.uk" target="_blank" rel="noopener noreferrer" className="text-pb-primary hover:underline text-sm font-medium">Don't have an account? Join the waitlist</a>
               <Link to="/forgot-password" className="text-pb-primary hover:underline text-sm font-medium">Forgot password?</Link>
             </div>
             {/* Divider */}

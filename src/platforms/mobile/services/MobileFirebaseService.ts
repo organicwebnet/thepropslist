@@ -369,6 +369,31 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
     return { ...listData, id: docRef.id };
   }
 
+  async updateList(boardId: string, listId: string, updates: Partial<ListData>): Promise<void> {
+    const listRef = fbDoc(this.firestore, `todo_boards/${boardId}/lists`, listId);
+    await fbUpdate(listRef, {
+      ...updates,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  async deleteList(boardId: string, listId: string): Promise<void> {
+    const listRef = fbDoc(this.firestore, `todo_boards/${boardId}/lists`, listId);
+    
+    // First, delete all cards in the list
+    const cardsSnapshot = await fbGetDocs(fbCollection(this.firestore, `todo_boards/${boardId}/lists/${listId}/cards`));
+    const batch = rnWriteBatch(this.firestore);
+    
+    cardsSnapshot.docs.forEach(cardDoc => {
+      batch.delete(cardDoc.ref);
+    });
+    
+    // Then delete the list itself
+    batch.delete(listRef);
+    
+    await batch.commit();
+  }
+
   async addCard(boardId: string, listId: string, cardData: Omit<CardData, 'id' | 'boardId' | 'listId'>): Promise<CardData> {
     const collectionRef = fbCollection(this.firestore, `todo_boards/${boardId}/lists/${listId}/cards`);
     const docRef = await fbAdd(collectionRef, {

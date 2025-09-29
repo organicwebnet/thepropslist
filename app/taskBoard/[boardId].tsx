@@ -328,13 +328,28 @@ const TaskBoardDetailScreen = () => {
 
   useEffect(() => {
     if (!firebaseService || !boardId || !isFirebaseInitialized) return;
-    if (!lists) return;
+    if (!lists || lists.length === 0) return;
 
-    // Check for missing standard lists
-    const existingListNames = lists.map(l => l.name);
-    const missingStandardLists = STANDARD_LISTS.filter(l => !existingListNames.includes(l.name));
+    // Check for missing standard lists with better duplicate detection
+    const existingListNames = lists.map(l => l.name?.toLowerCase().trim()).filter(Boolean);
+    const missingStandardLists = STANDARD_LISTS.filter(stdList => {
+      const stdListName = stdList.name.toLowerCase().trim();
+      // Check for exact match or common variations
+      return !existingListNames.some(existingName => {
+        const variations = [
+          stdListName,
+          stdListName.replace(/-/g, ' '), // "to-do" -> "to do"
+          stdListName.replace(/ /g, '-'), // "to do" -> "to-do"
+          stdListName.replace(/s$/, ''),  // "deliveries" -> "delivery"
+        ];
+        return variations.includes(existingName);
+      });
+    });
 
-    if (missingStandardLists.length > 0) {
+    // Only create missing lists if we don't have any standard lists at all
+    // This prevents creating duplicates when the effect runs multiple times
+    if (missingStandardLists.length > 0 && existingListNames.length === 0) {
+      console.log('Creating initial standard lists for board:', boardId);
       missingStandardLists.forEach((list, idx) => {
         firebaseService.addList(boardId, {
           name: list.name,
@@ -343,7 +358,7 @@ const TaskBoardDetailScreen = () => {
         });
       });
     }
-  }, [firebaseService, boardId, isFirebaseInitialized, lists]);
+  }, [firebaseService, boardId, isFirebaseInitialized, lists.length]); // Only depend on lists.length, not the entire lists array
 
   // --- Handlers ---
   const handleReorderLists = useCallback(
@@ -512,6 +527,62 @@ const TaskBoardDetailScreen = () => {
       ]);
     },
     [boardId, firebaseService, router, offlineSyncManager],
+  );
+
+  const handleDeleteList = useCallback(
+    async (listId: string) => {
+      if (!boardId) return;
+      const list = lists.find(l => l.id === listId);
+      const listName = list?.name || 'this list';
+      
+      Alert.alert('Delete List', `Are you sure you want to delete "${listName}"? This will also delete all cards in this list.`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (offlineSyncManager) {
+                // Delete all cards in the list first
+                const cardsInList = cards[listId] || [];
+                for (const card of cardsInList) {
+                  await offlineSyncManager.queueOperation('delete', `todo_boards/${boardId}/lists/${listId}/cards`, { id: card.id });
+                }
+                // Then delete the list
+                await offlineSyncManager.queueOperation('delete', `todo_boards/${boardId}/lists`, { id: listId });
+              } else {
+                await firebaseService.deleteList(boardId, listId);
+              }
+            } catch (error) {
+              console.error('Error deleting list:', error);
+              Alert.alert('Error', 'Could not delete list.');
+            }
+          },
+        },
+      ]);
+    },
+    [boardId, firebaseService, lists, cards, offlineSyncManager],
+  );
+
+  const handleEditList = useCallback(
+    async (listId: string, newName: string) => {
+      if (!boardId || !newName.trim()) return;
+      
+      try {
+        if (offlineSyncManager) {
+          await offlineSyncManager.queueOperation('update', `todo_boards/${boardId}/lists`, { 
+            id: listId, 
+            name: newName.trim() 
+          });
+        } else {
+          await firebaseService.updateList(boardId, listId, { name: newName.trim() });
+        }
+      } catch (error) {
+        console.error('Error updating list:', error);
+        Alert.alert('Error', 'Could not update list name.');
+      }
+    },
+    [boardId, firebaseService, offlineSyncManager],
   );
 
   // --- Mobile DnD Rendering ---
@@ -898,6 +969,8 @@ const TaskBoardDetailScreen = () => {
                     cards={filteredCards}
                     onAddCard={handleAddCardFromList}
                     onDeleteCard={handleDeleteCard}
+                    onDeleteList={handleDeleteList}
+                    onEditList={handleEditList}
                     onOpenCardDetail={(card: any) => router.setParams({ selectedCardId: card.id })}
                     onReorderCards={handleReorderCards}
                     onCardDrop={(card: any, targetListId: string) => {

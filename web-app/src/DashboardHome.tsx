@@ -16,7 +16,7 @@ import type { Show } from './types/Show';
 import type { Prop } from './types/props';
 import type { CardData } from './types/taskManager';
 import { Link, useNavigate } from 'react-router-dom';
-import { OnboardingModal } from './components/OnboardingModal';
+import OnboardingFlow from './components/OnboardingFlow';
 import { useWebAuth } from './contexts/WebAuthContext';
 
 const containerVariants = {
@@ -54,16 +54,19 @@ const DashboardHome: React.FC = () => {
   const { currentShowId } = useShowSelection();
   const navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const { userProfile } = useWebAuth();
 
   useEffect(() => {
-    const seen = localStorage.getItem('onboarded') === '1';
-    if (!seen && !currentShowId) setShowOnboarding(true);
-  }, [currentShowId]);
+    // Show onboarding if user hasn't completed it
+    if (userProfile && !userProfile.onboardingCompleted) {
+      setShowOnboarding(true);
+    }
+  }, [userProfile]);
   const { service } = useFirebase();
   const [show, setShow] = useState<Show | null>(null);
   const [props, setProps] = useState<Prop[]>([]);
   const [cards, setCards] = useState<CardData[]>([]);
-  const { user, userProfile } = useWebAuth();
+  const { user } = useWebAuth();
 
   // Fetch show
   useEffect(() => {
@@ -389,13 +392,9 @@ const DashboardHome: React.FC = () => {
         </div>
       </motion.div>
     </DashboardLayout>
-    <OnboardingModal
+    <OnboardingFlow
       isOpen={showOnboarding}
-      onClose={() => setShowOnboarding(false)}
-      onCreateShow={() => navigate('/shows/new')}
-      onInviteTeam={() => navigate('/profile')}
-      onAddProp={() => navigate('/props/add')}
-      onOpenBoard={() => navigate('/boards')}
+      onComplete={() => setShowOnboarding(false)}
     />
     </>
   );

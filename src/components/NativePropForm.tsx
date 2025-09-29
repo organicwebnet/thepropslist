@@ -495,6 +495,7 @@ export function NativePropForm({
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Add Usage Instructions?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={hasUsageInstructions ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -516,6 +517,7 @@ export function NativePropForm({
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Add Maintenance Notes?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={hasMaintenanceNotes ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -537,6 +539,7 @@ export function NativePropForm({
          <View style={styles.switchContainer}>
           <Text style={styles.label}>Add Safety Notes?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={hasSafetyNotes ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -559,6 +562,7 @@ export function NativePropForm({
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Consumable?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={isConsumable ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -569,6 +573,7 @@ export function NativePropForm({
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Requires Pre-Show Setup?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={requiresPreShowSetup ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -579,6 +584,7 @@ export function NativePropForm({
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Breakable?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={isBreakable ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -589,6 +595,7 @@ export function NativePropForm({
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Has Dedicated Shipping Crate?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={hasOwnShippingCrate ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -599,6 +606,7 @@ export function NativePropForm({
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Requires Special Transport?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={requiresSpecialTransport ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -609,6 +617,7 @@ export function NativePropForm({
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Prop Has Been Modified?</Text>
           <Switch
+            style={styles.switch}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={hasBeenModified ? "#f5dd4b" : "#f4f3f4"}
             ios_backgroundColor="#3e3e3e"
@@ -685,6 +694,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#4B5563',
     height: 50, // Ensure consistent height for inputs/pickers
+    textAlign: 'left', // Ensure left alignment for all inputs
   },
   pickerContainer: { // Container to style the picker like an input
     backgroundColor: '#374151',
@@ -697,23 +707,26 @@ const styles = StyleSheet.create({
   },
   picker: {
     color: '#FFFFFF',
+    textAlign: 'left', // Ensure left alignment
     // height: 50, // Height is controlled by container
   },
   textArea: { // Style for multiline description
     height: 100, 
     textAlignVertical: 'top', // Align text to top for multiline
+    textAlign: 'left', // Ensure left alignment for multiline text
   },
   conditionalInput: { // Style for inputs that appear conditionally
     marginTop: -5, // Reduce space after switch
     marginBottom: 15, // Keep standard bottom margin
     borderColor: '#5A677A', // Slightly different border to indicate relation
   },
-  switchContainer: { // Style for Switch row
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  switchContainer: { // Style for Switch row - now vertical layout
     marginBottom: 15,
     paddingHorizontal: 5, // Add some horizontal padding
+  },
+  switch: { // Style for individual switches
+    alignSelf: 'flex-start', // Align switch to the left
+    marginTop: 5, // Add some space between label and switch
   },
   buttonContainer: {
     flexDirection: 'row',

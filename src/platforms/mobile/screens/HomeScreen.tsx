@@ -356,7 +356,7 @@ export function HomeScreen() {
       <Ionicons name="search" size={18} color={darkColors.secondaryText} style={{ marginRight: 8 }} />
       <TextInput
         style={styles.globalSearchInput}
-        placeholder="Search props or enter container GUID"
+        placeholder="Search"
         placeholderTextColor={darkColors.secondaryText}
         value={globalQuery}
         onChangeText={setGlobalQuery}
@@ -374,13 +374,6 @@ export function HomeScreen() {
         autoCapitalize="none"
         autoCorrect={false}
       />
-      <TouchableOpacity
-        onPress={() => navigateToFind({ initialMode: 'container', openScanner: '1' })}
-        style={styles.scanButton}
-      >
-        <Ionicons name="qr-code-outline" size={18} color={'#111'} />
-        <Text style={styles.scanButtonText}>Scan</Text>
-      </TouchableOpacity>
     </View>
   );
 
@@ -528,16 +521,6 @@ export function HomeScreen() {
             {selectedShow && (
               <>
                 {renderInfoCard({
-                  title: "To-Do Boards",
-                  data: filteredBoards,
-                  loading: loadingBoards,
-                  error: errorBoards,
-                  onCardPress: (boardId) => router.navigate(`/taskBoard/${boardId}`),
-                  onSeeAllPress: () => router.navigate('/(tabs)/todos'),
-                  renderItem: (item) => item.data?.name || 'Untitled Board',
-                  emptyText: "No boards found for this show. Creating one...",
-                })}
-                {renderInfoCard({
                   title: "Upcoming Tasks",
                   data: upcomingTasks,
                   loading: loadingTasks,
@@ -559,59 +542,59 @@ export function HomeScreen() {
                {
                  icon: ({ color, size }) => (
                    <View style={{ position: 'relative' }}>
-                     <Ionicons name="people-outline" size={size} color={color} />
+                     <Ionicons name="people-outline" size={size} color="#FFFFFF" />
                      <Ionicons
                        name="add-circle"
                        size={size * 0.4}
-                       color={color}
-                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: 'white', borderRadius: size * 0.2 }}
+                       color="#FFFFFF"
+                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: darkColors.primary, borderRadius: size * 0.2 }}
                      />
                    </View>
                  ),
                  label: 'Add Show',
                  onPress: () => router.navigate('/(tabs)/shows/create' as any),
                  style: styles.fabAction,
-                 labelStyle: [styles.fabLabel, { marginLeft: 0, paddingLeft: 0, minWidth: 0 }],
+                 labelStyle: styles.fabLabel,
                },
                {
                  icon: ({ color, size }) => (
                    <View style={{ position: 'relative' }}>
-                     <Ionicons name="rose-outline" size={size} color={color} />
+                     <Ionicons name="rose-outline" size={size} color="#FFFFFF" />
                      <Ionicons
                        name="add-circle"
                        size={size * 0.4}
-                       color={color}
-                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: 'white', borderRadius: size * 0.2 }}
+                       color="#FFFFFF"
+                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: darkColors.primary, borderRadius: size * 0.2 }}
                      />
                    </View>
                  ),
                  label: 'Add Prop',
                  onPress: () => router.navigate({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } }),
-                 style: [styles.fabAction, { marginBottom: 0}],
-                 labelStyle: [styles.fabLabel, { marginLeft: 0, paddingLeft: 0, minWidth: 0 }],
+                 style: styles.fabAction,
+                 labelStyle: styles.fabLabel,
                },
                {
                  icon: ({ color, size }) => (
                    <View style={{ position: 'relative' }}>
-                     <Ionicons name="cube-outline" size={size} color={color} />
+                     <Ionicons name="cube-outline" size={size} color="#FFFFFF" />
                      <Ionicons
                        name="add-circle"
                        size={size * 0.4}
-                       color={color}
-                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: 'white', borderRadius: size * 0.2 }}
+                       color="#FFFFFF"
+                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: darkColors.primary, borderRadius: size * 0.2 }}
                      />
                    </View>
                  ),
                  label: 'Add Board',
                  onPress: handleCreateNewBoard,
-                 style: [styles.fabAction, { marginBottom:52,}],
-                 labelStyle: [styles.fabLabel, { marginLeft: 0, paddingLeft: 0, minWidth: 0 }],
+                 style: [styles.fabAction, { marginBottom: 52 }],
+                 labelStyle: styles.fabLabel,
                },
              ]}
              onStateChange={({ open }) => setFabOpen(open)}
-             fabStyle={[styles.fab, { backgroundColor: '#c084fc' }]}
+             fabStyle={styles.fab}
              color="#FFFFFF"
-             backdropColor="transparent"
+             backdropColor="rgba(0,0,0,0.3)"
           />
           
           {renderCreateBoardModal()}
@@ -744,24 +727,42 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 0,
-    backgroundColor: '#c084fc',
+    backgroundColor: darkColors.primary,
     borderRadius: 28,
     width: 56,
     height: 56,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: 'transparent',
-    elevation: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
     borderWidth: 0,
   },
   fabAction: {
-    backgroundColor: 'rgba(30,30,30,0.7)',
+    backgroundColor: darkColors.card,
+    borderRadius: 28,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: darkColors.border,
   },
   fabLabel: {
     color: '#FFFFFF',
-    backgroundColor: 'rgba(30,30,30,0.7)',
-    paddingHorizontal: 8,
-    borderRadius: 4,
+    backgroundColor: darkColors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: darkColors.border,
   },
   centeredMessage: {
     flex: 1,

@@ -11,7 +11,6 @@ import { useWebAuth } from '../contexts/WebAuthContext';
 import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { ShowSelectionProvider } from "../contexts/ShowSelectionContext";
 import Login from "../pages/Login";
-import Signup from "../pages/Signup";
 import ForgotPassword from "../pages/ForgotPassword";
 import EditPropPage from "../pages/EditPropPage";
 import PropDetailPage from "../pages/PropDetailPage";
@@ -101,7 +100,7 @@ const BoardsPage: React.FC = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-          <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
+          <Route path="/signup" element={<Navigate to="https://thepropslist.uk" replace />} />
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
           <Route path="/props/:id/edit" element={user ? <EditPropPage /> : <Navigate to="/login" replace />} />
           <Route path="/props/:id" element={user ? <PropDetailPage /> : <Navigate to="/login" replace />} />

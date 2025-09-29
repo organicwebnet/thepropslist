@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useAuth } from '../src/contexts/AuthContext';
 
 export default function Index() {
-  const { user, loading, status } = useAuth();
+  const { user, loading, status, error } = useAuth();
 
   // Show loading while authentication is being determined
   if (loading || status === 'pending') {
@@ -12,6 +12,20 @@ export default function Index() {
       <View style={styles.container}>
         <Text style={styles.title}>The Props List</Text>
         <Text style={styles.loading}>Loading...</Text>
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Error: {error.message}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={() => {
+                // Force reload the app
+                window.location?.reload?.();
+              }}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   }

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import { Suspense, lazy } from 'react';
 import './index.css';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useWebAuth } from './contexts/WebAuthContext';
@@ -11,7 +11,6 @@ import DashboardHome from './DashboardHome';
 
 // Lazy load all page components for better performance
 const Login = lazy(() => import('./pages/Login'));
-const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const CompleteSignup = lazy(() => import('./pages/CompleteSignup'));
 
@@ -60,7 +59,7 @@ function App() {
         }>
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-          <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
+          <Route path="/signup" element={<Navigate to="https://thepropslist.uk" replace />} />
           <Route path="/complete-signup" element={<CompleteSignup />} />
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
           <Route path="/props/pdf-export" element={<ProtectedRoute><PropsPdfExportPage /></ProtectedRoute>} />

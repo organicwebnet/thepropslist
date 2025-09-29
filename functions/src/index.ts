@@ -808,6 +808,250 @@ export const createCheckoutSession = onCall({ region: "us-central1" }, async (re
   return { url: session.url } as any;
 });
 
+// --- Create Stripe Coupon ---
+export const createStripeCoupon = onCall({ region: "us-central1" }, async (req) => {
+  const s = await ensureStripe();
+  if (!s) {
+    throw new Error("Stripe not configured");
+  }
+
+  const { id, name, percent_off, amount_off, currency, max_redemptions, redeem_by } = req.data;
+
+  try {
+    const coupon = await s.coupons.create({
+      id,
+      name,
+      percent_off,
+      amount_off,
+      currency,
+      max_redemptions,
+      redeem_by
+    });
+
+    return { couponId: coupon.id } as any;
+  } catch (error) {
+    logger.error('Error creating Stripe coupon:', error);
+    throw new Error('Failed to create Stripe coupon');
+  }
+});
+
+// --- Create Stripe Promotion Code ---
+export const createStripePromotionCode = onCall({ region: "us-central1" }, async (req) => {
+  const s = await ensureStripe();
+  if (!s) {
+    throw new Error("Stripe not configured");
+  }
+
+  const { coupon, code, active } = req.data;
+
+  try {
+    const promotionCode = await s.promotionCodes.create({
+      coupon,
+      code,
+      active
+    });
+
+    return { promotionCodeId: promotionCode.id } as any;
+  } catch (error) {
+    logger.error('Error creating Stripe promotion code:', error);
+    throw new Error('Failed to create Stripe promotion code');
+  }
+});
+
+// --- Get Stripe Coupons ---
+export const getStripeCoupons = onCall({ region: "us-central1" }, async (req) => {
+  const s = await ensureStripe();
+  if (!s) {
+    throw new Error("Stripe not configured");
+  }
+
+  try {
+    const coupons = await s.coupons.list({ limit: 100 });
+    return { coupons: coupons.data } as any;
+  } catch (error) {
+    logger.error('Error fetching Stripe coupons:', error);
+    throw new Error('Failed to fetch Stripe coupons');
+  }
+});
+
+// --- Get Stripe Promotion Codes ---
+export const getStripePromotionCodes = onCall({ region: "us-central1" }, async (req) => {
+  const s = await ensureStripe();
+  if (!s) {
+    throw new Error("Stripe not configured");
+  }
+
+  try {
+    const promotionCodes = await s.promotionCodes.list({ limit: 100 });
+    return { promotionCodes: promotionCodes.data } as any;
+  } catch (error) {
+    logger.error('Error fetching Stripe promotion codes:', error);
+    throw new Error('Failed to fetch Stripe promotion codes');
+  }
+});
+
+// Helper function to get default features for a plan
+function getDefaultFeaturesForPlan(planId: string): string[] {
+  const defaultFeatures: Record<string, string[]> = {
+    'free': [
+      '1 Show', '2 Task Boards', '20 Packing Boxes',
+      '3 Collaborators per Show', '10 Props', 'Basic Support'
+    ],
+    'starter': [
+      '3 Shows', '5 Task Boards', '200 Packing Boxes',
+      '5 Collaborators per Show', '50 Props', 'Email Support'
+    ],
+    'standard': [
+      '10 Shows', '20 Task Boards', '1000 Packing Boxes',
+      '15 Collaborators per Show', '100 Props', 'Priority Support',
+      'Custom Branding'
+    ],
+    'pro': [
+      '100 Shows', '200 Task Boards', '10000 Packing Boxes',
+      '100 Collaborators per Show', '1000 Props', '24/7 Support',
+      'Custom Branding'
+    ]
+  };
+  
+  return defaultFeatures[planId] || [];
+}
+
+// --- Get pricing configuration from Stripe ---
+export const getPricingConfig = onCall({ region: "us-central1" }, async (req) => {
+  const s = await ensureStripe();
+  if (!s) {
+    // Return static configuration if Stripe is not configured
+    return {
+      currency: 'USD',
+      billingInterval: 'monthly',
+      plans: [
+        {
+          id: 'free',
+          name: 'Free',
+          description: 'Perfect for small productions',
+          price: { monthly: 0, yearly: 0, currency: 'USD' },
+          features: [
+            '1 Show', '2 Task Boards', '20 Packing Boxes',
+            '3 Collaborators per Show', '10 Props', 'Basic Support'
+          ],
+          limits: {
+            shows: 1, boards: 2, packingBoxes: 20,
+            collaboratorsPerShow: 3, props: 10
+          },
+          priceId: { monthly: '', yearly: '' },
+          popular: false,
+          color: 'bg-gray-500'
+        },
+        {
+          id: 'starter',
+          name: 'Starter', 
+          description: 'Great for growing productions',
+          price: { monthly: 9, yearly: 90, currency: 'USD' },
+          features: [
+            '3 Shows', '5 Task Boards', '200 Packing Boxes',
+            '5 Collaborators per Show', '50 Props', 'Email Support'
+          ],
+          limits: {
+            shows: 3, boards: 5, packingBoxes: 200,
+            collaboratorsPerShow: 5, props: 50
+          },
+          priceId: { monthly: '', yearly: '' },
+          popular: false,
+          color: 'bg-blue-500'
+        },
+        {
+          id: 'standard',
+          name: 'Standard',
+          description: 'Perfect for professional productions', 
+          price: { monthly: 19, yearly: 190, currency: 'USD' },
+          features: [
+            '10 Shows', '20 Task Boards', '1000 Packing Boxes',
+            '15 Collaborators per Show', '100 Props', 'Priority Support',
+            'Custom Branding'
+          ],
+          limits: {
+            shows: 10, boards: 20, packingBoxes: 1000,
+            collaboratorsPerShow: 15, props: 100
+          },
+          priceId: { monthly: '', yearly: '' },
+          popular: true,
+          color: 'bg-purple-500'
+        },
+        {
+          id: 'pro',
+          name: 'Pro',
+          description: 'For large-scale productions',
+          price: { monthly: 39, yearly: 390, currency: 'USD' },
+          features: [
+            '100 Shows', '200 Task Boards', '10000 Packing Boxes',
+            '100 Collaborators per Show', '1000 Props', '24/7 Support',
+            'Custom Branding'
+          ],
+          limits: {
+            shows: 100, boards: 200, packingBoxes: 10000,
+            collaboratorsPerShow: 100, props: 1000
+          },
+          priceId: { monthly: '', yearly: '' },
+          popular: false,
+          color: 'bg-yellow-500'
+        }
+      ]
+    } as any;
+  }
+
+  try {
+    // Fetch products and prices from Stripe
+    const products = await s.products.list({ active: true, type: 'service' });
+    const prices = await s.prices.list({ active: true });
+    
+    // Map Stripe data to our pricing structure
+    const plans = products.data.map(product => {
+      const productPrices = prices.data.filter(price => price.product === product.id);
+      const monthlyPrice = productPrices.find(p => p.recurring?.interval === 'month');
+      const yearlyPrice = productPrices.find(p => p.recurring?.interval === 'year');
+      
+      // Extract plan ID from product metadata or name
+      const planId = product.metadata?.plan_id || product.name.toLowerCase().replace(/\s+/g, '-');
+      
+      return {
+        id: planId,
+        name: product.name,
+        description: product.description || '',
+        price: {
+          monthly: monthlyPrice ? (monthlyPrice.unit_amount || 0) / 100 : 0,
+          yearly: yearlyPrice ? (yearlyPrice.unit_amount || 0) / 100 : 0,
+          currency: monthlyPrice?.currency || 'usd'
+        },
+        features: product.metadata?.features 
+          ? product.metadata.features.split(',').map(f => f.trim()).filter(f => f.length > 0)
+          : getDefaultFeaturesForPlan(planId),
+        limits: {
+          shows: parseInt(product.metadata?.shows || '0'),
+          boards: parseInt(product.metadata?.boards || '0'),
+          packingBoxes: parseInt(product.metadata?.packing_boxes || '0'),
+          collaboratorsPerShow: parseInt(product.metadata?.collaborators || '0'),
+          props: parseInt(product.metadata?.props || '0')
+        },
+        priceId: {
+          monthly: monthlyPrice?.id || '',
+          yearly: yearlyPrice?.id || ''
+        },
+        popular: product.metadata?.popular === 'true',
+        color: product.metadata?.color || 'bg-gray-500'
+      };
+    });
+
+    return {
+      currency: 'USD',
+      billingInterval: 'monthly',
+      plans
+    } as any;
+  } catch (error) {
+    logger.error('Error fetching pricing config from Stripe:', error);
+    throw new Error('Failed to fetch pricing configuration');
+  }
+});
+
 // --- Seed test users (god/system-admin only) ---
 export const seedTestUsers = onCall({ region: "us-central1" }, async (req) => {
   if (!req.auth) throw new Error("unauthenticated");

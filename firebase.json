@@ -66,7 +66,7 @@
       "redirects": [
         { "source": "/app/**", "destination": "https://app.thepropslist.uk/:splat", "type": 301 },
         { "source": "/login", "destination": "https://app.thepropslist.uk/login", "type": 301 },
-        { "source": "/signup", "destination": "https://app.thepropslist.uk/signup", "type": 301 }
+        { "source": "/signup", "destination": "https://thepropslist.uk", "type": 301 }
       ],
       "rewrites": [
         { "source": "/contact/**", "destination": "/contact/index.html" },

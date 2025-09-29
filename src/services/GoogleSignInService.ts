@@ -19,23 +19,25 @@ export class GoogleSignInService {
     if (this.isConfigured) return;
 
     try {
-      // Get the Google Client ID from environment variables
-      const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '162597141271-lhl338e6m7sf4m81l5ev271k8rmqv0da.apps.googleusercontent.com';
+      // For Android, we need the web client ID (not the Android client ID)
+      // The web client ID should be from the Firebase Console > Authentication > Sign-in method > Google > Web SDK configuration
+      const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '162597141271-lhl338e6m7sf4m81l5ev271k8rmqv0da.apps.googleusercontent.com';
       
-      if (!clientId) {
-        throw new Error('Google Client ID is not configured. Please set EXPO_PUBLIC_GOOGLE_CLIENT_ID in your environment variables.');
+      if (!webClientId) {
+        throw new Error('Google Web Client ID is not configured. Please set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID in your environment variables.');
       }
 
       await GoogleSignin.configure({
-        webClientId: clientId, // This is the client ID from the Firebase console
+        webClientId: webClientId, // This MUST be the web client ID from Firebase Console
         offlineAccess: true, // If you want to access Google API on behalf of the user FROM YOUR SERVER
         hostedDomain: '', // specifies a hosted domain restriction
         forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
         accountName: '', // [Android] specifies an account name on the device that should be used
-        iosClientId: clientId, // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
+        iosClientId: webClientId, // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
       });
 
       this.isConfigured = true;
+      console.log('Google Sign-In configured successfully with web client ID:', webClientId);
     } catch (error) {
       console.error('Failed to configure Google Sign-In:', error);
       throw error;

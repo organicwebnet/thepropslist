@@ -748,6 +748,162 @@ export const createCheckoutSession = onCall({ region: "us-central1" }, async (re
     });
     return { url: session.url };
 });
+// Helper function to get default features for a plan
+function getDefaultFeaturesForPlan(planId) {
+    const defaultFeatures = {
+        'free': [
+            '1 Show', '2 Task Boards', '20 Packing Boxes',
+            '3 Collaborators per Show', '10 Props', 'Basic Support'
+        ],
+        'starter': [
+            '3 Shows', '5 Task Boards', '200 Packing Boxes',
+            '5 Collaborators per Show', '50 Props', 'Email Support'
+        ],
+        'standard': [
+            '10 Shows', '20 Task Boards', '1000 Packing Boxes',
+            '15 Collaborators per Show', '100 Props', 'Priority Support',
+            'Custom Branding'
+        ],
+        'pro': [
+            '100 Shows', '200 Task Boards', '10000 Packing Boxes',
+            '100 Collaborators per Show', '1000 Props', '24/7 Support',
+            'Custom Branding'
+        ]
+    };
+    return defaultFeatures[planId] || [];
+}
+
+// --- Get pricing configuration from Stripe ---
+export const getPricingConfig = onCall({ region: "us-central1" }, async (req) => {
+    const s = await ensureStripe();
+    if (!s) {
+        // Return static configuration if Stripe is not configured
+        return {
+            currency: 'USD',
+            billingInterval: 'monthly',
+            plans: [
+                {
+                    id: 'free',
+                    name: 'Free',
+                    description: 'Perfect for small productions',
+                    price: { monthly: 0, yearly: 0, currency: 'USD' },
+                    features: [
+                        '1 Show', '2 Task Boards', '20 Packing Boxes',
+                        '3 Collaborators per Show', '10 Props', 'Basic Support'
+                    ],
+                    limits: {
+                        shows: 1, boards: 2, packingBoxes: 20,
+                        collaboratorsPerShow: 3, props: 10
+                    },
+                    priceId: { monthly: '', yearly: '' },
+                    popular: false,
+                    color: 'bg-gray-500'
+                },
+                {
+                    id: 'starter',
+                    name: 'Starter',
+                    description: 'Great for growing productions',
+                    price: { monthly: 9, yearly: 90, currency: 'USD' },
+                    features: [
+                        '3 Shows', '5 Task Boards', '200 Packing Boxes',
+                        '5 Collaborators per Show', '50 Props', 'Email Support'
+                    ],
+                    limits: {
+                        shows: 3, boards: 5, packingBoxes: 200,
+                        collaboratorsPerShow: 5, props: 50
+                    },
+                    priceId: { monthly: '', yearly: '' },
+                    popular: false,
+                    color: 'bg-blue-500'
+                },
+                {
+                    id: 'standard',
+                    name: 'Standard',
+                    description: 'Perfect for professional productions',
+                    price: { monthly: 19, yearly: 190, currency: 'USD' },
+                    features: [
+                        '10 Shows', '20 Task Boards', '1000 Packing Boxes',
+                        '15 Collaborators per Show', '100 Props', 'Priority Support',
+                        'Custom Branding'
+                    ],
+                    limits: {
+                        shows: 10, boards: 20, packingBoxes: 1000,
+                        collaboratorsPerShow: 15, props: 100
+                    },
+                    priceId: { monthly: '', yearly: '' },
+                    popular: true,
+                    color: 'bg-purple-500'
+                },
+                {
+                    id: 'pro',
+                    name: 'Pro',
+                    description: 'For large-scale productions',
+                    price: { monthly: 39, yearly: 390, currency: 'USD' },
+                    features: [
+                        '100 Shows', '200 Task Boards', '10000 Packing Boxes',
+                        '100 Collaborators per Show', '1000 Props', '24/7 Support',
+                        'Custom Branding'
+                    ],
+                    limits: {
+                        shows: 100, boards: 200, packingBoxes: 10000,
+                        collaboratorsPerShow: 100, props: 1000
+                    },
+                    priceId: { monthly: '', yearly: '' },
+                    popular: false,
+                    color: 'bg-yellow-500'
+                }
+            ]
+        };
+    }
+    try {
+        // Fetch products and prices from Stripe
+        const products = await s.products.list({ active: true, type: 'service' });
+        const prices = await s.prices.list({ active: true });
+        // Map Stripe data to our pricing structure
+        const plans = products.data.map(product => {
+            const productPrices = prices.data.filter(price => price.product === product.id);
+            const monthlyPrice = productPrices.find(p => p.recurring?.interval === 'month');
+            const yearlyPrice = productPrices.find(p => p.recurring?.interval === 'year');
+            // Extract plan ID from product metadata or name
+            const planId = product.metadata?.plan_id || product.name.toLowerCase().replace(/\s+/g, '-');
+            return {
+                id: planId,
+                name: product.name,
+                description: product.description || '',
+                price: {
+                    monthly: monthlyPrice ? (monthlyPrice.unit_amount || 0) / 100 : 0,
+                    yearly: yearlyPrice ? (yearlyPrice.unit_amount || 0) / 100 : 0,
+                    currency: monthlyPrice?.currency || 'usd'
+                },
+                features: product.metadata?.features 
+                    ? product.metadata.features.split(',').map(f => f.trim()).filter(f => f.length > 0)
+                    : getDefaultFeaturesForPlan(planId),
+                limits: {
+                    shows: parseInt(product.metadata?.shows || '0'),
+                    boards: parseInt(product.metadata?.boards || '0'),
+                    packingBoxes: parseInt(product.metadata?.packing_boxes || '0'),
+                    collaboratorsPerShow: parseInt(product.metadata?.collaborators || '0'),
+                    props: parseInt(product.metadata?.props || '0')
+                },
+                priceId: {
+                    monthly: monthlyPrice?.id || '',
+                    yearly: yearlyPrice?.id || ''
+                },
+                popular: product.metadata?.popular === 'true',
+                color: product.metadata?.color || 'bg-gray-500'
+            };
+        });
+        return {
+            currency: 'USD',
+            billingInterval: 'monthly',
+            plans
+        };
+    }
+    catch (error) {
+        logger.error('Error fetching pricing config from Stripe:', error);
+        throw new Error('Failed to fetch pricing configuration');
+    }
+});
 // --- Seed test users (god/system-admin only) ---
 export const seedTestUsers = onCall({ region: "us-central1" }, async (req) => {
     if (!req.auth)
@@ -1426,6 +1582,169 @@ export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res
         logger.error("joinWaitlist error", { err });
         res.status(500).json({ ok: false });
     }
+});
+// --- Image Optimization Functions ---
+import sharp from 'sharp';
+// Image optimization function
+export const optimizeImage = onRequest({
+    region: "us-central1",
+    timeoutSeconds: 60,
+    memory: "1GiB"
+}, async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+    }
+    if (req.method !== "POST") {
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    try {
+        const { imageUrl, format = 'webp', quality = 80, width, height } = req.body;
+        if (!imageUrl) {
+            res.status(400).json({ error: "imageUrl is required" });
+            return;
+        }
+        // Fetch the original image
+        const response = await fetch(imageUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch image: ${response.status}`);
+        }
+        const imageBuffer = Buffer.from(await response.arrayBuffer());
+        // Process with Sharp
+        let sharpInstance = sharp(imageBuffer);
+        // Resize if dimensions provided
+        if (width || height) {
+            sharpInstance = sharpInstance.resize(width, height, {
+                fit: 'inside',
+                withoutEnlargement: true
+            });
+        }
+        // Convert to requested format
+        let outputBuffer;
+        let contentType;
+        switch (format.toLowerCase()) {
+            case 'webp':
+                outputBuffer = await sharpInstance
+                    .webp({ quality, effort: 6 })
+                    .toBuffer();
+                contentType = 'image/webp';
+                break;
+            case 'jpeg':
+            case 'jpg':
+                outputBuffer = await sharpInstance
+                    .jpeg({ quality, progressive: true })
+                    .toBuffer();
+                contentType = 'image/jpeg';
+                break;
+            case 'png':
+                outputBuffer = await sharpInstance
+                    .png({ quality, progressive: true })
+                    .toBuffer();
+                contentType = 'image/png';
+                break;
+            case 'avif':
+                outputBuffer = await sharpInstance
+                    .avif({ quality, effort: 6 })
+                    .toBuffer();
+                contentType = 'image/avif';
+                break;
+            default:
+                throw new Error(`Unsupported format: ${format}`);
+        }
+        // Upload optimized image to Firebase Storage
+        const bucket = admin.storage().bucket();
+        const fileName = `optimized/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${format}`;
+        const file = bucket.file(fileName);
+        await file.save(outputBuffer, {
+            metadata: {
+                contentType,
+                cacheControl: 'public, max-age=31536000', // 1 year cache
+                metadata: {
+                    originalUrl: imageUrl,
+                    optimizedAt: new Date().toISOString(),
+                    format,
+                    quality: quality.toString()
+                }
+            }
+        });
+        // Make file publicly accessible
+        await file.makePublic();
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+        res.json({
+            success: true,
+            optimizedUrl: publicUrl,
+            originalSize: imageBuffer.length,
+            optimizedSize: outputBuffer.length,
+            compressionRatio: Math.round((1 - outputBuffer.length / imageBuffer.length) * 100),
+            format,
+            quality
+        });
+    }
+    catch (error) {
+        logger.error("Image optimization error", { error });
+        res.status(500).json({
+            error: "Image optimization failed",
+            details: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
+});
+// Batch image optimization for existing images
+export const batchOptimizeImages = onCall({ region: "us-central1" }, async (req) => {
+    if (!req.auth)
+        throw new Error("unauthenticated");
+    const { collection = 'props', limit = 10, format = 'webp', quality = 80 } = req.data || {};
+    const db = admin.firestore();
+    const snapshot = await db.collection(collection)
+        .where('images', '!=', null)
+        .limit(limit)
+        .get();
+    const results = [];
+    for (const doc of snapshot.docs) {
+        const data = doc.data();
+        const images = data.images || [];
+        for (const image of images) {
+            if (image.url && !image.optimizedUrl) {
+                try {
+                    // Call the optimization function
+                    const response = await fetch(`${process.env.FUNCTIONS_URL || 'http://localhost:5001'}/optimizeImage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            imageUrl: image.url,
+                            format,
+                            quality
+                        })
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        results.push({
+                            docId: doc.id,
+                            imageId: image.id,
+                            originalUrl: image.url,
+                            optimizedUrl: result.optimizedUrl,
+                            compressionRatio: result.compressionRatio
+                        });
+                        // Update the document with optimized URL
+                        await doc.ref.update({
+                            [`images.${images.indexOf(image)}.optimizedUrl`]: result.optimizedUrl
+                        });
+                    }
+                }
+                catch (error) {
+                    logger.error("Batch optimization error", { docId: doc.id, imageId: image.id, error });
+                }
+            }
+        }
+    }
+    return {
+        success: true,
+        processed: results.length,
+        results
+    };
 });
 // Export the contact form function
 export { submitContactForm } from './contact.js';

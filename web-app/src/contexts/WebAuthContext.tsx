@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   updateProfile,
@@ -28,6 +27,7 @@ interface UserProfile {
   email: string;
   displayName: string;
   photoURL?: string;
+  phoneNumber?: string;
   role: 'admin' | 'user' | 'viewer' | 'god';
   organizations: string[];
   preferences: {
@@ -38,6 +38,7 @@ interface UserProfile {
   lastLogin: Date;
   createdAt: Date;
   groups?: { [key: string]: boolean };
+  onboardingCompleted?: boolean;
 }
 
 interface WebAuthContextType {
@@ -46,7 +47,6 @@ interface WebAuthContextType {
   loading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   startEmailVerification: (email: string) => Promise<void>;
@@ -58,6 +58,7 @@ interface WebAuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  markOnboardingCompleted: () => Promise<void>;
   getCurrentOrganization: () => string | null;
   setCurrentOrganization: (orgId: string) => void;
   clearError: () => void;
@@ -179,7 +180,8 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
             defaultView: 'grid'
           },
           lastLogin: new Date(),
-          createdAt: new Date()
+          createdAt: new Date(),
+          onboardingCompleted: false
         };
         await setDoc(userDocRef, {
           ...defaultProfile,
@@ -218,19 +220,6 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
     }
   };
 
-  const signUp = async (email: string, password: string, displayName: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(result.user, { displayName });
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Email link verification flow
   const actionCodeSettings = {
@@ -477,6 +466,22 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
     }
   };
 
+  const markOnboardingCompleted = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      if (!user) throw new Error('No user');
+      const userDocRef = doc(db, 'users', user.uid);
+      await updateDoc(userDocRef, { onboardingCompleted: true });
+      await loadUserProfile(user.uid);
+    } catch (error: any) {
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getCurrentOrganization = () => currentOrganization;
   const setCurrentOrganizationState = (orgId: string) => {
     setCurrentOrganization(orgId);
@@ -498,7 +503,6 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         loading,
         error,
         signIn,
-        signUp,
         signInWithGoogle,
         signInWithApple,
         startEmailVerification,
@@ -510,6 +514,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         signOut: handleSignOut,
         resetPassword,
         updateUserProfile,
+        markOnboardingCompleted,
         getCurrentOrganization,
         setCurrentOrganization: setCurrentOrganizationState,
         clearError,

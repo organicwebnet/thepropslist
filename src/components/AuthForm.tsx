@@ -8,7 +8,8 @@ import {
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -22,7 +23,7 @@ interface AuthFormProps {
   onClose: () => void;
 }
 
-export type AuthMode = 'signin' | 'signup' | 'forgot';
+export type AuthMode = 'signin' | 'forgot';
 
 function RequiredLabel({ children }: { children: React.ReactNode }): React.JSX.Element {
   return (
@@ -118,10 +119,6 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       return false;
     }
 
-    if (mode === 'signup' && trimmedPassword.length < 6) {
-      setError('Password should be at least 6 characters long');
-      return false;
-    }
 
     return true;
   };
@@ -195,11 +192,7 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       const trimmedEmail = email.trim();
       const trimmedPassword = password.trim();
 
-      if (mode === 'signup') {
-        await firebaseService.createUserWithEmailAndPassword(trimmedEmail, trimmedPassword);
-      } else {
-        await firebaseService.signInWithEmailAndPassword(trimmedEmail, trimmedPassword);
-      }
+      await firebaseService.signInWithEmailAndPassword(trimmedEmail, trimmedPassword);
       onClose();
     } catch (error: any) {
       console.error('[AuthForm Error]', error);
@@ -211,12 +204,6 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       const errorMessage = error?.message || error?.error?.message;
       
       switch (errorCode) {
-        case 'auth/email-already-in-use':
-          message = 'This email is already registered. Please sign in instead.';
-          break;
-        case 'auth/weak-password':
-          message = 'Password should be at least 6 characters long.';
-          break;
         case 'auth/invalid-email':
           message = 'Please enter a valid email address.';
           break;
@@ -230,9 +217,6 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
           break;
         case 'auth/too-many-requests':
           message = 'Too many attempts. Please try again later.';
-          break;
-        case 'auth/operation-not-allowed':
-          message = 'Email/password sign up is not enabled. Please contact support.';
           break;
         case 'auth/user-disabled':
           message = 'This account has been disabled.';
@@ -253,15 +237,13 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
   const getTitle = () => {
     switch (mode) {
       case 'signin': return 'Welcome Back';
-      case 'signup': return 'Create Account';
       case 'forgot': return 'Reset Password';
     }
   };
 
   const getSubtitle = () => {
     switch (mode) {
-              case 'signin': return 'Sign in to access your props list';
-      case 'signup': return 'Join the production crew';
+      case 'signin': return 'Sign in to access your props list';
       case 'forgot': return 'Enter your email to reset password';
     }
   };
@@ -359,7 +341,7 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
               >
                 {loading && <ActivityIndicator size="small" color="#FFFFFF" style={styles.loadingIcon} />}
                 <Text style={styles.submitButtonText}>
-                  {mode === 'signin' ? 'Sign In' : 'Sign Up'}
+                  Sign In
                 </Text>
               </TouchableOpacity>
 
@@ -378,7 +360,7 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
               >
                 <Ionicons name="logo-google" size={20} color="#fff" />
                 <Text style={styles.googleButtonText}>
-                  Sign {mode === 'signin' ? 'in' : 'up'} with Google
+                  Sign in with Google
                 </Text>
               </TouchableOpacity>
 
@@ -390,24 +372,23 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
               >
                 <Ionicons name="logo-apple" size={20} color="#fff" />
                 <Text style={styles.appleButtonText}>
-                  Sign {mode === 'signin' ? 'in' : 'up'} with Apple
+                  Sign in with Apple
                 </Text>
               </TouchableOpacity>
 
-              {/* Mode Switch */}
+              {/* Sign Up Redirect */}
               <View style={styles.switchContainer}>
                 <Text style={styles.switchText}>
-                  {mode === 'signin' ? 'Don\'t have an account? ' : 'Already have an account? '}
+                  Don't have an account? 
                 </Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setMode(mode === 'signin' ? 'signup' : 'signin');
-                    setError(null);
-                    setSuccess(null);
+                    // Open marketing site in browser
+                    Linking.openURL('https://thepropslist.uk');
                   }}
                 >
                   <Text style={styles.switchLink}>
-                    {mode === 'signin' ? 'Sign Up' : 'Sign In'}
+                    Join the waitlist
                   </Text>
                 </TouchableOpacity>
               </View>

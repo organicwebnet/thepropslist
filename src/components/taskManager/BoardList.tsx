@@ -37,10 +37,11 @@ interface BoardListProps {
   listId: string;
   listName: string;
   boardId: string;
-  boardId: string;
   cards: CardData[];
   onAddCard: (listId: string, cardTitle: string) => Promise<void>;
   onDeleteCard: (listId: string, cardId: string) => void;
+  onDeleteList: (listId: string) => void;
+  onEditList: (listId: string, newName: string) => void;
   onOpenCardDetail: (card: CardData) => void;
   onReorderCards: (listId: string, newCards: CardData[]) => void;
   onCardDrop: (card: CardData, targetListId: string) => void;
@@ -53,6 +54,8 @@ const BoardList: React.FC<BoardListProps> = ({
   cards,
   onAddCard,
   onDeleteCard,
+  onDeleteList,
+  onEditList,
   onOpenCardDetail,
   onReorderCards,
   onCardDrop,
@@ -63,6 +66,8 @@ const BoardList: React.FC<BoardListProps> = ({
   const [newCardTitle, setNewCardTitle] = useState('');
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isEditingListName, setIsEditingListName] = useState(false);
+  const [editedListName, setEditedListName] = useState(listName);
 
   // --- @mention state for add-new-card title ---
   const [showMentionMenu, setShowMentionMenu] = useState(false);
@@ -212,6 +217,31 @@ const BoardList: React.FC<BoardListProps> = ({
     } finally {
       setIsAddingCard(false);
     }
+  };
+
+  const handleEditListName = () => {
+    setIsEditingListName(true);
+    setEditedListName(listName);
+  };
+
+  const handleSaveListName = async () => {
+    if (editedListName.trim() && editedListName.trim() !== listName) {
+      try {
+        await onEditList(listId, editedListName.trim());
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update list name.');
+      }
+    }
+    setIsEditingListName(false);
+  };
+
+  const handleCancelEditListName = () => {
+    setIsEditingListName(false);
+    setEditedListName(listName);
+  };
+
+  const handleDeleteList = () => {
+    onDeleteList(listId);
   };
 
   const listStyles = StyleSheet.create({
@@ -380,10 +410,46 @@ const BoardList: React.FC<BoardListProps> = ({
         }}
       >
         <View style={listStyles.listHeader}>
-          <Text style={listStyles.listTitle}>{listName}</Text>
-          <Pressable onPress={() => setIsCollapsed((prev) => !prev)}>
-            <Ionicons name="chevron-forward-outline" size={24} color={currentThemeColors.textSecondary} style={{ transform: [{ scaleX: -1 }] }} />
-          </Pressable>
+          {isEditingListName ? (
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+              <TextInput
+                style={[listStyles.listTitle, { 
+                  backgroundColor: 'rgba(255,255,255,0.1)', 
+                  paddingHorizontal: 8, 
+                  paddingVertical: 4, 
+                  borderRadius: 4,
+                  flex: 1,
+                  marginRight: 8
+                }]}
+                value={editedListName}
+                onChangeText={setEditedListName}
+                autoFocus
+                onSubmitEditing={handleSaveListName}
+                onBlur={handleSaveListName}
+              />
+              <Pressable onPress={handleSaveListName} style={{ marginRight: 4 }}>
+                <Ionicons name="checkmark" size={20} color="#4CAF50" />
+              </Pressable>
+              <Pressable onPress={handleCancelEditListName}>
+                <Ionicons name="close" size={20} color="#F44336" />
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <Text style={listStyles.listTitle}>{listName}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Pressable onPress={handleEditListName} style={{ marginRight: 8 }}>
+                  <Ionicons name="pencil" size={18} color={currentThemeColors.textSecondary} />
+                </Pressable>
+                <Pressable onPress={handleDeleteList} style={{ marginRight: 8 }}>
+                  <Ionicons name="trash" size={18} color="#F44336" />
+                </Pressable>
+                <Pressable onPress={() => setIsCollapsed((prev) => !prev)}>
+                  <Ionicons name="chevron-forward-outline" size={24} color={currentThemeColors.textSecondary} style={{ transform: [{ scaleX: -1 }] }} />
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
         <View style={listStyles.cardList}>
           {cards.length === 0 ? (
