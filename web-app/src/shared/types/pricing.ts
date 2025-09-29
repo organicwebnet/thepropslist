@@ -144,16 +144,15 @@ export function calculateDiscount(monthlyPrice: number, yearlyPrice: number): {
   savings: number;
   discountPercent: number;
 } {
-  if (monthlyPrice <= 0 || yearlyPrice <= 0) {
-    return { savings: 0, discountPercent: 0 };
-  }
-  
   const monthlyTotal = monthlyPrice * 12;
   const savings = monthlyTotal - yearlyPrice;
+  
+  // Handle division by zero case
+  if (monthlyTotal === 0) {
+    return { savings, discountPercent: 0 };
+  }
+  
   const discountPercent = Math.round((savings / monthlyTotal) * 100);
   
-  return {
-    savings: Math.max(0, savings),
-    discountPercent: Math.max(0, discountPercent)
-  };
+  return { savings, discountPercent };
 }
