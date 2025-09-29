@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PricingModalErrorBoundary } from '../components/PricingModalErrorBoundary';
 import { calculateDiscount } from '../shared/types/pricing';
