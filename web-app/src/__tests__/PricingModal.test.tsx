@@ -1,18 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PricingModalErrorBoundary } from '../components/PricingModalErrorBoundary';
 import { calculateDiscount } from '../shared/types/pricing';
 
 // Mock the StripeService
 const mockStripeService = {
-  getPricingConfig: vi.fn(),
-  refreshPricingConfig: vi.fn(),
-  createCheckoutSession: vi.fn(),
+  getPricingConfig: jest.fn(),
+  refreshPricingConfig: jest.fn(),
+  createCheckoutSession: jest.fn(),
 };
 
-vi.mock('../services/StripeService', () => ({
+jest.mock('../services/StripeService', () => ({
   stripeService: mockStripeService,
 }));
 
@@ -52,7 +51,7 @@ const MockProfilePage = () => {
   const [pricingConfig, setPricingConfig] = React.useState(mockPricingConfig.plans);
   const [pricingLoading, setPricingLoading] = React.useState(false);
 
-  const handleStartCheckout = vi.fn();
+  const handleStartCheckout = jest.fn();
 
   return (
     <div>
@@ -161,7 +160,7 @@ const MockProfilePage = () => {
 
 describe('PricingModal', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     mockStripeService.getPricingConfig.mockResolvedValue(mockPricingConfig);
     mockStripeService.refreshPricingConfig.mockResolvedValue(mockPricingConfig);
   });
@@ -263,7 +262,7 @@ describe('PricingModal', () => {
         throw new Error('Test error');
       };
 
-      const onRetry = vi.fn();
+      const onRetry = jest.fn();
 
       render(
         <PricingModalErrorBoundary onRetry={onRetry}>
