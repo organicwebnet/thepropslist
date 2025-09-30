@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, useColorScheme, Image } from 
 import { Link, useRouter } from 'expo-router';
 import { useTheme } from '../../contexts/ThemeContext.tsx';
 import { useAuth } from '../../contexts/AuthContext.tsx';
-const appConfigFunction = require('../../../app.config.js'); // Corrected import for app.config.js
+import appConfigFunction from '../../../app.config.js'; // Corrected import for app.config.js
 
 export const TopNavBar = () => {
   const { theme, setTheme } = useTheme();

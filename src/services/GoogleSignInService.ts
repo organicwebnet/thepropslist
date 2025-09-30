@@ -6,7 +6,9 @@ export class GoogleSignInService {
   private static instance: GoogleSignInService;
   private isConfigured = false;
 
-  private constructor() {}
+  private constructor() {
+    // Private constructor for singleton pattern
+  }
 
   public static getInstance(): GoogleSignInService {
     if (!GoogleSignInService.instance) {

@@ -34,7 +34,7 @@ export class BiometricService {
   }
 
   static async authenticate(
-    reason: string = 'Please authenticate to continue'
+    reason = 'Please authenticate to continue'
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const capabilities = await this.getCapabilities();

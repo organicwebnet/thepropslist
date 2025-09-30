@@ -364,7 +364,7 @@ export function HomeScreen() {
         onSubmitEditing={() => {
           const q = globalQuery.trim();
           if (!q) return navigateToFind({});
-          const looksLikeGuid = /[A-Za-z0-9\-]{5,}/.test(q);
+          const looksLikeGuid = /[A-Za-z0-9-]{5,}/.test(q);
           if (looksLikeGuid) {
             navigateToFind({ initialMode: 'container', code: q });
           } else {
