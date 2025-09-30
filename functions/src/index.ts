@@ -2206,3 +2206,135 @@ export const getAddOnsForMarketing = onRequest({ region: "us-central1" }, async 
 // Export the contact form function
 export { submitContactForm } from './contact.js';
 
+// Show deletion function with admin privileges - MINIMAL TEST VERSION
+export const deleteShowWithAdminPrivileges = onCall(async (req) => {
+  try {
+    // Verify user is authenticated
+    if (!req.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const { showId, confirmationToken } = req.data;
+    
+    // Validate input
+    if (!showId || typeof showId !== 'string') {
+      throw new functions.https.HttpsError('invalid-argument', 'showId is required and must be a string');
+    }
+
+    if (!confirmationToken || typeof confirmationToken !== 'string') {
+      throw new functions.https.HttpsError('invalid-argument', 'confirmationToken is required for show deletion');
+    }
+
+    const userId = req.auth.uid;
+    logger.info(`Starting show deletion for showId: ${showId}, userId: ${userId}`);
+
+    // Get Firestore instance with admin privileges
+    const db = admin.firestore();
+    
+    // Verify the show exists and user has permission
+    const showRef = db.collection('shows').doc(showId);
+    const showDoc = await showRef.get();
+    
+    if (!showDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Show not found');
+    }
+
+    const showData = showDoc.data();
+    
+    // Validate show data structure
+    if (!showData || typeof showData !== 'object') {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid show document structure');
+    }
+
+    if (!showData.name || typeof showData.name !== 'string') {
+      throw new functions.https.HttpsError('invalid-argument', 'Show must have a valid name');
+    }
+
+    // Verify confirmation token (simple hash of showId + userId + timestamp)
+    const expectedToken = Buffer.from(`${showId}:${userId}:${Math.floor(Date.now() / 1000 / 60)}`).toString('base64');
+    if (confirmationToken !== expectedToken) {
+      logger.warn(`User ${userId} provided invalid confirmation token for show ${showId}`);
+      throw new functions.https.HttpsError('permission-denied', 'Invalid confirmation token');
+    }
+    
+    // Check if user has permission to delete this show
+    const hasPermission = 
+      showData?.userId === userId ||
+      showData?.ownerId === userId ||
+      showData?.createdBy === userId ||
+      (showData?.team && showData.team[userId]);
+
+    if (!hasPermission) {
+      logger.warn(`User ${userId} attempted to delete show ${showId} without permission`);
+      throw new functions.https.HttpsError('permission-denied', 'User does not have permission to delete this show');
+    }
+
+    logger.info(`User ${userId} has permission to delete show ${showId}`);
+
+    // Create deletion log entry first (for audit trail)
+    const deletionLogRef = db.collection('deletion_logs').doc();
+    await deletionLogRef.set({
+      showId,
+      deletedBy: userId,
+      deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      deletionMethod: 'admin_function',
+      showName: showData.name,
+      status: 'in_progress',
+      confirmationToken: confirmationToken.substring(0, 10) + '...' // Log partial token for audit
+    });
+
+    // Simple batch deletion (will be enhanced after successful deployment)
+    const batch = db.batch();
+    let deletedCount = 0;
+
+    // 1. Delete all props in the show (subcollection)
+    const propsSnapshot = await db.collection('shows').doc(showId).collection('props').get();
+    propsSnapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+      deletedCount++;
+    });
+    logger.info(`Queued ${propsSnapshot.docs.length} props for deletion`);
+
+    // 2. Delete all tasks related to the show
+    const tasksSnapshot = await db.collection('tasks').where('showId', '==', showId).get();
+    tasksSnapshot.docs.forEach(doc => {
+      batch.delete(doc.ref);
+      deletedCount++;
+    });
+    logger.info(`Queued ${tasksSnapshot.docs.length} tasks for deletion`);
+
+    // 3. Delete the show document itself
+    batch.delete(showRef);
+    deletedCount++;
+
+    // Commit the batch deletion
+    await batch.commit();
+    
+    // Update deletion log with success
+    await deletionLogRef.update({
+      status: 'completed',
+      associatedDataCount: deletedCount - 1, // Exclude the show document itself
+      completedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    logger.info(`Successfully deleted show ${showId} and ${deletedCount - 1} associated documents`);
+
+    return {
+      success: true,
+      showId,
+      deletedCount,
+      associatedDataCount: deletedCount - 1,
+      message: `Successfully deleted show "${showData.name}" and ${deletedCount - 1} associated items`
+    };
+
+  } catch (error) {
+    logger.error('Error in deleteShowWithAdminPrivileges:', error);
+    
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    
+    throw new functions.https.HttpsError('internal', `Failed to delete show: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+});
+

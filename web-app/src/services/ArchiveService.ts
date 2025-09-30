@@ -117,16 +117,12 @@ export class ArchiveService {
   }
 
   /**
-   * Permanently delete a show and all its data
+   * Permanently delete a show and all its data using Cloud Function with admin privileges
    */
   async permanentlyDeleteShow(showId: string, userId: string): Promise<void> {
     const startTime = Date.now();
     
     try {
-      // Debug show deletion permissions
-      const { ShowDeletionDebugger } = await import('../lib/debugShowDeletion');
-      await ShowDeletionDebugger.testShowDeletionPermission(showId, userId, this.firebaseService);
-
       // Track deletion attempt
       const { analytics } = await import('../lib/analytics');
       await analytics.trackShowDeletionAttempt({
@@ -136,22 +132,23 @@ export class ArchiveService {
         deletion_method: 'permanent',
       });
 
-      // 1. Get all associated data IDs
-      const associatedDataIds = await this.getAssociatedDataIds(showId);
-
-      // 2. Delete all associated data
-      await this.deleteAssociatedData(associatedDataIds);
-
-      // 3. Delete the show
-      await this.firebaseService.deleteDocument('shows', showId);
-
-      // 4. Log the deletion
-      await this.firebaseService.addDocument('deletion_logs', {
-        showId,
-        deletedBy: userId,
-        deletedAt: new Date(),
-        associatedDataCount: associatedDataIds.length,
+      // Generate confirmation token (simple hash of showId + userId + current minute)
+      const currentMinute = Math.floor(Date.now() / 1000 / 60);
+      const confirmationToken = btoa(`${showId}:${userId}:${currentMinute}`);
+      
+      // Call Cloud Function with admin privileges
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const functions = getFunctions();
+      const deleteShowFunction = httpsCallable(functions, 'deleteShowWithAdminPrivileges');
+      
+      console.log('🚀 Calling Cloud Function to delete show with admin privileges...');
+      
+      const result = await deleteShowFunction({ 
+        showId, 
+        confirmationToken 
       });
+      
+      console.log('✅ Show deletion completed via Cloud Function:', result.data);
 
       // Track successful deletion
       await analytics.trackShowDeletionCompleted({
@@ -159,16 +156,16 @@ export class ArchiveService {
         user_id: userId,
         platform: 'web',
         deletion_method: 'permanent',
-        associated_data_count: associatedDataIds.length,
+        associated_data_count: result.data.deletedCount - 1, // Exclude the show document itself
         success: true,
       });
     } catch (error) {
-      console.error('Error permanently deleting show:', error);
-      
+      console.error('Error permanently deleting show via Cloud Function:', error);
+
       // Track failed deletion and report error
       const { analytics } = await import('../lib/analytics');
       const { errorReporting } = await import('../lib/errorReporting');
-      
+
       await Promise.all([
         analytics.trackShowDeletionFailed({
           show_id: showId,
@@ -185,11 +182,11 @@ export class ArchiveService {
             user_id: userId,
             platform: 'web',
             deletion_method: 'permanent',
-            error_phase: 'show_deletion',
+            error_phase: 'cloud_function_call',
           }
         )
       ]);
-      
+
       throw error;
     } finally {
       // Track performance
