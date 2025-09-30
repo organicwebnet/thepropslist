@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { NativeAuthScreen } from '../src/components/NativeAuthScreen';
-import * as LocalAuthentication from 'expo-local-authentication';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, Text } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { useAuth } from '../src/contexts/AuthContext';
 import { Redirect } from 'expo-router';
+import { BiometricService } from '../src/services/biometric';
 
 export default function AuthScreen() {
   const { user, status } = useAuth();
@@ -14,16 +13,15 @@ export default function AuthScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const enabled = await AsyncStorage.getItem('biometricEnabled');
-        if (enabled === 'true') {
-          const hasHardware = await LocalAuthentication.hasHardwareAsync();
-          const enrolled = await LocalAuthentication.isEnrolledAsync();
-          if (hasHardware && enrolled) {
-            const res = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock The Props List' });
-            setBiometricOk(!!res.success);
-          }
+        const isBiometricEnabled = await BiometricService.isBiometricEnabled();
+        if (isBiometricEnabled) {
+          const result = await BiometricService.authenticate('Unlock The Props List');
+          setBiometricOk(result.success);
         }
-      } catch {}
+      } catch (error) {
+        console.error('Biometric authentication error:', error);
+        setBiometricOk(false);
+      }
       setBiometricChecked(true);
     })();
   }, []);
@@ -35,7 +33,8 @@ export default function AuthScreen() {
   if (!biometricChecked) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181b' }}>
-        <Text style={{ color: 'white' }}>Preparing...</Text>
+        <ActivityIndicator size="large" color="#10B981" />
+        <Text style={{ color: 'white', marginTop: 16, fontSize: 16 }}>Preparing authentication...</Text>
       </View>
     );
   }

@@ -1,10 +1,77 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { BiometricService, BiometricCapabilities } from '../../src/services/biometric';
 
 export default function ProfileScreen() {
   const { user, userProfile, signOut } = useAuth();
+  const [showBiometricSettings, setShowBiometricSettings] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricCapabilities, setBiometricCapabilities] = useState<BiometricCapabilities | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    checkBiometricStatus();
+  }, []);
+
+  const checkBiometricStatus = async () => {
+    try {
+      const [enabled, capabilities] = await Promise.all([
+        BiometricService.isBiometricEnabled(),
+        BiometricService.getCapabilities()
+      ]);
+      setBiometricEnabled(enabled);
+      setBiometricCapabilities(capabilities);
+    } catch (error) {
+      console.error('Error checking biometric status:', error);
+    }
+  };
+
+  const handleBiometricSettings = () => {
+    setShowBiometricSettings(true);
+  };
+
+  const handleToggleBiometric = async () => {
+    if (!biometricCapabilities?.isAvailable) {
+      Alert.alert(
+        'Biometric Not Available',
+        'Biometric authentication is not available on this device. Please ensure you have set up fingerprint or face recognition in your device settings.'
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (biometricEnabled) {
+        // Disable biometric
+        await BiometricService.setBiometricEnabled(false);
+        setBiometricEnabled(false);
+        Alert.alert('Success', 'Biometric sign-in has been disabled.');
+      } else {
+        // Enable biometric - test authentication first
+        const result = await BiometricService.authenticate(
+          'Enable biometric sign-in for The Props List'
+        );
+
+        if (result.success) {
+          await BiometricService.setBiometricEnabled(true);
+          setBiometricEnabled(true);
+          Alert.alert('Success', 'Biometric sign-in has been enabled!');
+        } else {
+          Alert.alert(
+            'Authentication Failed',
+            result.error || 'Biometric authentication failed. Please try again.'
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling biometric:', error);
+      Alert.alert('Error', 'Failed to update biometric settings');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditProfile = () => {
     // TODO: Navigate to edit profile screen
@@ -70,6 +137,17 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.menuSection}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleBiometricSettings}>
+            <Ionicons name="finger-print" size={24} color="#10B981" />
+            <Text style={styles.menuText}>Biometric Sign-In</Text>
+            <View style={styles.menuRight}>
+              <Text style={[styles.menuText, { color: biometricEnabled ? '#10B981' : '#6b7280', fontSize: 14 }]}>
+                {biometricEnabled ? 'Enabled' : 'Disabled'}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={handleSettings}>
             <Ionicons name="settings-outline" size={24} color="#c084fc" />
             <Text style={styles.menuText}>Settings</Text>
@@ -83,6 +161,73 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Biometric Settings Modal */}
+      <Modal
+        visible={showBiometricSettings}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowBiometricSettings(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Biometric Sign-In</Text>
+              <TouchableOpacity onPress={() => setShowBiometricSettings(false)}>
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <View style={styles.biometricInfo}>
+                <Ionicons 
+                  name="finger-print" 
+                  size={48} 
+                  color={biometricCapabilities?.isAvailable ? "#10B981" : "#6b7280"} 
+                />
+                <Text style={styles.biometricTitle}>
+                  {biometricCapabilities?.isAvailable 
+                    ? BiometricService.getBiometricTypeLabel(biometricCapabilities.supportedTypes)
+                    : 'Biometric Not Available'
+                  }
+                </Text>
+                <Text style={styles.biometricDescription}>
+                  {biometricCapabilities?.isAvailable
+                    ? 'Use your fingerprint or face to sign in quickly and securely'
+                    : 'Please set up fingerprint or face recognition in your device settings first'
+                  }
+                </Text>
+              </View>
+
+              {biometricCapabilities?.isAvailable && (
+                <TouchableOpacity
+                  style={[
+                    styles.toggleButton,
+                    biometricEnabled ? styles.toggleButtonEnabled : styles.toggleButtonDisabled
+                  ]}
+                  onPress={handleToggleBiometric}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Ionicons 
+                        name={biometricEnabled ? "finger-print" : "finger-print-outline"} 
+                        size={20} 
+                        color="white" 
+                      />
+                      <Text style={styles.toggleButtonText}>
+                        {biometricEnabled ? 'Disable' : 'Enable'} Biometric Sign-In
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -164,5 +309,72 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     marginLeft: 12,
+  },
+  menuRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1f2937',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  modalBody: {
+    gap: 24,
+  },
+  biometricInfo: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  biometricTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  biometricDescription: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  toggleButtonEnabled: {
+    backgroundColor: '#ef4444',
+  },
+  toggleButtonDisabled: {
+    backgroundColor: '#10B981',
+  },
+  toggleButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

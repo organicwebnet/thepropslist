@@ -124,11 +124,11 @@ export class ArchiveService {
     
     try {
       // Debug show deletion permissions
-      const { ShowDeletionDebugger } = await import('../../lib/debugShowDeletion');
+      const { ShowDeletionDebugger } = await import('../lib/debugShowDeletion');
       await ShowDeletionDebugger.testShowDeletionPermission(showId, userId, this.firebaseService);
 
       // Track deletion attempt
-      const { analytics } = await import('../../lib/analytics');
+      const { analytics } = await import('../lib/analytics');
       await analytics.trackShowDeletionAttempt({
         show_id: showId,
         user_id: userId,
@@ -166,8 +166,8 @@ export class ArchiveService {
       console.error('Error permanently deleting show:', error);
       
       // Track failed deletion and report error
-      const { analytics } = await import('../../lib/analytics');
-      const { errorReporting } = await import('../../lib/errorReporting');
+      const { analytics } = await import('../lib/analytics');
+      const { errorReporting } = await import('../lib/errorReporting');
       
       await Promise.all([
         analytics.trackShowDeletionFailed({
@@ -194,7 +194,7 @@ export class ArchiveService {
     } finally {
       // Track performance
       const duration = Date.now() - startTime;
-      const { analytics } = await import('../../lib/analytics');
+      const { analytics } = await import('../lib/analytics');
       await analytics.trackPerformance('show_deletion_duration', duration, {
         show_id: showId,
         platform: 'web',

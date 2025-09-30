@@ -18,6 +18,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { appleAuthService } from '../services/AppleAuthService';
 import { googleSignInService } from '../services/GoogleSignInService';
+import { BiometricSetupModal } from './BiometricSetupModal';
+import { BiometricService } from '../services/biometric';
 
 interface AuthFormProps {
   onClose: () => void;
@@ -43,6 +45,7 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showBiometricSetup, setShowBiometricSetup] = useState(false);
 
   useEffect(() => {
     if (firebaseError) {
@@ -60,7 +63,17 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       if (result.success && result.user) {
         setError(null);
         setSuccess('Google Sign-In successful!');
-        onClose(); // Close the auth form on successful sign-in
+        
+        // Check if biometric is already enabled
+        const isBiometricEnabled = await BiometricService.isBiometricEnabled();
+        
+        if (!isBiometricEnabled) {
+          // Show biometric setup modal
+          setShowBiometricSetup(true);
+        } else {
+          // Close the auth form if biometric is already enabled
+          onClose();
+        }
       } else {
         setError(result.error || 'Google Sign-In failed');
       }
@@ -88,6 +101,17 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
         // For now, we'll show a success message
         setError(null);
         setSuccess('Apple Sign-In successful! Integration with Firebase pending.');
+        
+        // Check if biometric is already enabled
+        const isBiometricEnabled = await BiometricService.isBiometricEnabled();
+        
+        if (!isBiometricEnabled) {
+          // Show biometric setup modal
+          setShowBiometricSetup(true);
+        } else {
+          // Close the auth form if biometric is already enabled
+          onClose();
+        }
         // You would typically call Firebase Auth here to create/link the account
         // await firebaseService.signInWithApple(result.user);
       } else {
@@ -193,7 +217,17 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       const trimmedPassword = password.trim();
 
       await firebaseService.signInWithEmailAndPassword(trimmedEmail, trimmedPassword);
-      onClose();
+      
+      // Check if biometric is already enabled
+      const isBiometricEnabled = await BiometricService.isBiometricEnabled();
+      
+      if (!isBiometricEnabled) {
+        // Show biometric setup modal
+        setShowBiometricSetup(true);
+      } else {
+        // Close the auth form if biometric is already enabled
+        onClose();
+      }
     } catch (error: any) {
       console.error('[AuthForm Error]', error);
       
@@ -246,6 +280,16 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       case 'signin': return 'Sign in to access your props list';
       case 'forgot': return 'Enter your email to reset password';
     }
+  };
+
+  const handleBiometricSetupComplete = () => {
+    setShowBiometricSetup(false);
+    onClose();
+  };
+
+  const handleBiometricSetupClose = () => {
+    setShowBiometricSetup(false);
+    onClose();
   };
 
   return (
@@ -430,6 +474,13 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    
+    {/* Biometric Setup Modal */}
+    <BiometricSetupModal
+      visible={showBiometricSetup}
+      onClose={handleBiometricSetupClose}
+      onSetupComplete={handleBiometricSetupComplete}
+    />
     </LinearGradient>
   );
 }
