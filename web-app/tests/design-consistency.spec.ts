@@ -143,14 +143,18 @@ test.describe('Design Consistency & Visual Regression Tests', () => {
       if (bodyWidths.length > 1) {
         const maxWidth = Math.max(...bodyWidths);
         const minWidth = Math.min(...bodyWidths);
-        expect(maxWidth - minWidth).toBeLessThan(100); // Allow 100px variance
+        if (maxWidth - minWidth >= 100) {
+          throw new Error(`Body width variance (${maxWidth - minWidth}px) exceeds acceptable limit (100px)`);
+        }
       }
 
       // Header heights should be consistent
       if (headerHeights.length > 1) {
         const maxHeight = Math.max(...headerHeights);
         const minHeight = Math.min(...headerHeights);
-        expect(maxHeight - minHeight).toBeLessThan(50); // Allow 50px variance
+        if (maxHeight - minHeight >= 50) {
+          throw new Error(`Header height variance (${maxHeight - minHeight}px) exceeds acceptable limit (50px)`);
+        }
       }
     });
 
@@ -168,7 +172,6 @@ test.describe('Design Consistency & Visual Regression Tests', () => {
         if (containers.length === 0) {
           throw new Error(`No container width classes found on ${pagePath}\nURL: ${page.url()}\nExpected to find classes like: .max-w-6xl, .max-w-7xl, .max-w-4xl, etc.`);
         }
-        expect(containers.length).toBeGreaterThan(0);
       }
     });
 
@@ -381,7 +384,10 @@ test.describe('Design Consistency & Visual Regression Tests', () => {
         // Check for horizontal scrolling (should not happen)
         const bodyBox = await body.boundingBox();
         if (bodyBox) {
-          expect(bodyBox.width).toBeLessThanOrEqual(viewport.width + 20); // Allow small margin
+          // Check that body width doesn't exceed viewport width (allow small margin)
+          if (bodyBox.width > viewport.width + 20) {
+            throw new Error(`Body width (${bodyBox.width}px) exceeds viewport width (${viewport.width}px) by more than 20px`);
+          }
         }
 
         // Check that interactive elements are still accessible
@@ -396,7 +402,6 @@ test.describe('Design Consistency & Visual Regression Tests', () => {
                   const buttonText = await button.textContent() || 'Unknown button';
                   throw new Error(`Button too small for mobile touch on ${viewport.name} viewport\nURL: ${page.url()}\nButton: "${buttonText.substring(0, 30)}..."\nCurrent height: ${buttonBox.height}px\nRequired minimum: 40px\nRecommended: 44px`);
                 }
-                expect(buttonBox.height).toBeGreaterThan(40); // Minimum touch target
               }
             }
           }
@@ -551,9 +556,15 @@ test.describe('Design Consistency & Visual Regression Tests', () => {
       for (const button of buttons.slice(0, 3)) {
         if (await button.isVisible()) {
           const buttonBox = await button.boundingBox();
-          expect(buttonBox).toBeTruthy();
-          expect(buttonBox!.width).toBeGreaterThan(0);
-          expect(buttonBox!.height).toBeGreaterThan(0);
+          if (!buttonBox) {
+            throw new Error('Button bounding box is null');
+          }
+          if (buttonBox.width <= 0) {
+            throw new Error(`Button width (${buttonBox.width}px) should be greater than 0`);
+          }
+          if (buttonBox.height <= 0) {
+            throw new Error(`Button height (${buttonBox.height}px) should be greater than 0`);
+          }
         }
       }
     });

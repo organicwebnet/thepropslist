@@ -87,7 +87,9 @@ test.describe('Props Bible Web App - UI Flows', () => {
                         await input.getAttribute('aria-labelledby') ||
                         await page.locator(`label[for="${await input.getAttribute('id')}"]`).count() > 0;
         
-        expect(hasLabel).toBeTruthy();
+        if (!hasLabel) {
+          throw new Error(`Input element at index ${i} is missing accessibility label`);
+        }
       }
     });
 
@@ -158,7 +160,9 @@ test.describe('Props Bible Web App - UI Flows', () => {
       const loadTime = Date.now() - startTime;
       
       // Should load within 5 seconds
-      expect(loadTime).toBeLessThan(5000);
+      if (loadTime >= 5000) {
+        throw new Error(`Page load time (${loadTime}ms) exceeds acceptable limit (5000ms)`);
+      }
     });
 
     test('should have optimized images', async ({ page }) => {
@@ -173,7 +177,9 @@ test.describe('Props Bible Web App - UI Flows', () => {
         if (src) {
           // Check if image has proper attributes
           const alt = await img.getAttribute('alt');
-          expect(alt).toBeTruthy(); // Should have alt text
+          if (!alt) {
+            throw new Error(`Image at index ${i} is missing alt text`);
+          }
         }
       }
     });
@@ -189,7 +195,9 @@ test.describe('Props Bible Web App - UI Flows', () => {
       const bodyBox = await body.boundingBox();
       
       if (bodyBox) {
-        expect(bodyBox.width).toBeLessThanOrEqual(375);
+        if (bodyBox.width > 375) {
+          throw new Error(`Body width (${bodyBox.width}px) exceeds mobile viewport width (375px)`);
+        }
       }
     });
 
@@ -239,8 +247,12 @@ test.describe('Props Bible Web App - Production Readiness', () => {
       const headers = response.headers();
       
       // Check for security headers
-      expect(headers['x-frame-options']).toBeTruthy();
-      expect(headers['x-content-type-options']).toBeTruthy();
+      if (!headers['x-frame-options']) {
+        throw new Error('Missing X-Frame-Options security header');
+      }
+      if (!headers['x-content-type-options']) {
+        throw new Error('Missing X-Content-Type-Options security header');
+      }
     }
   });
 
