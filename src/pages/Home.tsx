@@ -216,16 +216,39 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
           style: "cancel"
         },
         {
-          text: "Test Deletion",
+          text: "Run Diagnostic",
           onPress: async () => {
             try {
-              const { ShowDeletionTester } = await import('../lib/testShowDeletion');
-              const result = await ShowDeletionTester.testShowDeletion(showIdToDelete, service, { currentUser: user });
-              console.log('Test result:', result);
-              Alert.alert('Test Result', result.success ? 'Test passed' : `Test failed: ${result.error}`);
+              const { ShowDeletionDiagnostic } = await import('../lib/diagnosticTool');
+              const results = await ShowDeletionDiagnostic.runFullDiagnostic(showIdToDelete, service, { currentUser: user });
+              ShowDeletionDiagnostic.logResults(results);
+              
+              const failedSteps = results.filter(r => !r.success);
+              if (failedSteps.length > 0) {
+                const errorMessage = failedSteps.map(s => `${s.step}: ${s.error}`).join('\n');
+                Alert.alert('Diagnostic Failed', errorMessage);
+              } else {
+                Alert.alert('Diagnostic Passed', 'All tests passed! Show deletion should work.');
+              }
             } catch (error) {
-              console.error("Test error:", error);
-              Alert.alert('Test Error', error.message);
+              console.error("Diagnostic error:", error);
+              Alert.alert('Diagnostic Error', error.message);
+            }
+          }
+        },
+        {
+          text: "Direct Delete",
+          onPress: async () => {
+            try {
+              console.log('🧪 Attempting direct document deletion...');
+              await service.deleteDocument('shows', showIdToDelete);
+              if (currentShowId === showIdToDelete) {
+                setCurrentShowId(null);
+              }
+              Alert.alert('Success', 'Show deleted successfully using direct method!');
+            } catch (error) {
+              console.error("Direct deletion error:", error);
+              Alert.alert('Direct Delete Failed', `Error: ${error.message}`);
             }
           }
         },
