@@ -125,10 +125,10 @@ service cloud.firestore {
       allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
     }
     match /shows/{showId} {
-      allow read: if isSystemAdmin() || (request.auth != null);
-      // TEMPORARY: Very permissive rules for debugging - allow any authenticated user
-      allow update, delete: if isSystemAdmin() || (request.auth != null);
-      allow create: if isSystemAdmin() || request.auth != null;
+      allow read: if request.auth != null;
+      // ULTRA PERMISSIVE: Allow any authenticated user to delete shows for debugging
+      allow update, delete: if request.auth != null;
+      allow create: if request.auth != null;
 
       // Team subcollection (if you use it)
       match /team/{teamMemberId} {
@@ -138,6 +138,13 @@ service cloud.firestore {
           get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] == "props_supervisor"
         ));
       }
+    }
+    
+    // Deletion logs collection - allow authenticated users to create logs
+    match /deletion_logs/{logId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false; // Logs should not be modified after creation
     }
     match /invitations/{inviteId} {
       function isShowOwner(showId) {
