@@ -26,6 +26,28 @@ export interface ShowDeletionAttemptEvent {
   deletion_method: 'permanent' | 'archive';
 }
 
+export interface BiometricSetupEvent {
+  user_id: string;
+  platform: 'mobile' | 'web';
+  biometric_type?: string;
+  device_capabilities?: {
+    has_hardware: boolean;
+    is_enrolled: boolean;
+    supported_types: string[];
+  };
+  success: boolean;
+  error_message?: string;
+}
+
+export interface BiometricAuthenticationEvent {
+  user_id: string;
+  platform: 'mobile' | 'web';
+  biometric_type?: string;
+  success: boolean;
+  error_message?: string;
+  context: 'setup' | 'login' | 'settings';
+}
+
 class AnalyticsService {
   private isEnabled: boolean = true;
   private userId?: string;
@@ -168,10 +190,80 @@ class AnalyticsService {
       },
     });
   }
+
+  // Biometric analytics methods
+  async trackBiometricSetupOffered(event: Omit<BiometricSetupEvent, 'success' | 'error_message'>): Promise<void> {
+    await this.trackEvent({
+      event: 'biometric_setup_offered',
+      properties: {
+        platform: event.platform,
+        biometric_type: event.biometric_type,
+        device_capabilities: event.device_capabilities,
+      },
+      userId: event.user_id,
+    });
+  }
+
+  async trackBiometricSetupCompleted(event: BiometricSetupEvent): Promise<void> {
+    await this.trackEvent({
+      event: 'biometric_setup_completed',
+      properties: {
+        platform: event.platform,
+        biometric_type: event.biometric_type,
+        device_capabilities: event.device_capabilities,
+        success: event.success,
+        error_message: event.error_message,
+      },
+      userId: event.user_id,
+    });
+  }
+
+  async trackBiometricSetupSkipped(event: Omit<BiometricSetupEvent, 'success' | 'error_message'>): Promise<void> {
+    await this.trackEvent({
+      event: 'biometric_setup_skipped',
+      properties: {
+        platform: event.platform,
+        biometric_type: event.biometric_type,
+        device_capabilities: event.device_capabilities,
+      },
+      userId: event.user_id,
+    });
+  }
+
+  async trackBiometricAuthentication(event: BiometricAuthenticationEvent): Promise<void> {
+    await this.trackEvent({
+      event: 'biometric_authentication',
+      properties: {
+        platform: event.platform,
+        biometric_type: event.biometric_type,
+        success: event.success,
+        error_message: event.error_message,
+        context: event.context,
+      },
+      userId: event.user_id,
+    });
+  }
+
+  async trackBiometricSettingsChanged(event: {
+    user_id: string;
+    platform: 'mobile' | 'web';
+    biometric_type?: string;
+    action: 'enabled' | 'disabled';
+  }): Promise<void> {
+    await this.trackEvent({
+      event: 'biometric_settings_changed',
+      properties: {
+        platform: event.platform,
+        biometric_type: event.biometric_type,
+        action: event.action,
+      },
+      userId: event.user_id,
+    });
+  }
 }
 
 // Export singleton instance
 export const analytics = new AnalyticsService();
 
 // Export types for use in other modules
-export type { AnalyticsEvent, ShowDeletionEvent, ShowDeletionAttemptEvent };
+export type { AnalyticsEvent, ShowDeletionEvent, ShowDeletionAttemptEvent, BiometricSetupEvent, BiometricAuthenticationEvent };

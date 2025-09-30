@@ -17,6 +17,15 @@ export default function AuthScreen() {
         if (isBiometricEnabled) {
           const result = await BiometricService.authenticate('Unlock The Props List');
           setBiometricOk(result.success);
+          
+          // Log specific error information for debugging
+          if (!result.success) {
+            console.error('Biometric authentication failed:', {
+              error: result.error,
+              errorCode: result.errorCode,
+              timestamp: new Date().toISOString()
+            });
+          }
         }
       } catch (error) {
         console.error('Biometric authentication error:', error);
@@ -40,4 +49,5 @@ export default function AuthScreen() {
   }
 
   return <NativeAuthScreen />;
+}
 }

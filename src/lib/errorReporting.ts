@@ -21,6 +21,19 @@ export interface ShowDeletionErrorContext {
   error_phase: 'attempt' | 'associated_data' | 'show_deletion' | 'logging';
 }
 
+export interface BiometricErrorContext {
+  user_id: string;
+  platform: 'mobile' | 'web';
+  biometric_type?: string;
+  device_capabilities?: {
+    has_hardware: boolean;
+    is_enrolled: boolean;
+    supported_types: string[];
+  };
+  operation: 'setup' | 'authentication' | 'capability_check' | 'settings_change';
+  error_code?: string;
+}
+
 class ErrorReportingService {
   private isEnabled: boolean = true;
   private userId?: string;
@@ -173,10 +186,79 @@ class ErrorReportingService {
       // Could send to error reporting service for context
     }
   }
+
+  // Biometric error reporting methods
+  async reportBiometricError(
+    error: Error,
+    context: BiometricErrorContext,
+    severity: ErrorReport['severity'] = 'medium'
+  ): Promise<void> {
+    const errorReport: ErrorReport = {
+      message: `Biometric ${context.operation} failed: ${error.message}`,
+      stack: error.stack,
+      context: {
+        ...context,
+        error_message: error.message,
+        error_stack: error.stack,
+        error_type: 'biometric_error',
+      },
+      timestamp: new Date(),
+      platform: context.platform,
+      severity,
+    };
+
+    await this.sendErrorReport(errorReport);
+  }
+
+  async reportBiometricCapabilityError(
+    error: Error,
+    context: Omit<BiometricErrorContext, 'operation'>,
+    severity: ErrorReport['severity'] = 'low'
+  ): Promise<void> {
+    const errorReport: ErrorReport = {
+      message: `Biometric capability check failed: ${error.message}`,
+      stack: error.stack,
+      context: {
+        ...context,
+        operation: 'capability_check',
+        error_message: error.message,
+        error_stack: error.stack,
+        error_type: 'biometric_capability_error',
+      },
+      timestamp: new Date(),
+      platform: context.platform,
+      severity,
+    };
+
+    await this.sendErrorReport(errorReport);
+  }
+
+  async reportBiometricAuthenticationError(
+    error: Error,
+    context: Omit<BiometricErrorContext, 'operation'>,
+    severity: ErrorReport['severity'] = 'medium'
+  ): Promise<void> {
+    const errorReport: ErrorReport = {
+      message: `Biometric authentication failed: ${error.message}`,
+      stack: error.stack,
+      context: {
+        ...context,
+        operation: 'authentication',
+        error_message: error.message,
+        error_stack: error.stack,
+        error_type: 'biometric_authentication_error',
+      },
+      timestamp: new Date(),
+      platform: context.platform,
+      severity,
+    };
+
+    await this.sendErrorReport(errorReport);
+  }
 }
 
 // Export singleton instance
 export const errorReporting = new ErrorReportingService();
 
 // Export types for use in other modules
-export type { ErrorReport, ShowDeletionErrorContext };
+export type { ErrorReport, ShowDeletionErrorContext, BiometricErrorContext };

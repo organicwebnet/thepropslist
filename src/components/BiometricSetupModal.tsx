@@ -10,6 +10,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BiometricService, BiometricCapabilities } from '../services/biometric';
+import { useTranslation } from '../hooks/useTranslation';
+import { analytics } from '../lib/analytics';
+import { errorReporting } from '../lib/errorReporting';
+import { useAuth } from '../contexts/AuthContext';
 
 interface BiometricSetupModalProps {
   visible: boolean;
@@ -22,6 +26,8 @@ export function BiometricSetupModal({
   onClose, 
   onSetupComplete 
 }: BiometricSetupModalProps): React.JSX.Element {
+  const { t, tWithParams } = useTranslation();
+  const { user } = useAuth();
   const [capabilities, setCapabilities] = useState<BiometricCapabilities | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingCapabilities, setCheckingCapabilities] = useState(true);
@@ -37,9 +43,34 @@ export function BiometricSetupModal({
       setCheckingCapabilities(true);
       const caps = await BiometricService.getCapabilities();
       setCapabilities(caps);
+      
+      // Track biometric setup offered
+      if (user?.uid) {
+        await analytics.trackBiometricSetupOffered({
+          user_id: user.uid,
+          platform: 'mobile',
+          biometric_type: caps.isAvailable ? BiometricService.getBiometricTypeLabel(caps.supportedTypes) : undefined,
+          device_capabilities: {
+            has_hardware: caps.hasHardware,
+            is_enrolled: caps.isEnrolled,
+            supported_types: caps.supportedTypes.map(type => type.toString()),
+          },
+        });
+      }
     } catch (error) {
       console.error('Error checking biometric capabilities:', error);
-      Alert.alert('Error', 'Failed to check biometric capabilities');
+      
+      // Report error
+      if (user?.uid && error instanceof Error) {
+        await errorReporting.reportBiometricCapabilityError(error, {
+          user_id: user.uid,
+          platform: 'mobile',
+          biometric_type: undefined,
+          device_capabilities: undefined,
+        });
+      }
+      
+      Alert.alert(t('common.error'), 'Failed to check biometric capabilities');
     } finally {
       setCheckingCapabilities(false);
     }
@@ -48,8 +79,8 @@ export function BiometricSetupModal({
   const handleEnableBiometric = async () => {
     if (!capabilities?.isAvailable) {
       Alert.alert(
-        'Biometric Not Available',
-        'Biometric authentication is not available on this device. Please ensure you have set up fingerprint or face recognition in your device settings.'
+        t('biometric.setup.unavailable'),
+        t('biometric.setup.not_enrolled')
       );
       return;
     }
@@ -58,15 +89,31 @@ export function BiometricSetupModal({
     try {
       // Test biometric authentication
       const result = await BiometricService.authenticate(
-        'Enable biometric sign-in for The Props List'
+        t('biometric.setup.prompt')
       );
 
       if (result.success) {
         // Enable biometric authentication
         await BiometricService.setBiometricEnabled(true);
+        
+        // Track successful setup
+        if (user?.uid) {
+          await analytics.trackBiometricSetupCompleted({
+            user_id: user.uid,
+            platform: 'mobile',
+            biometric_type: BiometricService.getBiometricTypeLabel(capabilities.supportedTypes),
+            device_capabilities: {
+              has_hardware: capabilities.hasHardware,
+              is_enrolled: capabilities.isEnrolled,
+              supported_types: capabilities.supportedTypes.map(type => type.toString()),
+            },
+            success: true,
+          });
+        }
+        
         Alert.alert(
-          'Success',
-          'Biometric sign-in has been enabled! You can now use your fingerprint or face to sign in quickly.',
+          t('common.success'),
+          t('biometric.setup.success'),
           [
             {
               text: 'OK',
@@ -78,31 +125,96 @@ export function BiometricSetupModal({
           ]
         );
       } else {
+        // Track failed setup
+        if (user?.uid) {
+          await analytics.trackBiometricSetupCompleted({
+            user_id: user.uid,
+            platform: 'mobile',
+            biometric_type: BiometricService.getBiometricTypeLabel(capabilities.supportedTypes),
+            device_capabilities: {
+              has_hardware: capabilities.hasHardware,
+              is_enrolled: capabilities.isEnrolled,
+              supported_types: capabilities.supportedTypes.map(type => type.toString()),
+            },
+            success: false,
+            error_message: result.error || 'Authentication failed',
+          });
+          
+          // Report authentication error with specific error code
+          if (result.errorCode) {
+            await errorReporting.reportBiometricAuthenticationError(
+              new Error(result.error || 'Authentication failed'),
+              {
+                user_id: user.uid,
+                platform: 'mobile',
+                biometric_type: BiometricService.getBiometricTypeLabel(capabilities.supportedTypes),
+                device_capabilities: {
+                  has_hardware: capabilities.hasHardware,
+                  is_enrolled: capabilities.isEnrolled,
+                  supported_types: capabilities.supportedTypes.map(type => type.toString()),
+                },
+                error_code: result.errorCode,
+              }
+            );
+          }
+        }
+        
         Alert.alert(
-          'Authentication Failed',
-          result.error || 'Biometric authentication failed. Please try again.'
+          t('biometric.auth.failed'),
+          result.error || t('biometric.setup.failed')
         );
       }
     } catch (error) {
       console.error('Error enabling biometric:', error);
-      Alert.alert('Error', 'Failed to enable biometric authentication');
+      
+      // Report error
+      if (user?.uid && error instanceof Error && capabilities) {
+        await errorReporting.reportBiometricError(error, {
+          user_id: user.uid,
+          platform: 'mobile',
+          biometric_type: BiometricService.getBiometricTypeLabel(capabilities.supportedTypes),
+          device_capabilities: {
+            has_hardware: capabilities.hasHardware,
+            is_enrolled: capabilities.isEnrolled,
+            supported_types: capabilities.supportedTypes.map(type => type.toString()),
+          },
+          operation: 'setup',
+        });
+      }
+      
+      Alert.alert(t('common.error'), 'Failed to enable biometric authentication');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     Alert.alert(
-      'Skip Biometric Setup',
+      t('biometric.setup.skip'),
       'You can enable biometric sign-in later in your profile settings.',
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel'
         },
         {
-          text: 'Skip',
-          onPress: onClose
+          text: t('common.skip'),
+          onPress: async () => {
+            // Track skipped setup
+            if (user?.uid && capabilities) {
+              await analytics.trackBiometricSetupSkipped({
+                user_id: user.uid,
+                platform: 'mobile',
+                biometric_type: capabilities.isAvailable ? BiometricService.getBiometricTypeLabel(capabilities.supportedTypes) : undefined,
+                device_capabilities: {
+                  has_hardware: capabilities.hasHardware,
+                  is_enrolled: capabilities.isEnrolled,
+                  supported_types: capabilities.supportedTypes.map(type => type.toString()),
+                },
+              });
+            }
+            onClose();
+          }
         }
       ]
     );
@@ -131,16 +243,16 @@ export function BiometricSetupModal({
               color="#10B981" 
               style={styles.icon}
             />
-            <Text style={styles.title}>Enable Biometric Sign-In</Text>
+            <Text style={styles.title}>{t('biometric.setup.title')}</Text>
             <Text style={styles.subtitle}>
-              Sign in quickly and securely with your {getBiometricTypeLabel().toLowerCase()}
+              {tWithParams('biometric.setup.description', { type: getBiometricTypeLabel().toLowerCase() })}
             </Text>
           </View>
 
           {checkingCapabilities ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#10B981" />
-              <Text style={styles.loadingText}>Checking device capabilities...</Text>
+              <Text style={styles.loadingText}>{t('biometric.setup.checking')}</Text>
             </View>
           ) : (
             <View style={styles.content}>
@@ -148,15 +260,15 @@ export function BiometricSetupModal({
                 <View style={styles.availableContainer}>
                   <View style={styles.benefitItem}>
                     <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                    <Text style={styles.benefitText}>Quick and secure access</Text>
+                    <Text style={styles.benefitText}>{t('biometric.setup.benefits.quick')}</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                    <Text style={styles.benefitText}>No need to remember passwords</Text>
+                    <Text style={styles.benefitText}>{t('biometric.setup.benefits.secure')}</Text>
                   </View>
                   <View style={styles.benefitItem}>
                     <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-                    <Text style={styles.benefitText}>Works with your device's security</Text>
+                    <Text style={styles.benefitText}>{t('biometric.setup.benefits.device_security')}</Text>
                   </View>
                 </View>
               ) : (
@@ -164,10 +276,10 @@ export function BiometricSetupModal({
                   <Ionicons name="warning" size={24} color="#F59E0B" />
                   <Text style={styles.unavailableText}>
                     {!capabilities?.hasHardware 
-                      ? 'Your device does not support biometric authentication'
+                      ? t('biometric.setup.no_hardware')
                       : !capabilities?.isEnrolled
-                      ? 'Please set up fingerprint or face recognition in your device settings first'
-                      : 'Biometric authentication is not available'
+                      ? t('biometric.setup.not_enrolled')
+                      : t('biometric.setup.not_available')
                     }
                   </Text>
                 </View>
@@ -189,7 +301,7 @@ export function BiometricSetupModal({
                     <>
                       <Ionicons name="finger-print" size={20} color="white" />
                       <Text style={styles.primaryButtonText}>
-                        Enable {getBiometricTypeLabel()}
+                        {tWithParams('biometric.setup.enable', { type: getBiometricTypeLabel() })}
                       </Text>
                     </>
                   )}
@@ -200,7 +312,7 @@ export function BiometricSetupModal({
                   onPress={handleSkip}
                   disabled={loading}
                 >
-                  <Text style={styles.secondaryButtonText}>Skip for now</Text>
+                  <Text style={styles.secondaryButtonText}>{t('biometric.setup.skip')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

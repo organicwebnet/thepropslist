@@ -59,6 +59,13 @@ export default function ProfileScreen() {
           setBiometricEnabled(true);
           Alert.alert('Success', 'Biometric sign-in has been enabled!');
         } else {
+          // Log specific error information for debugging
+          console.error('Biometric authentication failed in settings:', {
+            error: result.error,
+            errorCode: result.errorCode,
+            timestamp: new Date().toISOString()
+          });
+          
           Alert.alert(
             'Authentication Failed',
             result.error || 'Biometric authentication failed. Please try again.'
