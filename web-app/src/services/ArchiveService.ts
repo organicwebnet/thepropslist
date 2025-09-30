@@ -123,6 +123,10 @@ export class ArchiveService {
     const startTime = Date.now();
     
     try {
+      // Debug show deletion permissions
+      const { ShowDeletionDebugger } = await import('../../lib/debugShowDeletion');
+      await ShowDeletionDebugger.testShowDeletionPermission(showId, userId, this.firebaseService);
+
       // Track deletion attempt
       const { analytics } = await import('../../lib/analytics');
       await analytics.trackShowDeletionAttempt({

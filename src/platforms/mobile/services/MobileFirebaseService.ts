@@ -313,6 +313,12 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
     const userId = this.auth.currentUser?.uid;
     
     try {
+      // Debug show deletion permissions
+      if (userId) {
+        const { ShowDeletionDebugger } = await import('../../../lib/debugShowDeletion');
+        await ShowDeletionDebugger.testShowDeletionPermission(showId, userId, this);
+      }
+
       // Track deletion attempt
       if (userId) {
         const { analytics } = await import('../../../lib/analytics');
