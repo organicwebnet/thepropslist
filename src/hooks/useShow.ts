@@ -62,8 +62,8 @@ export function useShow(showId: string | undefined) {
   }, [showId, service]);
 
   const deleteShow = useCallback(async () => {
-    if (!showId || !service?.firestore || !service.deleteDocument) throw new Error('Service or showId not available');
-    await service.deleteDocument('shows', showId);
+    if (!showId || !service?.deleteShow) throw new Error('Service or showId not available');
+    await service.deleteShow(showId);
     setShow(null); // Clear local state after deletion
   }, [showId, service]);
 

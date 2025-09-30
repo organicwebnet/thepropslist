@@ -8,7 +8,91 @@ import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import type Stripe from "stripe";
 import * as nodemailer from "nodemailer";
-import { DEFAULT_PRICING_CONFIG, getDefaultFeaturesForPlan } from "./pricing";
+// Inline pricing configuration to avoid import issues
+const DEFAULT_PRICING_CONFIG = {
+  currency: 'USD',
+  billingInterval: 'monthly' as const,
+  plans: [
+    {
+      id: 'free',
+      name: 'Free',
+      description: 'Perfect for getting started',
+      price: 0,
+      interval: 'monthly',
+      features: [
+        '1 Show', '2 Task Boards', '20 Packing Boxes',
+        '3 Collaborators per Show', '10 Props', 'No Archived Shows', 'Basic Support'
+      ],
+      limits: {
+        shows: 1,
+        boards: 2,
+        packingBoxes: 20,
+        collaborators: 3,
+        props: 10,
+        archivedShows: 0
+      }
+    },
+    {
+      id: 'starter',
+      name: 'Starter',
+      description: 'Great for small productions',
+      price: 9.99,
+      interval: 'monthly',
+      features: [
+        '3 Shows', '5 Task Boards', '200 Packing Boxes',
+        '5 Collaborators per Show', '50 Props', '2 Archived Shows', 'Email Support'
+      ],
+      limits: {
+        shows: 3,
+        boards: 5,
+        packingBoxes: 200,
+        collaborators: 5,
+        props: 50,
+        archivedShows: 2
+      }
+    },
+    {
+      id: 'standard',
+      name: 'Standard',
+      description: 'Perfect for growing productions',
+      price: 29.99,
+      interval: 'monthly',
+      features: [
+        '10 Shows', '20 Task Boards', '1000 Packing Boxes',
+        '15 Collaborators per Show', '100 Props', '5 Archived Shows', 'Priority Support',
+        'Custom Branding'
+      ],
+      limits: {
+        shows: 10,
+        boards: 20,
+        packingBoxes: 1000,
+        collaborators: 15,
+        props: 100,
+        archivedShows: 5
+      }
+    },
+    {
+      id: 'pro',
+      name: 'Pro',
+      description: 'For large productions and teams',
+      price: 99.99,
+      interval: 'monthly',
+      features: [
+        '100 Shows', '200 Task Boards', '10000 Packing Boxes',
+        '100 Collaborators per Show', '1000 Props', '10 Archived Shows', '24/7 Support',
+        'Custom Branding'
+      ],
+      limits: {
+        shows: 100,
+        boards: 200,
+        packingBoxes: 10000,
+        collaborators: 100,
+        props: 1000,
+        archivedShows: 10
+      }
+    }
+  ]
+};
 
 // Error reporting service
 const reportError = (error: any, context: string, userId?: string) => {
@@ -1982,7 +2066,9 @@ export const cancelAddOn = onCall({ region: "us-central1" }, async (req) => {
   
   // Cancel the subscription item in Stripe
   await s.subscriptionItems.update(userAddOn.stripeSubscriptionItemId, {
-    cancel_at_period_end: true
+    metadata: {
+      cancel_at_period_end: 'true'
+    }
   });
   
   // Update the UserAddOn record

@@ -309,9 +309,93 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
   }
   
   async deleteShow(showId: string): Promise<void> {
-    // This is a placeholder and should be implemented based on your Firestore structure for shows
-    // Example: await this.deleteDocument('shows', showId);
-    throw new FirebaseError('deleteShow method not implemented', 'unimplemented');
+    const startTime = Date.now();
+    const userId = this.auth.currentUser?.uid;
+    
+    try {
+      // Track deletion attempt
+      if (userId) {
+        const { analytics } = await import('../../../lib/analytics');
+        await analytics.trackShowDeletionAttempt({
+          show_id: showId,
+          user_id: userId,
+          platform: 'mobile',
+          deletion_method: 'permanent',
+        });
+      }
+
+      // Deleting show and related data
+      // 1. Delete all props in the show
+      const props = await this.getDocuments(`shows/${showId}/props`);
+      const batch = this.firestore.batch();
+      props.forEach(prop => {
+        batch.delete(prop.ref);
+      });
+      
+      // 2. Delete all tasks related to the show
+      const tasks = await this.getDocuments('tasks', { where: [['showId', '==', showId]] });
+      tasks.forEach(task => {
+        batch.delete(task.ref);
+      });
+      
+      // 3. Delete the show document itself
+      const showRef = this.firestore.collection('shows').doc(showId);
+      batch.delete(showRef);
+      
+      await batch.commit();
+      
+      // Track successful deletion
+      if (userId) {
+        const { analytics } = await import('../../../lib/analytics');
+        await analytics.trackShowDeletionCompleted({
+          show_id: showId,
+          user_id: userId,
+          platform: 'mobile',
+          deletion_method: 'permanent',
+          associated_data_count: props.length + tasks.length,
+          success: true,
+        });
+      }
+    } catch (error) {
+      // Track failed deletion
+      if (userId) {
+        const { analytics } = await import('../../../lib/analytics');
+        const { errorReporting } = await import('../../../lib/errorReporting');
+        
+        await Promise.all([
+          analytics.trackShowDeletionFailed({
+            show_id: showId,
+            user_id: userId,
+            platform: 'mobile',
+            deletion_method: 'permanent',
+            success: false,
+            error_message: error instanceof Error ? error.message : 'Unknown error',
+          }),
+          errorReporting.reportShowDeletionError(
+            error instanceof Error ? error : new Error('Unknown error'),
+            {
+              show_id: showId,
+              user_id: userId,
+              platform: 'mobile',
+              deletion_method: 'permanent',
+              error_phase: 'show_deletion',
+            }
+          )
+        ]);
+      }
+      
+      throw this.handleError(`Error deleting show ${showId}`, error);
+    } finally {
+      // Track performance
+      const duration = Date.now() - startTime;
+      if (userId) {
+        const { analytics } = await import('../../../lib/analytics');
+        await analytics.trackPerformance('show_deletion_duration', duration, {
+          show_id: showId,
+          platform: 'mobile',
+        });
+      }
+    }
   }
 
   async getPropsByShowId(showId: string): Promise<FirebaseDocument<Prop>[]> {

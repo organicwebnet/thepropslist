@@ -120,7 +120,18 @@ export class ArchiveService {
    * Permanently delete a show and all its data
    */
   async permanentlyDeleteShow(showId: string, userId: string): Promise<void> {
+    const startTime = Date.now();
+    
     try {
+      // Track deletion attempt
+      const { analytics } = await import('../../lib/analytics');
+      await analytics.trackShowDeletionAttempt({
+        show_id: showId,
+        user_id: userId,
+        platform: 'web',
+        deletion_method: 'permanent',
+      });
+
       // 1. Get all associated data IDs
       const associatedDataIds = await this.getAssociatedDataIds(showId);
 
@@ -137,9 +148,53 @@ export class ArchiveService {
         deletedAt: new Date(),
         associatedDataCount: associatedDataIds.length,
       });
+
+      // Track successful deletion
+      await analytics.trackShowDeletionCompleted({
+        show_id: showId,
+        user_id: userId,
+        platform: 'web',
+        deletion_method: 'permanent',
+        associated_data_count: associatedDataIds.length,
+        success: true,
+      });
     } catch (error) {
       console.error('Error permanently deleting show:', error);
+      
+      // Track failed deletion and report error
+      const { analytics } = await import('../../lib/analytics');
+      const { errorReporting } = await import('../../lib/errorReporting');
+      
+      await Promise.all([
+        analytics.trackShowDeletionFailed({
+          show_id: showId,
+          user_id: userId,
+          platform: 'web',
+          deletion_method: 'permanent',
+          success: false,
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        }),
+        errorReporting.reportShowDeletionError(
+          error instanceof Error ? error : new Error('Unknown error'),
+          {
+            show_id: showId,
+            user_id: userId,
+            platform: 'web',
+            deletion_method: 'permanent',
+            error_phase: 'show_deletion',
+          }
+        )
+      ]);
+      
       throw error;
+    } finally {
+      // Track performance
+      const duration = Date.now() - startTime;
+      const { analytics } = await import('../../lib/analytics');
+      await analytics.trackPerformance('show_deletion_duration', duration, {
+        show_id: showId,
+        platform: 'web',
+      });
     }
   }
 

@@ -7,7 +7,111 @@ import * as functions from "firebase-functions";
 import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
-import { DEFAULT_PRICING_CONFIG } from "./pricing";
+// Inline pricing configuration to avoid import issues
+const DEFAULT_PRICING_CONFIG = {
+    currency: 'USD',
+    billingInterval: 'monthly',
+    plans: [
+        {
+            id: 'free',
+            name: 'Free',
+            description: 'Perfect for getting started',
+            price: 0,
+            interval: 'monthly',
+            features: [
+                '1 Show', '2 Task Boards', '20 Packing Boxes',
+                '3 Collaborators per Show', '10 Props', 'No Archived Shows', 'Basic Support'
+            ],
+            limits: {
+                shows: 1,
+                boards: 2,
+                packingBoxes: 20,
+                collaborators: 3,
+                props: 10,
+                archivedShows: 0
+            }
+        },
+        {
+            id: 'starter',
+            name: 'Starter',
+            description: 'Great for small productions',
+            price: 9.99,
+            interval: 'monthly',
+            features: [
+                '3 Shows', '5 Task Boards', '200 Packing Boxes',
+                '5 Collaborators per Show', '50 Props', '2 Archived Shows', 'Email Support'
+            ],
+            limits: {
+                shows: 3,
+                boards: 5,
+                packingBoxes: 200,
+                collaborators: 5,
+                props: 50,
+                archivedShows: 2
+            }
+        },
+        {
+            id: 'standard',
+            name: 'Standard',
+            description: 'Perfect for growing productions',
+            price: 29.99,
+            interval: 'monthly',
+            features: [
+                '10 Shows', '20 Task Boards', '1000 Packing Boxes',
+                '15 Collaborators per Show', '100 Props', '5 Archived Shows', 'Priority Support',
+                'Custom Branding'
+            ],
+            limits: {
+                shows: 10,
+                boards: 20,
+                packingBoxes: 1000,
+                collaborators: 15,
+                props: 100,
+                archivedShows: 5
+            }
+        },
+        {
+            id: 'pro',
+            name: 'Pro',
+            description: 'For large productions and teams',
+            price: 99.99,
+            interval: 'monthly',
+            features: [
+                '100 Shows', '200 Task Boards', '10000 Packing Boxes',
+                '100 Collaborators per Show', '1000 Props', '10 Archived Shows', '24/7 Support',
+                'Custom Branding'
+            ],
+            limits: {
+                shows: 100,
+                boards: 200,
+                packingBoxes: 10000,
+                collaborators: 100,
+                props: 1000,
+                archivedShows: 10
+            }
+        }
+    ]
+};
+// Error reporting service
+const reportError = (error, context, userId) => {
+    const errorInfo = {
+        message: error.message || 'Unknown error',
+        stack: error.stack,
+        context,
+        userId,
+        timestamp: new Date().toISOString(),
+        functionName: process.env.FUNCTION_NAME || 'unknown',
+    };
+    logger.error('Error occurred', errorInfo);
+    // TODO: Integrate with external error reporting service (e.g., Sentry)
+    // Example:
+    // if (process.env.SENTRY_DSN) {
+    //   Sentry.captureException(error, {
+    //     tags: { context, userId },
+    //     extra: errorInfo
+    //   });
+    // }
+};
 // Initialize Admin SDK once
 try {
     admin.initializeApp();
@@ -879,11 +983,18 @@ export const getPricingConfig = onCall({ region: "us-central1" }, async (req) =>
                     ? product.metadata.features.split(',').map(f => f.trim()).filter(f => f.length > 0)
                     : getDefaultFeaturesForPlan(planId),
                 limits: {
+                    // Per-plan limits (total across all shows)
                     shows: parseInt(product.metadata?.shows || '0'),
                     boards: parseInt(product.metadata?.boards || '0'),
                     packingBoxes: parseInt(product.metadata?.packing_boxes || '0'),
                     collaboratorsPerShow: parseInt(product.metadata?.collaborators || '0'),
-                    props: parseInt(product.metadata?.props || '0')
+                    props: parseInt(product.metadata?.props || '0'),
+                    archivedShows: parseInt(product.metadata?.archived_shows || '0'),
+                    // Per-show limits (per individual show)
+                    boardsPerShow: product.metadata?.boards_per_show || '0',
+                    packingBoxesPerShow: product.metadata?.packing_boxes_per_show || '0',
+                    collaboratorsPerShowLimit: product.metadata?.collaborators_per_show || '0',
+                    propsPerShow: product.metadata?.props_per_show || '0',
                 },
                 priceId: {
                     monthly: monthlyPrice?.id || '',
@@ -1745,6 +1856,245 @@ export const batchOptimizeImages = onCall({ region: "us-central1" }, async (req)
         processed: results.length,
         results
     };
+});
+// --- Add-Ons Management Functions ---
+// Purchase an add-on
+export const purchaseAddOn = onCall({ region: "us-central1" }, async (req) => {
+    try {
+        if (!req.auth)
+            throw new Error("unauthenticated");
+        const s = await ensureStripe();
+        if (!s)
+            throw new Error("Stripe not configured");
+        const { userId, addOnId, billingInterval } = req.data || {};
+        if (!userId || !addOnId || !billingInterval) {
+            throw new Error("Missing required parameters");
+        }
+        const db = admin.firestore();
+        const profileRef = db.doc(`userProfiles/${userId}`);
+        const profileSnap = await profileRef.get();
+        const profile = profileSnap.exists ? profileSnap.data() : {};
+        // Check if user has Standard or Pro plan
+        const userPlan = profile.plan || profile.subscriptionPlan;
+        if (!['standard', 'pro'].includes(userPlan)) {
+            throw new Error("Add-ons are only available for Standard and Pro plans");
+        }
+        // Get user's Stripe customer ID
+        let customerId = profile.stripeCustomerId;
+        if (!customerId) {
+            const user = await admin.auth().getUser(userId).catch(() => undefined);
+            const email = (profile?.email || user?.email);
+            if (email) {
+                const list = await s.customers.list({ email, limit: 1 });
+                customerId = list.data[0]?.id;
+            }
+        }
+        if (!customerId) {
+            throw new Error("No Stripe customer found");
+        }
+        // Get user's subscription
+        const subscriptionId = profile.subscriptionId;
+        if (!subscriptionId) {
+            throw new Error("No active subscription found");
+        }
+        // Get add-on product from Stripe
+        const products = await s.products.list({ active: true, type: 'service' });
+        const addOnProduct = products.data.find(p => p.metadata?.addon_id === addOnId);
+        if (!addOnProduct) {
+            throw new Error("Add-on product not found");
+        }
+        // Get the appropriate price for the billing interval
+        const prices = await s.prices.list({ active: true, product: addOnProduct.id });
+        const price = prices.data.find(p => p.recurring?.interval === billingInterval &&
+            p.metadata?.addon_id === addOnId);
+        if (!price) {
+            throw new Error("Add-on price not found");
+        }
+        // Add the add-on to the subscription
+        const subscription = await s.subscriptions.retrieve(subscriptionId);
+        const subscriptionItem = await s.subscriptionItems.create({
+            subscription: subscriptionId,
+            price: price.id,
+            quantity: 1,
+            metadata: {
+                addon_id: addOnId,
+                addon_type: addOnProduct.metadata?.addon_type || 'unknown',
+                addon_quantity: addOnProduct.metadata?.addon_quantity || '1',
+            }
+        });
+        // Create UserAddOn record in Firestore
+        const userAddOnRef = db.collection('userAddOns').doc();
+        await userAddOnRef.set({
+            id: userAddOnRef.id,
+            userId,
+            addOnId,
+            quantity: parseInt(addOnProduct.metadata?.addon_quantity || '1'),
+            status: 'active',
+            billingInterval,
+            stripeSubscriptionItemId: subscriptionItem.id,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return {
+            success: true,
+            subscriptionItemId: subscriptionItem.id,
+            userAddOnId: userAddOnRef.id
+        };
+    }
+    catch (error) {
+        reportError(error, 'purchaseAddOn', req.auth?.uid);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred'
+        };
+    }
+});
+// Cancel an add-on
+export const cancelAddOn = onCall({ region: "us-central1" }, async (req) => {
+    try {
+        if (!req.auth)
+            throw new Error("unauthenticated");
+        const s = await ensureStripe();
+        if (!s)
+            throw new Error("Stripe not configured");
+        const { userId, userAddOnId } = req.data || {};
+        if (!userId || !userAddOnId) {
+            throw new Error("Missing required parameters");
+        }
+        const db = admin.firestore();
+        const userAddOnRef = db.doc(`userAddOns/${userAddOnId}`);
+        const userAddOnSnap = await userAddOnRef.get();
+        if (!userAddOnSnap.exists) {
+            throw new Error("Add-on not found");
+        }
+        const userAddOn = userAddOnSnap.data();
+        if (userAddOn.userId !== userId) {
+            throw new Error("Unauthorized");
+        }
+        if (userAddOn.status !== 'active') {
+            throw new Error("Add-on is not active");
+        }
+        // Cancel the subscription item in Stripe
+        await s.subscriptionItems.update(userAddOn.stripeSubscriptionItemId, {
+            metadata: {
+                cancel_at_period_end: 'true'
+            }
+        });
+        // Update the UserAddOn record
+        await userAddOnRef.update({
+            status: 'cancelled',
+            cancelledAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { success: true };
+    }
+    catch (error) {
+        reportError(error, 'cancelAddOn', req.auth?.uid);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error occurred'
+        };
+    }
+});
+// Get add-ons for marketing site
+export const getAddOnsForMarketing = onRequest({ region: "us-central1" }, async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+    }
+    if (req.method !== "GET") {
+        res.status(405).json({ error: "Method not allowed" });
+        return;
+    }
+    try {
+        const s = await ensureStripe();
+        if (!s) {
+            // Return default add-ons if Stripe is not configured
+            const defaultAddOns = [
+                {
+                    id: 'shows_5',
+                    type: 'shows',
+                    name: '5 Additional Shows',
+                    description: 'Add 5 more shows to your account',
+                    quantity: 5,
+                    targetPlans: ['standard', 'pro'],
+                    popular: true,
+                    monthlyPrice: 12,
+                    yearlyPrice: 120,
+                },
+                {
+                    id: 'props_100',
+                    type: 'props',
+                    name: '100 Additional Props',
+                    description: 'Add 100 more props to your account',
+                    quantity: 100,
+                    targetPlans: ['standard', 'pro'],
+                    popular: true,
+                    monthlyPrice: 4,
+                    yearlyPrice: 40,
+                },
+                {
+                    id: 'packing_100',
+                    type: 'packing_boxes',
+                    name: '100 Additional Packing Boxes',
+                    description: 'Add 100 more packing boxes to your account',
+                    quantity: 100,
+                    targetPlans: ['standard', 'pro'],
+                    monthlyPrice: 2,
+                    yearlyPrice: 20,
+                },
+                {
+                    id: 'archived_5',
+                    type: 'archived_shows',
+                    name: '5 Additional Archived Shows',
+                    description: 'Add 5 more archived shows to your account',
+                    quantity: 5,
+                    targetPlans: ['standard', 'pro'],
+                    monthlyPrice: 2,
+                    yearlyPrice: 20,
+                },
+            ];
+            res.json({ addOns: defaultAddOns });
+            return;
+        }
+        // Fetch add-on products from Stripe
+        const products = await s.products.list({
+            active: true,
+            type: 'service',
+            limit: 100
+        });
+        const addOnProducts = products.data.filter(product => product.metadata?.addon_type &&
+            product.metadata?.addon_id);
+        const addOns = [];
+        for (const product of addOnProducts) {
+            const prices = await s.prices.list({
+                active: true,
+                product: product.id
+            });
+            const monthlyPrice = prices.data.find(p => p.recurring?.interval === 'month');
+            const yearlyPrice = prices.data.find(p => p.recurring?.interval === 'year');
+            addOns.push({
+                id: product.metadata.addon_id,
+                type: product.metadata.addon_type,
+                name: product.name,
+                description: product.description || '',
+                quantity: parseInt(product.metadata.addon_quantity || '1'),
+                targetPlans: product.metadata.addon_target_plans?.split(',') || ['standard', 'pro'],
+                popular: product.metadata.addon_popular === 'true',
+                monthlyPrice: monthlyPrice ? (monthlyPrice.unit_amount || 0) / 100 : 0,
+                yearlyPrice: yearlyPrice ? (yearlyPrice.unit_amount || 0) / 100 : 0,
+                stripeProductId: product.id,
+                stripePriceIdMonthly: monthlyPrice?.id,
+                stripePriceIdYearly: yearlyPrice?.id,
+            });
+        }
+        res.json({ addOns });
+    }
+    catch (error) {
+        logger.error('Error fetching add-ons for marketing:', error);
+        res.status(500).json({ error: 'Failed to fetch add-ons' });
+    }
 });
 // Export the contact form function
 export { submitContactForm } from './contact.js';

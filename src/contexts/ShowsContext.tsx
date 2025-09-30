@@ -276,12 +276,12 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
   }, [firebaseService]);
 
    const deleteShow = useCallback(async (id: string) => {
-      if (!firebaseService?.deleteDocument) {
+      if (!firebaseService?.deleteShow) {
          setErrorState(new Error("Firebase service not available"));
          return;
       }
       try {
-         await firebaseService.deleteDocument('shows', id);
+         await firebaseService.deleteShow(id);
          if (selectedShow?.id === id) {
             setSelectedShow(null); // Deselect if the selected show is deleted
          }

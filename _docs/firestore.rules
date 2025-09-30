@@ -127,8 +127,11 @@ service cloud.firestore {
     match /shows/{showId} {
       allow read: if isSystemAdmin() || (request.auth != null);
       allow update, delete: if isSystemAdmin() || (request.auth != null && (
-        resource.data.team[request.auth.uid] == "god" ||
-        resource.data.team[request.auth.uid] == "props_supervisor"
+        resource.data.userId == request.auth.uid ||
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid ||
+        (resource.data.team != null && resource.data.team[request.auth.uid] == "god") ||
+        (resource.data.team != null && resource.data.team[request.auth.uid] == "props_supervisor")
       ));
       allow create: if isSystemAdmin() || request.auth != null;
 

@@ -13,13 +13,15 @@ import { useShows } from '../contexts/ShowsContext.tsx';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import type { Show } from '../types/index.ts';
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import { useTranslation } from '../hooks/useTranslation';
 import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 
 export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   // const [filters, setFilters] = React.useState<Filters>({
   //   search: '',
   // });
-  const [showId, /* setShowId */] = React.useState<string | null>(null); // setShowId appears unused
+  const [showId, /* setShowId */] = React.useState<string | null>(null);
+  const { t } = useTranslation(); // setShowId appears unused
   const [isLoadingShows, setIsLoadingShows] = React.useState(true);
   const [connectionError, setConnectionError] = React.useState<string | null>(null);
   // const [showData, setShowData] = useState<Show | null>(null); // showData appears unused
@@ -204,25 +206,25 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
   const deleteShow = async (showIdToDelete: string) => {
     if (!user || !service || !isInitialized) return;
     Alert.alert(
-      "Confirm Delete",
-      "Are you sure you want to delete this show and all its props? This action cannot be undone.",
+      t('show.delete.confirm'),
+      t('show.delete.warning'),
       [
         {
-          text: "Cancel",
+          text: t('show.delete.cancel'),
           style: "cancel"
         },
         {
-          text: "Delete",
+          text: t('show.delete.proceed'),
           onPress: async () => {
             try {
-              await service.deleteDocument('shows', showIdToDelete);
+              await service.deleteShow(showIdToDelete);
               if (currentShowId === showIdToDelete) {
                 setCurrentShowId(null);
               }
-              Alert.alert("Show Deleted", "The show has been successfully deleted.");
+              Alert.alert(t('show.delete.success'), t('show.delete.success'));
             } catch (error) {
               console.error("Error deleting show:", error);
-              Alert.alert("Error", "Failed to delete show.");
+              Alert.alert(t('common.error'), t('show.delete.error'));
             }
           }
         }
