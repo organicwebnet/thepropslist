@@ -205,6 +205,8 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
 
   const deleteShow = async (showIdToDelete: string) => {
     if (!user || !service || !isInitialized) return;
+    
+    // Add test button for debugging
     Alert.alert(
       t('show.delete.confirm'),
       t('show.delete.warning'),
@@ -212,6 +214,20 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
         {
           text: t('show.delete.cancel'),
           style: "cancel"
+        },
+        {
+          text: "Test Deletion",
+          onPress: async () => {
+            try {
+              const { ShowDeletionTester } = await import('../lib/testShowDeletion');
+              const result = await ShowDeletionTester.testShowDeletion(showIdToDelete, service, { currentUser: user });
+              console.log('Test result:', result);
+              Alert.alert('Test Result', result.success ? 'Test passed' : `Test failed: ${result.error}`);
+            } catch (error) {
+              console.error("Test error:", error);
+              Alert.alert('Test Error', error.message);
+            }
+          }
         },
         {
           text: t('show.delete.proceed'),

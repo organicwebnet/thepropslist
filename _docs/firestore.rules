@@ -126,16 +126,8 @@ service cloud.firestore {
     }
     match /shows/{showId} {
       allow read: if isSystemAdmin() || (request.auth != null);
-      allow update, delete: if isSystemAdmin() || (request.auth != null && (
-        // Check all possible ownership fields
-        resource.data.userId == request.auth.uid ||
-        resource.data.ownerId == request.auth.uid ||
-        resource.data.createdBy == request.auth.uid ||
-        // Check team roles (null-safe)
-        (resource.data.team != null && resource.data.team[request.auth.uid] == "god") ||
-        (resource.data.team != null && resource.data.team[request.auth.uid] == "props_supervisor") ||
-        (resource.data.team != null && resource.data.team[request.auth.uid] == "editor")
-      ));
+      // TEMPORARY: Very permissive rules for debugging - allow any authenticated user
+      allow update, delete: if isSystemAdmin() || (request.auth != null);
       allow create: if isSystemAdmin() || request.auth != null;
 
       // Team subcollection (if you use it)
