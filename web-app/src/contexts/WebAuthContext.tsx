@@ -103,11 +103,13 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
 
   const loadUserProfile = async (uid: string) => {
     try {
+      console.log('WebAuthContext: Loading user profile for UID:', uid);
       // If using cache, try cache first
       // const cached = await webCache.get<UserProfile>(`user-profile-${uid}`);
       // if (cached) { setUserProfile(cached); return cached; }
       const userDocRef = doc(db, 'users', uid);
       const userDoc = await getDoc(userDocRef);
+      console.log('WebAuthContext: User document exists:', userDoc.exists());
       if (userDoc.exists()) {
         const rawCreatedAt = userDoc.data().createdAt;
         let createdAt: Date | null = null;
@@ -132,6 +134,14 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
           lastLogin,
           createdAt
         } as UserProfile;
+        
+        console.log('WebAuthContext: Loaded user profile data:', {
+          uid: profileData.uid,
+          email: profileData.email,
+          onboardingCompleted: profileData.onboardingCompleted,
+          displayName: profileData.displayName
+        });
+        
         setUserProfile(profileData);
         // If using cache: await webCache.set(`user-profile-${uid}`, profileData, 60 * 60 * 1000);
         if (Array.isArray(profileData.organizations) && profileData.organizations.length > 0) {
@@ -139,6 +149,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         }
         return profileData;
       } else {
+        console.log('WebAuthContext: User document does not exist, creating new profile');
         // If invite-only mode is enabled, require a valid invitation before creating a profile
         const inviteOnly = String(import.meta.env.VITE_INVITE_ONLY || '').toLowerCase() === 'true';
         if (inviteOnly) {
@@ -471,10 +482,16 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       setLoading(true);
       setError(null);
       if (!user) throw new Error('No user');
+      
+      console.log('WebAuthContext: Marking onboarding as completed for user:', user.uid);
       const userDocRef = doc(db, 'users', user.uid);
       await updateDoc(userDocRef, { onboardingCompleted: true });
+      console.log('WebAuthContext: Successfully updated user document with onboardingCompleted: true');
+      
       await loadUserProfile(user.uid);
+      console.log('WebAuthContext: Reloaded user profile after marking onboarding complete');
     } catch (error: any) {
+      console.error('WebAuthContext: Error marking onboarding completed:', error);
       setError(error.message);
       throw error;
     } finally {

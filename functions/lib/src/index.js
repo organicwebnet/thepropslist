@@ -7,6 +7,7 @@ import * as functions from "firebase-functions";
 import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
+import { DEFAULT_PRICING_CONFIG } from "./pricing";
 // Initialize Admin SDK once
 try {
     admin.initializeApp();
@@ -748,7 +749,81 @@ export const createCheckoutSession = onCall({ region: "us-central1" }, async (re
     });
     return { url: session.url };
 });
-// Shared pricing configuration
+// --- Create Stripe Coupon ---
+export const createStripeCoupon = onCall({ region: "us-central1" }, async (req) => {
+    const s = await ensureStripe();
+    if (!s) {
+        throw new Error("Stripe not configured");
+    }
+    const { id, name, percent_off, amount_off, currency, max_redemptions, redeem_by } = req.data;
+    try {
+        const coupon = await s.coupons.create({
+            id,
+            name,
+            percent_off,
+            amount_off,
+            currency,
+            max_redemptions,
+            redeem_by
+        });
+        return { couponId: coupon.id };
+    }
+    catch (error) {
+        logger.error('Error creating Stripe coupon:', error);
+        throw new Error('Failed to create Stripe coupon');
+    }
+});
+// --- Create Stripe Promotion Code ---
+export const createStripePromotionCode = onCall({ region: "us-central1" }, async (req) => {
+    const s = await ensureStripe();
+    if (!s) {
+        throw new Error("Stripe not configured");
+    }
+    const { coupon, code, active } = req.data;
+    try {
+        const promotionCode = await s.promotionCodes.create({
+            coupon,
+            code,
+            active
+        });
+        return { promotionCodeId: promotionCode.id };
+    }
+    catch (error) {
+        logger.error('Error creating Stripe promotion code:', error);
+        throw new Error('Failed to create Stripe promotion code');
+    }
+});
+// --- Get Stripe Coupons ---
+export const getStripeCoupons = onCall({ region: "us-central1" }, async (req) => {
+    const s = await ensureStripe();
+    if (!s) {
+        throw new Error("Stripe not configured");
+    }
+    try {
+        const coupons = await s.coupons.list({ limit: 100 });
+        return { coupons: coupons.data };
+    }
+    catch (error) {
+        logger.error('Error fetching Stripe coupons:', error);
+        throw new Error('Failed to fetch Stripe coupons');
+    }
+});
+// --- Get Stripe Promotion Codes ---
+export const getStripePromotionCodes = onCall({ region: "us-central1" }, async (req) => {
+    const s = await ensureStripe();
+    if (!s) {
+        throw new Error("Stripe not configured");
+    }
+    try {
+        const promotionCodes = await s.promotionCodes.list({ limit: 100 });
+        return { promotionCodes: promotionCodes.data };
+    }
+    catch (error) {
+        logger.error('Error fetching Stripe promotion codes:', error);
+        throw new Error('Failed to fetch Stripe promotion codes');
+    }
+});
+// Import shared pricing configuration
 const DEFAULT_PLAN_FEATURES = {
     'free': [
         '1 Show', '2 Task Boards', '20 Packing Boxes',
@@ -769,79 +844,16 @@ const DEFAULT_PLAN_FEATURES = {
         'Custom Branding'
     ]
 };
-
 // Helper function to get default features for a plan
 function getDefaultFeaturesForPlan(planId) {
     return DEFAULT_PLAN_FEATURES[planId] || [];
 }
-
 // --- Get pricing configuration from Stripe ---
 export const getPricingConfig = onCall({ region: "us-central1" }, async (req) => {
     const s = await ensureStripe();
     if (!s) {
-        // Return static configuration if Stripe is not configured
-        return {
-            currency: 'USD',
-            billingInterval: 'monthly',
-            plans: [
-                {
-                    id: 'free',
-                    name: 'Free',
-                    description: 'Perfect for small productions',
-                    price: { monthly: 0, yearly: 0, currency: 'USD' },
-                    features: getDefaultFeaturesForPlan('free'),
-                    limits: {
-                        shows: 1, boards: 2, packingBoxes: 20,
-                        collaboratorsPerShow: 3, props: 10
-                    },
-                    priceId: { monthly: '', yearly: '' },
-                    popular: false,
-                    color: 'bg-gray-500'
-                },
-                {
-                    id: 'starter',
-                    name: 'Starter',
-                    description: 'Great for growing productions',
-                    price: { monthly: 9, yearly: 90, currency: 'USD' },
-                    features: getDefaultFeaturesForPlan('starter'),
-                    limits: {
-                        shows: 3, boards: 5, packingBoxes: 200,
-                        collaboratorsPerShow: 5, props: 50
-                    },
-                    priceId: { monthly: '', yearly: '' },
-                    popular: false,
-                    color: 'bg-blue-500'
-                },
-                {
-                    id: 'standard',
-                    name: 'Standard',
-                    description: 'Perfect for professional productions',
-                    price: { monthly: 19, yearly: 190, currency: 'USD' },
-                    features: getDefaultFeaturesForPlan('standard'),
-                    limits: {
-                        shows: 10, boards: 20, packingBoxes: 1000,
-                        collaboratorsPerShow: 15, props: 100
-                    },
-                    priceId: { monthly: '', yearly: '' },
-                    popular: true,
-                    color: 'bg-purple-500'
-                },
-                {
-                    id: 'pro',
-                    name: 'Pro',
-                    description: 'For large-scale productions',
-                    price: { monthly: 39, yearly: 390, currency: 'USD' },
-                    features: getDefaultFeaturesForPlan('pro'),
-                    limits: {
-                        shows: 100, boards: 200, packingBoxes: 10000,
-                        collaboratorsPerShow: 100, props: 1000
-                    },
-                    priceId: { monthly: '', yearly: '' },
-                    popular: false,
-                    color: 'bg-yellow-500'
-                }
-            ]
-        };
+        // Return shared default configuration as fallback if Stripe is not configured
+        return DEFAULT_PRICING_CONFIG;
     }
     try {
         // Fetch products and prices from Stripe
@@ -863,7 +875,7 @@ export const getPricingConfig = onCall({ region: "us-central1" }, async (req) =>
                     yearly: yearlyPrice ? (yearlyPrice.unit_amount || 0) / 100 : 0,
                     currency: monthlyPrice?.currency || 'usd'
                 },
-                features: product.metadata?.features 
+                features: product.metadata?.features
                     ? product.metadata.features.split(',').map(f => f.trim()).filter(f => f.length > 0)
                     : getDefaultFeaturesForPlan(planId),
                 limits: {

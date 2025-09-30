@@ -255,10 +255,28 @@ const EditShowPage: React.FC = () => {
       } else if (show.logoImage && typeof show.logoImage === 'object' && 'url' in show.logoImage) {
         logoUrl = show.logoImage.url;
       }
-      const showData = {
-        ...show,
-        logoImage: logoUrl ? { url: logoUrl } : undefined,
+      // Clean the data to remove undefined values
+      const cleanShowData = (data: any): any => {
+        if (data === null || data === undefined) return null;
+        if (Array.isArray(data)) {
+          return data.map(cleanShowData).filter(item => item !== null && item !== undefined);
+        }
+        if (typeof data === 'object') {
+          const cleaned: any = {};
+          for (const [key, value] of Object.entries(data)) {
+            if (value !== undefined) {
+              cleaned[key] = cleanShowData(value);
+            }
+          }
+          return cleaned;
+        }
+        return data;
       };
+
+      const showData = cleanShowData({
+        ...show,
+        logoImage: logoUrl ? { url: logoUrl } : null,
+      });
       if (!id) throw new Error('Missing show id');
       await firebaseService.updateDocument('shows', id, showData);
       setSaving(false);

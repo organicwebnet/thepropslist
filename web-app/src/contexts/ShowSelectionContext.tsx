@@ -10,11 +10,14 @@ const ShowSelectionContext = createContext<ShowSelectionContextType | undefined>
 export const ShowSelectionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentShowId, setCurrentShowIdState] = useState<string | null>(() => {
     // Initialize from localStorage if available
-    return localStorage.getItem('currentShowId') || null;
+    const stored = localStorage.getItem('currentShowId');
+    console.log('ShowSelectionContext: Initializing with stored show ID:', stored);
+    return stored || null;
   });
 
   // Keep localStorage in sync when currentShowId changes
   useEffect(() => {
+    console.log('ShowSelectionContext: currentShowId changed to:', currentShowId);
     if (currentShowId) {
       localStorage.setItem('currentShowId', currentShowId);
     } else {
@@ -24,11 +27,14 @@ export const ShowSelectionProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Wrap setCurrentShowId to update both state and localStorage
   const setCurrentShowId = useCallback((id: string | null) => {
+    console.log('ShowSelectionContext: Setting current show ID to:', id);
     setCurrentShowIdState(id);
     if (id) {
       localStorage.setItem('currentShowId', id);
+      console.log('ShowSelectionContext: Saved to localStorage:', id);
     } else {
       localStorage.removeItem('currentShowId');
+      console.log('ShowSelectionContext: Removed from localStorage');
     }
   }, []);
 

@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { useFirebase } from '../contexts/FirebaseContext';
-import { User, CheckCircle, Theater, Package, Home, ArrowRight, ArrowLeft } from 'lucide-react';
+import { User, CheckCircle, Theater, Package, Home, ArrowRight, ArrowLeft, Users } from 'lucide-react';
+import { getDocs, collection } from 'firebase/firestore';
+import { db } from '../firebase';
 
 interface OnboardingFlowProps {
   isOpen: boolean;
@@ -12,10 +14,9 @@ interface OnboardingFlowProps {
 
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ isOpen, onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [profileCompleted, setProfileCompleted] = useState(false);
   const [showCreated, setShowCreated] = useState(false);
   const [propAdded, setPropAdded] = useState(false);
-  const { userProfile, markOnboardingCompleted } = useWebAuth();
+  const { userProfile, user, markOnboardingCompleted } = useWebAuth();
   const { service } = useFirebase();
   const navigate = useNavigate();
 
@@ -46,44 +47,167 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ isOpen, onComplete }) =
     },
     {
       id: 'explore',
-      title: 'Explore the Dashboard',
-      description: 'Learn about the key features and how to navigate the system',
+      title: 'Welcome to The Props List!',
+      description: 'Here\'s a quick overview of the main features you can use to manage your theater productions',
       icon: Home,
       action: () => navigate('/'),
       checkComplete: () => true
     }
   ];
 
+  // Check if user has shows
+  const checkShows = async () => {
+    const userId = userProfile?.uid || user?.uid;
+    if (!userId) {
+      console.log('OnboardingFlow: No user ID available for checking shows');
+      return;
+    }
+    
+    try {
+      const showsSnapshot = await getDocs(collection(db, 'shows'));
+      const shows = showsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        data: doc.data()
+      }));
+      
+      console.log('OnboardingFlow: All shows from Firestore:', shows);
+      console.log('OnboardingFlow: Looking for shows created by user:', userId);
+      
+      // Log each show's createdBy field
+      shows.forEach((show, index) => {
+        console.log(`OnboardingFlow: Show ${index}:`, {
+          id: show.id,
+          name: show.data?.name,
+          createdBy: show.data?.createdBy,
+          matches: show.data?.createdBy === userId
+        });
+      });
+      
+      const userShows = shows.filter(show => {
+        const matches = show.data?.createdBy === userId;
+        console.log('OnboardingFlow: Show filter check:', {
+          showId: show.id,
+          showCreatedBy: show.data?.createdBy,
+          userId: userId,
+          matches: matches
+        });
+        return matches;
+      });
+      
+      setShowCreated(userShows.length > 0);
+      console.log('OnboardingFlow: Final result - found:', userShows.length, 'shows for user');
+    } catch (error) {
+      console.error('Error checking shows:', error);
+    }
+  };
+
+  // Check if user has props
+  const checkProps = async () => {
+    const userId = userProfile?.uid || user?.uid;
+    if (!userId) return;
+    
+    try {
+      const propsSnapshot = await getDocs(collection(db, 'props'));
+      const props = propsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        data: doc.data()
+      }));
+      
+      const userProps = props.filter(prop => prop.data.createdBy === userId);
+      setPropAdded(userProps.length > 0);
+      console.log('OnboardingFlow: Checked props, found:', userProps.length, 'props');
+    } catch (error) {
+      console.error('Error checking props:', error);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
-
-    // Check if user has shows
-    const checkShows = async () => {
-      if (!userProfile?.uid) return;
-      try {
-        const shows = await service.getCollection('shows');
-        const userShows = shows.filter(show => show.data.createdBy === userProfile.uid);
-        setShowCreated(userShows.length > 0);
-      } catch (error) {
-        console.error('Error checking shows:', error);
-      }
-    };
-
-    // Check if user has props
-    const checkProps = async () => {
-      if (!userProfile?.uid) return;
-      try {
-        const props = await service.getCollection('props');
-        const userProps = props.filter(prop => prop.data.createdBy === userProfile.uid);
-        setPropAdded(userProps.length > 0);
-      } catch (error) {
-        console.error('Error checking props:', error);
-      }
-    };
-
     checkShows();
     checkProps();
-  }, [isOpen, userProfile, service]);
+  }, [isOpen, userProfile, user, service]);
+
+  // Add a refresh mechanism when the component becomes visible again
+  useEffect(() => {
+    if (isOpen) {
+      // Double-check that user hasn't already completed onboarding
+      if (userProfile?.onboardingCompleted) {
+        console.log('OnboardingFlow: User has already completed onboarding, closing modal');
+        onComplete();
+        return;
+      }
+      
+      // Refresh the state when the onboarding modal opens
+      // Add a small delay to ensure any recent changes are saved
+      setTimeout(() => {
+        checkShows();
+        checkProps();
+      }, 500);
+    }
+  }, [isOpen, userProfile?.onboardingCompleted, onComplete]);
+
+  // Auto-advance when current step is completed
+  useEffect(() => {
+    if (isOpen && currentStep < steps.length) {
+      const currentStepData = steps[currentStep];
+      const isStepComplete = currentStepData.checkComplete();
+      
+      console.log('OnboardingFlow: Checking step completion:', {
+        currentStep,
+        stepId: currentStepData.id,
+        isStepComplete,
+        showCreated,
+        propAdded
+      });
+      
+      // If the current step is complete and we're not on the last step, auto-advance
+      if (isStepComplete && currentStep < steps.length - 1) {
+        console.log('OnboardingFlow: Auto-advancing to next step');
+        setTimeout(() => {
+          setCurrentStep(currentStep + 1);
+        }, 1000); // Small delay to show the completion state
+      }
+      
+      // If we're on the last step (explore) and it's complete, finish onboarding
+      if (isStepComplete && currentStep === steps.length - 1) {
+        console.log('OnboardingFlow: Final step complete, finishing onboarding');
+        setTimeout(() => {
+          handleComplete();
+        }, 2000); // Give user time to see the completion
+      }
+    }
+  }, [isOpen, currentStep, showCreated, propAdded, userProfile, user]);
+
+  // Add a window focus listener to refresh when user returns to the page
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isOpen) {
+        console.log('OnboardingFlow: Window focused, refreshing state');
+        setTimeout(() => {
+          checkShows();
+          checkProps();
+        }, 200);
+      }
+    };
+
+    // Also listen for visibility change (when tab becomes active)
+    const handleVisibilityChange = () => {
+      if (isOpen && !document.hidden) {
+        console.log('OnboardingFlow: Tab became visible, refreshing state');
+        setTimeout(() => {
+          checkShows();
+          checkProps();
+        }, 300);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isOpen]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -111,7 +235,26 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ isOpen, onComplete }) =
 
   const handleStepAction = () => {
     const step = steps[currentStep];
-    step.action();
+    const isStepComplete = step.checkComplete();
+    
+    console.log('Onboarding step action:', {
+      currentStep,
+      stepId: step.id,
+      isStepComplete,
+      userProfile: userProfile ? {
+        displayName: userProfile.displayName,
+        role: userProfile.role,
+        onboardingCompleted: userProfile.onboardingCompleted
+      } : null
+    });
+    
+    if (isStepComplete) {
+      // If step is complete, move to next step
+      handleNext();
+    } else {
+      // If step is not complete, go to the step's action
+      step.action();
+    }
   };
 
   if (!isOpen) return null;
@@ -187,7 +330,55 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ isOpen, onComplete }) =
             <h3 className="text-xl font-semibold text-white mb-2">{currentStepData.title}</h3>
             <p className="text-pb-gray mb-6">{currentStepData.description}</p>
             
-            {isStepComplete && (
+            {/* Special content for the final step */}
+            {currentStepData.id === 'explore' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-pb-darker/40 rounded-lg p-6 mb-6 border border-pb-primary/20"
+              >
+                <h4 className="text-lg font-semibold text-white mb-4">Main Features:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-start space-x-3">
+                    <Theater className="w-5 h-5 text-pb-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium text-white">Show Management</div>
+                      <div className="text-pb-gray">Create and manage your theater productions</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <Package className="w-5 h-5 text-pb-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium text-white">Props Inventory</div>
+                      <div className="text-pb-gray">Track all your props with photos and details</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <Users className="w-5 h-5 text-pb-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium text-white">Team Collaboration</div>
+                      <div className="text-pb-gray">Invite team members and assign roles</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <Home className="w-5 h-5 text-pb-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium text-white">Task Boards</div>
+                      <div className="text-pb-gray">Organize work with Kanban-style boards</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-pb-primary/10 rounded-lg border border-pb-primary/20">
+                  <div className="flex items-center text-pb-primary">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    <span className="font-medium">Onboarding Complete!</span>
+                  </div>
+                  <p className="text-pb-gray text-sm mt-1">You're all set to start managing your theater productions!</p>
+                </div>
+              </motion.div>
+            )}
+            
+            {isStepComplete && currentStepData.id !== 'explore' && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -220,6 +411,17 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ isOpen, onComplete }) =
                 {isStepComplete ? 'Continue' : `Go to ${currentStepData.title}`}
               </button>
               
+              <button
+                onClick={() => {
+                  console.log('OnboardingFlow: Manual refresh triggered');
+                  checkShows();
+                  checkProps();
+                }}
+                className="px-4 py-2 rounded-lg border border-pb-gray text-pb-gray hover:text-white hover:border-white transition-colors text-sm"
+              >
+                Refresh
+              </button>
+              
               {currentStep === steps.length - 1 ? (
                 <button
                   onClick={handleComplete}
@@ -238,6 +440,22 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ isOpen, onComplete }) =
               )}
             </div>
           </div>
+
+          {/* Debug Panel - Remove in production */}
+          {import.meta.env?.DEV && (
+            <div className="mt-6 p-4 bg-pb-darker/50 rounded-lg border border-pb-gray/20">
+              <h4 className="text-sm font-medium text-white mb-2">Debug Info:</h4>
+              <div className="text-xs text-pb-gray space-y-1">
+                <div>Current Step: {currentStep} ({steps[currentStep]?.id})</div>
+                <div>Show Created: {showCreated ? 'Yes' : 'No'}</div>
+                <div>Prop Added: {propAdded ? 'Yes' : 'No'}</div>
+                <div>User UID: {userProfile?.uid || user?.uid || 'None'}</div>
+                <div>User Profile UID: {userProfile?.uid || 'None'}</div>
+                <div>Firebase User UID: {user?.uid || 'None'}</div>
+                <div>Step Complete: {isStepComplete ? 'Yes' : 'No'}</div>
+              </div>
+            </div>
+          )}
 
           {/* Help Text */}
           <div className="mt-6 text-center">

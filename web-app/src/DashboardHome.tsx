@@ -58,8 +58,19 @@ const DashboardHome: React.FC = () => {
 
   useEffect(() => {
     // Show onboarding if user hasn't completed it
+    console.log('DashboardHome: Checking onboarding status:', {
+      userProfile: userProfile ? {
+        uid: userProfile.uid,
+        onboardingCompleted: userProfile.onboardingCompleted
+      } : null
+    });
+    
     if (userProfile && !userProfile.onboardingCompleted) {
+      console.log('DashboardHome: Showing onboarding - user has not completed it');
       setShowOnboarding(true);
+    } else if (userProfile && userProfile.onboardingCompleted) {
+      console.log('DashboardHome: Hiding onboarding - user has completed it');
+      setShowOnboarding(false);
     }
   }, [userProfile]);
   const { service } = useFirebase();

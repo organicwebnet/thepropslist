@@ -10,6 +10,7 @@ import { stripeService, type StripePlan } from '../services/StripeService';
 import { calculateDiscount } from '../shared/types/pricing';
 import { PricingModalErrorBoundary } from '../components/PricingModalErrorBoundary';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   User, 
   Mail, 
@@ -32,12 +33,16 @@ import {
   Calendar,
   TrendingUp,
   TrendingDown,
-  X
+  X,
+  ArrowLeft,
+  Home,
+  ChevronRight
 } from 'lucide-react';
 
 const ProfilePage: React.FC = () => {
-  const { user, userProfile, updateUserProfile, signOut } = useWebAuth();
+  const { user, userProfile, updateUserProfile, signOut, loading } = useWebAuth();
   const { plan, status, limits, currentPeriodEnd } = useSubscription();
+  const navigate = useNavigate();
   
   // User Details State
   const [displayName, setDisplayName] = useState('');
@@ -337,8 +342,158 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  // Check if user is still in onboarding
+  const isOnboarding = !userProfile?.onboardingCompleted;
+
+  // Show loading state while authentication is being checked
+  if (loading) {
+    return (
+      <div className="w-full max-w-6xl mx-auto py-10 px-4">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary"></div>
+          <span className="ml-3 text-pb-gray">Loading profile...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if user is not authenticated
+  if (!user) {
+    return (
+      <div className="w-full max-w-6xl mx-auto py-10 px-4">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-4 text-white">Access Denied</h1>
+          <p className="text-pb-gray mb-6">You need to be logged in to access your profile.</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="px-6 py-3 bg-pb-primary text-white rounded-lg hover:bg-pb-secondary transition-colors"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-6xl mx-auto py-10 px-4">
+      {/* Navigation Header */}
+      <div className="mb-8">
+        {isOnboarding ? (
+          // Onboarding Navigation
+          <nav className="flex items-center justify-between mb-6" role="navigation" aria-label="Onboarding navigation">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => {
+                  try {
+                    navigate('/');
+                  } catch (error) {
+                    console.error('Navigation failed:', error);
+                  }
+                }}
+                className="flex items-center space-x-2 text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
+                aria-label="Navigate back to dashboard"
+                role="button"
+                tabIndex={0}
+              >
+                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
+                <span>Back to Dashboard</span>
+              </button>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-pb-gray" aria-live="polite">Step 1 of 4</span>
+              <button
+                onClick={() => {
+                  try {
+                    navigate('/shows/new');
+                  } catch (error) {
+                    console.error('Navigation failed:', error);
+                  }
+                }}
+                className="flex items-center space-x-2 px-4 py-2 bg-pb-primary text-white rounded-lg hover:bg-pb-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker"
+                aria-label="Continue to next step: Create your first show"
+                role="button"
+                tabIndex={0}
+              >
+                <span>Next: Create Show</span>
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+          </nav>
+        ) : (
+          // Main Navigation for completed onboarding
+          <nav className="flex items-center justify-between mb-6" role="navigation" aria-label="Main navigation">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => {
+                  try {
+                    navigate('/');
+                  } catch (error) {
+                    console.error('Navigation failed:', error);
+                  }
+                }}
+                className="flex items-center space-x-2 text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
+                aria-label="Navigate to dashboard"
+                role="button"
+                tabIndex={0}
+              >
+                <Home className="w-5 h-5" aria-hidden="true" />
+                <span>Dashboard</span>
+              </button>
+              <span className="text-pb-gray" aria-hidden="true">/</span>
+              <span className="text-white" aria-current="page">Account Settings</span>
+            </div>
+            <div className="flex items-center space-x-4" role="group" aria-label="Quick navigation links">
+              <button
+                onClick={() => {
+                  try {
+                    navigate('/props');
+                  } catch (error) {
+                    console.error('Navigation failed:', error);
+                  }
+                }}
+                className="text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
+                aria-label="Navigate to props inventory"
+                role="button"
+                tabIndex={0}
+              >
+                Props
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    navigate('/shows');
+                  } catch (error) {
+                    console.error('Navigation failed:', error);
+                  }
+                }}
+                className="text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
+                aria-label="Navigate to show management"
+                role="button"
+                tabIndex={0}
+              >
+                Shows
+              </button>
+              <button
+                onClick={() => {
+                  try {
+                    navigate('/boards');
+                  } catch (error) {
+                    console.error('Navigation failed:', error);
+                  }
+                }}
+                className="text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
+                aria-label="Navigate to task boards"
+                role="button"
+                tabIndex={0}
+              >
+                Task Boards
+              </button>
+            </div>
+          </nav>
+        )}
+      </div>
+
       <h1 className="text-3xl font-bold mb-8 text-white">Account Settings</h1>
       
       {/* Tab Navigation */}

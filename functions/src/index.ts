@@ -8,6 +8,7 @@ import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import type Stripe from "stripe";
 import * as nodemailer from "nodemailer";
+import { DEFAULT_PRICING_CONFIG, getDefaultFeaturesForPlan } from "./pricing";
 
 // Initialize Admin SDK once
 try {
@@ -921,70 +922,8 @@ function getDefaultFeaturesForPlan(planId: string): string[] {
 export const getPricingConfig = onCall({ region: "us-central1" }, async (req) => {
   const s = await ensureStripe();
   if (!s) {
-    // Return static configuration if Stripe is not configured
-    // Return shared default configuration as fallback
-    return {
-      currency: 'USD',
-      billingInterval: 'monthly',
-      plans: [
-        {
-          id: 'free',
-          name: 'Free',
-          description: 'Perfect for small productions',
-          price: { monthly: 0, yearly: 0, currency: 'USD' },
-          features: getDefaultFeaturesForPlan('free'),
-          limits: {
-            shows: 1, boards: 2, packingBoxes: 20,
-            collaboratorsPerShow: 3, props: 10
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: false,
-          color: 'bg-gray-500'
-        },
-        {
-          id: 'starter',
-          name: 'Starter', 
-          description: 'Great for growing productions',
-          price: { monthly: 9, yearly: 90, currency: 'USD' },
-          features: getDefaultFeaturesForPlan('starter'),
-          limits: {
-            shows: 3, boards: 5, packingBoxes: 200,
-            collaboratorsPerShow: 5, props: 50
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: false,
-          color: 'bg-blue-500'
-        },
-        {
-          id: 'standard',
-          name: 'Standard',
-          description: 'Perfect for professional productions', 
-          price: { monthly: 19, yearly: 190, currency: 'USD' },
-          features: getDefaultFeaturesForPlan('standard'),
-          limits: {
-            shows: 10, boards: 20, packingBoxes: 1000,
-            collaboratorsPerShow: 15, props: 100
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: true,
-          color: 'bg-purple-500'
-        },
-        {
-          id: 'pro',
-          name: 'Pro',
-          description: 'For large-scale productions',
-          price: { monthly: 39, yearly: 390, currency: 'USD' },
-          features: getDefaultFeaturesForPlan('pro'),
-          limits: {
-            shows: 100, boards: 200, packingBoxes: 10000,
-            collaboratorsPerShow: 100, props: 1000
-          },
-          priceId: { monthly: '', yearly: '' },
-          popular: false,
-          color: 'bg-yellow-500'
-        }
-      ]
-    } as any;
+    // Return shared default configuration as fallback if Stripe is not configured
+    return DEFAULT_PRICING_CONFIG as any;
   }
 
   try {

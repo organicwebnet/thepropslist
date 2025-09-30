@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
+import { useWebAuth } from '../contexts/WebAuthContext';
+import { useShowSelection } from '../contexts/ShowSelectionContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, UploadCloud, Users, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,6 +55,8 @@ const statusOptions = [
 ];
 
 const AddShowPage: React.FC = () => {
+  const { userProfile, user, loading: authLoading } = useWebAuth();
+  const { setCurrentShowId } = useShowSelection();
   const [show, setShow] = useState<ShowFormState>({
     name: '',
     description: '',
@@ -60,7 +64,7 @@ const AddShowPage: React.FC = () => {
     endDate: '',
     logoImage: null,
     acts: [{ name: '', scenes: [''] }],
-    team: [{ email: '', role: '', status: undefined }],
+    team: [{ email: '', role: '', status: 'pending' }],
     stageManager: '',
     stageManagerEmail: '',
     propsSupervisor: '',
@@ -220,20 +224,94 @@ const AddShowPage: React.FC = () => {
           logoUrl = uploadResult.url;
         }
       }
-      const showData = {
+      // Clean the data to remove undefined values
+      const cleanShowData = (data: any): any => {
+        if (data === null || data === undefined) return null;
+        if (Array.isArray(data)) {
+          return data.map(cleanShowData).filter(item => item !== null && item !== undefined);
+        }
+        if (typeof data === 'object') {
+          const cleaned: any = {};
+          for (const [key, value] of Object.entries(data)) {
+            if (value !== undefined) {
+              cleaned[key] = cleanShowData(value);
+            }
+          }
+          return cleaned;
+        }
+        return data;
+      };
+
+      const showData = cleanShowData({
         ...show,
-        logoImage: logoUrl ? { url: logoUrl } : undefined,
         startDate: show.startDate,
         endDate: show.endDate,
-      };
-      const docRef = await firebaseService.addDocument('shows', showData);
+        logoImage: logoUrl ? { url: logoUrl } : null,
+        createdBy: user?.uid,
+        createdAt: new Date(),
+      });
+      const docId = await firebaseService.addDocument('shows', showData);
+      console.log('AddShowPage: Show created with ID:', docId);
       setLoading(false);
-      navigate(`/shows/${docRef.id}`);
+      
+      // Set the newly created show as the current show
+      console.log('AddShowPage: About to set current show to:', docId);
+      setCurrentShowId(docId as unknown as string);
+      console.log('AddShowPage: Set current show to:', docId);
+      
+      // Check if user is in onboarding process
+      const isOnboarding = !userProfile?.onboardingCompleted;
+      
+      if (isOnboarding) {
+        // If in onboarding, go back to dashboard to continue onboarding flow
+        navigate('/');
+      } else {
+        // If onboarding is complete, go to the show detail page
+        navigate(`/shows/${docId}`);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to add show.');
       setLoading(false);
     }
   };
+
+  // Show loading state while authentication is being checked
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex-1 flex flex-col min-h-screen">
+          <div className="w-full max-w-6xl mx-auto py-10 px-4">
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary"></div>
+              <span className="ml-3 text-pb-gray">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error state if user is not authenticated
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="flex-1 flex flex-col min-h-screen">
+          <div className="w-full max-w-6xl mx-auto py-10 px-4">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold mb-4 text-white">Access Denied</h1>
+              <p className="text-pb-gray mb-6">You need to be logged in to create a show.</p>
+              <button
+                onClick={() => navigate('/login')}
+                className="px-6 py-3 bg-pb-primary text-white rounded-lg hover:bg-pb-secondary transition-colors"
+              >
+                Go to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
