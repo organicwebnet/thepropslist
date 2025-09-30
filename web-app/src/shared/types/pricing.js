@@ -8,20 +8,20 @@
 export const DEFAULT_PLAN_FEATURES = {
     'free': [
         '1 Show', '2 Task Boards', '20 Packing Boxes',
-        '3 Collaborators per Show', '10 Props', 'Basic Support'
+        '3 Collaborators per Show', '10 Props', 'No Archived Shows', 'Basic Support'
     ],
     'starter': [
         '3 Shows', '5 Task Boards', '200 Packing Boxes',
-        '5 Collaborators per Show', '50 Props', 'Email Support'
+        '5 Collaborators per Show', '50 Props', '2 Archived Shows', 'Email Support'
     ],
     'standard': [
         '10 Shows', '20 Task Boards', '1000 Packing Boxes',
-        '15 Collaborators per Show', '100 Props', 'Priority Support',
+        '15 Collaborators per Show', '100 Props', '5 Archived Shows', 'Priority Support',
         'Custom Branding'
     ],
     'pro': [
         '100 Shows', '200 Task Boards', '10000 Packing Boxes',
-        '100 Collaborators per Show', '1000 Props', '24/7 Support',
+        '100 Collaborators per Show', '1000 Props', '10 Archived Shows', '24/7 Support',
         'Custom Branding'
     ]
 };

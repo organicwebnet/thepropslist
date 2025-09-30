@@ -10,6 +10,8 @@ import PropCardWeb from './PropCardWeb';
 import jsPDF from 'jspdf';
 import type { PdfGenerationOptions } from '../shared/types/pdf';
 import ImportPropsModal from './components/ImportPropsModal';
+import AvailabilityCounter from './components/AvailabilityCounter';
+import { useSubscription } from './hooks/useSubscription';
 
 const defaultPdfOptions: PdfGenerationOptions = {
   selectedFields: {
@@ -65,6 +67,7 @@ const PropsListPage: React.FC = () => {
   const { service: firebaseService, isInitialized, error: firebaseInitError } = useFirebase();
   const { currentShowId } = useShowSelection();
   const { userProfile } = useWebAuth();
+  const { effectiveLimits } = useSubscription();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('');
   const [status, setStatus] = useState<string>('');
@@ -300,7 +303,15 @@ const PropsListPage: React.FC = () => {
             <div className="text-pb-primary font-semibold text-lg mb-2">Please select a show to view its props.</div>
           </div>
         )}
-        <h2 className="text-2xl font-bold mb-6 self-start">Props List</h2>
+        <div className="w-full max-w-3xl flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold">Props List</h2>
+          <AvailabilityCounter
+            currentCount={props.length}
+            limit={effectiveLimits.props}
+            type="props"
+            className="text-sm"
+          />
+        </div>
         <div className="w-full max-w-3xl flex justify-between mb-4 gap-2">
           <div>
             {currentShowId && (

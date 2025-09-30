@@ -177,4 +177,15 @@
 /* Focus styles for accessibility */
 .focus-visible:focus-visible {
   @apply outline-none ring-2 ring-pb-primary ring-opacity-50;
+}
+
+/* Date input calendar icon styling */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+  filter: invert(1);
 } 

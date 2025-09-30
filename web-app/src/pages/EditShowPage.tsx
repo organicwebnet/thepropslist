@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useNavigate, useParams } from 'react-router-dom';
+import { cleanFirestoreData } from '../utils/firestore';
 import { Plus, Trash2, UploadCloud, Users, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EntitySelect from '../components/EntitySelect';
@@ -255,25 +256,7 @@ const EditShowPage: React.FC = () => {
       } else if (show.logoImage && typeof show.logoImage === 'object' && 'url' in show.logoImage) {
         logoUrl = show.logoImage.url;
       }
-      // Clean the data to remove undefined values
-      const cleanShowData = (data: any): any => {
-        if (data === null || data === undefined) return null;
-        if (Array.isArray(data)) {
-          return data.map(cleanShowData).filter(item => item !== null && item !== undefined);
-        }
-        if (typeof data === 'object') {
-          const cleaned: any = {};
-          for (const [key, value] of Object.entries(data)) {
-            if (value !== undefined) {
-              cleaned[key] = cleanShowData(value);
-            }
-          }
-          return cleaned;
-        }
-        return data;
-      };
-
-      const showData = cleanShowData({
+      const showData = cleanFirestoreData({
         ...show,
         logoImage: logoUrl ? { url: logoUrl } : null,
       });

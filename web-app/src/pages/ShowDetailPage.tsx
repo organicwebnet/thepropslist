@@ -4,9 +4,11 @@ import { useParams, Link } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import type { Show } from '../types/Show';
-import { Pencil, UserPlus } from 'lucide-react';
+import { Pencil, UserPlus, AlertTriangle, Archive, Trash2, MoreVertical } from 'lucide-react';
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { buildInviteEmailDocTo } from '../services/EmailService';
+import { showNeedsAttention, getMissingShowDetails } from '../utils/showUtils';
+import ShowActionsModal from '../components/ShowActionsModal';
 
 const ShowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +47,8 @@ const ShowDetailPage: React.FC = () => {
   const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [showActionsOpen, setShowActionsOpen] = useState(false);
+
 
   useEffect(() => {
     if (!id) return;
@@ -128,15 +132,26 @@ const ShowDetailPage: React.FC = () => {
     <DashboardLayout>
       <div className="flex-1 flex flex-col min-h-screen">
         <div className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 relative">
-          {/* Edit Button */}
-          <button
-            onClick={() => id && window.location.assign(`/shows/${id}/edit`)}
-            className="absolute top-6 right-6 flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-            aria-label="Edit Show"
-          >
-            <Pencil className="w-4 h-4" />
-            <span className="hidden sm:inline">Edit</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="absolute top-6 right-6 flex items-center gap-2">
+            <button
+              onClick={() => id && window.location.assign(`/shows/${id}/edit`)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+              aria-label="Edit Show"
+            >
+              <Pencil className="w-4 h-4" />
+              <span className="hidden sm:inline">Edit</span>
+            </button>
+            
+            <button
+              onClick={() => setShowActionsOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-darker hover:bg-pb-primary/20 text-pb-gray hover:text-white border border-pb-primary/30 transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+              aria-label="Show Actions"
+            >
+              <MoreVertical className="w-4 h-4" />
+              <span className="hidden sm:inline">Actions</span>
+            </button>
+          </div>
           <div className="flex flex-col md:flex-row md:items-center md:gap-8 mb-6">
             {show.logoImage?.url ? (
               <img
@@ -151,7 +166,15 @@ const ShowDetailPage: React.FC = () => {
               </div>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-white mb-2">{show.name}</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-2xl font-bold text-white">{show.name}</h1>
+                {showNeedsAttention(show) && (
+                  <div className="flex items-center gap-1" title="Add more details like production info, venues, acts, or team members to get the most out of this show">
+                    <AlertTriangle className="w-5 h-5 text-pb-warning" />
+                    <span className="text-sm text-pb-warning font-medium">Needs attention</span>
+                  </div>
+                )}
+              </div>
               {show.status && (
                 <span className="inline-block px-3 py-1 rounded-full bg-pb-primary/20 text-pb-primary text-xs font-semibold mb-2">{show.status}</span>
               )}
@@ -167,6 +190,34 @@ const ShowDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
+          
+          {/* Attention Banner for shows that need more details */}
+          {showNeedsAttention(show) && (
+            <div className="mb-6 p-4 bg-pb-warning/10 border border-pb-warning/30 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-pb-warning mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="text-pb-warning font-semibold mb-1">This show needs more details</h3>
+                  <p className="text-pb-gray text-sm mb-2">
+                    Add more information to get the most out of your show. Consider adding:
+                  </p>
+                  <ul className="text-pb-gray text-sm mb-3 list-disc list-inside">
+                    {getMissingShowDetails(show).map((detail, index) => (
+                      <li key={index} className="capitalize">{detail}</li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => id && window.location.assign(`/shows/${id}/edit`)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-pb-warning text-white rounded-lg hover:bg-pb-warning/80 transition-colors text-sm font-medium"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Add Details
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
           {canInvite && (
             <div className="mt-3 flex gap-2">
               <button
@@ -243,12 +294,12 @@ const ShowDetailPage: React.FC = () => {
               ))}
             </div>
           </div>
-          {renderList(show.venues, 'Venues', (venue, idx) => <li key={idx}>{venue.name || venue}</li>)}
-          {renderList(show.contacts, 'Contacts', (contact, idx) => <li key={idx}>{contact.name || contact}</li>)}
-          {renderList(show.collaborators, 'Collaborators', (collab, idx) => <li key={idx}>{collab.name || collab.email || collab}</li>)}
-          {renderList(show.acts, 'Acts', (act, idx) => <li key={idx}>{act.name || act}</li>)}
-          {renderList(show.rehearsalAddresses, 'Rehearsal Addresses', (addr, idx) => <li key={idx}>{addr.address || addr}</li>)}
-          {renderList(show.storageAddresses, 'Storage Addresses', (addr, idx) => <li key={idx}>{addr.address || addr}</li>)}
+          {renderList(show.venues, 'Venues', (venue, idx) => <li key={idx}>{typeof venue === 'object' && venue.name ? venue.name : String(venue)}</li>)}
+          {renderList(show.contacts, 'Contacts', (contact, idx) => <li key={idx}>{typeof contact === 'object' && contact.name ? contact.name : String(contact)}</li>)}
+          {renderList(show.collaborators, 'Collaborators', (collab, idx) => <li key={idx}>{typeof collab === 'object' ? (collab.name || collab.email || 'Unknown') : String(collab)}</li>)}
+          {renderList(show.acts, 'Acts', (act, idx) => <li key={idx}>{typeof act === 'object' && act.name ? act.name : String(act)}</li>)}
+          {renderList(show.rehearsalAddresses, 'Rehearsal Addresses', (addr, idx) => <li key={idx}>{typeof addr === 'object' && addr.address ? addr.address : String(addr)}</li>)}
+          {renderList(show.storageAddresses, 'Storage Addresses', (addr, idx) => <li key={idx}>{typeof addr === 'object' && addr.address ? addr.address : String(addr)}</li>)}
           {show.team && Array.isArray(show.team) && show.team.length > 0 && (
             <div className="mb-4">
               <h2 className="text-lg font-semibold text-white mb-1">Team</h2>
@@ -417,6 +468,24 @@ const ShowDetailPage: React.FC = () => {
               </form>
             </div>
           </div>
+        )}
+        
+        {/* Show Actions Modal */}
+        {showActionsOpen && id && (
+          <ShowActionsModal
+            isOpen={showActionsOpen}
+            onClose={() => setShowActionsOpen(false)}
+            showId={id}
+            showName={show.name}
+            onShowArchived={() => {
+              // Redirect to shows list after archiving
+              window.location.assign('/shows');
+            }}
+            onShowDeleted={() => {
+              // Redirect to shows list after deletion
+              window.location.assign('/shows');
+            }}
+          />
         )}
       </div>
     </DashboardLayout>

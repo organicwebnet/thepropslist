@@ -41,7 +41,7 @@ import {
 
 const ProfilePage: React.FC = () => {
   const { user, userProfile, updateUserProfile, signOut, loading } = useWebAuth();
-  const { plan, status, limits, currentPeriodEnd } = useSubscription();
+  const { plan, status, limits, perShowLimits, currentPeriodEnd } = useSubscription();
   const navigate = useNavigate();
   
   // User Details State
@@ -136,10 +136,10 @@ const ProfilePage: React.FC = () => {
     clearMessages();
     
     try {
-      await updateUserProfile({ 
+      await updateUserProfile({
         displayName, 
         phoneNumber, 
-        role, 
+        role: role as 'admin' | 'user' | 'viewer' | 'god', 
         photoURL 
       });
       setSuccess('Profile updated successfully!');
@@ -794,6 +794,17 @@ const ProfilePage: React.FC = () => {
                   <div>Packing Boxes: {limits.packingBoxes}</div>
                   <div>Collaborators: {limits.collaboratorsPerShow}</div>
                   <div>Props: {limits.props}</div>
+                  <div>Archived Shows: {limits.archivedShows === 0 ? 'None' : limits.archivedShows}</div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-sm text-pb-gray">Per-Show Limits</div>
+                <div className="space-y-1 text-sm text-white">
+                  <div>Boards per Show: {perShowLimits.boards}</div>
+                  <div>Packing Boxes per Show: {perShowLimits.packingBoxes}</div>
+                  <div>Collaborators per Show: {perShowLimits.collaborators}</div>
+                  <div>Props per Show: {perShowLimits.props}</div>
                 </div>
               </div>
             </div>

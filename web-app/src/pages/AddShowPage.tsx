@@ -3,6 +3,9 @@ import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { useShowSelection } from '../contexts/ShowSelectionContext';
+import { useSubscription } from '../hooks/useSubscription';
+import UpgradeModal from '../components/UpgradeModal';
+import { cleanFirestoreData } from '../utils/firestore';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, UploadCloud, Users, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -57,6 +60,7 @@ const statusOptions = [
 const AddShowPage: React.FC = () => {
   const { userProfile, user, loading: authLoading } = useWebAuth();
   const { setCurrentShowId } = useShowSelection();
+  const { limits } = useSubscription();
   const [show, setShow] = useState<ShowFormState>({
     name: '',
     description: '',
@@ -86,9 +90,30 @@ const AddShowPage: React.FC = () => {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentShowCount, setCurrentShowCount] = useState(0);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const navigate = useNavigate();
   const { service: firebaseService } = useFirebase();
   const [activeTab, setActiveTab] = useState<'details' | 'team'>('details');
+
+  // Load current show count to check limits
+  React.useEffect(() => {
+    if (!user?.uid) return;
+    
+    const unsubscribe = firebaseService.listenToCollection(
+      'shows',
+      (docs) => {
+        const userShows = docs.filter(doc => doc.data.userId === user.uid);
+        setCurrentShowCount(userShows.length);
+      },
+      (err: Error) => {
+        console.error('Error loading show count:', err);
+      },
+      { where: [['userId', '==', user.uid]] }
+    );
+    
+    return () => unsubscribe && unsubscribe();
+  }, [user?.uid, firebaseService]);
 
   // Mock user lookup function
   const mockUserLookup = async (email: string) => {
@@ -215,6 +240,14 @@ const AddShowPage: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
+    // Check subscription limits
+    if (currentShowCount >= limits.shows) {
+      setUpgradeOpen(true);
+      setLoading(false);
+      return;
+    }
+    
     try {
       let logoUrl = '';
       if (show.logoImage) {
@@ -224,25 +257,7 @@ const AddShowPage: React.FC = () => {
           logoUrl = uploadResult.url;
         }
       }
-      // Clean the data to remove undefined values
-      const cleanShowData = (data: any): any => {
-        if (data === null || data === undefined) return null;
-        if (Array.isArray(data)) {
-          return data.map(cleanShowData).filter(item => item !== null && item !== undefined);
-        }
-        if (typeof data === 'object') {
-          const cleaned: any = {};
-          for (const [key, value] of Object.entries(data)) {
-            if (value !== undefined) {
-              cleaned[key] = cleanShowData(value);
-            }
-          }
-          return cleaned;
-        }
-        return data;
-      };
-
-      const showData = cleanShowData({
+      const showData = cleanFirestoreData({
         ...show,
         startDate: show.startDate,
         endDate: show.endDate,
@@ -317,7 +332,20 @@ const AddShowPage: React.FC = () => {
     <DashboardLayout>
       <div className="flex-1 flex flex-col min-h-screen">
         <form onSubmit={handleSubmit} className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 space-y-6">
-          <h1 className="text-2xl font-bold text-white mb-4">Add New Show</h1>
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold text-white">Add New Show</h1>
+            <div className="text-sm text-pb-gray">
+              Shows: {currentShowCount}/{limits.shows}
+              {currentShowCount >= limits.shows && (
+                <button
+                  onClick={() => setUpgradeOpen(true)}
+                  className="ml-2 text-pb-warning font-medium hover:text-pb-accent underline"
+                >
+                  Limit reached - Upgrade
+                </button>
+              )}
+            </div>
+          </div>
           {error && <div className="text-red-500 mb-2">{error}</div>}
 
           {/* Tabs */}
@@ -569,13 +597,22 @@ const AddShowPage: React.FC = () => {
           <motion.button
             whileTap={{ scale: 0.97 }}
             type="submit"
-            disabled={loading}
+            disabled={loading || currentShowCount >= limits.shows}
             className="w-full py-3 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-bold text-lg shadow transition disabled:opacity-60 disabled:cursor-not-allowed mt-4"
           >
-            {loading ? 'Saving...' : 'Add Show'}
+            {loading ? 'Saving...' : currentShowCount >= limits.shows ? 'Show Limit Reached' : 'Add Show'}
           </motion.button>
         </form>
       </div>
+      
+      {/* Upgrade Modal */}
+      {upgradeOpen && (
+        <UpgradeModal 
+          open={upgradeOpen} 
+          onClose={() => setUpgradeOpen(false)} 
+          reason={`You have reached your plan's show limit of ${limits.shows}. Upgrade to create more shows.`} 
+        />
+      )}
     </DashboardLayout>
   );
 };
