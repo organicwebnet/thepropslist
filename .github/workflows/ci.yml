@@ -25,7 +25,12 @@ jobs:
 
     - name: Install web-app dependencies
       working-directory: web-app
-      run: npm ci --prefer-offline
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
 
     - name: Create env file for web-app (with safe defaults)
       working-directory: web-app
@@ -71,15 +76,20 @@ jobs:
 
     - name: Type-check web-app
       working-directory: web-app
-      run: npx tsc -p tsconfig.json
+      run: npx tsc -p tsconfig.json --noEmit
 
     - name: Install functions dependencies
       working-directory: functions
-      run: npm ci
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
 
     - name: Type-check functions
       working-directory: functions
-      run: npx tsc -p tsconfig.json
+      run: npx tsc -p tsconfig.json --noEmit
 
     - name: Prepare service account file (for ADC)
       if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}

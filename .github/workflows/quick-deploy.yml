@@ -25,7 +25,12 @@ jobs:
 
     - name: Install web-app dependencies
       working-directory: web-app
-      run: npm ci --prefer-offline
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
 
     - name: Create env file
       working-directory: web-app
