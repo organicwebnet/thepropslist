@@ -24,9 +24,9 @@ export const showNeedsAttention = (show: Show): boolean => {
     typeof act === 'object' && act.name && act.name.trim() !== ''
   );
   
-  // Check for meaningful team members (not just empty email/role)
+  // Check for meaningful team members (not just empty role)
   const hasTeam = show.team && show.team.length > 0 && show.team.some(member => 
-    (member.email && member.email.trim() !== '') || (member.role && member.role.trim() !== '')
+    member.role && member.role.trim() !== ''
   );
   
   // Check for collaborators
@@ -60,7 +60,7 @@ export const getMissingShowDetails = (show: Show): string[] => {
   }
   
   if (!show.team || show.team.length === 0 || !show.team.some(member => 
-    (member.email && member.email.trim() !== '') || (member.role && member.role.trim() !== '')
+    member.role && member.role.trim() !== ''
   )) {
     missing.push('team members');
   }

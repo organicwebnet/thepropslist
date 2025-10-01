@@ -71,12 +71,10 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   }
 
   // --- Auth ---
-  auth() {
-    return {
-      signInWithEmailAndPassword: (email: string, password: string) => webSignIn(this._auth, email, password),
-      signOut: () => webSignOut(this._auth),
-      createUserWithEmailAndPassword: (email: string, password: string) => webCreateUser(this._auth, email, password),
-    };
+  auth = {
+    signInWithEmailAndPassword: (email: string, password: string) => webSignIn(this._auth, email, password),
+    signOut: () => webSignOut(this._auth),
+    createUserWithEmailAndPassword: (email: string, password: string) => webCreateUser(this._auth, email, password),
   }
 
   async sendPasswordResetEmail(email: string): Promise<void> {
@@ -119,10 +117,15 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     return querySnapshot.docs.map((docSnap: QueryDocumentSnapshot<T>) => this._createDocumentWrapper(docSnap));
   }
 
-  async addDocument<T extends DocumentData>(collectionPath: string, data: T): Promise<string> {
+  async addDocument<T extends DocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
     const collRef = collection(this.firestore, collectionPath) as WebCollectionReference<T>;
     const docRef = await addDoc(collRef, data);
-    return docRef.id;
+    return {
+      id: docRef.id,
+      data: data,
+      exists: true,
+      ref: docRef
+    };
   }
 
   async setDocument<T extends DocumentData>(collectionPath: string, documentId: string, data: T, options?: { merge?: boolean }): Promise<void> {
@@ -193,7 +196,11 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     return {
       enableSync: async () => { /* noop */ },
       disableSync: async () => { /* noop */ },
-      getSyncStatus: async () => false,
+      getSyncStatus: async () => ({
+        lastSync: null,
+        isSyncing: false,
+        pendingOperations: 0
+      }),
     };
   }
 
