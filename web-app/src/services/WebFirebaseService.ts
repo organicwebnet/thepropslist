@@ -1,9 +1,9 @@
 import type {
   FirebaseService,
-  OfflineService as OfflineSync,
+  OfflineSync,
   FirebaseDocument,
 } from '../../shared/services/firebase/types';
-import type { ListData } from '../types/taskManager';
+import type { ListData } from '../../shared/types/taskManager';
 import type { 
   MemberData, 
   CustomTransaction, 
@@ -14,10 +14,6 @@ import type {
 import { FirebaseApp } from 'firebase/app';
 import {
   Auth,
-  UserCredential,
-  signInWithEmailAndPassword as webSignIn,
-  signOut as webSignOut,
-  createUserWithEmailAndPassword as webCreateUser,
   sendPasswordResetEmail as webSendPasswordReset
 } from 'firebase/auth';
 import {
@@ -90,6 +86,8 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     return {
       id: docSnapshot.id,
       data: docSnapshot.data() as T,
+      exists: docSnapshot.exists(),
+      ref: docSnapshot.ref as CustomDocumentReference<T>,
     };
   }
 
@@ -102,7 +100,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     return this._createDocumentWrapper(docSnap);
   }
 
-  async getDocuments<T extends DocumentData>(collectionPath: string, options?: { where?: [string, any, any][]; orderBy?: [string, 'asc' | 'desc']; limit?: number }): Promise<FirebaseDocument<T>[]> {
+  async getDocuments<T extends DocumentData>(collectionPath: string, options?: { where?: [string, any, any][]; orderBy?: [string, 'asc' | 'desc'][]; limit?: number }): Promise<FirebaseDocument<T>[]> {
     let q: WebQuery<T> = collection(this.firestore, collectionPath) as WebQuery<T>;
 
     if (options?.where) {
@@ -111,7 +109,9 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
       });
     }
     if (options?.orderBy) {
-      q = query(q, orderBy(options.orderBy[0] as any, options.orderBy[1] as any));
+      options.orderBy.forEach(([field, direction]) => {
+        q = query(q, orderBy(field, direction));
+      });
     }
     if (options?.limit) {
       q = query(q, limit(options.limit));
@@ -121,12 +121,14 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     return querySnapshot.docs.map((docSnap: QueryDocumentSnapshot<T>) => this._createDocumentWrapper(docSnap));
   }
 
-  async addDocument<T extends DocumentData>(collectionPath: string, data: T): Promise<FirebaseDocument<T>> {
+  async addDocument<T extends DocumentData>(collectionPath: string, data: Omit<T, 'id'>): Promise<FirebaseDocument<T>> {
     const collRef = collection(this.firestore, collectionPath) as WebCollectionReference<T>;
     const docRef = await addDoc(collRef, data);
     return {
       id: docRef.id,
-      data: data
+      data: data as T,
+      exists: true,
+      ref: docRef as CustomDocumentReference<T>,
     };
   }
 
@@ -210,9 +212,10 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     const collRef = collection(this.firestore, `boards/${boardId}/lists`);
     const docRef = await addDoc(collRef, {
       ...listData,
+      boardId,
       createdAt: new Date(),
     });
-    return { id: docRef.id, title: listData.title, cardIds: listData.cardIds };
+    return { id: docRef.id, name: listData.name, order: listData.order, boardId };
   }
 
   // Missing methods from shared interface
