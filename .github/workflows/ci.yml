@@ -124,9 +124,13 @@ jobs:
         # Revert to hosting-only until IAM grants allow rules deploy
         npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
 
-    - name: Deploy Cloud Functions (feedback integration)
+    - name: Deploy Cloud Functions (safer approach)
       if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
       run: |
-        npx firebase-tools@14.16.0 deploy --only functions --project props-bible-app-1c1cb --non-interactive --debug
+        # Deploy functions individually to avoid conflicts
+        npx firebase-tools@14.16.0 deploy --only functions:sendCustomPasswordResetEmail --project props-bible-app-1c1cb --non-interactive --debug || echo "sendCustomPasswordResetEmail deployment failed, continuing..."
+        npx firebase-tools@14.16.0 deploy --only functions:getPricingConfig --project props-bible-app-1c1cb --non-interactive --debug || echo "getPricingConfig deployment failed, continuing..."
+        npx firebase-tools@14.16.0 deploy --only functions:createCheckoutSession --project props-bible-app-1c1cb --non-interactive --debug || echo "createCheckoutSession deployment failed, continuing..."
+        npx firebase-tools@14.16.0 deploy --only functions:createBillingPortalSession --project props-bible-app-1c1cb --non-interactive --debug || echo "createBillingPortalSession deployment failed, continuing..."

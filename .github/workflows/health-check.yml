@@ -1,0 +1,64 @@
+name: Health Check
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Check website availability
+      run: |
+        echo "Checking website health..."
+        curl -f -s -o /dev/null https://props-bible-app-1c1cb.web.app/ || exit 1
+        echo "✅ Website is accessible"
+
+    - name: Check login page
+      run: |
+        echo "Checking login page..."
+        curl -f -s -o /dev/null https://props-bible-app-1c1cb.web.app/login || exit 1
+        echo "✅ Login page is accessible"
+
+    - name: Check forgot password page
+      run: |
+        echo "Checking forgot password page..."
+        curl -f -s -o /dev/null https://props-bible-app-1c1cb.web.app/forgot-password || exit 1
+        echo "✅ Forgot password page is accessible"
+
+    - name: Test Firebase Functions
+      run: |
+        echo "Testing Firebase Functions..."
+        # Test if the function endpoint is accessible (should return 405 Method Not Allowed for GET)
+        response=$(curl -s -o /dev/null -w "%{http_code}" https://us-central1-props-bible-app-1c1cb.cloudfunctions.net/sendCustomPasswordResetEmail)
+        if [ "$response" = "405" ] || [ "$response" = "400" ]; then
+          echo "✅ sendCustomPasswordResetEmail function is accessible"
+        else
+          echo "❌ sendCustomPasswordResetEmail function returned status: $response"
+          exit 1
+        fi
+
+    - name: Check Firebase project status
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
+      run: |
+        # Prepare service account
+        if [[ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" ]]; then
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/sa.json"
+        else
+          printf '%s' "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > "$GITHUB_WORKSPACE/sa.json"
+        fi
+        
+        echo "Checking Firebase project status..."
+        npx firebase-tools@14.16.0 projects:list --project props-bible-app-1c1cb --non-interactive
+        echo "✅ Firebase project is accessible"
+
+    - name: Report health status
+      run: |
+        echo "🎉 All health checks passed!"
+        echo "Timestamp: $(date)"
+        echo "Environment: Production"

@@ -1,0 +1,64 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+      rollback_to:
+        description: 'Commit hash to rollback to'
+        required: true
+        type: string
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.rollback_to }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install web-app dependencies
+      working-directory: web-app
+      run: npm ci
+
+    - name: Build web-app
+      working-directory: web-app
+      run: npm run build
+
+    - name: Prepare service account file
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" ]]; then
+          echo "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/sa.json"
+        else
+          printf '%s' "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > "$GITHUB_WORKSPACE/sa.json"
+        fi
+
+    - name: Rollback deployment
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
+      run: |
+        echo "Rolling back ${{ github.event.inputs.environment }} to commit ${{ github.event.inputs.rollback_to }}"
+        npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
+
+    - name: Notify rollback completion
+      run: |
+        echo "✅ Rollback completed successfully"
+        echo "Environment: ${{ github.event.inputs.environment }}"
+        echo "Rolled back to: ${{ github.event.inputs.rollback_to }}"
