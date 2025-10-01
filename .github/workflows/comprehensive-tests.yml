@@ -1,0 +1,83 @@
+name: Comprehensive Tests
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM
+  workflow_dispatch:
+
+jobs:
+  comprehensive-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install web-app dependencies
+      working-directory: web-app
+      run: npm ci
+
+    - name: Create env file
+      working-directory: web-app
+      shell: bash
+      env:
+        VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+        VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+        VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+        VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
+        VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+      run: |
+        echo "VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY:-dummy}" >> .env
+        echo "VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN:-dummy}.firebaseapp.com" >> .env
+        echo "VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID:-dummy}" >> .env
+        echo "VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET:-dummy}.appspot.com" >> .env
+        echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID:-000000000000}" >> .env
+        echo "VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID:-1:000000000000:web:0000000000000000000000}" >> .env
+        echo "VITE_GOOGLE_API_KEY=${VITE_GOOGLE_API_KEY:-dummy}" >> .env
+        echo "VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-dummy.apps.googleusercontent.com}" >> .env
+
+    - name: Build web-app
+      working-directory: web-app
+      run: npm run build
+
+    - name: Install Playwright Browsers
+      working-directory: web-app
+      run: npx playwright install --with-deps
+
+    - name: Run Playwright smoke tests
+      working-directory: web-app
+      env:
+        BASE_URL: https://props-bible-app-1c1cb.web.app
+      run: npx playwright test --config=playwright.config.ts --reporter=line
+
+    - name: Lighthouse CI Performance Tests
+      env:
+        BASE_URL: https://props-bible-app-1c1cb.web.app
+      run: |
+        npx -y @lhci/cli@0.13.x collect \
+          --numberOfRuns=1 \
+          --url="$BASE_URL/" \
+          --url="$BASE_URL/login" \
+          --url="$BASE_URL/props"
+        npx -y @lhci/cli@0.13.x assert || true
+        npx -y @lhci/cli@0.13.x upload --target=temporary-public-storage || true
+
+    - name: Test password reset functionality
+      run: |
+        echo "Testing password reset endpoint..."
+        response=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://us-central1-props-bible-app-1c1cb.cloudfunctions.net/sendCustomPasswordResetEmail)
+        if [ "$response" = "400" ] || [ "$response" = "401" ]; then
+          echo "✅ Password reset function is accessible (returned $response as expected)"
+        else
+          echo "❌ Password reset function returned unexpected status: $response"
+          exit 1
+        fi
