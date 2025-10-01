@@ -20,14 +20,14 @@ import {
 import type { CardData, MemberData, ListData } from '../../types/taskManager';
 
 // Re-export specific types that are used elsewhere
-export type { Show } from '../../../types/index';
+export type { Show } from '../../../src/types/index';
 export type { Prop } from '../../types/props';
 export type { Task } from '../../types/tasks';
 export type { BoardData as TodoBoard, ListData, MemberData } from '../../types/taskManager';
 
 // --- App-Specific Data Structures ---
 
-export type { Act, Contact, Scene, Venue, ShowCollaborator } from '../../types/index';
+export type { Act, Contact, Scene, Venue, ShowCollaborator } from '../../../src/types/index';
 
 // --- Custom Error ---
 export class FirebaseError extends Error {
