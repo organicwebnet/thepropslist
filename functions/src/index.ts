@@ -875,6 +875,12 @@ export const createBillingPortalSession = onCall({
   const s = await ensureStripe();
   if (!s) throw new Error("Stripe not configured");
   const uid = req.auth.uid;
+  
+  // Ensure admin is initialized
+  if (!admin.apps || admin.apps.length === 0) {
+    admin.initializeApp();
+  }
+  
   const db = admin.firestore();
   const profileRef = db.doc(`userProfiles/${uid}`);
   const profileSnap = await profileRef.get();
@@ -913,6 +919,11 @@ export const createCheckoutSession = onCall({
   const uid = req.auth.uid;
   const priceId = String(req.data?.priceId || "").trim();
   if (!priceId) throw new Error("priceId required");
+
+  // Ensure admin is initialized
+  if (!admin.apps || admin.apps.length === 0) {
+    admin.initializeApp();
+  }
 
   const db = admin.firestore();
   const profileRef = db.doc(`userProfiles/${uid}`);
@@ -1046,6 +1057,11 @@ export const sendCustomPasswordResetEmail = onCall({
 
     // Initialize secrets first
     await initializeSecrets();
+    
+    // Ensure admin is initialized
+    if (!admin.apps || admin.apps.length === 0) {
+      admin.initializeApp();
+    }
     
     // Rate limiting: Check if user has made too many requests
     const db = admin.firestore();
