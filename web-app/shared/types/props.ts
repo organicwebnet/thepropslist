@@ -11,7 +11,7 @@ export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData }
 // Re-export the type needed by PropForm using 'export type'
 export type { PropLifecycleStatus };
 
-export type PropSource = 'bought' | 'made' | 'rented' | 'borrowed' | 'owned' | 'created';
+export type PropSource = 'bought' | 'made' | 'rented' | 'borrowed' | 'owned' | 'created' | 'hired';
 export type WeightUnit = 'kg' | 'lb' | 'g' | 'oz';
 export type DimensionUnit = 'cm' | 'in' | 'm' | 'ft';
 

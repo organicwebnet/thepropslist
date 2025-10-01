@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWebAuth } from '../contexts/WebAuthContext';
-import { adminPricingService, type PricingConfig, type AdminPricingData } from '../services/AdminPricingService';
+import { adminPricingService } from '../services/AdminPricingService';
+import { type AdminPricingData, type PricingPlan } from '../shared/types/pricing';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Save, 
@@ -21,7 +22,7 @@ const AdminPricingPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [editingPlan, setEditingPlan] = useState<string | null>(null);
+  const [, _setEditingPlan] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
 
   // Check if user is god/admin
@@ -64,7 +65,7 @@ const AdminPricingPage: React.FC = () => {
 
       // Validate all price IDs
       const validationErrors: string[] = [];
-      pricingData.plans.forEach(plan => {
+      pricingData.plans.forEach((plan: PricingPlan) => {
         if (plan.priceId.monthly && !adminPricingService.validatePriceId(plan.priceId.monthly)) {
           validationErrors.push(`${plan.name} monthly price ID is invalid`);
         }
@@ -93,7 +94,7 @@ const AdminPricingPage: React.FC = () => {
   const updatePlanPriceId = (planId: string, type: 'monthly' | 'yearly', value: string) => {
     if (!pricingData) return;
 
-    const updatedPlans = pricingData.plans.map(plan => {
+    const updatedPlans = pricingData.plans.map((plan: PricingPlan) => {
       if (plan.id === planId) {
         return {
           ...plan,
@@ -115,7 +116,7 @@ const AdminPricingPage: React.FC = () => {
   const togglePlanActive = (planId: string) => {
     if (!pricingData) return;
 
-    const updatedPlans = pricingData.plans.map(plan => {
+    const updatedPlans = pricingData.plans.map((plan: PricingPlan) => {
       if (plan.id === planId) {
         return {
           ...plan,
@@ -131,10 +132,10 @@ const AdminPricingPage: React.FC = () => {
     });
   };
 
-  const clearMessages = () => {
-    setError(null);
-    setSuccess(null);
-  };
+  // const _clearMessages = () => {
+  //   setError(null);
+  //   setSuccess(null);
+  // };
 
   if (!isAdmin) {
     return (
@@ -255,7 +256,7 @@ const AdminPricingPage: React.FC = () => {
       {/* Pricing Plans */}
       {pricingData && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {pricingData.plans.map((plan) => (
+          {pricingData.plans.map((plan: PricingPlan) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
@@ -379,7 +380,7 @@ const AdminPricingPage: React.FC = () => {
               <div className="mt-4">
                 <h4 className="text-sm font-medium text-pb-gray mb-2">Features</h4>
                 <ul className="space-y-1">
-                  {plan.features.slice(0, 3).map((feature, index) => (
+                  {plan.features.slice(0, 3).map((feature: string, index: number) => (
                     <li key={index} className="text-sm text-pb-gray flex items-center">
                       <CheckCircle className="w-3 h-3 text-green-400 mr-2 flex-shrink-0" />
                       {feature}

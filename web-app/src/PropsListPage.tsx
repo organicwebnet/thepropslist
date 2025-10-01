@@ -151,7 +151,8 @@ const PropsListPage: React.FC = () => {
   const handleDownloadPdf = async () => {
     setDownloading(true);
     const html = generatePropsListHtml(filteredProps, pdfOptions);
-    const pdf = new jsPDF({ orientation: pdfOptions.layout });
+    const orientation = pdfOptions.layout === 'landscape' ? 'landscape' : 'portrait';
+    const pdf = new jsPDF({ orientation });
     await pdf.html(html, { callback: () => {
       pdf.save(`${pdfOptions.title || 'props-list'}.pdf`);
       setDownloading(false);

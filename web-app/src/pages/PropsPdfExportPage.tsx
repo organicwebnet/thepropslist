@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Prop } from '../../shared/types/props';
-import type { PdfGenerationOptions, PdfLayout } from '../../shared/types/pdf';
+import type { PdfGenerationOptions } from '../../shared/types/pdf';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useShowSelection } from '../contexts/ShowSelectionContext';
 import { useFirebase } from '../contexts/FirebaseContext';
@@ -324,7 +324,7 @@ const PropsPdfExportPage: React.FC = () => {
       if (b) {
         setPdfOptions(opt => ({
           ...opt,
-          fonts: { heading: b.fonts?.heading || opt.fonts.heading, body: b.fonts?.body || opt.fonts.body },
+          fonts: { heading: b.fonts?.heading || opt.fonts?.heading, body: b.fonts?.body || opt.fonts?.body },
           brandColors: { primary: b.colors?.primary || opt.brandColors?.primary || '#0ea5e9', accent: b.colors?.accent || opt.brandColors?.accent || '#22c55e' },
           watermark: b.watermark || opt.watermark,
         }));
@@ -337,7 +337,7 @@ const PropsPdfExportPage: React.FC = () => {
     unsubPropsRef.fn = service.listenToCollection('props', (data) => {
       setProps(data.filter(doc => doc.data.showId === currentShowId).map(doc => ({ ...(doc.data as Prop), id: doc.id })));
       setLoading(false);
-    }, err => {
+    }, _err => {
       setProps([]);
       setLoading(false);
     });
@@ -560,7 +560,7 @@ const PropsPdfExportPage: React.FC = () => {
               <select
                 className={selectClass}
                 value={pdfOptions.layout as any}
-                onChange={e => setPdfOptions({ ...pdfOptions, layout: e.target.value as PdfLayout })}
+                onChange={e => setPdfOptions({ ...pdfOptions, layout: e.target.value as PdfGenerationOptions['layout'] })}
               >
                 <option value="classic">Classic (single column)</option>
                 <option value="compact">Compact (two column)</option>
@@ -581,13 +581,13 @@ const PropsPdfExportPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="font-semibold block mb-1">Heading font</label>
-                <select className={selectClass} value={pdfOptions.fonts.heading} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, heading: e.target.value } })}>
+                <select className={selectClass} value={pdfOptions.fonts?.heading || ''} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, heading: e.target.value } })}>
                   <option>Inter</option><option>Roboto</option><option>Merriweather</option><option>Source Serif Pro</option><option>Poppins</option>
                 </select>
               </div>
               <div>
                 <label className="font-semibold block mb-1">Body font</label>
-                <select className={selectClass} value={pdfOptions.fonts.body} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, body: e.target.value } })}>
+                <select className={selectClass} value={pdfOptions.fonts?.body || ''} onChange={e => setPdfOptions({ ...pdfOptions, fonts: { ...pdfOptions.fonts, body: e.target.value } })}>
                   <option>Inter</option><option>Roboto</option><option>Open Sans</option><option>Source Sans Pro</option><option>Lato</option>
                 </select>
               </div>
@@ -599,7 +599,7 @@ const PropsPdfExportPage: React.FC = () => {
               </div>
               <div>
                 <label className="font-semibold block mb-1">Accent color</label>
-                <input type="color" value={pdfOptions.brandColors?.accent} onChange={e => setPdfOptions({ ...pdfOptions, brandColors: { ...(pdfOptions.brandColors||{}), accent: e.target.value } })} className="h-10 w-16 bg-pb-darker/60 border border-pb-primary/20 rounded" />
+                <input type="color" value={pdfOptions.brandColors?.accent || '#22c55e'} onChange={e => setPdfOptions({ ...pdfOptions, brandColors: { ...(pdfOptions.brandColors||{}), accent: e.target.value } })} className="h-10 w-16 bg-pb-darker/60 border border-pb-primary/20 rounded" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-2">

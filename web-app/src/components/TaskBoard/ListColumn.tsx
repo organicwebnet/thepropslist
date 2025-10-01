@@ -9,16 +9,16 @@ import { useFirebase } from "../../contexts/FirebaseContext";
 interface ListColumnProps {
   list: ListData;
   cards: CardData[];
-  boardId: string;
   onAddCard: (listId: string, title: string) => void;
   onUpdateCard: (cardId: string, updates: Partial<CardData>) => void;
+  onDeleteCard: (cardId: string) => void;
   dndId: string;
   onDeleteList: (listId: string) => void;
   cardIdPrefix?: string;
   selectedCardId?: string | null;
 }
 
-const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard, onUpdateCard, dndId, onDeleteList, cardIdPrefix = '', selectedCardId }) => {
+const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdateCard, onDeleteCard, dndId, onDeleteList, cardIdPrefix = '', selectedCardId }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [addingCard, setAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState("");
@@ -130,7 +130,7 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, boardId, onAddCard
                   {Array.isArray(card.attachments) && card.attachments.length > 0 && (
                     <span className="absolute -top-2 -right-2 bg-pb-primary text-white text-[10px] rounded-full px-1.5 py-0.5" title="Has attachments" aria-label="Has attachments">📎</span>
                   )}
-                  <Card card={card} onUpdateCard={onUpdateCard} dndId={`${cardIdPrefix}${card.id}`} openInitially={selectedCardId === card.id} />
+                  <Card card={card} onUpdateCard={onUpdateCard} onDeleteCard={onDeleteCard} dndId={`${cardIdPrefix}${card.id}`} openInitially={selectedCardId === card.id} />
                 </div>
               ))}
             </div>

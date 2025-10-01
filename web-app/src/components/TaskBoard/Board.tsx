@@ -145,6 +145,14 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
     await service.updateDocument(`todo_boards/${boardId}/lists/${listId}/cards`, cardId, updates);
   };
 
+  // Delete card handler
+  const deleteCard = async (cardId: string) => {
+    // Find the list containing this card
+    const listId = Object.keys(cards).find(lid => cards[lid].some(card => card.id === cardId));
+    if (!listId) return;
+    await service.deleteDocument(`todo_boards/${boardId}/lists/${listId}/cards`, cardId);
+  };
+
   const handleListDragEnd = async (event: DragEndEvent) => {
     if (!board) return;
     const { active, over } = event;
@@ -333,9 +341,9 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
                             key={list.id}
                             list={list}
                             cards={cards[list.id] || []}
-                            boardId={boardId}
                             onAddCard={addCard}
                             onUpdateCard={updateCard}
+                            onDeleteCard={deleteCard}
                             dndId={`list-${list.id}`}
                             onDeleteList={deleteList}
                             cardIdPrefix="card-"
@@ -348,9 +356,9 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
                   key={list.id}
                   list={list}
                   cards={cards[list.id] || []}
-                  boardId={boardId}
                   onAddCard={addCard}
                   onUpdateCard={updateCard}
+                  onDeleteCard={deleteCard}
                           dndId={`list-${list.id}`}
                           onDeleteList={deleteList}
                           cardIdPrefix="card-"
@@ -452,9 +460,9 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
                       key={list.id}
                       list={list}
                       cards={cards[list.id] || []}
-                      boardId={boardId}
                       onAddCard={addCard}
                       onUpdateCard={updateCard}
+                      onDeleteCard={deleteCard}
                           dndId={`list-${list.id}`}
                           onDeleteList={deleteList}
                           cardIdPrefix="card-"
@@ -466,9 +474,9 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
                     key={list.id}
                     list={list}
                     cards={cards[list.id] || []}
-                    boardId={boardId}
                     onAddCard={addCard}
                     onUpdateCard={updateCard}
+                    onDeleteCard={deleteCard}
                         dndId={`list-${list.id}`}
                         onDeleteList={deleteList}
                         cardIdPrefix="card-"

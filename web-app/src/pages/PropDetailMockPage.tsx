@@ -86,7 +86,7 @@ export default function PropDetailMockPage() {
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
               <span className="px-2 py-1 rounded-full text-xs bg-white/10 text-white flex items-center gap-1"><MapPin className="w-3 h-3 text-pb-primary" />{prop.location || 'No location'}</span>
-              <span className="px-2 py-1 rounded-full text-xs bg-pb-success/30 text-white">{(prop.status || '').replaceAll('_', ' ')}</span>
+              <span className="px-2 py-1 rounded-full text-xs bg-pb-success/30 text-white">{(prop.status || '').replace(/_/g, ' ')}</span>
               {missingFields.length > 0 && (
                 <a href="#gaps" onClick={handleNavClick('overview')} className="px-3 py-1.5 rounded-md bg-pb-warning text-black text-sm hover:opacity-90">Complete details ({missingFields.length})</a>
               )}

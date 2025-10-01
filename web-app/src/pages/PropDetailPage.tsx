@@ -468,7 +468,7 @@ const PropDetailPage: React.FC = () => {
                   <MapPin className="w-3 h-3 text-pb-primary" />
                   {prop.location || prop.currentLocation || 'No location'}
                 </span>
-                <span className="px-2 py-1 rounded-full text-xs bg-pb-success/30 text-white">{(prop.status || '').toString().replaceAll('_', ' ')}</span>
+                <span className="px-2 py-1 rounded-full text-xs bg-pb-success/30 text-white">{(prop.status || '').toString().replace(/_/g, ' ')}</span>
                 {gaps.length > 0 && (
           <button
                     type="button"

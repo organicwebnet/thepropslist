@@ -155,7 +155,7 @@ const ShoppingListPage: React.FC = () => {
   }, [actionMessage]);
 
   // Local state to store moved props
-  const [movedProps, setMovedProps] = useState<Prop[]>([]);
+  const [, setMovedProps] = useState<Prop[]>([]);
 
   // Effect: update item status to 'picked' if any option is 'buy'
   React.useEffect(() => {
@@ -213,12 +213,12 @@ const ShoppingListPage: React.FC = () => {
   };
 
   // Helper to get reference image (first option image for prop/hired)
-  const getReferenceImage = (item: ShoppingItem) => {
-    if ((item.type === 'prop' || item.type === 'hired') && item.options.length > 0 && item.options[0].images.length > 0) {
-      return item.options[0].images[0];
-    }
-    return null;
-  };
+  // const _getReferenceImage = (item: ShoppingItem) => {
+  //   if ((item.type === 'prop' || item.type === 'hired') && item.options.length > 0 && item.options[0].images.length > 0) {
+  //     return item.options[0].images[0];
+  //   }
+  //   return null;
+  // };
 
   // Handle image upload (multiple)
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -454,7 +454,7 @@ const ShoppingListPage: React.FC = () => {
                             price: item.options[0]?.price || 0,
                             quantity: item.quantity || 1,
                             source: 'bought',
-                            status: 'in-use',
+                            status: 'active',
                             createdAt: new Date().toISOString(),
                             updatedAt: new Date().toISOString(),
                           };
@@ -535,7 +535,7 @@ const ShoppingListPage: React.FC = () => {
               {/* Option selector if multiple options */}
               {selectedItem.options.length > 1 && (
                 <div className="flex gap-2 mb-2">
-                  {selectedItem.options.map((opt, i) => (
+                  {selectedItem.options.map((_opt, i) => (
                     <button key={i} className={`px-2 py-1 rounded text-xs font-semibold ${i === selectedOptionIndex ? 'bg-pb-primary text-white' : 'bg-pb-gray/30 text-pb-gray'}`} onClick={() => setSelectedOptionIndex(i)}>{i + 1}</button>
                   ))}
                 </div>

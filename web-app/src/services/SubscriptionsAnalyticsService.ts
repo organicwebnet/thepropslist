@@ -64,21 +64,21 @@ class SubscriptionsAnalyticsService {
       // Calculate metrics
       const totalUsers = users.length;
       const freeUsers = users.filter(user => 
-        !user.subscriptionPlan || user.subscriptionPlan === 'free'
+        !(user as any).subscriptionPlan || (user as any).subscriptionPlan === 'free'
       ).length;
       const paidUsers = totalUsers - freeUsers;
       
       const activeSubscriptions = users.filter(user => 
-        user.subscriptionStatus === 'active' && user.subscriptionPlan !== 'free'
+        (user as any).subscriptionStatus === 'active' && (user as any).subscriptionPlan !== 'free'
       ).length;
 
       // Calculate revenue (simplified - you might want to get this from Stripe)
       const monthlyRevenue = users
-        .filter(user => user.subscriptionPlan === 'starter' && user.subscriptionStatus === 'active')
+        .filter(user => (user as any).subscriptionPlan === 'starter' && (user as any).subscriptionStatus === 'active')
         .length * 9; // $9 for starter monthly
       
       const yearlyRevenue = users
-        .filter(user => user.subscriptionPlan === 'standard' && user.subscriptionStatus === 'active')
+        .filter(user => (user as any).subscriptionPlan === 'standard' && (user as any).subscriptionStatus === 'active')
         .length * 190; // $190 for standard yearly
       
       const totalRevenue = monthlyRevenue + yearlyRevenue;
@@ -128,16 +128,16 @@ class SubscriptionsAnalyticsService {
 
       // Count users by plan
       users.forEach(user => {
-        const plan = user.subscriptionPlan || 'free';
+        const plan = (user as any).subscriptionPlan || 'free';
         if (planCounts[plan]) {
           planCounts[plan].count++;
           
           // Calculate revenue based on plan
-          if (plan === 'starter' && user.subscriptionStatus === 'active') {
+          if (plan === 'starter' && (user as any).subscriptionStatus === 'active') {
             planCounts[plan].revenue += 9; // Monthly
-          } else if (plan === 'standard' && user.subscriptionStatus === 'active') {
+          } else if (plan === 'standard' && (user as any).subscriptionStatus === 'active') {
             planCounts[plan].revenue += 19; // Monthly
-          } else if (plan === 'pro' && user.subscriptionStatus === 'active') {
+          } else if (plan === 'pro' && (user as any).subscriptionStatus === 'active') {
             planCounts[plan].revenue += 39; // Monthly
           }
         }
@@ -232,20 +232,20 @@ class SubscriptionsAnalyticsService {
         const dateStr = date.toISOString().split('T')[0];
         
         const newUsers = users.filter(user => {
-          const userDate = new Date(user.createdAt);
+          const userDate = new Date((user as any).createdAt);
           return userDate.toISOString().split('T')[0] === dateStr;
         }).length;
         
         const totalUsers = users.filter(user => {
-          const userDate = new Date(user.createdAt);
+          const userDate = new Date((user as any).createdAt);
           return userDate <= date;
         }).length;
         
         const activeSubscriptions = users.filter(user => {
-          const userDate = new Date(user.createdAt);
+          const userDate = new Date((user as any).createdAt);
           return userDate <= date && 
-                 user.subscriptionStatus === 'active' && 
-                 user.subscriptionPlan !== 'free';
+                 (user as any).subscriptionStatus === 'active' && 
+                 (user as any).subscriptionPlan !== 'free';
         }).length;
         
         growthData.push({

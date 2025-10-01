@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
@@ -21,7 +21,7 @@ type Invitation = {
 
 const TeamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const { service, user } = useFirebase() as any;
   const [show, setShow] = useState<Show | null>(null);
   const [collaborators, setCollaborators] = useState<any[]>([]);
@@ -37,12 +37,12 @@ const TeamPage: React.FC = () => {
   const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
   const [submitting, setSubmitting] = useState(false);
 
-  const showId = id || show?.id || '';
+  const _showId = id || show?.id || '';
 
   useEffect(() => {
     if (!id) return;
-    const unsub = service.listenToDocument<Show>(`shows/${id}`,
-      doc => {
+    const unsub = service.listenToDocument(`shows/${id}`,
+      (doc: any) => {
         const showData = { ...doc.data, id: doc.id } as Show;
         setShow(showData);
         setCollaborators(Array.isArray(showData.collaborators) ? showData.collaborators : []);
@@ -55,9 +55,9 @@ const TeamPage: React.FC = () => {
 
   useEffect(() => {
     if (!id) return;
-    const unsub = service.listenToCollection<Invitation>('invitations', docs => {
+    const unsub = service.listenToCollection('invitations', (docs: any) => {
       const list = docs
-        .map(d => ({ ...(d.data as any), id: d.id }))
+        .map((d: any) => ({ ...(d.data as any), id: d.id }))
         .filter((d: any) => d.showId === id && (d.status === 'pending' || !d.status));
       setInvites(list);
     }, () => { /* ignore */ }, { where: [['showId', '==', id as any]] });

@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where, orderBy, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where, orderBy, runTransaction, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
@@ -136,7 +136,7 @@ class DiscountCodesService {
         redeem_by: new Date(discountData.validUntil).getTime() / 1000
       });
 
-      const stripeCouponId = stripeResult.data.couponId;
+      const stripeCouponId = (stripeResult.data as any).couponId;
 
       // Create promotion code
       const createPromotionCode = httpsCallable(getFunctions(), 'createStripePromotionCode');
@@ -146,7 +146,7 @@ class DiscountCodesService {
         active: discountData.active
       });
 
-      const stripePromotionCodeId = promotionResult.data.promotionCodeId;
+      const stripePromotionCodeId = (promotionResult.data as any).promotionCodeId;
 
       // Save to Firestore
       const docRef = doc(collection(db, this.COLLECTION));

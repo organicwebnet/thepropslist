@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import type { Show } from '../types/Show';
-import { Pencil, UserPlus, AlertTriangle, Archive, Trash2, MoreVertical } from 'lucide-react';
+import { Pencil, UserPlus, AlertTriangle, MoreVertical } from 'lucide-react';
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { buildInviteEmailDocTo } from '../services/EmailService';
 import { showNeedsAttention, getMissingShowDetails } from '../utils/showUtils';

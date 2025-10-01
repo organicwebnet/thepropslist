@@ -11,13 +11,7 @@ import {
   Tag,
   Users,
   DollarSign,
-  TrendingUp,
-  Calendar,
-  Edit,
-  Trash2,
-  Copy,
-  Eye,
-  EyeOff
+  Copy
 } from 'lucide-react';
 
 const AdminDiscountCodesPage: React.FC = () => {
@@ -30,7 +24,7 @@ const AdminDiscountCodesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [, _setEditingCode] = useState<string | null>(null);
 
   // Check if user is god/admin
   const isAdmin = userProfile?.role === 'god' || userProfile?.role === 'admin';
@@ -163,10 +157,10 @@ const AdminDiscountCodesPage: React.FC = () => {
     });
   };
 
-  const clearMessages = () => {
-    setError(null);
-    setSuccess(null);
-  };
+  // const _clearMessages = () => {
+  //   setError(null);
+  //   setSuccess(null);
+  // };
 
   if (!isAdmin) {
     return (

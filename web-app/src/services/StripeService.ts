@@ -34,7 +34,7 @@ class StripeService {
       const getPricingConfig = httpsCallable(getFunctions(), 'getPricingConfig');
       const result = await getPricingConfig();
       
-      if (result.data && result.data.plans && Array.isArray(result.data.plans)) {
+      if (result.data && (result.data as any).plans && Array.isArray((result.data as any).plans)) {
         this.pricingConfig = result.data as PricingConfig;
         this.lastFetch = now;
         // Successfully fetched latest pricing from Stripe
@@ -113,7 +113,7 @@ class StripeService {
       discountCode
     });
 
-    return result.data.url;
+    return (result.data as any).url;
   }
 
   /**

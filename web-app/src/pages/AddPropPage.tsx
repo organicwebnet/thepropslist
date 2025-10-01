@@ -4,8 +4,7 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import DashboardLayout from '../PropsBibleHomepage';
 import { motion } from 'framer-motion';
 import { useShowSelection } from '../contexts/ShowSelectionContext';
-import { Prop, PropFormData, propCategories, PropCategory, PropImage, DigitalAsset } from '../../shared/types/props';
-import { Plus, UploadCloud, Trash2 } from 'lucide-react';
+import { PropFormData, propCategories } from '../../shared/types/props';
 import { ImageUpload } from '../components/ImageUpload';
 import { DigitalAssetForm } from '../components/DigitalAssetForm';
 import ImportPropsModal from '../components/ImportPropsModal';
@@ -37,7 +36,7 @@ const AddPropPage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const [showOptions, setShowOptions] = useState<{ id: string; name: string }[]>([]);
+  const [, setShowOptions] = useState<{ id: string; name: string }[]>([]);
   const [actOptions, setActOptions] = useState<{ id: string; name: string }[]>([]);
   const [sceneOptions, setSceneOptions] = useState<{ id: string; name: string }[]>([]);
   const [actsList, setActsList] = useState<any[]>([]);
@@ -196,7 +195,7 @@ const AddPropPage: React.FC = () => {
     }
   };
 
-  const [addAnother, setAddAnother] = useState(false);
+  const [, _setAddAnother] = useState(false);
 
   return (
     <DashboardLayout>

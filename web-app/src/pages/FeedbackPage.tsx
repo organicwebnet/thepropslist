@@ -35,14 +35,15 @@ const FeedbackPage: React.FC = () => {
         createdAt: new Date().toISOString(),
         status: 'new'
       } as any;
-      const id = await service.addDocument('feedback', doc);
+      const feedbackDoc = await service.addDocument('feedback', doc);
+      const id = feedbackDoc.id;
       // Optional screenshot upload
       if (file) {
         const path = `feedback/${id}/${Date.now()}_${file.name}`;
         const sref = storageRef(storage, path);
         await uploadBytes(sref, file);
         const url = await getDownloadURL(sref);
-        await service.setDocument('feedback', id, { screenshotUrl: url } as any, { merge: true } as any);
+        await service.setDocument('feedback', id, { screenshotUrl: url }, { merge: true });
       }
       setSubmittedId(id);
       setTitle('');

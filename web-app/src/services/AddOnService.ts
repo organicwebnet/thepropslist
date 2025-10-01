@@ -1,5 +1,5 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { AddOn, UserAddOn } from '../types/AddOns';
+import { UserAddOn } from '../types/AddOns';
 
 export class AddOnService {
   /**
@@ -20,7 +20,7 @@ export class AddOnService {
       
       return {
         success: true,
-        subscriptionItemId: result.data.subscriptionItemId,
+        subscriptionItemId: (result.data as any).subscriptionItemId,
       };
     } catch (error: any) {
       console.error('Error purchasing add-on:', error);
@@ -58,7 +58,7 @@ export class AddOnService {
   /**
    * Get user's add-ons
    */
-  async getUserAddOns(userId: string): Promise<UserAddOn[]> {
+  async getUserAddOns(_userId: string): Promise<UserAddOn[]> {
     try {
       // This would typically fetch from Firestore
       // For now, return empty array - this will be implemented when we add the Firestore collection

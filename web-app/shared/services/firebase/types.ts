@@ -128,7 +128,7 @@ export interface FirebaseService {
     getDocument<T extends DocumentData>(collectionPath: string, documentId: string): Promise<FirebaseDocument<T> | null>;
     getDocuments<T extends DocumentData>(collectionPath: string, options?: QueryOptions): Promise<FirebaseDocument<T>[]>;
     addDocument<T extends DocumentData>(collectionPath: string, data: Omit<T, 'id'>): Promise<FirebaseDocument<T>>;
-    setDocument<T extends DocumentData>(collectionPath: string, docId: string, data: T): Promise<void>;
+    setDocument<T extends DocumentData>(collectionPath: string, docId: string, data: T, options?: { merge?: boolean }): Promise<void>;
     updateDocument<T extends DocumentData>(collectionPath: string, docId: string, data: Partial<T>): Promise<void>;
     deleteDocument(collectionPath: string, docId: string): Promise<void>;
     

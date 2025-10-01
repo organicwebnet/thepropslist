@@ -161,7 +161,7 @@ class ErrorReportingService {
   }
 
   // Set user context for all future error reports
-  setUserContext(userId: string, additionalContext?: Record<string, any>) {
+  setUserContext(userId: string, _additionalContext?: Record<string, any>) {
     this.userId = userId;
     // Could also set additional user context here
   }

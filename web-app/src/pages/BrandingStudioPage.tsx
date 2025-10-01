@@ -8,7 +8,12 @@ import SubFootnote from '../components/SubFootnote';
 const BrandingStudioPage: React.FC = () => {
   const { service } = useFirebase();
   const { currentShowId } = useShowSelection();
-  const [brand, setBrand] = useState<BrandProfile>({ colors: { primary: '#0ea5e9', accent: '#22c55e' }, fonts: { heading: 'Inter', body: 'Inter' } });
+  const [brand, setBrand] = useState<BrandProfile>({ 
+    id: 'default', 
+    name: 'Default Brand',
+    colors: { primary: '#0ea5e9', accent: '#22c55e' }, 
+    fonts: { heading: 'Inter', body: 'Inter' } 
+  });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -23,7 +28,7 @@ const BrandingStudioPage: React.FC = () => {
     if (!currentShowId) return;
     setSaving(true);
     try {
-      await service.setDocument(`shows/${currentShowId}/brand`, 'default', { ...brand, updatedAt: new Date().toISOString() } as any, { merge: true } as any);
+      await service.setDocument(`shows/${currentShowId}/brand`, 'default', { ...brand, updatedAt: new Date().toISOString() }, { merge: true });
     } finally {
       setSaving(false);
     }
