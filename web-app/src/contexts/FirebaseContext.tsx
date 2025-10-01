@@ -3,8 +3,6 @@ import { type User } from 'firebase/auth';
 import { app, auth, db } from '../firebase';
 import {
   FirebaseService as FirebaseServiceInterface,
-  FirebaseDocument,
-  OfflineSync as OfflineServiceInterface,
 }
  from '../../shared/services/firebase/types';
 import { WebFirebaseService } from '../services/WebFirebaseService';

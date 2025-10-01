@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from './PropsBibleHomepage';
 // import { useWebAuth } from './contexts/WebAuthContext'; // Not used in current implementation
 import { useFirebase, FirebaseContextType } from './contexts/FirebaseContext';
-import type { Show } from '../types/index';
+import type { Show } from './types/Show';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Gem, AlertTriangle, Archive } from 'lucide-react';
 import { useShowSelection } from './contexts/ShowSelectionContext';

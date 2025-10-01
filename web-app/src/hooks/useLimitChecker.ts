@@ -1,6 +1,6 @@
 import { useSubscription } from './useSubscription';
 import { useFirebase } from '../contexts/FirebaseContext';
-import { useState, useEffect } from 'react';
+// import { useState, useEffect } from 'react'; // Not used in current implementation
 
 export interface LimitCheckResult {
   withinLimit: boolean;
