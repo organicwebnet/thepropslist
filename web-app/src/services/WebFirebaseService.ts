@@ -4,6 +4,13 @@ import type {
   FirebaseDocument,
 } from '../types/firebase';
 import type { ListData } from '../types/taskManager';
+import type { 
+  MemberData, 
+  CardData, 
+  CustomTransaction, 
+  CustomWriteBatch, 
+  WhereClause 
+} from '../../shared/services/firebase/types';
 
 import { FirebaseApp } from 'firebase/app';
 import {
@@ -217,5 +224,78 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
       createdAt: new Date(),
     });
     return { id: docRef.id, title: listData.title, cardIds: listData.cardIds };
+  }
+
+  // Missing methods from shared interface
+  async getBoardMembers(boardId: string): Promise<MemberData[]> {
+    // Stub implementation - would need to implement based on your data structure
+    return [];
+  }
+
+  async runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T> {
+    // Stub implementation - would need to implement using Firestore transactions
+    throw new Error('runTransaction not implemented in WebFirebaseService');
+  }
+
+  batch(): CustomWriteBatch {
+    // Stub implementation - would need to implement using Firestore batch
+    throw new Error('batch not implemented in WebFirebaseService');
+  }
+
+  async uploadFile(path: string, file: string | File, metadata?: any): Promise<string> {
+    // Stub implementation - would need to implement using Firebase Storage
+    throw new Error('uploadFile not implemented in WebFirebaseService');
+  }
+
+  async deleteFile(path: string): Promise<void> {
+    // Stub implementation - would need to implement using Firebase Storage
+    throw new Error('deleteFile not implemented in WebFirebaseService');
+  }
+
+  async deleteShow(showId: string): Promise<void> {
+    // Stub implementation - would need to implement show deletion logic
+    throw new Error('deleteShow not implemented in WebFirebaseService');
+  }
+
+  async updateCard(boardId: string, listId: string, cardId: string, updates: Partial<CardData>): Promise<void> {
+    // Stub implementation - would need to implement card update logic
+    throw new Error('updateCard not implemented in WebFirebaseService');
+  }
+
+  async deleteCard(boardId: string, listId: string, cardId: string): Promise<void> {
+    // Stub implementation - would need to implement card deletion logic
+    throw new Error('deleteCard not implemented in WebFirebaseService');
+  }
+
+  async reorderCardsInList(boardId: string, listId: string, orderedCards: CardData[]): Promise<void> {
+    // Stub implementation - would need to implement card reordering logic
+    throw new Error('reorderCardsInList not implemented in WebFirebaseService');
+  }
+
+  async reorderLists(boardId: string, orderedLists: ListData[]): Promise<void> {
+    // Stub implementation - would need to implement list reordering logic
+    throw new Error('reorderLists not implemented in WebFirebaseService');
+  }
+
+  async addCard(boardId: string, listId: string, cardData: Omit<CardData, 'id' | 'boardId' | 'listId'>): Promise<CardData> {
+    // Stub implementation - would need to implement card creation logic
+    throw new Error('addCard not implemented in WebFirebaseService');
+  }
+
+  async moveCardToList(boardId: string, cardId: string, originalListId: string, targetListId: string, newOrder: number): Promise<void> {
+    // Stub implementation - would need to implement card moving logic
+    throw new Error('moveCardToList not implemented in WebFirebaseService');
+  }
+
+  async getCollection<T extends DocumentData>(
+    collectionName: string,
+    options?: {
+      where?: WhereClause[];
+      orderBy?: [string, 'asc' | 'desc'][];
+      limit?: number;
+    }
+  ): Promise<FirebaseDocument<T>[]> {
+    // Stub implementation - would need to implement collection querying logic
+    throw new Error('getCollection not implemented in WebFirebaseService');
   }
 } 
