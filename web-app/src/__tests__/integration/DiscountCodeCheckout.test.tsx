@@ -55,7 +55,7 @@ describe('Discount Code Checkout Integration', () => {
 
     render(
       <TestWrapper>
-        <DiscountCodeCheckoutFlow planId="starter" />
+        <MockDiscountCodeCheckoutFlow planId="starter" />
       </TestWrapper>
     );
 
@@ -86,7 +86,7 @@ describe('Discount Code Checkout Integration', () => {
 
     render(
       <TestWrapper>
-        <DiscountCodeCheckoutFlow planId="starter" />
+        <MockDiscountCodeCheckoutFlow planId="starter" />
       </TestWrapper>
     );
 
@@ -111,7 +111,7 @@ describe('Discount Code Checkout Integration', () => {
 
     render(
       <TestWrapper>
-        <DiscountCodeCheckoutFlow planId="starter" />
+        <MockDiscountCodeCheckoutFlow planId="starter" />
       </TestWrapper>
     );
 
@@ -128,7 +128,7 @@ describe('Discount Code Checkout Integration', () => {
   it('should allow checkout without discount code', async () => {
     render(
       <TestWrapper>
-        <DiscountCodeCheckoutFlow planId="starter" />
+        <MockDiscountCodeCheckoutFlow planId="starter" />
       </TestWrapper>
     );
 
@@ -150,7 +150,7 @@ describe('Discount Code Checkout Integration', () => {
 
     render(
       <TestWrapper>
-        <DiscountCodeCheckoutFlow planId="starter" />
+        <MockDiscountCodeCheckoutFlow planId="starter" />
       </TestWrapper>
     );
 
@@ -169,7 +169,7 @@ describe('Discount Code Checkout Integration', () => {
 });
 
 // Mock component for testing
-const DiscountCodeCheckoutFlow: React.FC<{ planId: string }> = ({ planId }) => {
+const MockDiscountCodeCheckoutFlow: React.FC<{ planId: string }> = ({ planId }) => {
   const [discountCode, setDiscountCode] = React.useState('');
   const [isValidating, setIsValidating] = React.useState(false);
   const [validationResult, setValidationResult] = React.useState<{

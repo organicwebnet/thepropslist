@@ -55,7 +55,6 @@ export default function PropDetailMockPage() {
   useEffect(() => {
     const hash = (window.location.hash || '').replace('#', '') as SectionId;
     if (hash && hash in openSections && !openSections[hash]) setOpenSections(prev => ({ ...prev, [hash]: true }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleNavClick = (section: SectionId) => (e: React.MouseEvent<HTMLAnchorElement>) => {
