@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Archive, RotateCcw, Calendar, User, Database } from 'lucide-react';
+import { Archive, RotateCcw, Calendar, Database } from 'lucide-react';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { useSubscription } from '../hooks/useSubscription';

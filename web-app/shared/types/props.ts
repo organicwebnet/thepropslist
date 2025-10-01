@@ -3,10 +3,10 @@
 // // import { Address } from './address.ts'; // Unused in web version
 
 // Import types from lifecycle file to avoid conflicts
-import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../src/types/lifecycle';
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../src/types/lifecycle';
 
 // Re-export master types from src/types/index.ts
-export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../src/types/index';
+export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../src/types/index';
 
 // Re-export the type needed by PropForm using 'export type'
 export type { PropLifecycleStatus };

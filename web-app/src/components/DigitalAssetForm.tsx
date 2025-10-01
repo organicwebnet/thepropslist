@@ -43,7 +43,7 @@ export function DigitalAssetForm({ assets = [], onChange, disabled = false }: Di
       // Example: If upload was needed, you might use service.uploadFile()
       
       // Try to fetch the file preview
-      const _response = await fetch(previewUrl, {
+      await fetch(previewUrl, {
         method: 'HEAD',
         mode: 'no-cors' // This is important for cross-origin requests
       });

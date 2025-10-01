@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react'; // Not needed with new JSX transform
 import DashboardLayout from './PropsBibleHomepage';
 import { motion } from 'framer-motion';
 import {
@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react';
 import type { Show } from './types/Show';
 import type { Prop } from './types/props';
 import type { CardData } from './types/taskManager';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import OnboardingFlow from './components/OnboardingFlow';
 import { useWebAuth } from './contexts/WebAuthContext';
 
