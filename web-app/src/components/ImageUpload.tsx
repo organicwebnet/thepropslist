@@ -1,5 +1,5 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { ImagePlus, Link, X, Loader2, Image as ImageIcon, Star, Trash2, AlertTriangle } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ImagePlus, Link, X, Loader2, Image as ImageIcon } from 'lucide-react';
 // Removed unused useFirebase import
 import type { PropImage } from '../types/props';
 import { v4 as uuidv4 } from 'uuid';

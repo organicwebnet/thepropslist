@@ -13,7 +13,7 @@ export interface OfflineService {
 }
 
 export interface FirebaseService {
-  addDocument<T extends DocumentData>(collectionName: string, data: T): Promise<string>;
+  addDocument<T extends DocumentData>(collectionName: string, data: T): Promise<FirebaseDocument<T>>;
   getDocument<T extends DocumentData>(collectionName: string, id: string): Promise<FirebaseDocument<T> | null>;
   updateDocument<T extends DocumentData>(collectionName: string, id: string, data: Partial<T>): Promise<void>;
   deleteDocument(collectionName: string, id: string): Promise<void>;

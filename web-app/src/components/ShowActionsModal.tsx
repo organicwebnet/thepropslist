@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Archive, Trash2, AlertTriangle, X, RotateCcw } from 'lucide-react';
+import { Archive, Trash2, AlertTriangle, X } from 'lucide-react';
 import { ArchiveService } from '../services/ArchiveService';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
