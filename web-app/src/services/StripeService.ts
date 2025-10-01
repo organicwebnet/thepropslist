@@ -1,5 +1,5 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { PricingConfig, PricingPlan, DEFAULT_PRICING_CONFIG, getDefaultFeaturesForPlan } from '../shared/types/pricing';
+import { PricingConfig, PricingPlan, DEFAULT_PRICING_CONFIG } from '../shared/types/pricing';
 
 // Re-export for backward compatibility
 export type StripePlan = PricingPlan;

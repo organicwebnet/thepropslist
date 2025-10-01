@@ -14,7 +14,6 @@ import type {
 import { FirebaseApp } from 'firebase/app';
 import {
   Auth,
-  UserCredential,
   signInWithEmailAndPassword as webSignIn,
   signOut as webSignOut,
   createUserWithEmailAndPassword as webCreateUser,

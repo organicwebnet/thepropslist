@@ -1,4 +1,4 @@
-import { collection, query, where, getDocs, orderBy, limit, startAfter, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export interface SubscriptionMetrics {
@@ -144,7 +144,7 @@ class SubscriptionsAnalyticsService {
       });
 
       const totalUsers = users.length;
-      const totalRevenue = Object.values(planCounts).reduce((sum, plan) => sum + plan.revenue, 0);
+      // const totalRevenue = Object.values(planCounts).reduce((sum, plan) => sum + plan.revenue, 0); // Not used in current implementation
 
       return Object.entries(planCounts).map(([planId, data]) => ({
         planId,
