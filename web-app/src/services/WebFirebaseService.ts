@@ -14,6 +14,10 @@ import type {
 import { FirebaseApp } from 'firebase/app';
 import {
   Auth,
+  UserCredential,
+  signInWithEmailAndPassword as webSignIn,
+  signOut as webSignOut,
+  createUserWithEmailAndPassword as webCreateUser,
   sendPasswordResetEmail as webSendPasswordReset
 } from 'firebase/auth';
 import {
@@ -47,14 +51,14 @@ class BaseFirebaseService {}
 
 export class WebFirebaseService extends BaseFirebaseService implements FirebaseService {
   private app: FirebaseApp;
-  private _auth: Auth;
+  public auth: Auth;
   public firestore: Firestore;
   public storage: any;
 
   constructor(app: FirebaseApp, auth: Auth, firestore: Firestore) {
     super();
     this.app = app;
-    this._auth = auth;
+    this.auth = auth;
     this.firestore = firestore;
     this.storage = getStorage(this.app);
   }
@@ -73,11 +77,21 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     throw new Error('getFirestoreReactNativeInstance is not available in WebFirebaseService');
   }
 
-  // --- Auth ---
-  auth = this._auth;
-
   async sendPasswordResetEmail(email: string): Promise<void> {
-      return webSendPasswordReset(this._auth, email);
+      return webSendPasswordReset(this.auth, email);
+  }
+
+  // Direct auth methods required by shared FirebaseService interface
+  async signInWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
+    return webSignIn(this.auth, email, password);
+  }
+
+  async createUserWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
+    return webCreateUser(this.auth, email, password);
+  }
+
+  async signOut(): Promise<void> {
+    return webSignOut(this.auth);
   }
 
 
@@ -87,7 +101,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
       id: docSnapshot.id,
       data: docSnapshot.data() as T,
       exists: docSnapshot.exists(),
-      ref: docSnapshot.ref as CustomDocumentReference<T>,
+      ref: docSnapshot.ref as WebDocumentReference<T>,
     };
   }
 
@@ -128,7 +142,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
       id: docRef.id,
       data: data as T,
       exists: true,
-      ref: docRef as CustomDocumentReference<T>,
+      ref: docRef as WebDocumentReference<T>,
     };
   }
 
@@ -205,6 +219,15 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
         isSyncing: false,
         pendingOperations: 0
       }),
+      getQueueStatus: async () => ({
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        completed: 0,
+        failed: 0
+      }),
+      retryFailedOperations: async () => { /* noop */ },
+      clearQueue: async () => { /* noop */ }
     };
   }
 

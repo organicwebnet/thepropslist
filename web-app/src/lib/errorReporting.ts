@@ -178,6 +178,5 @@ class ErrorReportingService {
 // Export singleton instance
 export const errorReporting = new ErrorReportingService();
 
-// Export types for use in other modules
-export type { ErrorReport, ShowDeletionErrorContext };
+// Types are already exported as interfaces above
 

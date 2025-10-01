@@ -173,6 +173,5 @@ class AnalyticsService {
 // Export singleton instance
 export const analytics = new AnalyticsService();
 
-// Export types for use in other modules
-export type { AnalyticsEvent, ShowDeletionEvent, ShowDeletionAttemptEvent };
+// Types are already exported as interfaces above
 
