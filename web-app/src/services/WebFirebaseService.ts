@@ -6,7 +6,6 @@ import type {
 import type { ListData } from '../types/taskManager';
 import type { 
   MemberData, 
-  CardData, 
   CustomTransaction, 
   CustomWriteBatch, 
   WhereClause 
@@ -15,6 +14,7 @@ import type {
 import { FirebaseApp } from 'firebase/app';
 import {
   Auth,
+  UserCredential,
   signInWithEmailAndPassword as webSignIn,
   signOut as webSignOut,
   createUserWithEmailAndPassword as webCreateUser,
@@ -78,22 +78,14 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   }
 
   // --- Auth ---
-  auth = this._auth;
+  auth = {
+    signInWithEmailAndPassword: (email: string, password: string) => webSignIn(this._auth, email, password),
+    signOut: () => webSignOut(this._auth),
+    createUserWithEmailAndPassword: (email: string, password: string) => webCreateUser(this._auth, email, password),
+  };
 
   async sendPasswordResetEmail(email: string): Promise<void> {
       return webSendPasswordReset(this._auth, email);
-  }
-
-  async signInWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
-    return webSignIn(this._auth, email, password);
-  }
-
-  async createUserWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
-    return webCreateUser(this._auth, email, password);
-  }
-
-  async signOut(): Promise<void> {
-    return webSignOut(this._auth);
   }
 
   // --- Firestore Document/Collection ---
@@ -227,12 +219,12 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   }
 
   // Missing methods from shared interface
-  async getBoardMembers(boardId: string): Promise<MemberData[]> {
+  async getBoardMembers(_boardId: string): Promise<MemberData[]> {
     // Stub implementation - would need to implement based on your data structure
     return [];
   }
 
-  async runTransaction<T>(updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T> {
+  async runTransaction<T>(_updateFunction: (transaction: CustomTransaction) => Promise<T>): Promise<T> {
     // Stub implementation - would need to implement using Firestore transactions
     throw new Error('runTransaction not implemented in WebFirebaseService');
   }
@@ -242,54 +234,54 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     throw new Error('batch not implemented in WebFirebaseService');
   }
 
-  async uploadFile(path: string, file: string | File, metadata?: any): Promise<string> {
+  async uploadFile(_path: string, _file: string | File, _metadata?: any): Promise<string> {
     // Stub implementation - would need to implement using Firebase Storage
     throw new Error('uploadFile not implemented in WebFirebaseService');
   }
 
-  async deleteFile(path: string): Promise<void> {
+  async deleteFile(_path: string): Promise<void> {
     // Stub implementation - would need to implement using Firebase Storage
     throw new Error('deleteFile not implemented in WebFirebaseService');
   }
 
-  async deleteShow(showId: string): Promise<void> {
+  async deleteShow(_showId: string): Promise<void> {
     // Stub implementation - would need to implement show deletion logic
     throw new Error('deleteShow not implemented in WebFirebaseService');
   }
 
-  async updateCard(boardId: string, listId: string, cardId: string, updates: Partial<CardData>): Promise<void> {
+  async updateCard(_boardId: string, _listId: string, _cardId: string, _updates: Partial<any>): Promise<void> {
     // Stub implementation - would need to implement card update logic
     throw new Error('updateCard not implemented in WebFirebaseService');
   }
 
-  async deleteCard(boardId: string, listId: string, cardId: string): Promise<void> {
+  async deleteCard(_boardId: string, _listId: string, _cardId: string): Promise<void> {
     // Stub implementation - would need to implement card deletion logic
     throw new Error('deleteCard not implemented in WebFirebaseService');
   }
 
-  async reorderCardsInList(boardId: string, listId: string, orderedCards: CardData[]): Promise<void> {
+  async reorderCardsInList(_boardId: string, _listId: string, _orderedCards: any[]): Promise<void> {
     // Stub implementation - would need to implement card reordering logic
     throw new Error('reorderCardsInList not implemented in WebFirebaseService');
   }
 
-  async reorderLists(boardId: string, orderedLists: ListData[]): Promise<void> {
+  async reorderLists(_boardId: string, _orderedLists: ListData[]): Promise<void> {
     // Stub implementation - would need to implement list reordering logic
     throw new Error('reorderLists not implemented in WebFirebaseService');
   }
 
-  async addCard(boardId: string, listId: string, cardData: Omit<CardData, 'id' | 'boardId' | 'listId'>): Promise<CardData> {
+  async addCard(_boardId: string, _listId: string, _cardData: Omit<any, 'id' | 'boardId' | 'listId'>): Promise<any> {
     // Stub implementation - would need to implement card creation logic
     throw new Error('addCard not implemented in WebFirebaseService');
   }
 
-  async moveCardToList(boardId: string, cardId: string, originalListId: string, targetListId: string, newOrder: number): Promise<void> {
+  async moveCardToList(_boardId: string, _cardId: string, _originalListId: string, _targetListId: string, _newOrder: number): Promise<void> {
     // Stub implementation - would need to implement card moving logic
     throw new Error('moveCardToList not implemented in WebFirebaseService');
   }
 
   async getCollection<T extends DocumentData>(
-    collectionName: string,
-    options?: {
+    _collectionName: string,
+    _options?: {
       where?: WhereClause[];
       orderBy?: [string, 'asc' | 'desc'][];
       limit?: number;
