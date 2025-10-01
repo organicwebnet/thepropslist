@@ -71,14 +71,22 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   }
 
   // --- Auth ---
-  auth = {
-    signInWithEmailAndPassword: (email: string, password: string) => webSignIn(this._auth, email, password),
-    signOut: () => webSignOut(this._auth),
-    createUserWithEmailAndPassword: (email: string, password: string) => webCreateUser(this._auth, email, password),
-  }
+  auth = this._auth;
 
   async sendPasswordResetEmail(email: string): Promise<void> {
       return webSendPasswordReset(this._auth, email);
+  }
+
+  async signInWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
+    return webSignIn(this._auth, email, password);
+  }
+
+  async createUserWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
+    return webCreateUser(this._auth, email, password);
+  }
+
+  async signOut(): Promise<void> {
+    return webSignOut(this._auth);
   }
 
   // --- Firestore Document/Collection ---

@@ -1,4 +1,4 @@
-import { FirebaseService } from '../types/firebase';
+import { FirebaseService } from '../../shared/services/firebase/types';
 import type { ShowArchive, ArchiveOperation } from '../types/Archive';
 import type { Show } from '../types/Show';
 

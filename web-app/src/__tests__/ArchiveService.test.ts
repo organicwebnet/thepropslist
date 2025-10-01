@@ -1,5 +1,5 @@
 import { ArchiveService } from '../services/ArchiveService';
-import { FirebaseService } from '../types/firebase';
+import { FirebaseService } from '../../shared/services/firebase/types';
 
 // Mock Firebase service
 const mockFirebaseService: jest.Mocked<FirebaseService> = {
