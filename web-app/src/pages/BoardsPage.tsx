@@ -12,6 +12,7 @@ import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-r
 import { ShowSelectionProvider } from "../contexts/ShowSelectionContext";
 import Login from "../pages/Login";
 import ForgotPassword from "../pages/ForgotPassword";
+import Signup from "../pages/Signup";
 import EditPropPage from "../pages/EditPropPage";
 import PropDetailPage from "../pages/PropDetailPage";
 import PropsListPage from '../PropsListPage';
@@ -29,6 +30,12 @@ const BoardsPage: React.FC = () => {
   const { service } = useFirebase();
   const { currentShowId } = useShowSelection();
   const { user } = useWebAuth();
+  const [boards, setBoards] = useState<BoardData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [boardName, setBoardName] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [showTitle, setShowTitle] = useState('');
 
   useEffect(() => {
     // Listen to boards collection, filter by showId if selected
@@ -100,7 +107,7 @@ const BoardsPage: React.FC = () => {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-          <Route path="/signup" element={<Navigate to="https://thepropslist.uk" replace />} />
+          <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
           <Route path="/props/:id/edit" element={user ? <EditPropPage /> : <Navigate to="/login" replace />} />
           <Route path="/props/:id" element={user ? <PropDetailPage /> : <Navigate to="/login" replace />} />
@@ -325,14 +332,6 @@ function BoardsPageContent() {
       )}
     </DashboardLayout>
   );
-  return (
-    <>
-      {content}
-      {upgradeOpen && (
-        <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} reason={`You have reached your plan's board limit. Upgrade to create more boards.`} />
-      )}
-    </>
-  );
 }
 
-export default BoardsPageContent; 
+export default BoardsPage; 

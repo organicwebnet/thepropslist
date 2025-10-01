@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useWebAuth } from '../contexts/WebAuthContext';
-import { doc as fsDoc, getDoc as fsGetDoc } from 'firebase/firestore';
+import { doc as fsDoc, getDoc as fsGetDoc, Firestore } from 'firebase/firestore';
+import { db } from '../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { UserAddOn, calculateAddOnLimits } from '../types/AddOns';
 
@@ -138,7 +137,7 @@ export function useSubscription(): SubscriptionInfo {
       
       try {
         // Get user profile
-        const ref = fsDoc(db, 'userProfiles', user.uid);
+        const ref = fsDoc(db as Firestore, 'userProfiles', user.uid);
         const snap = await fsGetDoc(ref);
         const d = snap.exists() ? (snap.data() as any) : {};
         
@@ -202,7 +201,8 @@ export function useSubscription(): SubscriptionInfo {
         
         // Fetch user's add-ons
         try {
-          const addOnsSnapshot = await fsDoc(db, 'userAddOns', user.uid).get();
+          const addOnsRef = fsDoc(db as Firestore, 'userAddOns', user.uid);
+          const addOnsSnapshot = await fsGetDoc(addOnsRef);
           if (addOnsSnapshot.exists()) {
             const addOnsData = addOnsSnapshot.data() as any;
             const userAddOnsList = Array.isArray(addOnsData.addOns) ? addOnsData.addOns : [];
@@ -236,7 +236,15 @@ export function useSubscription(): SubscriptionInfo {
 
   // Calculate effective limits including add-ons
   const effectiveLimits = useMemo(() => {
-    return calculateAddOnLimits(stripeLimits.limits, userAddOns);
+    const addOnLimits = calculateAddOnLimits(stripeLimits.limits, userAddOns);
+    return {
+      shows: addOnLimits.shows,
+      boards: stripeLimits.limits.boards, // Add-ons don't affect boards
+      packingBoxes: addOnLimits.packingBoxes,
+      collaboratorsPerShow: stripeLimits.limits.collaboratorsPerShow, // Add-ons don't affect collaborators
+      props: addOnLimits.props,
+      archivedShows: addOnLimits.archivedShows,
+    };
   }, [stripeLimits.limits, userAddOns]);
   
   // Determine if user can purchase add-ons

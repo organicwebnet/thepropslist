@@ -99,7 +99,14 @@ export default function Login() {
           <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-3xl pointer-events-none"></div>
           <div className="relative z-10">
             <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-white mb-1">The Props List</h1>
+                <div className="flex items-center justify-center gap-3 mb-1">
+                    <img 
+                        src="/thepropslist_logo_v1.svg" 
+                        alt="The Props List Logo" 
+                        className="w-16 h-16"
+                    />
+                    <h1 className="text-3xl font-bold text-white">The Props List</h1>
+                </div>
                 <p className="text-white/80 text-sm font-medium">Theater Props Management Tool</p>
             </div>
             {/* Debug Info */}
@@ -191,8 +198,8 @@ export default function Login() {
             </form>
             {/* Links for sign up and forgot password */}
             <div className="flex flex-col items-center mt-6 space-y-2">
-              <a href="https://thepropslist.uk" target="_blank" rel="noopener noreferrer" className="text-pb-primary hover:underline text-sm font-medium">Don't have an account? Join the waitlist</a>
-              <Link to="/forgot-password" className="text-pb-primary hover:underline text-sm font-medium">Forgot password?</Link>
+              <Link to="/signup" className="text-white hover:text-blue-200 hover:underline text-sm font-medium transition-colors">Don't have an account? Sign up</Link>
+              <Link to="/forgot-password" className="text-white hover:text-blue-200 hover:underline text-sm font-medium transition-colors">Forgot password?</Link>
             </div>
             {/* Divider */}
             <div className="flex items-center my-6">

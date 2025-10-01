@@ -132,23 +132,16 @@ export class ArchiveService {
         deletion_method: 'permanent',
       });
 
-      // Generate confirmation token (simple hash of showId + userId + current minute)
-      const currentMinute = Math.floor(Date.now() / 1000 / 60);
-      const confirmationToken = btoa(`${showId}:${userId}:${currentMinute}`);
+      console.log('🚀 Starting show deletion with direct Firestore access...');
       
-      // Call Cloud Function with admin privileges
-      const { getFunctions, httpsCallable } = await import('firebase/functions');
-      const functions = getFunctions();
-      const deleteShowFunction = httpsCallable(functions, 'deleteShowWithAdminPrivileges');
+      // Use direct Firestore deletion (same as the working test)
+      const result = await FirestoreTest.testShowDeletion(showId);
       
-      console.log('🚀 Calling Cloud Function to delete show with admin privileges...');
+      if (!result.success) {
+        throw new Error(result.error || 'Deletion failed');
+      }
       
-      const result = await deleteShowFunction({ 
-        showId, 
-        confirmationToken 
-      });
-      
-      console.log('✅ Show deletion completed via Cloud Function:', result.data);
+      console.log('✅ Show deletion completed successfully:', result.message);
 
       // Track successful deletion
       await analytics.trackShowDeletionCompleted({
@@ -156,11 +149,11 @@ export class ArchiveService {
         user_id: userId,
         platform: 'web',
         deletion_method: 'permanent',
-        associated_data_count: result.data.deletedCount - 1, // Exclude the show document itself
+        associated_data_count: 0, // We don't have exact count from direct deletion
         success: true,
       });
     } catch (error) {
-      console.error('Error permanently deleting show via Cloud Function:', error);
+      console.error('Error permanently deleting show:', error);
 
       // Track failed deletion and report error
       const { analytics } = await import('../lib/analytics');
@@ -182,7 +175,7 @@ export class ArchiveService {
             user_id: userId,
             platform: 'web',
             deletion_method: 'permanent',
-            error_phase: 'cloud_function_call',
+            error_phase: 'direct_firestore_deletion',
           }
         )
       ]);
@@ -473,4 +466,5 @@ export class ArchiveService {
     const dataSize = JSON.stringify(associatedData).length;
     return showSize + dataSize;
   }
+
 }

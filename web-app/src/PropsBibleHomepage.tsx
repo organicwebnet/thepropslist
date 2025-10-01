@@ -7,6 +7,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useShowSelection } from "./contexts/ShowSelectionContext";
 import type { Show } from "./types/Show";
 import { useFirebase } from "./contexts/FirebaseContext";
+import Avatar from './components/Avatar';
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
@@ -119,16 +120,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           <Link to="/feedback" className="text-xs text-pb-primary underline">Report a bug</Link>
           <NotificationBell />
           <Link to="/profile" className="relative block">
-            <img
-              src={userProfile?.photoURL || '/public/icon.png'}
+            <Avatar
+              src={userProfile?.photoURL}
               alt="Profile"
-              className="w-8 h-8 rounded-full border border-pb-primary/40 object-cover"
+              name={userProfile?.displayName}
+              size="md"
+              className="border border-pb-primary/40"
             />
             {(() => {
               const missing: string[] = [];
               if (!userProfile?.displayName) missing.push('name');
               if (!userProfile?.photoURL) missing.push('photo');
-              if (!userProfile?.organization) missing.push('org');
+              if (!userProfile?.organizations || userProfile.organizations.length === 0) missing.push('org');
               const incomplete = missing.length > 0;
               return incomplete ? (
                 <span

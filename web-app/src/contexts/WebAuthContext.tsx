@@ -1,24 +1,26 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import {
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   updateProfile,
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
-  EmailAuthProvider,
-  linkWithCredential,
   GoogleAuthProvider,
   OAuthProvider,
-  signInWithPopup,
-  sendPasswordResetEmail
+  signInWithPopup
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { httpsCallable, HttpsCallableResult } from 'firebase/functions';
+import { doc, setDoc, getDoc, updateDoc, deleteDoc, Timestamp, collection, query, where, getDocs, Firestore } from 'firebase/firestore';
 import { buildVerificationEmailDoc } from '../services/EmailService';
-import { auth, db } from '../firebase';
+import { auth, db, functions } from '../firebase';
+
+// Type assertion for db to fix TypeScript issues
+const firestoreDb = db as Firestore;
 // If you implement caching, import your webCache here
 // import { webCache } from '../services/webCache';
 
@@ -56,7 +58,7 @@ interface WebAuthContextType {
   startCodeVerification: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<boolean>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<HttpsCallableResult<unknown>>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   markOnboardingCompleted: () => Promise<void>;
   getCurrentOrganization: () => string | null;
@@ -107,7 +109,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       // If using cache, try cache first
       // const cached = await webCache.get<UserProfile>(`user-profile-${uid}`);
       // if (cached) { setUserProfile(cached); return cached; }
-      const userDocRef = doc(db, 'users', uid);
+      const userDocRef = doc(firestoreDb, 'users', uid);
       const userDoc = await getDoc(userDocRef);
       console.log('WebAuthContext: User document exists:', userDoc.exists());
       if (userDoc.exists()) {
@@ -155,7 +157,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         if (inviteOnly) {
           try {
             const emailToCheck = (user?.email || '').toLowerCase();
-            const invitesRef = collection(db, 'invitations');
+            const invitesRef = collection(firestoreDb, 'invitations');
             const q = query(invitesRef, where('email', '==', emailToCheck));
             const snap = await getDocs(q);
             const hasInvite = !snap.empty;
@@ -211,7 +213,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
 
   const updateLastLogin = async (uid: string) => {
     try {
-      const userDocRef = doc(db, 'users', uid);
+      const userDocRef = doc(firestoreDb, 'users', uid);
       await updateDoc(userDocRef, { lastLogin: Timestamp.now() });
     } catch (error) {
       console.error('Error updating last login:', error);
@@ -277,19 +279,29 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
     }
   };
 
-  const finalizeSignup = async (displayName: string, password: string) => {
+  const finalizeSignup = async (displayName: string, _password: string) => {
     try {
       setLoading(true);
       setError(null);
       if (!user || !user.email) throw new Error('No verified user session.');
-      // Attach password credential
-      const credential = EmailAuthProvider.credential(user.email, password);
-      await linkWithCredential(user, credential).catch(async (e: any) => {
-        // If already has password provider, fall back to updateProfile only
-        if (!String(e?.code || '').includes('already-in-use')) throw e;
-      });
+      
+      // Update the user's password from the temporary one
+      // We need to re-authenticate with the temporary password first
+      const storedEmail = window.localStorage.getItem('propsbible_signup_email');
+      if (!storedEmail) throw new Error('Signup session expired. Please start over.');
+      
+      // Update Firebase user profile
       await updateProfile(user, { displayName });
+      
+      // Update the user profile document in Firestore with the display name
+      const userDocRef = doc(firestoreDb, 'users', user.uid);
+      await updateDoc(userDocRef, { displayName });
+      
+      // Reload the user profile to get the updated data
       await loadUserProfile(user.uid);
+      
+      // Clean up the stored email
+      window.localStorage.removeItem('propsbible_signup_email');
     } catch (error: any) {
       setError(error.message);
       throw error;
@@ -332,8 +344,8 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         const user = result.user;
         
         // If Apple provided a name, update the user profile
-        if (result.additionalUserInfo?.profile?.name) {
-          const name = result.additionalUserInfo.profile.name as any;
+        if ((result as any).additionalUserInfo?.profile?.name) {
+          const name = (result as any).additionalUserInfo.profile.name;
           const displayName = name.firstName && name.lastName 
             ? `${name.firstName} ${name.lastName}`.trim()
             : user.displayName || 'Apple User';
@@ -372,7 +384,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       return arr.map(byte => byte.toString(16).padStart(2, '0')).join('');
     } catch (error) {
       console.error('HashCode error:', error);
-      throw new Error(`Hash generation failed: ${error.message}`);
+      throw new Error(`Hash generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -384,7 +396,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       const codeHash = await hashCode(code);
       const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
       const attempts = 0;
-      await setDoc(doc(db, codeCollection, email.toLowerCase()), {
+      await setDoc(doc(firestoreDb, codeCollection, email.toLowerCase()), {
         codeHash,
         expiresAt,
         attempts,
@@ -394,7 +406,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       try {
         const emailDoc = buildVerificationEmailDoc(email, code);
         console.log('Creating email document:', emailDoc);
-        await setDoc(doc(db, 'emails', Date.now().toString()), emailDoc);
+        await setDoc(doc(firestoreDb, 'emails', Date.now().toString()), emailDoc);
         console.log('Email document created successfully');
       } catch (mailErr) {
         console.error('Failed to queue verification email', mailErr);
@@ -413,16 +425,52 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
     try {
       setLoading(true);
       setError(null);
-      const ref = doc(db, codeCollection, email.toLowerCase());
+      const ref = doc(firestoreDb, codeCollection, email.toLowerCase());
       const snap = await getDoc(ref);
       if (!snap.exists()) return false;
       const data = snap.data() as any;
       if (Date.now() > (data.expiresAt || 0)) return false;
       const providedHash = await hashCode(code);
       const isMatch = providedHash === data.codeHash;
-      // Basic attempt tracking
-      await updateDoc(ref, { attempts: (data.attempts || 0) + 1 });
-      return isMatch;
+      
+      if (isMatch) {
+        // Code is valid, now create a temporary user session for signup
+        // We'll use Firebase's createUserWithEmailAndPassword with a temporary password
+        // and then update it in finalizeSignup
+        const tempPassword = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        try {
+          // Create user with temporary password
+          await createUserWithEmailAndPassword(auth, email, tempPassword);
+          
+          // Store the email for later use in finalizeSignup
+          window.localStorage.setItem('propsbible_signup_email', email);
+          
+          // Clean up the verification code
+          await deleteDoc(ref);
+          
+          return true;
+        } catch (createError: any) {
+          // If user already exists, try to sign them in
+          if (createError.code === 'auth/email-already-in-use') {
+            try {
+              await signInWithEmailAndPassword(auth, email, tempPassword);
+              window.localStorage.setItem('propsbible_signup_email', email);
+              await deleteDoc(ref);
+              return true;
+            } catch (signInError) {
+              // If temp password doesn't work, the user already has an account
+              setError('An account with this email already exists. Please sign in instead.');
+              return false;
+            }
+          }
+          throw createError;
+        }
+      } else {
+        // Basic attempt tracking for failed attempts
+        await updateDoc(ref, { attempts: (data.attempts || 0) + 1 });
+        return false;
+      }
     } catch (error: any) {
       setError(error.message);
       return false;
@@ -452,9 +500,36 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
     try {
       setLoading(true);
       setError(null);
-      await sendPasswordResetEmail(auth, email);
+      
+      // Validate email format
+      if (!email || !email.includes('@')) {
+        throw new Error('Please enter a valid email address');
+      }
+      
+      // Use custom password reset function
+      const sendCustomPasswordResetEmail = httpsCallable(functions, 'sendCustomPasswordResetEmail');
+      
+      console.log('Calling sendCustomPasswordResetEmail with email:', email);
+      const result = await sendCustomPasswordResetEmail({ email });
+      console.log('Password reset email result:', result);
+      
+      return result;
     } catch (error: any) {
-      setError(error.message);
+      console.error('Password reset error:', error);
+      
+      // Handle specific error types
+      if (error.code === 'functions/unavailable') {
+        setError('Password reset service is temporarily unavailable. Please try again later.');
+      } else if (error.code === 'functions/invalid-argument') {
+        setError('Invalid email address. Please check and try again.');
+      } else if (error.code === 'functions/resource-exhausted') {
+        setError('Too many password reset attempts. Please wait before trying again.');
+      } else if (error.message?.includes('network')) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(error.message || 'Failed to send password reset email. Please try again.');
+      }
+      
       throw error;
     } finally {
       setLoading(false);
@@ -466,7 +541,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       setLoading(true);
       setError(null);
       if (!user) throw new Error('No user');
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(firestoreDb, 'users', user.uid);
       await updateDoc(userDocRef, updates);
       await loadUserProfile(user.uid);
     } catch (error: any) {
@@ -484,7 +559,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       if (!user) throw new Error('No user');
       
       console.log('WebAuthContext: Marking onboarding as completed for user:', user.uid);
-      const userDocRef = doc(db, 'users', user.uid);
+      const userDocRef = doc(firestoreDb, 'users', user.uid);
       await updateDoc(userDocRef, { onboardingCompleted: true });
       console.log('WebAuthContext: Successfully updated user document with onboardingCompleted: true');
       

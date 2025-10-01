@@ -77,6 +77,7 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
     }
   };
 
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-pb-darker/90 border border-pb-primary/30 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
@@ -198,13 +199,15 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
                   />
                 </label>
 
-                <button
-                  onClick={handleDelete}
-                  disabled={loading || deleteConfirmation !== 'delete show'}
-                  className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Deleting...' : 'Permanently Delete Show'}
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleDelete}
+                    disabled={loading || deleteConfirmation !== 'delete show'}
+                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Deleting...' : 'Permanently Delete Show'}
+                  </button>
+                </div>
               </div>
             </div>
           )}

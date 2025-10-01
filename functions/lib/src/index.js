@@ -642,13 +642,35 @@ export const feedbackToGithubEU = functionsV1
     }
 });
 // --- Stripe Billing (Webhook + Customer Portal) ---
-const cfg = functions?.config ? functions.config() : {};
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || cfg?.stripe?.secret;
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || cfg?.stripe?.webhook_secret;
-// Optional price ids if you want to map to friendly plan names
-const PRICE_STARTER = process.env.PRICE_STARTER || cfg?.stripe?.plan_starter_price;
-const PRICE_STANDARD = process.env.PRICE_STANDARD || cfg?.stripe?.plan_standard_price;
-const PRICE_PRO = process.env.PRICE_PRO || cfg?.stripe?.plan_pro_price;
+// Initialize secrets
+let STRIPE_SECRET_KEY;
+let STRIPE_WEBHOOK_SECRET;
+let PRICE_STARTER;
+let PRICE_STANDARD;
+let PRICE_PRO;
+const initializeStripeSecrets = async () => {
+    try {
+        const { defineSecret } = await import("firebase-functions/params");
+        const stripeSecretKeySecret = defineSecret("STRIPE_SECRET_KEY");
+        const stripeWebhookSecretSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
+        const priceStarterSecret = defineSecret("PRICE_STARTER");
+        const priceStandardSecret = defineSecret("PRICE_STANDARD");
+        const priceProSecret = defineSecret("PRICE_PRO");
+        STRIPE_SECRET_KEY = stripeSecretKeySecret.value();
+        STRIPE_WEBHOOK_SECRET = stripeWebhookSecretSecret.value();
+        PRICE_STARTER = priceStarterSecret.value();
+        PRICE_STANDARD = priceStandardSecret.value();
+        PRICE_PRO = priceProSecret.value();
+    }
+    catch (error) {
+        logger.warn("Failed to initialize Stripe secrets, using environment variables", { error });
+        STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+        STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+        PRICE_STARTER = process.env.PRICE_STARTER;
+        PRICE_STANDARD = process.env.PRICE_STANDARD;
+        PRICE_PRO = process.env.PRICE_PRO;
+    }
+};
 let stripe = null;
 async function ensureStripe() {
     if (stripe)
@@ -779,9 +801,13 @@ export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, re
         res.status(400).send(`webhook error`);
     }
 });
-export const createBillingPortalSession = onCall({ region: "us-central1" }, async (req) => {
+export const createBillingPortalSession = onCall({
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET_KEY"]
+}, async (req) => {
     if (!req.auth)
         throw new Error("unauthenticated");
+    await initializeStripeSecrets();
     const s = await ensureStripe();
     if (!s)
         throw new Error("Stripe not configured");
@@ -805,7 +831,7 @@ export const createBillingPortalSession = onCall({ region: "us-central1" }, asyn
     }
     if (!customerId)
         throw new Error("No Stripe customer");
-    const returnUrl = process.env.BILLING_RETURN_URL || cfg?.app?.billing_return_url || "https://app.thepropslist.uk/profile";
+    const returnUrl = process.env.BILLING_RETURN_URL || "https://app.thepropslist.uk/profile";
     const session = await s.billingPortal.sessions.create({
         customer: customerId,
         return_url: returnUrl,
@@ -813,9 +839,13 @@ export const createBillingPortalSession = onCall({ region: "us-central1" }, asyn
     return { url: session.url };
 });
 // --- Create Stripe Checkout session for new/upgrades ---
-export const createCheckoutSession = onCall({ region: "us-central1" }, async (req) => {
+export const createCheckoutSession = onCall({
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET_KEY"]
+}, async (req) => {
     if (!req.auth)
         throw new Error("unauthenticated");
+    await initializeStripeSecrets();
     const s = await ensureStripe();
     if (!s)
         throw new Error("Stripe not configured");
@@ -841,8 +871,8 @@ export const createCheckoutSession = onCall({ region: "us-central1" }, async (re
     }
     if (customerId)
         await profileRef.set({ stripeCustomerId: customerId }, { merge: true });
-    const successUrl = process.env.CHECKOUT_SUCCESS_URL || cfg?.app?.checkout_success_url || "https://app.thepropslist.uk/profile";
-    const cancelUrl = process.env.CHECKOUT_CANCEL_URL || cfg?.app?.checkout_cancel_url || "https://app.thepropslist.uk/profile";
+    const successUrl = process.env.CHECKOUT_SUCCESS_URL || "https://app.thepropslist.uk/profile";
+    const cancelUrl = process.env.CHECKOUT_CANCEL_URL || "https://app.thepropslist.uk/profile";
     const session = await s.checkout.sessions.create({
         mode: "subscription",
         customer: customerId,
@@ -852,6 +882,210 @@ export const createCheckoutSession = onCall({ region: "us-central1" }, async (re
         allow_promotion_codes: true,
     });
     return { url: session.url };
+});
+// Localization helper function
+function getLocalizedEmailContent(resetUrl, locale = 'en') {
+    const translations = {
+        en: {
+            subject: "Reset Your Password - The Props List",
+            title: "Reset Your Password",
+            description: "We received a request to reset your password for your The Props List account. Click the button below to reset your password:",
+            buttonText: "Reset Password",
+            linkText: "If the button doesn't work, copy and paste this link into your browser:",
+            expiryText: "This link will expire in 24 hours. If you didn't request this password reset, you can safely ignore this email.",
+            footer: "© 2025 The Props List. All rights reserved."
+        },
+        es: {
+            subject: "Restablecer tu Contraseña - The Props List",
+            title: "Restablecer tu Contraseña",
+            description: "Recibimos una solicitud para restablecer tu contraseña de tu cuenta de The Props List. Haz clic en el botón de abajo para restablecer tu contraseña:",
+            buttonText: "Restablecer Contraseña",
+            linkText: "Si el botón no funciona, copia y pega este enlace en tu navegador:",
+            expiryText: "Este enlace expirará en 24 horas. Si no solicitaste este restablecimiento de contraseña, puedes ignorar este correo de forma segura.",
+            footer: "© 2025 The Props List. Todos los derechos reservados."
+        },
+        fr: {
+            subject: "Réinitialiser votre Mot de Passe - The Props List",
+            title: "Réinitialiser votre Mot de Passe",
+            description: "Nous avons reçu une demande de réinitialisation de votre mot de passe pour votre compte The Props List. Cliquez sur le bouton ci-dessous pour réinitialiser votre mot de passe:",
+            buttonText: "Réinitialiser le Mot de Passe",
+            linkText: "Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur:",
+            expiryText: "Ce lien expirera dans 24 heures. Si vous n'avez pas demandé cette réinitialisation de mot de passe, vous pouvez ignorer cet e-mail en toute sécurité.",
+            footer: "© 2025 The Props List. Tous droits réservés."
+        }
+    };
+    const t = translations[locale] || translations.en;
+    const html = `
+    <div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #111; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">The Props List</h1>
+      </div>
+      <div style="padding: 40px 20px; background: #f8f9fa;">
+        <h2 style="color: #333; margin-bottom: 20px;">${t.title}</h2>
+        <p style="color: #666; line-height: 1.6; margin-bottom: 30px;">
+          ${t.description}
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" 
+             style="display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+            ${t.buttonText}
+          </a>
+        </div>
+        <p style="color: #666; line-height: 1.6; font-size: 14px;">
+          ${t.linkText}<br>
+          <a href="${resetUrl}" style="color: #667eea; word-break: break-all;">${resetUrl}</a>
+        </p>
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+          ${t.expiryText}
+        </p>
+      </div>
+      <div style="background: #333; color: #999; padding: 20px; text-align: center; font-size: 12px;">
+        ${t.footer}
+      </div>
+    </div>
+  `;
+    const text = `
+${t.subject}
+
+${t.description}
+
+${t.buttonText}: ${resetUrl}
+
+${t.expiryText}
+
+${t.footer}
+  `;
+    return { subject: t.subject, html, text };
+}
+// --- Custom Password Reset Function ---
+export const sendCustomPasswordResetEmail = onCall({
+    region: "us-central1",
+    secrets: ["GMAIL_USER", "GMAIL_PASS"]
+}, async (req) => {
+    try {
+        const { email, locale = 'en' } = req.data || {};
+        if (!email) {
+            throw new functions.https.HttpsError('invalid-argument', 'Email is required');
+        }
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            throw new functions.https.HttpsError('invalid-argument', 'Invalid email format');
+        }
+        // Initialize secrets first
+        await initializeSecrets();
+        // Rate limiting: Check if user has made too many requests
+        const db = admin.firestore();
+        const oneHourAgo = admin.firestore.Timestamp.fromDate(new Date(Date.now() - 60 * 60 * 1000));
+        const recentRequests = await db.collection('passwordResetRequests')
+            .where('email', '==', email)
+            .where('requestedAt', '>=', oneHourAgo)
+            .get();
+        const MAX_REQUESTS_PER_HOUR = 3;
+        if (recentRequests.docs.length >= MAX_REQUESTS_PER_HOUR) {
+            throw new functions.https.HttpsError('resource-exhausted', 'Too many password reset requests. Please wait before trying again.');
+        }
+        // Log this request for rate limiting
+        await db.collection('passwordResetRequests').add({
+            email,
+            requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+            ipAddress: req.rawRequest?.ip || 'unknown'
+        });
+        // Check if there's already an unused token for this email
+        const existingTokens = await db.collection('passwordResetTokens')
+            .where('email', '==', email)
+            .where('used', '==', false)
+            .where('expiresAt', '>', admin.firestore.Timestamp.now())
+            .get();
+        // Invalidate existing tokens
+        if (!existingTokens.empty) {
+            const batch = db.batch();
+            existingTokens.docs.forEach(doc => {
+                batch.update(doc.ref, { used: true, invalidatedAt: admin.firestore.FieldValue.serverTimestamp() });
+            });
+            await batch.commit();
+        }
+        // Generate a secure password reset token
+        const crypto = require('crypto');
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        // Store the reset token in Firestore with expiration
+        await db.collection('passwordResetTokens').doc(resetToken).set({
+            email,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)), // 24 hours
+            used: false,
+            ipAddress: req.rawRequest?.ip || 'unknown'
+        });
+        // Create the reset URL
+        const resetUrl = `https://app.thepropslist.uk/reset-password?token=${resetToken}`;
+        // Create localized email content
+        const emailContent = getLocalizedEmailContent(resetUrl, locale);
+        const subject = emailContent.subject;
+        const html = emailContent.html;
+        const text = emailContent.text;
+        // Send email using your existing email infrastructure
+        if (GMAIL_USER && GMAIL_PASS) {
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: GMAIL_USER,
+                    pass: GMAIL_PASS
+                }
+            });
+            const mailOptions = {
+                from: `"The Props List" <${GMAIL_USER}>`,
+                to: email,
+                subject: subject,
+                html: html,
+                text: text
+            };
+            await transporter.sendMail(mailOptions);
+            logger.info("Custom password reset email sent via Gmail SMTP", { email });
+            return { success: true, message: "Password reset email sent successfully" };
+        }
+        else {
+            // Fallback to Brevo if Gmail not configured
+            if (BREVO_API_KEY && BREVO_FROM_EMAIL) {
+                const body = {
+                    sender: { email: BREVO_FROM_EMAIL, name: "The Props List" },
+                    to: [{ email }],
+                    subject,
+                    htmlContent: html,
+                    textContent: text,
+                };
+                const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+                    method: "POST",
+                    headers: {
+                        "api-key": BREVO_API_KEY,
+                        "Content-Type": "application/json",
+                        accept: "application/json",
+                    },
+                    body: JSON.stringify(body),
+                });
+                if (!response.ok) {
+                    throw new Error(`Brevo email sending failed: ${response.status}`);
+                }
+                logger.info("Custom password reset email sent via Brevo", { email });
+                return { success: true, message: "Password reset email sent successfully" };
+            }
+            else {
+                throw new Error("No email provider configured");
+            }
+        }
+    }
+    catch (error) {
+        logger.error("Custom password reset email error", {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            email: req.data?.email,
+            stack: error instanceof Error ? error.stack : undefined
+        });
+        // Re-throw HttpsError as-is
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        // Convert other errors to HttpsError
+        throw new functions.https.HttpsError('internal', `Failed to send password reset email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 });
 // --- Create Stripe Coupon ---
 export const createStripeCoupon = onCall({ region: "us-central1" }, async (req) => {
@@ -953,7 +1187,11 @@ function getDefaultFeaturesForPlan(planId) {
     return DEFAULT_PLAN_FEATURES[planId] || [];
 }
 // --- Get pricing configuration from Stripe ---
-export const getPricingConfig = onCall({ region: "us-central1" }, async (req) => {
+export const getPricingConfig = onCall({
+    region: "us-central1",
+    secrets: ["STRIPE_SECRET_KEY", "PRICE_STARTER", "PRICE_STANDARD", "PRICE_PRO"]
+}, async (req) => {
+    await initializeStripeSecrets();
     const s = await ensureStripe();
     if (!s) {
         // Return shared default configuration as fallback if Stripe is not configured

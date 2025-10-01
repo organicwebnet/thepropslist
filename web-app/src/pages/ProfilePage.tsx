@@ -5,17 +5,16 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useSubscription } from '../hooks/useSubscription';
 import { updatePassword, updateEmail, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-import { auth } from '../firebase';
 import { stripeService, type StripePlan } from '../services/StripeService';
 import { calculateDiscount } from '../shared/types/pricing';
+import Avatar from '../components/Avatar';
 import { PricingModalErrorBoundary } from '../components/PricingModalErrorBoundary';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import DashboardLayout from '../PropsBibleHomepage';
 import { 
   User, 
-  Mail, 
   Lock, 
-  Phone, 
   Camera, 
   Save, 
   Trash2, 
@@ -27,16 +26,7 @@ import {
   Crown,
   Star,
   Zap,
-  Shield,
-  Users,
-  Package,
-  Calendar,
-  TrendingUp,
-  TrendingDown,
-  X,
-  ArrowLeft,
-  Home,
-  ChevronRight
+  X
 } from 'lucide-react';
 
 const ProfilePage: React.FC = () => {
@@ -111,11 +101,21 @@ const ProfilePage: React.FC = () => {
     const loadPricingConfig = async () => {
       setPricingLoading(true);
       try {
+        console.log('Loading pricing configuration from Stripe...');
         const config = await stripeService.getPricingConfig();
+        console.log('Pricing config loaded:', config);
         setPricingConfig(config.plans);
+        
+        // Check if we have any plans with price IDs
+        const plansWithPrices = config.plans.filter(plan => plan.priceId.monthly || plan.priceId.yearly);
+        console.log('Plans with prices:', plansWithPrices.length);
+        
+        if (plansWithPrices.length === 0) {
+          setSubscriptionError('No pricing plans configured in Stripe. Please set up products and prices in your Stripe dashboard.');
+        }
       } catch (error) {
         console.error('Failed to load pricing config:', error);
-        setSubscriptionError('Failed to load pricing information');
+        setSubscriptionError('Failed to load pricing information. Please check your Stripe configuration.');
       } finally {
         setPricingLoading(false);
       }
@@ -343,7 +343,6 @@ const ProfilePage: React.FC = () => {
   };
 
   // Check if user is still in onboarding
-  const isOnboarding = !userProfile?.onboardingCompleted;
 
   // Show loading state while authentication is being checked
   if (loading) {
@@ -376,123 +375,8 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto py-10 px-4">
-      {/* Navigation Header */}
-      <div className="mb-8">
-        {isOnboarding ? (
-          // Onboarding Navigation
-          <nav className="flex items-center justify-between mb-6" role="navigation" aria-label="Onboarding navigation">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => {
-                  try {
-                    navigate('/');
-                  } catch (error) {
-                    console.error('Navigation failed:', error);
-                  }
-                }}
-                className="flex items-center space-x-2 text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
-                aria-label="Navigate back to dashboard"
-                role="button"
-                tabIndex={0}
-              >
-                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
-                <span>Back to Dashboard</span>
-              </button>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-pb-gray" aria-live="polite">Step 1 of 4</span>
-              <button
-                onClick={() => {
-                  try {
-                    navigate('/shows/new');
-                  } catch (error) {
-                    console.error('Navigation failed:', error);
-                  }
-                }}
-                className="flex items-center space-x-2 px-4 py-2 bg-pb-primary text-white rounded-lg hover:bg-pb-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker"
-                aria-label="Continue to next step: Create your first show"
-                role="button"
-                tabIndex={0}
-              >
-                <span>Next: Create Show</span>
-                <ChevronRight className="w-4 h-4" aria-hidden="true" />
-              </button>
-            </div>
-          </nav>
-        ) : (
-          // Main Navigation for completed onboarding
-          <nav className="flex items-center justify-between mb-6" role="navigation" aria-label="Main navigation">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => {
-                  try {
-                    navigate('/');
-                  } catch (error) {
-                    console.error('Navigation failed:', error);
-                  }
-                }}
-                className="flex items-center space-x-2 text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
-                aria-label="Navigate to dashboard"
-                role="button"
-                tabIndex={0}
-              >
-                <Home className="w-5 h-5" aria-hidden="true" />
-                <span>Dashboard</span>
-              </button>
-              <span className="text-pb-gray" aria-hidden="true">/</span>
-              <span className="text-white" aria-current="page">Account Settings</span>
-            </div>
-            <div className="flex items-center space-x-4" role="group" aria-label="Quick navigation links">
-              <button
-                onClick={() => {
-                  try {
-                    navigate('/props');
-                  } catch (error) {
-                    console.error('Navigation failed:', error);
-                  }
-                }}
-                className="text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
-                aria-label="Navigate to props inventory"
-                role="button"
-                tabIndex={0}
-              >
-                Props
-              </button>
-              <button
-                onClick={() => {
-                  try {
-                    navigate('/shows');
-                  } catch (error) {
-                    console.error('Navigation failed:', error);
-                  }
-                }}
-                className="text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
-                aria-label="Navigate to show management"
-                role="button"
-                tabIndex={0}
-              >
-                Shows
-              </button>
-              <button
-                onClick={() => {
-                  try {
-                    navigate('/boards');
-                  } catch (error) {
-                    console.error('Navigation failed:', error);
-                  }
-                }}
-                className="text-pb-gray hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary focus:ring-offset-2 focus:ring-offset-pb-darker rounded-md px-2 py-1"
-                aria-label="Navigate to task boards"
-                role="button"
-                tabIndex={0}
-              >
-                Task Boards
-              </button>
-            </div>
-          </nav>
-        )}
-      </div>
+    <DashboardLayout>
+      <div className="w-full max-w-6xl mx-auto py-10 px-4">
 
       <h1 className="text-3xl font-bold mb-8 text-white">Account Settings</h1>
       
@@ -561,10 +445,12 @@ const ProfilePage: React.FC = () => {
             </h2>
             <div className="flex items-center space-x-6">
               <div className="relative">
-              <img
-                src={photoURL || '/public/icon.png'}
+              <Avatar
+                src={photoURL}
                 alt="Profile"
-                className="w-24 h-24 rounded-full object-cover border-2 border-pb-primary bg-pb-darker"
+                name={displayName}
+                size="xl"
+                className="border-2 border-pb-primary"
               />
               <button
                 type="button"
@@ -832,18 +718,29 @@ const ProfilePage: React.FC = () => {
                   // Refresh pricing data to ensure we have the latest from Stripe
                   try {
                     setPricingLoading(true);
+                    setSubscriptionError(null);
+                    console.log('Refreshing pricing configuration...');
                     const config = await stripeService.refreshPricingConfig();
+                    console.log('Refreshed pricing config:', config);
                     setPricingConfig(config.plans);
+                    
+                    // Check if we have any plans with price IDs
+                    const plansWithPrices = config.plans.filter(plan => plan.priceId.monthly || plan.priceId.yearly);
+                    if (plansWithPrices.length === 0) {
+                      setSubscriptionError('No pricing plans configured in Stripe. Please set up products and prices in your Stripe dashboard.');
+                    }
                   } catch (error) {
                     console.error('Failed to refresh pricing config:', error);
+                    setSubscriptionError('Failed to load pricing information. Please check your Stripe configuration.');
                   } finally {
                     setPricingLoading(false);
                   }
                   setShowPricingModal(true);
                 }}
-                className="px-6 py-3 rounded-lg border border-pb-primary text-pb-primary font-medium hover:bg-pb-primary hover:text-white transition-colors"
+                disabled={pricingLoading}
+                className="px-6 py-3 rounded-lg border border-pb-primary text-pb-primary font-medium hover:bg-pb-primary hover:text-white transition-colors disabled:opacity-50"
               >
-                View All Plans
+                {pricingLoading ? 'Loading...' : 'View All Plans'}
               </button>
             </div>
             
@@ -865,7 +762,11 @@ const ProfilePage: React.FC = () => {
               Pricing is dynamically loaded from Stripe. Changes to your Stripe products and prices will automatically reflect here.
             </div>
             
-            {pricingConfig.length > 0 && (
+            {pricingLoading ? (
+              <div className="text-center py-8">
+                <div className="text-pb-gray">Loading pricing information...</div>
+              </div>
+            ) : pricingConfig.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {pricingConfig.map((plan) => {
                   const PlanIcon = getPlanIcon(plan.id);
@@ -890,6 +791,13 @@ const ProfilePage: React.FC = () => {
                     </div>
                   );
                 })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-pb-gray mb-2">No pricing plans configured</div>
+                <div className="text-sm text-pb-gray">
+                  Please set up products and prices in your Stripe dashboard to enable subscriptions.
+                </div>
               </div>
             )}
           </div>
@@ -1086,6 +994,13 @@ const ProfilePage: React.FC = () => {
                 <div className="col-span-full text-center py-8">
                   <div className="text-pb-gray">Loading pricing information...</div>
                 </div>
+              ) : pricingConfig.length === 0 ? (
+                <div className="col-span-full text-center py-8">
+                  <div className="text-pb-gray mb-4">No pricing plans available</div>
+                  <div className="text-sm text-pb-gray">
+                    Please configure your Stripe products and prices to enable subscriptions.
+                  </div>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {pricingConfig.map((planData) => {
@@ -1153,9 +1068,9 @@ const ProfilePage: React.FC = () => {
                                 handleStartCheckout(planData.id, 'monthly');
                                 setShowPricingModal(false);
                               }}
-                              disabled={planData.id === plan}
+                              disabled={planData.id === plan || checkoutLoading}
                               className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                                planData.id === plan
+                                planData.id === plan || checkoutLoading
                                   ? 'bg-pb-gray/30 text-pb-gray cursor-not-allowed'
                                   : planData.popular
                                   ? 'bg-pb-primary text-white hover:bg-pb-secondary'
@@ -1163,7 +1078,7 @@ const ProfilePage: React.FC = () => {
                               }`}
                               aria-label={`Subscribe to ${planData.name} plan monthly for $${planData.price.monthly} per month`}
                             >
-                              {planData.id === plan 
+                              {checkoutLoading ? 'Loading...' : planData.id === plan 
                                 ? 'Current Plan' 
                                 : `Monthly - $${planData.price.monthly}`
                               }
@@ -1176,15 +1091,15 @@ const ProfilePage: React.FC = () => {
                                 handleStartCheckout(planData.id, 'yearly');
                                 setShowPricingModal(false);
                               }}
-                              disabled={planData.id === plan}
+                              disabled={planData.id === plan || checkoutLoading}
                               className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                                planData.id === plan
+                                planData.id === plan || checkoutLoading
                                   ? 'bg-pb-gray/30 text-pb-gray cursor-not-allowed'
                                   : 'border border-green-500 text-green-400 hover:bg-green-500 hover:text-white'
                               }`}
                               aria-label={`Subscribe to ${planData.name} plan yearly for $${planData.price.yearly} per year`}
                             >
-                              {planData.id === plan 
+                              {checkoutLoading ? 'Loading...' : planData.id === plan 
                                 ? 'Current Plan' 
                                 : (() => {
                                     const { savings, discountPercent } = calculateDiscount(planData.price.monthly, planData.price.yearly);
@@ -1212,7 +1127,8 @@ const ProfilePage: React.FC = () => {
           </PricingModalErrorBoundary>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

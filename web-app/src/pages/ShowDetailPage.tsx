@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import type { Show } from '../types/Show';
@@ -12,6 +12,7 @@ import ShowActionsModal from '../components/ShowActionsModal';
 
 const ShowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { service: firebaseService } = useFirebase();
   const { user } = useWebAuth();
   const [show, setShow] = useState<Show | null>(null);
@@ -135,7 +136,7 @@ const ShowDetailPage: React.FC = () => {
           {/* Action Buttons */}
           <div className="absolute top-6 right-6 flex items-center gap-2">
             <button
-              onClick={() => id && window.location.assign(`/shows/${id}/edit`)}
+              onClick={() => id && navigate(`/shows/${id}/edit`)}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
               aria-label="Edit Show"
             >
@@ -479,11 +480,11 @@ const ShowDetailPage: React.FC = () => {
             showName={show.name}
             onShowArchived={() => {
               // Redirect to shows list after archiving
-              window.location.assign('/shows');
+              navigate('/shows');
             }}
             onShowDeleted={() => {
               // Redirect to shows list after deletion
-              window.location.assign('/shows');
+              navigate('/shows');
             }}
           />
         )}

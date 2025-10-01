@@ -13,6 +13,7 @@ import DashboardHome from './DashboardHome';
 const Login = lazy(() => import('./pages/Login'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const CompleteSignup = lazy(() => import('./pages/CompleteSignup'));
+const Signup = lazy(() => import('./pages/Signup'));
 
 const PropsListPage = lazy(() => import('./PropsListPage'));
 const PropDetailPage = lazy(() => import('./pages/PropDetailPage'));
@@ -59,7 +60,7 @@ function App() {
         }>
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-          <Route path="/signup" element={<Navigate to="https://thepropslist.uk" replace />} />
+          <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
           <Route path="/complete-signup" element={<CompleteSignup />} />
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
           <Route path="/props/pdf-export" element={<ProtectedRoute><PropsPdfExportPage /></ProtectedRoute>} />

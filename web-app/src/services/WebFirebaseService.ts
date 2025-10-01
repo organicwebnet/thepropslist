@@ -8,22 +8,16 @@ import type { ListData } from '../types/taskManager';
 import { FirebaseApp } from 'firebase/app';
 import {
   Auth,
-  User,
-  UserCredential,
   signInWithEmailAndPassword as webSignIn,
   signOut as webSignOut,
   createUserWithEmailAndPassword as webCreateUser,
-  sendPasswordResetEmail as webSendPasswordReset,
-  onAuthStateChanged
+  sendPasswordResetEmail as webSendPasswordReset
 } from 'firebase/auth';
 import {
   Firestore,
   CollectionReference as WebCollectionReference,
   DocumentReference as WebDocumentReference,
   Query as WebQuery,
-  enableIndexedDbPersistence,
-  runTransaction as webRunTransaction,
-  writeBatch as webWriteBatch,
   onSnapshot,
   DocumentSnapshot,
   QueryDocumentSnapshot,
@@ -42,13 +36,7 @@ import {
   DocumentData
 } from 'firebase/firestore';
 import {
-  getStorage,
-  ref,
-  uploadBytes,
-  getDownloadURL as getStorageDownloadURL,
-  deleteObject,
-  StorageReference as WebStorageReference,
-  FirebaseStorage as WebFirebaseStorage,
+  getStorage
 } from 'firebase/storage';
 
 // Minimal stub for base class
@@ -69,15 +57,9 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   }
 
   async initialize(): Promise<void> {
-    try {
-        await enableIndexedDbPersistence(this.firestore);
-    } catch (err: any) {
-        if (err.code === 'failed-precondition') {
-            // Firestore Persistence failed precondition. Multiple tabs open?
-        } else if (err.code === 'unimplemented') {
-            // Firestore Persistence is not available in this browser environment
-        }
-    }
+    // Note: Firestore cache is now configured at initialization time
+    // The new FirestoreSettings.cache approach is handled in the firebase.ts configuration
+    // No additional initialization needed here for caching
   }
 
   getFirestoreJsInstance(): Firestore {
