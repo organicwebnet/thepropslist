@@ -1049,7 +1049,7 @@ export const sendCustomPasswordResetEmail = onCall({
     await initializeSecrets();
     
     // Rate limiting: Check if user has made too many requests
-    const db = admin.firestore(admin.app());
+    const db = admin.firestore();
     const oneHourAgo = admin.firestore.Timestamp.fromDate(new Date(Date.now() - 60 * 60 * 1000));
     
     const recentRequests = await db.collection('passwordResetRequests')

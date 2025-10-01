@@ -141,7 +141,7 @@ export type PackListDocument = Omit<PackList, 'id'>;
 const createFirestoreConverter = <T>(): FirestoreDataConverter<T> => ({
   toFirestore: (
     modelObject: WithFieldValue<T> | PartialWithFieldValue<T>,
-    options?: SetOptions
+    _options?: SetOptions
   ): DocumentData => {
     if ((modelObject as any).id) {
       const { id, ...rest } = modelObject as any;

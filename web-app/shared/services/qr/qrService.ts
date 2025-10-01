@@ -78,7 +78,7 @@ export class PropQRCodeService implements QRCodeService {
   async generateBatchQRCodes(dataList: QRCodeData[], _options: QRCodeOptions = {}): Promise<string[]> {
     try {
       return Promise.all(
-        dataList.map(data => this.generateQRCode(data, options))
+        dataList.map(data => this.generateQRCode(data, _options))
       );
     } catch (error) {
       throw new FirebaseError(

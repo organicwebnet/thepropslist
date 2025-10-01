@@ -99,7 +99,7 @@ export class LabelPrintService {
     `;
   }
 
-  async printLabels(labels: PackingLabel[], options: LabelPrintOptions = {}): Promise<void> {
+  async printLabels(labels: PackingLabel[], _options: LabelPrintOptions = {}): Promise<void> {
     const html = this.generateHtml(labels);
 
     if (typeof window !== 'undefined') {

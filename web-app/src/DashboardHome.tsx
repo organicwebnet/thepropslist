@@ -52,7 +52,7 @@ const itemVariants = {
 
 const DashboardHome: React.FC = () => {
   const { currentShowId } = useShowSelection();
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { userProfile } = useWebAuth();
 
@@ -127,14 +127,17 @@ const DashboardHome: React.FC = () => {
                         ...cardsDocs.map(cd => ({ ...(cd.data as CardData), id: cd.id, listId: (list as any).id }))
                       ];
                     });
-                  }
+                  },
+                  error => console.error('Error listening to cards:', error)
                 );
                 unsubCards.push(unsub);
               });
-            }
+            },
+            error => console.error('Error listening to lists:', error)
           );
         });
-      }
+      },
+      error => console.error('Error listening to boards:', error)
     );
     return () => { if (unsubBoards) unsubBoards(); unsubCards.forEach(u => u && u()); };
   }, [service, currentShowId]);

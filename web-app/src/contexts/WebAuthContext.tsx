@@ -30,7 +30,7 @@ interface UserProfile {
   displayName: string;
   photoURL?: string;
   phoneNumber?: string;
-  role: 'admin' | 'user' | 'viewer' | 'god';
+  role: 'admin' | 'user' | 'viewer' | 'god' | 'editor' | 'props_supervisor' | 'art_director';
   organizations: string[];
   preferences: {
     theme: 'light' | 'dark';

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from './PropsBibleHomepage';
 import { useWebAuth } from './contexts/WebAuthContext';
 import { useFirebase, FirebaseContextType } from './contexts/FirebaseContext';
-import type { Show } from '../types/Show.ts';
+import type { Show } from '../types/index';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Gem, AlertTriangle, Archive } from 'lucide-react';
 import { useShowSelection } from './contexts/ShowSelectionContext';
@@ -16,7 +16,7 @@ const ShowsListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shows, setShows] = useState<Show[]>([]);
-  const { user } = useWebAuth();
+  const { user: _user } = useWebAuth();
   const { service: firebaseService, isInitialized, error: firebaseInitError }: FirebaseContextType = useFirebase();
   const navigate = useNavigate();
   const { currentShowId, setCurrentShowId } = useShowSelection();
@@ -58,7 +58,7 @@ const ShowsListPage: React.FC = () => {
     return () => unsubscribe();
   }, [firebaseService, isInitialized, firebaseInitError]);
 
-  const handleAddShow = () => {
+  const _handleAddShow = () => {
     // TODO: Route to add show form
     alert('Add Show (not implemented)');
   };

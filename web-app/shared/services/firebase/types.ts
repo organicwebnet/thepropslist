@@ -1,6 +1,7 @@
-import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
-import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
+// Web-only Firebase types - React Native Firebase not available in web environment
+// import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
+// import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
+// import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
 import { Auth as FirebaseAuthJs, User as FirebaseUserJs, UserCredential } from 'firebase/auth';
 import { 
   Firestore as WebFirestore, 
@@ -36,42 +37,24 @@ export class FirebaseError extends Error {
     }
 }
 
-// --- Platform-Agnostic Union Types ---
+// --- Web-Only Firebase Types (React Native Firebase not available in web) ---
 
-export type CustomFirestore = FirebaseFirestoreTypes.Module | WebFirestore;
-export type CustomAuth = FirebaseAuthTypes.Module | FirebaseAuthJs;
-export type CustomUser = FirebaseAuthTypes.User | FirebaseUserJs;
-export type CustomStorage = FirebaseStorageTypes.Module; // Using RN Firebase Storage as the base for now
-export type CustomTimestamp = FirebaseFirestoreTypes.Timestamp | WebTimestamp;
+export type CustomFirestore = WebFirestore;
+export type CustomAuth = FirebaseAuthJs;
+export type CustomUser = FirebaseUserJs;
+export type CustomStorage = any; // Web storage type placeholder
+export type CustomTimestamp = WebTimestamp;
 export type DocumentData = WebDocumentData;
 
-export type CustomDocumentReference<T extends DocumentData = DocumentData> = 
-  FirebaseFirestoreTypes.DocumentReference<T> | 
-  WebDocumentReference<T>;
-
-export type CustomCollectionReference<T extends DocumentData = DocumentData> = 
-  FirebaseFirestoreTypes.CollectionReference<T> |
-  WebCollectionReference<T>;
-
-export type DocumentSnapshot<T extends DocumentData = DocumentData> =
-  | FirebaseFirestoreTypes.DocumentSnapshot<T>
-  | WebDocumentSnapshot<T>;
-
-export type QuerySnapshot<T extends DocumentData = DocumentData> =
-  | FirebaseFirestoreTypes.QuerySnapshot<T>
-  | WebQuerySnapshot<T>;
-
-export type QueryDocumentSnapshot<T extends DocumentData = DocumentData> =
-  | FirebaseFirestoreTypes.QueryDocumentSnapshot<T>
-  | WebQueryDocumentSnapshot<T>;
-
-export type FirestoreQuery<T extends DocumentData = DocumentData> =
-  | FirebaseFirestoreTypes.Query<T>
-  | WebQuery<T>;
-
-export type CustomTransaction = FirebaseFirestoreTypes.Transaction | WebTransaction;
-export type CustomWriteBatch = FirebaseFirestoreTypes.WriteBatch | WebWriteBatch;
-export type CustomUserCredential = FirebaseAuthTypes.UserCredential | UserCredential;
+export type CustomDocumentReference<T extends DocumentData = DocumentData> = WebDocumentReference<T>;
+export type CustomCollectionReference<T extends DocumentData = DocumentData> = WebCollectionReference<T>;
+export type DocumentSnapshot<T extends DocumentData = DocumentData> = WebDocumentSnapshot<T>;
+export type QuerySnapshot<T extends DocumentData = DocumentData> = WebQuerySnapshot<T>;
+export type QueryDocumentSnapshot<T extends DocumentData = DocumentData> = WebQueryDocumentSnapshot<T>;
+export type FirestoreQuery<T extends DocumentData = DocumentData> = WebQuery<T>;
+export type CustomTransaction = WebTransaction;
+export type CustomWriteBatch = WebWriteBatch;
+export type CustomUserCredential = UserCredential;
 
 // Wrapper for document to include ID
 export interface FirebaseDocument<T extends DocumentData = DocumentData> {
@@ -178,7 +161,6 @@ export interface FirebaseService {
 
     // Helpers
     getFirestoreJsInstance(): WebFirestore;
-    getFirestoreReactNativeInstance(): FirebaseFirestoreTypes.Module;
 
     // App-specific methods (consider moving to a dedicated service)
     deleteShow(showId: string): Promise<void>;
@@ -210,15 +192,8 @@ export const isWebTimestamp = (timestamp: any): timestamp is WebTimestamp => {
     return timestamp && typeof timestamp.toDate === 'function' && !timestamp.nanoseconds;
 };
 
-export const isNativeTimestamp = (timestamp: any): timestamp is FirebaseFirestoreTypes.Timestamp => {
-    return timestamp && typeof timestamp.toDate === 'function' && timestamp.nanoseconds !== undefined;
-};
-
 export const getTimestamp = (date: Date): CustomTimestamp => {
-    // In a real cross-platform app, you might use a check like:
-    // if (Platform.OS === 'web') { return WebTimestamp.fromDate(date); }
-    // else { return FirebaseFirestoreTypes.Timestamp.fromDate(date); }
-    // For now, defaulting to web is fine for type safety.
+    // Web-only implementation
     return WebTimestamp.fromDate(date);
 };
 

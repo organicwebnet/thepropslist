@@ -139,7 +139,7 @@ const ProfilePage: React.FC = () => {
       await updateUserProfile({
         displayName, 
         phoneNumber, 
-        role: role as 'admin' | 'user' | 'viewer' | 'god', 
+        role: role as 'admin' | 'user' | 'viewer' | 'god' | 'editor' | 'props_supervisor' | 'art_director', 
         photoURL 
       });
       setSuccess('Profile updated successfully!');

@@ -1,6 +1,12 @@
-import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle.ts';
-// Removed unused Firebase native types
-import { Address } from './address.ts';
+// Web-only types - lifecycle types not available in web environment
+// import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle.ts';
+// // import { Address } from './address.ts'; // Unused in web version
+
+// Define minimal types for web compatibility
+export type PropLifecycleStatus = 'active' | 'inactive' | 'maintenance' | 'repair' | 'retired';
+export type MaintenanceRecord = any; // Placeholder
+export type PropStatusUpdate = any; // Placeholder
+export type RepairPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 // Re-export master types from src/types/index.ts
 export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../types/index.ts';
