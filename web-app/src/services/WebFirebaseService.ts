@@ -14,6 +14,7 @@ import type {
 import { FirebaseApp } from 'firebase/app';
 import {
   Auth,
+  UserCredential,
   signInWithEmailAndPassword as webSignIn,
   signOut as webSignOut,
   createUserWithEmailAndPassword as webCreateUser,
@@ -85,6 +86,19 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
 
   async sendPasswordResetEmail(email: string): Promise<void> {
       return webSendPasswordReset(this._auth, email);
+  }
+
+  // Direct auth methods required by src FirebaseService interface
+  async signInWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
+    return webSignIn(this._auth, email, password);
+  }
+
+  async createUserWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
+    return webCreateUser(this._auth, email, password);
+  }
+
+  async signOut(): Promise<void> {
+    return webSignOut(this._auth);
   }
 
   // --- Firestore Document/Collection ---
