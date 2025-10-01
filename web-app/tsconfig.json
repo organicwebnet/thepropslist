@@ -7,9 +7,9 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../src/shared/*"],
-      "@platforms/*": ["../src/platforms/*"],
-      "@types/*": ["../src/types/*"]
+      "@shared/*": ["src/shared/*"],
+      "@platforms/*": ["src/platforms/*"],
+      "@types/*": ["src/types/*"]
     },
 
     /* Bundler mode */

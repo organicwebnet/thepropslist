@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Maximize } from 'lucide-react';
 // import { Platform, View, Text, StyleSheet } from 'react-native';
 interface ImageCarouselProps {

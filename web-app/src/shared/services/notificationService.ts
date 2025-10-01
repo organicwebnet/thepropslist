@@ -1,4 +1,4 @@
-import type { FirebaseService } from './firebase/types.ts';
+import type { FirebaseService } from '../../shared/services/firebase/types';
 import {
   collection,
   addDoc,

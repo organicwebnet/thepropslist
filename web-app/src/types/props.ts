@@ -1,6 +1,6 @@
-import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle.ts';
-import { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firestore';
-import { Address } from './address.ts';
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './lifecycle';
+// import { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firestore'; // Not available in web
+// import { Address } from './address.ts'; // Not available in web
 
 // Re-export master types from src/types/index.ts
 export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from './index';
