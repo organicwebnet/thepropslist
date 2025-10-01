@@ -122,9 +122,7 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     const docRef = await addDoc(collRef, data);
     return {
       id: docRef.id,
-      data: data,
-      exists: true,
-      ref: docRef
+      data: data
     };
   }
 

@@ -4,7 +4,7 @@ import {
   addDoc,
   doc,
   getDocs,
-  getDoc,
+  // getDoc, // Not used in current implementation
   query,
   where,
   orderBy,
