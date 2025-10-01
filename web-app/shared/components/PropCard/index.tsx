@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, ViewStyle, ImageSourcePropType } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Prop } from '../../types';
-import { lifecycleStatusLabels } from '../../../types/lifecycle.ts';
+import { lifecycleStatusLabels } from '../../../types/lifecycle';
 import { Feather } from '@expo/vector-icons';
 
 interface PropCardProps {

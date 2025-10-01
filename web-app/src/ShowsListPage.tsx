@@ -16,7 +16,7 @@ const ShowsListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shows, setShows] = useState<Show[]>([]);
-  const { user: _user } = useWebAuth();
+  // const { user: _user } = useWebAuth(); // Not used in current implementation
   const { service: firebaseService, isInitialized, error: firebaseInitError }: FirebaseContextType = useFirebase();
   const navigate = useNavigate();
   const { currentShowId, setCurrentShowId } = useShowSelection();
@@ -58,10 +58,10 @@ const ShowsListPage: React.FC = () => {
     return () => unsubscribe();
   }, [firebaseService, isInitialized, firebaseInitError]);
 
-  const _handleAddShow = () => {
-    // TODO: Route to add show form
-    alert('Add Show (not implemented)');
-  };
+  // const _handleAddShow = () => {
+  //   // TODO: Route to add show form
+  //   alert('Add Show (not implemented)');
+  // };
 
   return (
     <DashboardLayout>

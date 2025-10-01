@@ -2,14 +2,11 @@
 // import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle.ts';
 // // import { Address } from './address.ts'; // Unused in web version
 
-// Define minimal types for web compatibility
-export type PropLifecycleStatus = 'active' | 'inactive' | 'maintenance' | 'repair' | 'retired';
-export type MaintenanceRecord = any; // Placeholder
-export type PropStatusUpdate = any; // Placeholder
-export type RepairPriority = 'low' | 'medium' | 'high' | 'urgent';
+// Import types from lifecycle file to avoid conflicts
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from '../../types/lifecycle';
 
 // Re-export master types from src/types/index.ts
-export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../types/index.ts';
+export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../types/index';
 
 // Re-export the type needed by PropForm using 'export type'
 export type { PropLifecycleStatus };

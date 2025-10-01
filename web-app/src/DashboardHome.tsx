@@ -52,7 +52,7 @@ const itemVariants = {
 
 const DashboardHome: React.FC = () => {
   const { currentShowId } = useShowSelection();
-  const _navigate = useNavigate();
+  // const _navigate = useNavigate(); // Not used in current implementation
   const [showOnboarding, setShowOnboarding] = useState(false);
   const { userProfile } = useWebAuth();
 

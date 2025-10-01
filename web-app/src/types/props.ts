@@ -3,7 +3,7 @@ import { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firest
 import { Address } from './address.ts';
 
 // Re-export master types from src/types/index.ts
-export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../types/index.ts';
+export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData } from '../../types/index';
 
 // Re-export the type needed by PropForm using 'export type'
 export type { PropLifecycleStatus };
