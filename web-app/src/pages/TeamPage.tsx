@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import type { Show } from '../types/Show';
 import { buildInviteEmailDocTo, buildReminderEmailDoc } from '../services/EmailService';
@@ -21,7 +21,7 @@ type Invitation = {
 
 const TeamPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const _navigate = useNavigate();
+  // const _navigate = useNavigate();
   const { service, user } = useFirebase() as any;
   const [show, setShow] = useState<Show | null>(null);
   const [collaborators, setCollaborators] = useState<any[]>([]);
@@ -37,7 +37,7 @@ const TeamPage: React.FC = () => {
   const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
   const [submitting, setSubmitting] = useState(false);
 
-  const _showId = id || show?.id || '';
+  // const _showId = id || show?.id || '';
 
   useEffect(() => {
     if (!id) return;

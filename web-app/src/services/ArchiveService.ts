@@ -407,43 +407,43 @@ export class ArchiveService {
     }
   }
 
-  /**
-   * Get IDs of all associated data for deletion
-   */
-  private async _getAssociatedDataIds(showId: string) {
-    const [props, boards, packingLists, collaborators, shoppingLists] = await Promise.all([
-      this.firebaseService.getDocuments('props', { where: [['showId', '==', showId]] }),
-      this.firebaseService.getDocuments('todo_boards', { where: [['showId', '==', showId]] }),
-      this.firebaseService.getDocuments('packing_lists', { where: [['showId', '==', showId]] }),
-      this.firebaseService.getDocuments('collaborators', { where: [['showId', '==', showId]] }),
-      this.firebaseService.getDocuments('shopping_lists', { where: [['showId', '==', showId]] }),
-    ]);
+  // /**
+  //  * Get IDs of all associated data for deletion
+  //  */
+  // private async _getAssociatedDataIds(showId: string) {
+  //   const [props, boards, packingLists, collaborators, shoppingLists] = await Promise.all([
+  //     this.firebaseService.getDocuments('props', { where: [['showId', '==', showId]] }),
+  //     this.firebaseService.getDocuments('todo_boards', { where: [['showId', '==', showId]] }),
+  //     this.firebaseService.getDocuments('packing_lists', { where: [['showId', '==', showId]] }),
+  //     this.firebaseService.getDocuments('collaborators', { where: [['showId', '==', showId]] }),
+  //     this.firebaseService.getDocuments('shopping_lists', { where: [['showId', '==', showId]] }),
+  //   ]);
 
-    return {
-      props: props.map(doc => ({ collection: 'props', id: doc.id })),
-      boards: boards.map(doc => ({ collection: 'todo_boards', id: doc.id })),
-      packingLists: packingLists.map(doc => ({ collection: 'packing_lists', id: doc.id })),
-      collaborators: collaborators.map(doc => ({ collection: 'collaborators', id: doc.id })),
-      shoppingLists: shoppingLists.map(doc => ({ collection: 'shopping_lists', id: doc.id })),
-    };
-  }
+  //   return {
+  //     props: props.map(doc => ({ collection: 'props', id: doc.id })),
+  //     boards: boards.map(doc => ({ collection: 'todo_boards', id: doc.id })),
+  //     packingLists: packingLists.map(doc => ({ collection: 'packing_lists', id: doc.id })),
+  //     collaborators: collaborators.map(doc => ({ collection: 'collaborators', id: doc.id })),
+  //     shoppingLists: shoppingLists.map(doc => ({ collection: 'shopping_lists', id: doc.id })),
+  //   };
+  // }
 
-  /**
-   * Delete all associated data
-   */
-  private async _deleteAssociatedData(dataIds: any) {
-    const allIds = [
-      ...dataIds.props,
-      ...dataIds.boards,
-      ...dataIds.packingLists,
-      ...dataIds.collaborators,
-      ...dataIds.shoppingLists,
-    ];
+  // /**
+  //  * Delete all associated data
+  //  */
+  // private async _deleteAssociatedData(dataIds: any) {
+  //   const allIds = [
+  //     ...dataIds.props,
+  //     ...dataIds.boards,
+  //     ...dataIds.packingLists,
+  //     ...dataIds.collaborators,
+  //     ...dataIds.shoppingLists,
+  //   ];
 
-    for (const { collection, id } of allIds) {
-      await this.firebaseService.deleteDocument(collection, id);
-    }
-  }
+  //   for (const { collection, id } of allIds) {
+  //     await this.firebaseService.deleteDocument(collection, id);
+  //   }
+  // }
 
   /**
    * Get count of archived shows for a user

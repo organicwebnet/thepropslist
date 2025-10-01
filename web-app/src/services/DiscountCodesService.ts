@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where, orderBy, runTransaction, limit } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, collection, getDocs, query, where, orderBy, runTransaction, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 

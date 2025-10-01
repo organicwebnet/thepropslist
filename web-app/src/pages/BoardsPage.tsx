@@ -24,18 +24,18 @@ import ShowDetailPage from "../pages/ShowDetailPage";
 import JoinInvitePage from "../pages/JoinInvitePage";
 import PropsBibleHomepage from '../PropsBibleHomepage';
 import { useSubscription } from '../hooks/useSubscription';
-import UpgradeModal from '../components/UpgradeModal';
+// import UpgradeModal from '../components/UpgradeModal';
 
 const BoardsPage: React.FC = () => {
   const { service } = useFirebase();
   const { currentShowId } = useShowSelection();
   const { user } = useWebAuth();
-  const [boards, setBoards] = useState<BoardData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [boardName, setBoardName] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [showTitle, setShowTitle] = useState('');
+  const [_boards, setBoards] = useState<BoardData[]>([]);
+  const [_loading, _setLoading] = useState(false);
+  const [_error, setError] = useState<string | null>(null);
+  const [_boardName, _setBoardName] = useState('');
+  const [_showForm, _setShowForm] = useState(false);
+  const [_showTitle, setShowTitle] = useState('');
 
   useEffect(() => {
     // Listen to boards collection, filter by showId if selected
@@ -82,25 +82,25 @@ const BoardsPage: React.FC = () => {
     });
   }, [service]);
 
-  const handleCreateBoard = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      // Create a new board in Firestore
-      await service.addDocument("boards", {
-        title: boardName,
-        listIds: [],
-        createdAt: new Date(),
-      });
-      setBoardName("");
-      setShowForm(false);
-    } catch (err: any) {
-      setError(err.message || "Failed to create board");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const handleCreateBoard = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setLoading(true);
+  //   setError(null);
+  //   try {
+  //     // Create a new board in Firestore
+  //     await service.addDocument("boards", {
+  //       title: boardName,
+  //       listIds: [],
+  //       createdAt: new Date(),
+  //     });
+  //     setBoardName("");
+  //     setShowForm(false);
+  //   } catch (err: any) {
+  //     setError(err.message || "Failed to create board");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   return (
     <ShowSelectionProvider>
@@ -137,10 +137,10 @@ function BoardsPageContent() {
   const [searchParams] = useSearchParams();
   const selectedCardId = searchParams.get('selectedCardId');
   const { currentShowId } = useShowSelection();
-  const [showTitle, setShowTitle] = useState<string>("");
+  const [_showTitle, setShowTitle] = useState<string>("");
   const { user } = useWebAuth();
   const { limits } = useSubscription();
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [_upgradeOpen, setUpgradeOpen] = useState(false);
 
   console.log("[BoardsPage] currentShowId:", currentShowId);
   console.log("[BoardsPage] Current user:", user);

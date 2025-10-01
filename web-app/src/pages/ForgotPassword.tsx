@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWebAuth } from '../contexts/WebAuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Loader2, Mail } from 'lucide-react';
 
 export default function ForgotPassword() {
@@ -8,7 +8,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [debugInfo, setDebugInfo] = useState('');
   const [sent, setSent] = useState(false);
-  const navigate = useNavigate();
+  // const _navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

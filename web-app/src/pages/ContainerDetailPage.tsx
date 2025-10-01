@@ -347,7 +347,7 @@ const ContainerDetailPage: React.FC = () => {
           <div className="bg-gray-900 rounded-xl shadow p-4 mt-6">
             <h2 className="font-semibold mb-2 text-lg">Containers on this {container.type || 'pallet'}</h2>
             <ul className="divide-y divide-gray-800">
-              {childContainers.map((ch) => (
+              {childContainers.map((ch: any) => (
                 <li key={ch.id} className="py-2 flex items-center justify-between">
                   <div className="text-white">
                     {ch.name} {ch.type && <span className="text-xs text-gray-400">({ch.type})</span>}

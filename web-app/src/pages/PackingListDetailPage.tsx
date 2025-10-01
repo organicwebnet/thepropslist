@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
-import { DigitalPackListService, PackList, PackingContainer } from '../../shared/services/inventory/packListService';
+import { DigitalPackListService, PackList } from '../../shared/services/inventory/packListService';
 import { DigitalInventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService';
 import DashboardLayout from '../PropsBibleHomepage';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+// import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 const PackingListDetailPage: React.FC = () => {
   const { service } = useFirebase();
@@ -17,7 +17,7 @@ const PackingListDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [containerForm, setContainerForm] = useState<{ description?: string; type?: string; length?: string; width?: string; height?: string; unit?: 'cm' | 'in' }>({ description: '', type: '', length: '', width: '', height: '', unit: 'cm' });
-  const [formError, setFormError] = useState<string | null>(null);
+  const [_formError, setFormError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [bulkPlaceOpen, setBulkPlaceOpen] = useState(false);

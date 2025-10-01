@@ -9,10 +9,10 @@ import SubFootnote from '../components/SubFootnote';
 
 const PackingListPage: React.FC = () => {
   const { service } = useFirebase();
-  const { currentShowId, setCurrentShowId } = useShowSelection();
+  const { currentShowId, setCurrentShowId: _setCurrentShowId } = useShowSelection();
   const [packingLists, setPackingLists] = useState<PackList[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
   const [newListName, setNewListName] = useState('');
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
