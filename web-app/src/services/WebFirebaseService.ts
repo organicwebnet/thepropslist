@@ -2,7 +2,7 @@ import type {
   FirebaseService,
   OfflineService as OfflineSync,
   FirebaseDocument,
-} from '../types/firebase';
+} from '../../shared/services/firebase/types';
 import type { ListData } from '../types/taskManager';
 import type { 
   MemberData, 
@@ -78,28 +78,12 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
   }
 
   // --- Auth ---
-  auth = {
-    signInWithEmailAndPassword: (email: string, password: string) => webSignIn(this._auth, email, password),
-    signOut: () => webSignOut(this._auth),
-    createUserWithEmailAndPassword: (email: string, password: string) => webCreateUser(this._auth, email, password),
-  };
+  auth = this._auth;
 
   async sendPasswordResetEmail(email: string): Promise<void> {
       return webSendPasswordReset(this._auth, email);
   }
 
-  // Direct auth methods required by src FirebaseService interface
-  async signInWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
-    return webSignIn(this._auth, email, password);
-  }
-
-  async createUserWithEmailAndPassword(email: string, password: string): Promise<UserCredential> {
-    return webCreateUser(this._auth, email, password);
-  }
-
-  async signOut(): Promise<void> {
-    return webSignOut(this._auth);
-  }
 
   // --- Firestore Document/Collection ---
   private _createDocumentWrapper<T extends DocumentData>(docSnapshot: DocumentSnapshot<T>): FirebaseDocument<T> {
