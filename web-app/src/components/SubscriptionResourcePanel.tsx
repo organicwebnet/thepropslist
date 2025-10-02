@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Crown, 
@@ -39,13 +39,13 @@ const SubscriptionResourcePanel: React.FC = () => {
     archivedShows: { used: 0, limit: 0 },
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchUsageData = useCallback(async () => {
     if (!user) return;
-
-    const fetchUsageData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Fetch all shows for the user
         const shows = await service.getDocuments('shows', {
@@ -78,12 +78,17 @@ const SubscriptionResourcePanel: React.FC = () => {
           allBoards = boardsResults.flat().map(doc => ({ ...doc.data, id: doc.id } as BoardData));
         }
         
-        // Count packing boxes (assuming they're stored as a field in props or shows)
-        const packingBoxesCount = allProps.reduce((count, prop) => {
-          // Assuming packing boxes are counted from props with a specific category or field
-          // This might need adjustment based on your actual data structure
-          return count + (prop.quantity || 1);
-        }, 0);
+        // Count packing boxes from actual containers/boxes
+        let packingBoxesCount = 0;
+        if (showIds.length > 0) {
+          const containersPromises = showIds.map(showId => 
+            service.getDocuments('packing_containers', {
+              where: [['showId', '==', showId]]
+            }).catch(() => []) // Gracefully handle if collection doesn't exist
+          );
+          const containersResults = await Promise.all(containersPromises);
+          packingBoxesCount = containersResults.flat().length;
+        }
         
         // For now, we'll use a simplified approach for collaborators
         // In a real implementation, you'd count unique collaborators across all shows
@@ -104,13 +109,15 @@ const SubscriptionResourcePanel: React.FC = () => {
         });
       } catch (error) {
         console.error('Error fetching usage data:', error);
+        setError('Failed to load subscription data. Please try again.');
       } finally {
         setLoading(false);
       }
-    };
+    }, [user, service, effectiveLimits]);
 
+  useEffect(() => {
     fetchUsageData();
-  }, [user, service, effectiveLimits]);
+  }, [fetchUsageData]);
 
   const getUsagePercentage = (used: number, limit: number) => {
     if (limit === 0) return 0;
@@ -198,6 +205,29 @@ const SubscriptionResourcePanel: React.FC = () => {
         </div>
         <div className="flex items-center justify-center h-32">
           <div className="text-pb-gray">Loading usage data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-6 border border-pb-primary/20">
+        <div className="flex items-center space-x-2 mb-4">
+          <Crown className="w-5 h-5 text-pb-accent" />
+          <h3 className="text-lg font-semibold text-white">Subscription Resources</h3>
+        </div>
+        <div className="flex flex-col items-center justify-center h-32 space-y-2">
+          <div className="text-red-400 text-sm">{error}</div>
+          <button
+            onClick={() => {
+              setError(null);
+              fetchUsageData();
+            }}
+            className="px-3 py-1 bg-pb-primary hover:bg-pb-primary/80 text-white rounded text-sm transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
