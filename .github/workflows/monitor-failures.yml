@@ -2,7 +2,7 @@ name: Monitor Test Failures
 
 on:
   workflow_run:
-    workflows: ["CI/CD", "Simple Test", "Basic Test"]
+    workflows: ["Basic Test", "Simple Test"]
     types: [completed]
 
 jobs:

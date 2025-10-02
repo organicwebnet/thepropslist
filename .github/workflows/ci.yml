@@ -1,11 +1,12 @@
-name: CI/CD
+# Temporarily disabled - using basic-test.yml instead
+# name: CI/CD
 
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+# on:
+#   push:
+#     branches: [ main, master ]
+#   pull_request:
+#     branches: [ main, master ]
+#   workflow_dispatch:
 
 jobs:
   build:
