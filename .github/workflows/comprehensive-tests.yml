@@ -63,15 +63,13 @@ jobs:
         echo "🧪 Running Playwright tests against production URL..."
         echo "Testing URL: $BASE_URL"
         
-        # Run tests with retry logic and better error handling
-        npx playwright test --config=playwright.config.ts \
+        # Run tests with CI-specific configuration
+        npx playwright test --config=playwright.ci.config.ts \
           --reporter=line \
-          --max-failures=5 \
-          --retries=2 \
-          --timeout=30000 \
+          --max-failures=3 \
           --project=chromium || {
           echo "❌ Some tests failed, but continuing..."
-          echo "This is expected for production testing"
+          echo "This is expected for production testing in CI environment"
         }
         
         echo "✅ Playwright tests completed"
