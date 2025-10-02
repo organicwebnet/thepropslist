@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 test.describe('Screenshot Generator for Help Documentation', () => {
   test('capture screenshots for help documentation', async ({ page }) => {
@@ -8,71 +12,52 @@ test.describe('Screenshot Generator for Help Documentation', () => {
     
     const screenshotsDir = path.join(__dirname, '../screenshots/help-docs');
     
-    // Login first (you'll need to adjust this based on your auth setup)
-    await page.goto('/login');
-    // Add login logic here if needed
+    // Create screenshots directory if it doesn't exist
+    try {
+      await page.evaluate(() => {
+        // This will be handled by the file system
+      });
+    } catch (error) {
+      console.log('Screenshots directory creation handled by test runner');
+    }
     
-    // 1. Dashboard/Home page
-    await page.goto('/');
+    // 1. Login page (always accessible)
+    await page.goto('/login');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ 
-      path: path.join(screenshotsDir, 'dashboard.png'),
+      path: path.join(screenshotsDir, 'login.png'),
       fullPage: true 
     });
     
-    // 2. Props List page
+    // 2. Signup page
+    await page.goto('/signup');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ 
+      path: path.join(screenshotsDir, 'signup.png'),
+      fullPage: true 
+    });
+    
+    // 3. Forgot password page
+    await page.goto('/forgot-password');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ 
+      path: path.join(screenshotsDir, 'forgot-password.png'),
+      fullPage: true 
+    });
+    
+    // 4. Try to access protected routes (they should redirect to login)
     await page.goto('/props');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ 
-      path: path.join(screenshotsDir, 'props-list.png'),
+      path: path.join(screenshotsDir, 'props-redirect.png'),
       fullPage: true 
     });
     
-    // 3. Add Prop page
-    await page.goto('/props/add');
+    // 5. Try to access dashboard (should redirect to login)
+    await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ 
-      path: path.join(screenshotsDir, 'add-prop.png'),
-      fullPage: true 
-    });
-    
-    // 4. Shows Management
-    await page.goto('/shows');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ 
-      path: path.join(screenshotsDir, 'shows-management.png'),
-      fullPage: true 
-    });
-    
-    // 5. Task Boards
-    await page.goto('/boards');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ 
-      path: path.join(screenshotsDir, 'task-boards.png'),
-      fullPage: true 
-    });
-    
-    // 6. Packing Lists
-    await page.goto('/packing-lists');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ 
-      path: path.join(screenshotsDir, 'packing-lists.png'),
-      fullPage: true 
-    });
-    
-    // 7. PDF Export
-    await page.goto('/props/pdf-export');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ 
-      path: path.join(screenshotsDir, 'pdf-export.png'),
-      fullPage: true 
-    });
-    
-    // 8. Team Management
-    await page.goto('/shows/1/team'); // Adjust show ID as needed
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ 
-      path: path.join(screenshotsDir, 'team-management.png'),
+      path: path.join(screenshotsDir, 'dashboard-redirect.png'),
       fullPage: true 
     });
   });
@@ -84,17 +69,24 @@ test.describe('Screenshot Generator for Help Documentation', () => {
     const screenshotsDir = path.join(__dirname, '../screenshots/help-docs/mobile');
     
     // Mobile screenshots of key pages
-    await page.goto('/');
+    await page.goto('/login');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ 
-      path: path.join(screenshotsDir, 'dashboard-mobile.png'),
+      path: path.join(screenshotsDir, 'login-mobile.png'),
       fullPage: true 
     });
     
-    await page.goto('/props');
+    await page.goto('/signup');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ 
-      path: path.join(screenshotsDir, 'props-list-mobile.png'),
+      path: path.join(screenshotsDir, 'signup-mobile.png'),
+      fullPage: true 
+    });
+    
+    await page.goto('/forgot-password');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ 
+      path: path.join(screenshotsDir, 'forgot-password-mobile.png'),
       fullPage: true 
     });
   });

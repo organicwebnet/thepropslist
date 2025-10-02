@@ -64,9 +64,10 @@
         "**/node_modules/**"
       ],
       "redirects": [
-        { "source": "/app/**", "destination": "https://app.thepropslist.uk/:splat", "type": 301 },
-        { "source": "/login", "destination": "https://app.thepropslist.uk/login", "type": 301 },
-        { "source": "/signup", "destination": "https://thepropslist.uk", "type": 301 }
+        // Temporarily disabled to avoid domain conflicts
+        // { "source": "/app/**", "destination": "https://props-bible-app-1c1cb.web.app/:splat", "type": 301 },
+        // { "source": "/login", "destination": "https://props-bible-app-1c1cb.web.app/login", "type": 301 },
+        // { "source": "/signup", "destination": "https://props-bible-app-1c1cb.web.app", "type": 301 }
       ],
       "rewrites": [
         { "source": "/contact/**", "destination": "/contact/index.html" },

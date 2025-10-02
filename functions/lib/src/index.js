@@ -1,12 +1,12 @@
-import { onCall, onRequest } from "firebase-functions/v2/https";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import fetch from "cross-fetch";
-import * as logger from "firebase-functions/logger";
-import * as functions from "firebase-functions";
+const { onCall, onRequest } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const fetch = require("cross-fetch");
+const logger = require("firebase-functions/logger");
+const functions = require("firebase-functions");
 // Force Gen1 for specific endpoints
-import * as functionsV1 from "firebase-functions/v1";
-import * as admin from "firebase-admin";
-import * as nodemailer from "nodemailer";
+const functionsV1 = require("firebase-functions/v1");
+const admin = require("firebase-admin");
+const nodemailer = require("nodemailer");
 // Inline pricing configuration to avoid import issues
 const DEFAULT_PRICING_CONFIG = {
     currency: 'USD',
@@ -112,12 +112,14 @@ const reportError = (error, context, userId) => {
     //   });
     // }
 };
-// Initialize Admin SDK once
+// Initialize Admin SDK - simple approach for Cloud Functions v2
 try {
-    admin.initializeApp();
+    if (!admin.apps || admin.apps.length === 0) {
+        admin.initializeApp();
+    }
 }
-catch (e) {
-    // no-op if already initialized
+catch (error) {
+    console.error("Firebase Admin initialization error:", error);
 }
 // Providers: Gmail SMTP (preferred), Brevo, or MailerSend (fallback)
 // Gmail SMTP configuration - will be set via secrets

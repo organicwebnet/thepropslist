@@ -62,8 +62,22 @@ export const signInWithGoogle = async (authInstance: Auth) => {
       return result;
     }
   } catch (error: any) {
+    console.error('Google Sign-in error:', error);
+    
     if (error.code === 'auth/unauthorized-domain') {
       throw new Error(`This domain (${window.location.hostname}) is not authorized for Google Sign-In. Please verify domain configuration in Firebase Console.`);
+    } else if (error.code === 'auth/network-request-failed') {
+      throw new Error('Network error. Please check your internet connection and try again.');
+    } else if (error.code === 'auth/popup-blocked') {
+      throw new Error('Popup was blocked by your browser. Please allow popups for this site and try again.');
+    } else if (error.code === 'auth/operation-not-allowed') {
+      throw new Error('Google Sign-in is not enabled. Please contact support.');
+    } else if (error.code === 'auth/too-many-requests') {
+      throw new Error('Too many failed attempts. Please wait a moment and try again.');
+    } else if (error.message?.includes('NET::ERR_CERT') || error.message?.includes('certificate')) {
+      throw new Error('SSL certificate error. Please try refreshing the page or contact support if the issue persists.');
+    } else if (error.message?.includes('firebaseapp.com')) {
+      throw new Error('Domain configuration error. Please contact support.');
     } else {
       throw error;
     }

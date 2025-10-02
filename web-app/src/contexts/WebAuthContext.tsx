@@ -10,14 +10,14 @@ import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
+  sendPasswordResetEmail,
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
-import { httpsCallable, HttpsCallableResult } from 'firebase/functions';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, Timestamp, collection, query, where, getDocs, Firestore } from 'firebase/firestore';
 import { buildVerificationEmailDoc } from '../services/EmailService';
-import { auth, db, functions } from '../firebase';
+import { auth, db } from '../firebase';
 
 // Type assertion for db to fix TypeScript issues
 const firestoreDb = db as Firestore;
@@ -58,7 +58,7 @@ interface WebAuthContextType {
   startCodeVerification: (email: string) => Promise<void>;
   verifyCode: (email: string, code: string) => Promise<boolean>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<HttpsCallableResult<unknown>>;
+  resetPassword: (email: string) => Promise<any>;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   markOnboardingCompleted: () => Promise<void>;
   getCurrentOrganization: () => string | null;
@@ -319,8 +319,41 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       provider.addScope('profile');
       await signInWithPopup(auth, provider);
     } catch (error: any) {
+      console.error('Google Sign-in error:', error);
+      
       if (error.code !== 'auth/popup-closed-by-user') {
-        setError(error.message);
+        let errorMessage = error.message;
+        
+        // Handle specific authentication errors with user-friendly messages
+        switch (error.code) {
+          case 'auth/unauthorized-domain':
+            errorMessage = 'This domain is not authorized for Google Sign-in. Please contact support.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+            break;
+          case 'auth/popup-blocked':
+            errorMessage = 'Popup was blocked by your browser. Please allow popups for this site and try again.';
+            break;
+          case 'auth/account-exists-with-different-credential':
+            errorMessage = 'An account already exists with this email using a different sign-in method. Please use the original sign-in method or contact support.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Google Sign-in is not enabled. Please contact support.';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many failed attempts. Please wait a moment and try again.';
+            break;
+          default:
+            // Check for SSL/certificate related errors
+            if (error.message?.includes('NET::ERR_CERT') || error.message?.includes('certificate')) {
+              errorMessage = 'SSL certificate error. Please try refreshing the page or contact support if the issue persists.';
+            } else if (error.message?.includes('firebaseapp.com')) {
+              errorMessage = 'Domain configuration error. Please contact support.';
+            }
+        }
+        
+        setError(errorMessage);
         throw error;
       }
     } finally {
@@ -506,26 +539,26 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         throw new Error('Please enter a valid email address');
       }
       
-      // Use custom password reset function
-      const sendCustomPasswordResetEmail = httpsCallable(functions, 'sendCustomPasswordResetEmail');
+      // Use Firebase's built-in password reset email
+      console.log('Sending password reset email to:', email);
+      await sendPasswordResetEmail(auth, email);
+      console.log('Password reset email sent successfully');
       
-      console.log('Calling sendCustomPasswordResetEmail with email:', email);
-      const result = await sendCustomPasswordResetEmail({ email });
-      console.log('Password reset email result:', result);
-      
-      return result;
+      return { success: true, message: 'Password reset email sent successfully' };
     } catch (error: any) {
       console.error('Password reset error:', error);
       
-      // Handle specific error types
-      if (error.code === 'functions/unavailable') {
-        setError('Password reset service is temporarily unavailable. Please try again later.');
-      } else if (error.code === 'functions/invalid-argument') {
+      // Handle specific Firebase error types
+      if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email address.');
+      } else if (error.code === 'auth/invalid-email') {
         setError('Invalid email address. Please check and try again.');
-      } else if (error.code === 'functions/resource-exhausted') {
+      } else if (error.code === 'auth/too-many-requests') {
         setError('Too many password reset attempts. Please wait before trying again.');
-      } else if (error.message?.includes('network')) {
+      } else if (error.code === 'auth/network-request-failed') {
         setError('Network error. Please check your connection and try again.');
+      } else if (error.code === 'auth/invalid-credential') {
+        setError('Invalid credentials. Please try again.');
       } else {
         setError(error.message || 'Failed to send password reset email. Please try again.');
       }

@@ -55,7 +55,7 @@ jobs:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
       run: |
         # Deploy functions one by one to avoid conflicts
-        npx firebase-tools@14.16.0 deploy --only functions:sendCustomPasswordResetEmail --project props-bible-app-1c1cb --non-interactive --debug || echo "sendCustomPasswordResetEmail deployment failed, continuing..."
+        echo "✅ Using Firebase built-in password reset system - no custom function deployment needed"
         npx firebase-tools@14.16.0 deploy --only functions:getPricingConfig --project props-bible-app-1c1cb --non-interactive --debug || echo "getPricingConfig deployment failed, continuing..."
         npx firebase-tools@14.16.0 deploy --only functions:createCheckoutSession --project props-bible-app-1c1cb --non-interactive --debug || echo "createCheckoutSession deployment failed, continuing..."
         npx firebase-tools@14.16.0 deploy --only functions:createBillingPortalSession --project props-bible-app-1c1cb --non-interactive --debug || echo "createBillingPortalSession deployment failed, continuing..."

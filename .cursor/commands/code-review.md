@@ -4,6 +4,29 @@ quality of code is more important than completeingthat task quickly so please ta
 - is there any redundat code or files in the codebase?
 - is the code well written?
 - Think through how data flows in the app. Explain new patterns if they exist and why.
+
+- Is the code readable and consistent with best practice and coding conventions?
+- Are functions/classes appropriately sized and named?
+- Are comments clear, necessary, and not excessive?
+
+- Does the code do what it claims to do?
+- Are edge cases handled?
+- what effect dose the code have on the rest on the codebase?it it working with the current code base.
+- is the front end optimised? 
+- is the css in a style sheets that is reuse across the project? 
+-is the styles thar are no longer used?
+
+is the js comon or ES as firestore dosent work well with ES yet?
+
+- Are inputs validated and sanitized?
+- Are secrets, credentials, or sensitive data exposed?
+- Is error handling robust and user-friendly?
+
+- Are tests meaningful and isolated?
+- Do they fail for the right reasons?
+- Is mocking/stubbing used appropriately?
+
+
 - Are there any changes that could affect infrastructure?
 - Error empty, loading, error, and offline states.
 - Consider front-end concerns: a11y (keyboard navigation, focus management, ARIA roles, contrast)

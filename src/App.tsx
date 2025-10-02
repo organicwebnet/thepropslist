@@ -225,9 +225,35 @@ function App() {
         }
       } catch (error: any) {
         console.error("Error handling redirect result:", error);
-        if (error.code === 'auth/account-exists-with-different-credential') {
-          window.alert('An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.');
+        
+        let errorMessage = 'Authentication failed. Please try again.';
+        
+        switch (error.code) {
+          case 'auth/account-exists-with-different-credential':
+            errorMessage = 'An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.';
+            break;
+          case 'auth/unauthorized-domain':
+            errorMessage = 'This domain is not authorized for Google Sign-in. Please contact support.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Google Sign-in is not enabled. Please contact support.';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many failed attempts. Please wait a moment and try again.';
+            break;
+          default:
+            // Check for SSL/certificate related errors
+            if (error.message?.includes('NET::ERR_CERT') || error.message?.includes('certificate')) {
+              errorMessage = 'SSL certificate error. Please try refreshing the page or contact support if the issue persists.';
+            } else if (error.message?.includes('firebaseapp.com')) {
+              errorMessage = 'Domain configuration error. Please contact support.';
+            }
         }
+        
+        window.alert(errorMessage);
       }
     };
 

@@ -53,8 +53,8 @@ jobs:
       run: |
         echo "Deploying critical functions..."
         
-        # Deploy password reset function first (most critical)
-        npx firebase-tools@14.16.0 deploy --only functions:sendCustomPasswordResetEmail --project props-bible-app-1c1cb --non-interactive --debug || echo "sendCustomPasswordResetEmail failed, continuing..."
+        # Note: Using Firebase built-in password reset - no custom function needed
+        echo "✅ Using Firebase built-in password reset system - no custom function deployment needed"
         
         # Deploy Stripe functions
         npx firebase-tools@14.16.0 deploy --only functions:getPricingConfig --project props-bible-app-1c1cb --non-interactive --debug || echo "getPricingConfig failed, continuing..."
@@ -66,4 +66,4 @@ jobs:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
       run: |
         echo "Verifying function deployment..."
-        npx firebase-tools@14.16.0 functions:list --project props-bible-app-1c1cb --filter="name:sendCustomPasswordResetEmail"
+        echo "✅ Firebase built-in password reset system is always available"
