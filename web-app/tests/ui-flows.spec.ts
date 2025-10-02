@@ -23,8 +23,8 @@ test.describe('Props Bible Web App - UI Flows', () => {
       await page.goto('/login');
       await page.waitForLoadState('networkidle');
       
-      // Look for forgot password link with multiple possible selectors
-      const forgotPasswordLink = page.locator('text=Forgot password, a[href*="forgot"], text=Forgot Password').first();
+      // Look for forgot password link using href attribute
+      const forgotPasswordLink = page.locator('a[href="/forgot-password"]');
       await expect(forgotPasswordLink).toBeVisible({ timeout: 10000 });
       
       // Click the forgot password link
