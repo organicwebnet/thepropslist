@@ -1,12 +1,11 @@
-# Temporarily disabled - using basic-test.yml instead
-# name: CI/CD
+name: CI/CD
 
-# on:
-#   push:
-#     branches: [ main, master ]
-#   pull_request:
-#     branches: [ main, master ]
-#   workflow_dispatch:
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -92,8 +91,24 @@ jobs:
       working-directory: functions
       run: npx tsc -p tsconfig.json --noEmit
 
-    - name: Prepare service account file (for ADC)
+    - name: Check Firebase deployment readiness
       if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+      run: |
+        echo "🔍 Checking Firebase deployment configuration..."
+        if [[ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 }}" ]]; then
+          echo "✅ FIREBASE_SERVICE_ACCOUNT_BASE64 is available"
+          echo "✅ Firebase deployment will proceed"
+        elif [[ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]]; then
+          echo "✅ FIREBASE_SERVICE_ACCOUNT is available"
+          echo "✅ Firebase deployment will proceed"
+        else
+          echo "⚠️  No Firebase service account secrets found"
+          echo "⚠️  Skipping Firebase deployment (build and tests will continue)"
+          echo "⚠️  To enable deployment, add FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT secret"
+        fi
+
+    - name: Prepare service account file (if available)
+      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && (secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 || secrets.FIREBASE_SERVICE_ACCOUNT) }}
       shell: bash
       run: |
         set -euo pipefail
@@ -103,23 +118,22 @@ jobs:
         elif [[ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]]; then
           echo "Using FIREBASE_SERVICE_ACCOUNT"
           printf '%s' "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > "$GITHUB_WORKSPACE/sa.json"
-        else
-          echo "No service account secret set" >&2
-          exit 1
         fi
         # Minimal sanity check
         jq -r .client_email "$GITHUB_WORKSPACE/sa.json" >/dev/null 2>&1 || { echo "Invalid service account JSON" >&2; exit 1; }
 
-    - name: Deploy to Firebase (CLI with service account)
-      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+    - name: Deploy to Firebase (if service account available)
+      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && (secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 || secrets.FIREBASE_SERVICE_ACCOUNT) }}
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
       run: |
-        # Revert to hosting-only until IAM grants allow rules deploy
+        echo "🚀 Deploying to Firebase..."
         npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
+        echo "✅ Firebase deployment completed successfully"
 
-    - name: Deploy Cloud Functions (skip for now)
-      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+    - name: Skip Firebase deployment (no service account)
+      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && !secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 && !secrets.FIREBASE_SERVICE_ACCOUNT }}
       run: |
-        echo "Skipping function deployment in main CI to prevent timeouts"
-        echo "Functions will be deployed via separate workflow"
+        echo "⏭️  Skipping Firebase deployment - no service account configured"
+        echo "💡 To enable deployment, add FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT secret"
+        echo "✅ Build and tests completed successfully without deployment"
