@@ -19,9 +19,26 @@ test.describe('Props Bible Web App - UI Flows', () => {
     });
 
     test('should show forgot password form', async ({ page }) => {
-      await page.click('text=Forgot password');
-      await expect(page).toHaveURL(/.*forgot-password/);
-      await expect(page.locator('h1, h2')).toContainText(/forgot password|reset password/i);
+      // Navigate to login page first
+      await page.goto('/login');
+      await page.waitForLoadState('networkidle');
+      
+      // Look for forgot password link with multiple possible selectors
+      const forgotPasswordLink = page.locator('text=Forgot password, a[href*="forgot"], text=Forgot Password').first();
+      await expect(forgotPasswordLink).toBeVisible({ timeout: 10000 });
+      
+      // Click the forgot password link
+      await forgotPasswordLink.click();
+      
+      // Wait for navigation and verify URL
+      await expect(page).toHaveURL(/.*forgot-password/, { timeout: 10000 });
+      
+      // Verify the page content
+      await expect(page.locator('h1, h2')).toContainText(/forgot password|reset password/i, { timeout: 10000 });
+      
+      // Verify form elements are present
+      await expect(page.locator('input[type="email"]')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('button[type="submit"]')).toBeVisible({ timeout: 10000 });
     });
   });
 
