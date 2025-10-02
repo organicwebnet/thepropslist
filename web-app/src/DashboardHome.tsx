@@ -18,6 +18,7 @@ import type { CardData } from './types/taskManager';
 import { Link } from 'react-router-dom';
 import OnboardingFlow from './components/OnboardingFlow';
 import { useWebAuth } from './contexts/WebAuthContext';
+import SubscriptionResourcePanel from './components/SubscriptionResourcePanel';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -307,7 +308,7 @@ const DashboardHome: React.FC = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Statistics Cards */}
           <motion.div variants={itemVariants} className="lg:col-span-2">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -373,9 +374,10 @@ const DashboardHome: React.FC = () => {
             )}
           </motion.div>
 
-          {/* Recent Props Activity */}
-          <motion.div variants={itemVariants} className="lg:col-span-1">
-            <div className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-6 border border-pb-primary/20 h-full">
+          {/* Right Column - Recent Props Activity and Subscription Panel */}
+          <motion.div variants={itemVariants} className="lg:col-span-2 space-y-6">
+            {/* Recent Props Activity */}
+            <div className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-6 border border-pb-primary/20">
               <div className="flex items-center space-x-2 mb-4">
                 <FileText className="w-5 h-5 text-pb-accent" />
                 <h3 className="text-lg font-semibold text-white">Recent Props Activity</h3>
@@ -402,6 +404,9 @@ const DashboardHome: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            {/* Subscription Resource Panel */}
+            <SubscriptionResourcePanel />
           </motion.div>
         </div>
       </motion.div>

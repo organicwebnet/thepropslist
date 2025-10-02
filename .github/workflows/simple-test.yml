@@ -1,0 +1,48 @@
+name: Simple Test
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  simple-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install web-app dependencies
+      working-directory: web-app
+      run: npm ci
+
+    - name: Create minimal env file
+      working-directory: web-app
+      run: |
+        echo "VITE_FIREBASE_API_KEY=dummy" > .env
+        echo "VITE_FIREBASE_AUTH_DOMAIN=dummy.firebaseapp.com" >> .env
+        echo "VITE_FIREBASE_PROJECT_ID=dummy" >> .env
+        echo "VITE_FIREBASE_STORAGE_BUCKET=dummy.appspot.com" >> .env
+        echo "VITE_FIREBASE_MESSAGING_SENDER_ID=000000000000" >> .env
+        echo "VITE_FIREBASE_APP_ID=1:000000000000:web:0000000000000000000000" >> .env
+        echo "VITE_GOOGLE_API_KEY=dummy" >> .env
+        echo "VITE_GOOGLE_CLIENT_ID=dummy.apps.googleusercontent.com" >> .env
+
+    - name: Build web-app
+      working-directory: web-app
+      run: npm run build
+
+    - name: Test password reset script
+      run: node scripts/test-password-reset.js
+
+    - name: Success
+      run: |
+        echo "✅ Simple test completed successfully"
+        echo "Password reset system is operational"
