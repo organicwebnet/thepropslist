@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { db } from '../firebase';
@@ -10,7 +10,8 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useWebAuth();
-  const token = searchParams.get('token');
+  const code = searchParams.get('code');
+  const email = searchParams.get('email');
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,53 +19,66 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [tokenValid, setTokenValid] = useState<boolean | null>(null);
-  const [tokenEmail, setTokenEmail] = useState<string | null>(null);
+  const [codeValid, setCodeValid] = useState<boolean | null>(null);
+  const [codeEmail, setCodeEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token) {
-      setError('Invalid or missing reset token');
-      setTokenValid(false);
+    if (!code || !email) {
+      setError('Invalid or missing reset code or email');
+      setCodeValid(false);
       return;
     }
 
-    // Check if token is valid
-    const checkToken = async () => {
+    // Check if code is valid using the SAME system as verification codes
+    const checkCode = async () => {
       try {
-        const tokenDoc = await getDoc(doc(db, 'passwordResetTokens', token));
+        const codeDoc = await getDoc(doc(db, 'pending_password_resets', email.toLowerCase()));
         
-        if (!tokenDoc.exists()) {
-          setError('Invalid or expired reset token');
-          setTokenValid(false);
+        if (!codeDoc.exists()) {
+          setError('Invalid or expired reset code');
+          setCodeValid(false);
           return;
         }
 
-        const tokenData = tokenDoc.data();
-        const now = Timestamp.now();
+        const codeData = codeDoc.data();
         
-        if (tokenData.used || tokenData.expiresAt.toMillis() < now.toMillis()) {
-          setError('This reset token has expired or already been used');
-          setTokenValid(false);
+        if (Date.now() > (codeData.expiresAt || 0)) {
+          setError('This reset code has expired');
+          setCodeValid(false);
           return;
         }
 
-        setTokenValid(true);
-        setTokenEmail(tokenData.email);
+        // Verify the code hash (same as verification codes)
+        const crypto = window.crypto || (window as any).msCrypto;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(code);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const providedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        if (providedHash !== codeData.codeHash) {
+          setError('Invalid reset code');
+          setCodeValid(false);
+          return;
+        }
+
+        setCodeValid(true);
+        setCodeEmail(email);
       } catch (err) {
-        console.error('Error checking token:', err);
-        setError('Failed to validate reset token');
-        setTokenValid(false);
+        console.error('Error checking code:', err);
+        setError('Failed to validate reset code');
+        setCodeValid(false);
       }
     };
 
-    checkToken();
-  }, [token]);
+    checkCode();
+  }, [code, email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!token || !tokenValid) {
-      setError('Invalid reset token');
+    if (!code || !email || !codeValid) {
+      setError('Invalid reset code');
       return;
     }
 
@@ -87,11 +101,8 @@ export default function ResetPassword() {
     setError(null);
 
     try {
-      // Mark token as used
-      await updateDoc(doc(db, 'passwordResetTokens', token), {
-        used: true,
-        usedAt: Timestamp.now()
-      });
+      // Clean up the reset code (same as verification codes)
+      await deleteDoc(doc(db, 'pending_password_resets', email.toLowerCase()));
 
       // If user is logged in, update their password directly
       if (user) {
@@ -116,32 +127,32 @@ export default function ResetPassword() {
     }
   };
 
-  if (tokenValid === null) {
+  if (codeValid === null) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white/10 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20">
           <div className="text-center">
             <Loader2 className="animate-spin w-8 h-8 text-white mx-auto mb-4" />
-            <p className="text-white/70">Validating reset token...</p>
+            <p className="text-white/70">Validating reset code...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (tokenValid === false) {
+  if (codeValid === false) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white/10 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20">
           <div className="text-center">
             <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-4">Invalid Reset Link</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Invalid Reset Code</h2>
             <p className="text-white/70 mb-6">{error}</p>
             <Link 
               to="/forgot-password" 
               className="inline-block bg-pb-primary hover:bg-pb-secondary text-white font-bold py-3 px-6 rounded-xl transition-colors"
             >
-              Request New Reset Link
+              Request New Reset Code
             </Link>
           </div>
         </div>
@@ -176,7 +187,7 @@ export default function ResetPassword() {
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-white mb-2">Reset Your Password</h2>
           <p className="text-white/70 text-sm">
-            {tokenEmail ? `Enter a new password for ${tokenEmail}` : 'Enter your new password'}
+            {codeEmail ? `Enter a new password for ${codeEmail}` : 'Enter your new password'}
           </p>
         </div>
 

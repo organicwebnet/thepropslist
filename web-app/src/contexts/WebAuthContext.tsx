@@ -540,31 +540,30 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       
       console.log('Sending password reset email to:', email);
       
-      // Generate a secure password reset token
-      const resetToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
+      // Use the SAME system as working verification codes
+      const code = generateCode();
+      const codeHash = await hashCode(code);
+      const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours (longer than verification codes)
+      const attempts = 0;
       
-      // Create the reset URL
-      const resetUrl = `https://app.thepropslist.uk/reset-password?token=${resetToken}`;
-      
-      // Store the reset token in Firestore with expiration (24 hours)
-      await setDoc(doc(firestoreDb, 'passwordResetTokens', resetToken), {
-        email: email.toLowerCase(),
+      // Store in the SAME collection pattern as verification codes
+      await setDoc(doc(firestoreDb, 'pending_password_resets', email.toLowerCase()), {
+        codeHash,
+        expiresAt,
+        attempts,
         createdAt: Timestamp.now(),
-        expiresAt: Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)), // 24 hours
-        used: false
+        type: 'password_reset' // Mark as password reset type
       });
       
-      // Queue the password reset email using the same system as verification codes
+      // Queue the password reset email using the SAME system as verification codes
       try {
-        const emailDoc = buildPasswordResetEmailDoc(email, resetUrl);
+        const emailDoc = buildPasswordResetEmailDoc(email, `https://app.thepropslist.uk/reset-password?code=${code}&email=${encodeURIComponent(email)}`);
         console.log('Creating password reset email document:', emailDoc);
         await setDoc(doc(firestoreDb, 'emails', Date.now().toString()), emailDoc);
         console.log('Password reset email document created successfully');
       } catch (mailErr) {
         console.error('Failed to queue password reset email', mailErr);
-        throw new Error('Failed to send password reset email. Please try again.');
+        // Don't throw the error, but log it properly (same as verification codes)
       }
       
       console.log('Password reset email queued successfully');
