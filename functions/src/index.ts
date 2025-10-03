@@ -1,12 +1,11 @@
-const { onCall, onRequest } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const fetch = require("cross-fetch");
-const logger = require("firebase-functions/logger");
-const functions = require("firebase-functions");
-// Force Gen1 for specific endpoints
-const functionsV1 = require("firebase-functions/v1");
-const admin = require("firebase-admin");
-const nodemailer = require("nodemailer");
+import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import * as logger from "firebase-functions/logger";
+import * as functions from "firebase-functions";
+import * as functionsV1 from "firebase-functions/v1";
+import * as admin from "firebase-admin";
+import * as nodemailer from "nodemailer";
+import Stripe from "stripe";
 // Inline pricing configuration to avoid import issues
 const DEFAULT_PRICING_CONFIG = {
   currency: 'USD',
@@ -162,7 +161,7 @@ if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
   );
 }
 
-export const sendInviteEmail = onCall(async (req) => {
+export const sendInviteEmail = onCall(async (req: any) => {
   const { to, role, showName, inviteUrl, fromName } = (req.data || {}) as {
     to?: string;
     role?: string;
@@ -262,7 +261,7 @@ export const processEmail = onDocumentCreated({
   timeoutSeconds: 60,
   memory: "256MiB",
   secrets: ["GMAIL_USER", "GMAIL_PASS"]
-}, async (event) => {
+}, async (event: any) => {
   // Initialize secrets first
   await initializeSecrets();
   
@@ -448,7 +447,7 @@ export const sendEmailDirect = onRequest({
   timeoutSeconds: 30,
   memory: "256MiB",
   secrets: ["GMAIL_USER", "GMAIL_PASS"]
-}, async (req, res) => {
+}, async (req: any, res: any) => {
   // Initialize secrets first
   await initializeSecrets();
   
@@ -1032,7 +1031,7 @@ ${t.footer}
 export const sendCustomPasswordResetEmail = onCall({ 
   region: "us-central1",
   secrets: ["GMAIL_USER", "GMAIL_PASS"]
-}, async (req) => {
+}, async (req: any) => {
   try {
     const { email, locale = 'en' } = req.data || {};
     

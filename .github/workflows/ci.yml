@@ -105,7 +105,7 @@ jobs:
         fi
 
     - name: Prepare service account file (if available)
-      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && (secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 || secrets.FIREBASE_SERVICE_ACCOUNT) }}
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       shell: bash
       run: |
         set -euo pipefail
@@ -115,22 +115,23 @@ jobs:
         elif [[ -n "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]]; then
           echo "Using FIREBASE_SERVICE_ACCOUNT"
           printf '%s' "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" > "$GITHUB_WORKSPACE/sa.json"
+        else
+          echo "No Firebase service account secrets found"
+          exit 0
         fi
         # Minimal sanity check
         jq -r .client_email "$GITHUB_WORKSPACE/sa.json" >/dev/null 2>&1 || { echo "Invalid service account JSON" >&2; exit 1; }
 
     - name: Deploy to Firebase (if service account available)
-      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && (secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 || secrets.FIREBASE_SERVICE_ACCOUNT) }}
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
       env:
         GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/sa.json
       run: |
-        echo "🚀 Deploying to Firebase..."
-        npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
-        echo "✅ Firebase deployment completed successfully"
-
-    - name: Skip Firebase deployment (no service account)
-      if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' && !secrets.FIREBASE_SERVICE_ACCOUNT_BASE64 && !secrets.FIREBASE_SERVICE_ACCOUNT }}
-      run: |
-        echo "⏭️  Skipping Firebase deployment - no service account configured"
-        echo "💡 To enable deployment, add FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT secret"
-        echo "✅ Build and tests completed successfully without deployment"
+        if [[ -f "$GITHUB_WORKSPACE/sa.json" ]]; then
+          echo "🚀 Deploying to Firebase..."
+          npx firebase-tools@14.16.0 deploy --only hosting --project props-bible-app-1c1cb --non-interactive --debug
+          echo "✅ Firebase deployment completed successfully"
+        else
+          echo "⏭️  Skipping Firebase deployment - no service account file found"
+          echo "💡 To enable deployment, add FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT secret"
+        fi

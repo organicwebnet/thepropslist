@@ -84,6 +84,6 @@ export const sendCustomPasswordResetEmailV3 = onCall({
       throw error;
     }
     
-    throw new functions.https.HttpsError('internal', `Failed to send password reset email: ${error.message}`);
+    throw new functions.https.HttpsError('internal', `Failed to send password reset email: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 });
