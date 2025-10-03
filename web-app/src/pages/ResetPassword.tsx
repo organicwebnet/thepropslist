@@ -9,7 +9,7 @@ import { Loader2, Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { } = useWebAuth();
+  const { } = useWebAuth(); // eslint-disable-line @typescript-eslint/no-empty-pattern
   const code = searchParams.get('code');
   const email = searchParams.get('email');
   

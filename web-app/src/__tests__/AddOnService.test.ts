@@ -6,7 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 jest.mock('firebase/functions');
 jest.mock('firebase/firestore');
 
-const mockGetFunctions = getFunctions as jest.MockedFunction<typeof getFunctions>;
+const _mockGetFunctions = getFunctions as jest.MockedFunction<typeof getFunctions>;
 const mockHttpsCallable = httpsCallable as jest.MockedFunction<typeof httpsCallable>;
 const mockDoc = doc as jest.MockedFunction<typeof doc>;
 const mockGetDoc = getDoc as jest.MockedFunction<typeof getDoc>;

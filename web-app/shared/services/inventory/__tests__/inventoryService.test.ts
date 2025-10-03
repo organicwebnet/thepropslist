@@ -1,8 +1,7 @@
-import { DigitalInventoryService, InventoryProp, PropLocation, PropMaintenance } from '../inventoryService.ts';
-import { FirebaseService, FirebaseDocument, CustomFirestore } from '../../firebase/types.ts';
+import { DigitalInventoryService, InventoryProp, PropLocation } from '../inventoryService.ts';
+import { FirebaseService, CustomFirestore } from '../../firebase/types.ts';
 import { VisionAPIService } from '../../ai/vision.ts';
 import { QRCodeService } from '../../qr/qrService.ts';
-import { Firestore, DocumentData } from 'firebase/firestore';
 
 jest.mock('../../firebase/types.ts');
 jest.mock('../../ai/vision.ts');
@@ -59,7 +58,7 @@ describe('DigitalInventoryService', () => {
       doc: jest.fn().mockReturnValue(mockDocRef)
     };
 
-    const mockFirestore = {
+    const _mockFirestore = {
       collection: jest.fn().mockReturnValue(mockCollectionRef)
     };
 

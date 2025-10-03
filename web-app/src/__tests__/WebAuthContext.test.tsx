@@ -299,7 +299,7 @@ describe('WebAuthContext', () => {
 
   it('should verify code successfully', async () => {
     // Mock the hashCode function to return a predictable hash
-    const mockHashCode = jest.fn().mockResolvedValue('test-hash');
+    const _mockHashCode = jest.fn().mockResolvedValue('test-hash');
     
     render(
       <WebAuthProvider>

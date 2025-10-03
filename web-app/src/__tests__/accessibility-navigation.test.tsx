@@ -157,7 +157,7 @@ describe('Accessibility and Keyboard Navigation', () => {
       });
 
       // Mock URLSearchParams
-      const mockSearchParams = new URLSearchParams('?focus=status');
+      const _mockSearchParams = new URLSearchParams('?focus=status');
       Object.defineProperty(window, 'location', {
         value: {
           search: '?focus=status',
@@ -351,7 +351,7 @@ describe('Accessibility and Keyboard Navigation', () => {
       // Check that interactive elements have proper contrast
       const buttons = screen.getAllByRole('button');
       buttons.forEach(button => {
-        const styles = window.getComputedStyle(button);
+        const _styles = window.getComputedStyle(button);
         // In a real test, you would check actual color contrast ratios
         expect(button).toBeInTheDocument();
       });
@@ -419,7 +419,7 @@ describe('Accessibility and Keyboard Navigation', () => {
       renderWithAuth(<ShowsListPage />);
 
       // Check for skip links (if implemented)
-      const skipLinks = screen.queryAllByText(/skip to/i);
+      const _skipLinks = screen.queryAllByText(/skip to/i);
       // In a properly accessible app, there should be skip links
     });
 
