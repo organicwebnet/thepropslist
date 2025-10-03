@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
-import { updatePassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { db } from '../firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Loader2, Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useWebAuth();
+  const { } = useWebAuth();
   const code = searchParams.get('code');
   const email = searchParams.get('email');
   
@@ -101,27 +101,35 @@ export default function ResetPassword() {
     setError(null);
 
     try {
-      // Clean up the reset code (same as verification codes)
-      await deleteDoc(doc(db, 'pending_password_resets', email.toLowerCase()));
+      // Call Firebase function to update password
+      const functions = getFunctions();
+      const updatePasswordFunction = httpsCallable(functions, 'updateUserPasswordWithCode');
+      
+      await updatePasswordFunction({
+        email: email,
+        code: code,
+        newPassword: password
+      });
 
-      // If user is logged in, update their password directly
-      if (user) {
-        await updatePassword(user, password);
-        setSuccess(true);
-        setTimeout(() => {
-          navigate('/');
-        }, 2000);
-      } else {
-        // If user is not logged in, we need to sign them in first
-        // For now, show success and redirect to login
-        setSuccess(true);
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-      }
+      setSuccess(true);
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (err: any) {
       console.error('Password reset error:', err);
-      setError(err.message || 'Failed to reset password. Please try again.');
+      
+      // Handle specific Firebase function errors
+      if (err.code === 'functions/not-found') {
+        setError('Invalid or expired reset code. Please request a new one.');
+      } else if (err.code === 'functions/deadline-exceeded') {
+        setError('Reset code has expired. Please request a new one.');
+      } else if (err.code === 'functions/permission-denied') {
+        setError('Invalid reset code. Please check the link and try again.');
+      } else if (err.code === 'functions/invalid-argument') {
+        setError(err.message || 'Invalid input. Please check your password and try again.');
+      } else {
+        setError(err.message || 'Failed to reset password. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
