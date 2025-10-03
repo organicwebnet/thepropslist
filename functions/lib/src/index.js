@@ -1104,6 +1104,10 @@ export const updateUserPasswordWithCode = onCall({
         if (newPassword.length < 6) {
             throw new functions.https.HttpsError('invalid-argument', 'Password must be at least 6 characters long');
         }
+        // Ensure Firebase Admin is initialized
+        if (!admin.apps || admin.apps.length === 0) {
+            admin.initializeApp();
+        }
         const db = admin.firestore();
         // Check if the reset code is valid
         const codeDoc = await db.collection('pending_password_resets').doc(email.toLowerCase()).get();
