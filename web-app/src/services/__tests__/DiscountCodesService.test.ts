@@ -1,5 +1,5 @@
 import { DiscountCodesService } from '../DiscountCodesService';
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, query, where, orderBy, runTransaction } from 'firebase/firestore';
+import { setDoc, updateDoc, collection, getDocs, query, where, orderBy, runTransaction } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Mock Firebase

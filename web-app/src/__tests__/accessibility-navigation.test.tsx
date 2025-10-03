@@ -436,8 +436,8 @@ describe('Accessibility and Keyboard Navigation', () => {
 
       // Check for proper landmark roles
       const main = screen.queryByRole('main');
-      const navigation = screen.queryByRole('navigation');
-      const banner = screen.queryByRole('banner');
+      const _navigation = screen.queryByRole('navigation');
+      const _banner = screen.queryByRole('banner');
       
       // At minimum, should have a main landmark
       expect(main || document.querySelector('main')).toBeTruthy();

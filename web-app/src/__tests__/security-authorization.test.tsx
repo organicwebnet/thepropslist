@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { BrowserRouter, Routes, Route, MemoryRouter } from 'react-router-dom';
+import { Routes, Route, MemoryRouter } from 'react-router-dom';
 import { WebAuthProvider } from '../contexts/WebAuthContext';
 import ProtectedRoute from '../components/ProtectedRoute';
 import AdminUsersPage from '../pages/AdminUsersPage';
@@ -608,7 +608,7 @@ describe('Security and Authorization', () => {
       );
 
       // Test that malicious input is sanitized
-      const maliciousInput = '<script>alert("xss")</script>';
+      const _maliciousInput = '<script>alert("xss")</script>';
       
       // In a real test, you would simulate form submission with malicious input
       // and verify it's properly sanitized before being saved

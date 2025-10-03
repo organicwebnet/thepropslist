@@ -183,7 +183,7 @@ describe('Password Reset Functionality', () => {
   describe('Error State Management', () => {
     it('should clear error state before making request', async () => {
       const { resetPassword } = WebAuthContext;
-      let errorState = 'Previous error';
+      let _errorState = 'Previous error';
       
       // Mock the setError function
       const originalSetError = WebAuthContext.setError;

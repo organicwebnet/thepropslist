@@ -141,6 +141,9 @@ export class ArchiveService {
       // TODO: Implement proper show deletion logic
       throw new Error('Show deletion not implemented');
 
+      // Note: The following code is unreachable due to the throw above
+      // It will be implemented when show deletion is properly implemented
+      /*
       // Track successful deletion
       await analytics.trackShowDeletionCompleted({
         show_id: showId,
@@ -150,6 +153,7 @@ export class ArchiveService {
         associated_data_count: 0, // We don't have exact count from direct deletion
         success: true,
       });
+      */
     } catch (error) {
       console.error('Error permanently deleting show:', error);
 

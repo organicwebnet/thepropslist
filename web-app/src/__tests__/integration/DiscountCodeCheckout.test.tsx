@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { DiscountCodeCheckoutFlow } from '../components/DiscountCodeCheckoutFlow';
+// import { DiscountCodeCheckoutFlow } from '../components/DiscountCodeCheckoutFlow';
 import { discountCodesService } from '../../services/DiscountCodesService';
 
 // Mock the discount service
