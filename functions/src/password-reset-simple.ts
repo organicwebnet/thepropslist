@@ -1,9 +1,8 @@
-// Simple CommonJS version of password reset function
-const { onCall } = require("firebase-functions/v2/https");
-const logger = require("firebase-functions/logger");
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-const nodemailer = require("nodemailer");
+import { onCall } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions";
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import * as nodemailer from "nodemailer";
 
 // Initialize Admin SDK
 if (!admin.apps || admin.apps.length === 0) {
@@ -11,7 +10,7 @@ if (!admin.apps || admin.apps.length === 0) {
 }
 
 // Simple password reset function
-exports.sendCustomPasswordResetEmailV2 = onCall({ 
+export const sendCustomPasswordResetEmailV3 = onCall({ 
   region: "us-central1",
   secrets: ["GMAIL_USER", "GMAIL_PASS"]
 }, async (req) => {

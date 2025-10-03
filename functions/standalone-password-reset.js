@@ -1,4 +1,4 @@
-// Simple CommonJS version of password reset function
+// Standalone password reset function - fixed version
 const { onCall } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const functions = require("firebase-functions");
@@ -10,8 +10,8 @@ if (!admin.apps || admin.apps.length === 0) {
   admin.initializeApp();
 }
 
-// Simple password reset function
-exports.sendCustomPasswordResetEmailV2 = onCall({ 
+// Fixed password reset function
+exports.sendCustomPasswordResetEmailV3 = onCall({ 
   region: "us-central1",
   secrets: ["GMAIL_USER", "GMAIL_PASS"]
 }, async (req) => {
@@ -56,7 +56,7 @@ exports.sendCustomPasswordResetEmailV2 = onCall({
     `;
     const text = `Reset your password by visiting: ${resetUrl}`;
 
-    // Send email using Gmail SMTP
+    // Send email using Gmail SMTP - FIXED METHOD NAME
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {

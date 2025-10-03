@@ -12,6 +12,7 @@ import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-r
 import { ShowSelectionProvider } from "../contexts/ShowSelectionContext";
 import Login from "../pages/Login";
 import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
 import Signup from "../pages/Signup";
 import EditPropPage from "../pages/EditPropPage";
 import PropDetailPage from "../pages/PropDetailPage";
@@ -109,6 +110,7 @@ const BoardsPage: React.FC = () => {
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
           <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/props/:id/edit" element={user ? <EditPropPage /> : <Navigate to="/login" replace />} />
           <Route path="/props/:id" element={user ? <PropDetailPage /> : <Navigate to="/login" replace />} />
           <Route path="/props" element={user ? <PropsListPage /> : <Navigate to="/login" replace />} />

@@ -10,13 +10,12 @@ import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
-  sendPasswordResetEmail,
   GoogleAuthProvider,
   OAuthProvider,
   signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, Timestamp, collection, query, where, getDocs, Firestore } from 'firebase/firestore';
-import { buildVerificationEmailDoc } from '../services/EmailService';
+import { buildVerificationEmailDoc, buildPasswordResetEmailDoc } from '../services/EmailService';
 import { auth, db } from '../firebase';
 
 // Type assertion for db to fix TypeScript issues
@@ -539,17 +538,44 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         throw new Error('Please enter a valid email address');
       }
       
-      // Use Firebase's built-in password reset email
       console.log('Sending password reset email to:', email);
-      await sendPasswordResetEmail(auth, email);
-      console.log('Password reset email sent successfully');
       
+      // Generate a secure password reset token
+      const resetToken = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      
+      // Create the reset URL
+      const resetUrl = `https://app.thepropslist.uk/reset-password?token=${resetToken}`;
+      
+      // Store the reset token in Firestore with expiration (24 hours)
+      await setDoc(doc(firestoreDb, 'passwordResetTokens', resetToken), {
+        email: email.toLowerCase(),
+        createdAt: Timestamp.now(),
+        expiresAt: Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)), // 24 hours
+        used: false
+      });
+      
+      // Queue the password reset email using the same system as verification codes
+      try {
+        const emailDoc = buildPasswordResetEmailDoc(email, resetUrl);
+        console.log('Creating password reset email document:', emailDoc);
+        await setDoc(doc(firestoreDb, 'emails', Date.now().toString()), emailDoc);
+        console.log('Password reset email document created successfully');
+      } catch (mailErr) {
+        console.error('Failed to queue password reset email', mailErr);
+        throw new Error('Failed to send password reset email. Please try again.');
+      }
+      
+      console.log('Password reset email queued successfully');
       return { success: true, message: 'Password reset email sent successfully' };
     } catch (error: any) {
       console.error('Password reset error:', error);
       
-      // Handle specific Firebase error types
-      if (error.code === 'auth/user-not-found') {
+      // Handle specific error types
+      if (error.message?.includes('Failed to send password reset email')) {
+        setError(error.message);
+      } else if (error.code === 'auth/user-not-found') {
         setError('No account found with this email address.');
       } else if (error.code === 'auth/invalid-email') {
         setError('Invalid email address. Please check and try again.');
@@ -557,8 +583,6 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
         setError('Too many password reset attempts. Please wait before trying again.');
       } else if (error.code === 'auth/network-request-failed') {
         setError('Network error. Please check your connection and try again.');
-      } else if (error.code === 'auth/invalid-credential') {
-        setError('Invalid credentials. Please try again.');
       } else {
         setError(error.message || 'Failed to send password reset email. Please try again.');
       }
