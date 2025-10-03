@@ -243,6 +243,13 @@ service cloud.firestore {
       allow read, update: if true;  // Allow reading and updating verification codes
       allow delete: if true;  // Allow cleanup of expired codes
     }
+    
+    // Allow password reset code storage (same permissions as signup codes)
+    match /pending_password_resets/{email} {
+      allow create: if true;  // Allow anyone to create password reset codes
+      allow read, update: if true;  // Allow reading and updating password reset codes
+      allow delete: if true;  // Allow cleanup of expired codes
+    }
     match /tasks/{taskId} {
       allow read, write: if isSystemAdmin() || (request.auth != null && (
           get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null ||
