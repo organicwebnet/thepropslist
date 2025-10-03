@@ -1,12 +1,10 @@
-const { onCall, onRequest } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const fetch = require("cross-fetch");
-const logger = require("firebase-functions/logger");
-const functions = require("firebase-functions");
-// Force Gen1 for specific endpoints
-const functionsV1 = require("firebase-functions/v1");
-const admin = require("firebase-admin");
-const nodemailer = require("nodemailer");
+import { onCall, onRequest } from "firebase-functions/v2/https";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import * as logger from "firebase-functions/logger";
+import * as functions from "firebase-functions";
+import * as functionsV1 from "firebase-functions/v1";
+import * as admin from "firebase-admin";
+import * as nodemailer from "nodemailer";
 // Inline pricing configuration to avoid import issues
 const DEFAULT_PRICING_CONFIG = {
     currency: 'USD',
@@ -1087,6 +1085,61 @@ export const sendCustomPasswordResetEmail = onCall({
         }
         // Convert other errors to HttpsError
         throw new functions.https.HttpsError('internal', `Failed to send password reset email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+});
+// --- Password Reset Update Function ---
+export const updateUserPasswordWithCode = onCall({
+    region: "us-central1"
+}, async (req) => {
+    try {
+        const { email, code, newPassword } = req.data || {};
+        if (!email || !code || !newPassword) {
+            throw new functions.https.HttpsError('invalid-argument', 'Email, code, and new password are required');
+        }
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            throw new functions.https.HttpsError('invalid-argument', 'Invalid email format');
+        }
+        if (newPassword.length < 6) {
+            throw new functions.https.HttpsError('invalid-argument', 'Password must be at least 6 characters long');
+        }
+        const db = admin.firestore();
+        // Check if the reset code is valid
+        const codeDoc = await db.collection('pending_password_resets').doc(email.toLowerCase()).get();
+        if (!codeDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Invalid or expired reset code');
+        }
+        const codeData = codeDoc.data();
+        if (Date.now() > (codeData?.expiresAt || 0)) {
+            throw new functions.https.HttpsError('deadline-exceeded', 'Reset code has expired');
+        }
+        // Verify the code hash
+        const crypto = require('crypto');
+        const providedHash = crypto.createHash('sha256').update(code).digest('hex');
+        if (providedHash !== codeData?.codeHash) {
+            throw new functions.https.HttpsError('permission-denied', 'Invalid reset code');
+        }
+        // Get the user by email
+        const userRecord = await admin.auth().getUserByEmail(email);
+        if (!userRecord) {
+            throw new functions.https.HttpsError('not-found', 'User not found');
+        }
+        // Update the user's password
+        await admin.auth().updateUser(userRecord.uid, {
+            password: newPassword
+        });
+        // Clean up the reset code
+        await db.collection('pending_password_resets').doc(email.toLowerCase()).delete();
+        logger.info("Password updated successfully for user:", email);
+        return { success: true, message: "Password updated successfully" };
+    }
+    catch (error) {
+        logger.error("Password update error:", error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError('internal', `Failed to update password: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 });
 // --- Create Stripe Coupon ---
