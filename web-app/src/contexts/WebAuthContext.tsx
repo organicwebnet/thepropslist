@@ -278,31 +278,71 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
     }
   };
 
-  const finalizeSignup = async (displayName: string, _password: string) => {
+  const finalizeSignup = async (displayName: string, password: string) => {
     try {
       setLoading(true);
       setError(null);
-      if (!user || !user.email) throw new Error('No verified user session.');
       
-      // Update the user's password from the temporary one
-      // We need to re-authenticate with the temporary password first
+      // Get the verified email from localStorage
       const storedEmail = window.localStorage.getItem('propsbible_signup_email');
       if (!storedEmail) throw new Error('Signup session expired. Please start over.');
       
-      // Update Firebase user profile
-      await updateProfile(user, { displayName });
+      // Validate password
+      if (!password || password.length < 8) {
+        throw new Error('Password must be at least 8 characters long.');
+      }
       
-      // Update the user profile document in Firestore with the display name
-      const userDocRef = doc(firestoreDb, 'users', user.uid);
-      await updateDoc(userDocRef, { displayName });
+      // Validate display name
+      if (!displayName || displayName.trim().length === 0) {
+        throw new Error('Display name is required.');
+      }
       
-      // Reload the user profile to get the updated data
-      await loadUserProfile(user.uid);
+      // Create the Firebase user with their chosen password
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(auth, storedEmail, password);
+      } catch (createError: any) {
+        if (createError.code === 'auth/email-already-in-use') {
+          throw new Error('An account with this email already exists. Please sign in instead.');
+        }
+        throw createError;
+      }
+      const newUser = userCredential.user;
+      
+      // Update Firebase user profile with display name
+      await updateProfile(newUser, { displayName });
+      
+      // Create the user profile document in Firestore
+      const userDocRef = doc(firestoreDb, 'users', newUser.uid);
+      await setDoc(userDocRef, {
+        uid: newUser.uid,
+        email: storedEmail,
+        displayName: displayName.trim(),
+        role: 'user',
+        createdAt: new Date(),
+        lastLogin: new Date(),
+        preferences: { theme: 'light', notifications: true, defaultView: 'grid' },
+        organizations: [],
+        onboardingCompleted: false
+      });
+      
+      // Create the user profile document
+      const userProfileRef = doc(firestoreDb, 'userProfiles', newUser.uid);
+      await setDoc(userProfileRef, {
+        email: storedEmail,
+        role: 'user',
+        groups: {},
+        plan: 'free',
+        subscriptionStatus: 'inactive',
+        lastStripeEventTs: Date.now()
+      });
       
       // Clean up the stored email
       window.localStorage.removeItem('propsbible_signup_email');
+      
+      // The onAuthStateChanged will automatically load the user profile
     } catch (error: any) {
-      setError(error.message);
+      // Don't set error state here - let the calling component handle it
       throw error;
     } finally {
       setLoading(false);
@@ -437,12 +477,14 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       // enqueue email
       try {
         const emailDoc = buildVerificationEmailDoc(email, code);
-        console.log('Creating email document:', emailDoc);
-        await setDoc(doc(firestoreDb, 'emails', Date.now().toString()), emailDoc);
-        console.log('Email document created successfully');
+        const emailId = Date.now().toString();
+        console.log('Creating email document with ID:', emailId, 'for email:', email);
+        await setDoc(doc(firestoreDb, 'emails', emailId), emailDoc);
+        console.log('Email document created successfully with ID:', emailId);
       } catch (mailErr) {
         console.error('Failed to queue verification email', mailErr);
-        // Don't throw the error, but log it properly
+        // Re-throw the error so the user knows if email queuing failed
+        throw new Error(`Failed to queue email: ${mailErr instanceof Error ? mailErr.message : 'Unknown error'}`);
       }
     } catch (error: any) {
       console.error('Code verification start error:', error);
@@ -466,38 +508,14 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       const isMatch = providedHash === data.codeHash;
       
       if (isMatch) {
-        // Code is valid, now create a temporary user session for signup
-        // We'll use Firebase's createUserWithEmailAndPassword with a temporary password
-        // and then update it in finalizeSignup
-        const tempPassword = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Code is valid, store the verified email for later use in finalizeSignup
+        // We'll create the Firebase user only after they set their password
+        window.localStorage.setItem('propsbible_signup_email', email);
         
-        try {
-          // Create user with temporary password
-          await createUserWithEmailAndPassword(auth, email, tempPassword);
-          
-          // Store the email for later use in finalizeSignup
-          window.localStorage.setItem('propsbible_signup_email', email);
-          
-          // Clean up the verification code
-          await deleteDoc(ref);
-          
-          return true;
-        } catch (createError: any) {
-          // If user already exists, try to sign them in
-          if (createError.code === 'auth/email-already-in-use') {
-            try {
-              await signInWithEmailAndPassword(auth, email, tempPassword);
-              window.localStorage.setItem('propsbible_signup_email', email);
-              await deleteDoc(ref);
-              return true;
-            } catch (signInError) {
-              // If temp password doesn't work, the user already has an account
-              setError('An account with this email already exists. Please sign in instead.');
-              return false;
-            }
-          }
-          throw createError;
-        }
+        // Clean up the verification code
+        await deleteDoc(ref);
+        
+        return true;
       } else {
         // Basic attempt tracking for failed attempts
         await updateDoc(ref, { attempts: (data.attempts || 0) + 1 });
@@ -540,6 +558,33 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       
       console.log('Sending password reset email to:', email);
       
+      // First, check if the user exists in Firebase Auth by trying to sign them in with a dummy password
+      // This will fail but won't throw an error for non-existent users in some cases
+      // We'll use a different approach - check if there's a user profile in Firestore
+      try {
+        const userProfileRef = doc(firestoreDb, 'users', email.toLowerCase());
+        const userProfileSnap = await getDoc(userProfileRef);
+        
+        if (!userProfileSnap.exists()) {
+          // Check if there's a user with this email in the userProfiles collection
+          const userProfilesQuery = query(
+            collection(firestoreDb, 'userProfiles'),
+            where('email', '==', email.toLowerCase())
+          );
+          const userProfilesSnap = await getDocs(userProfilesQuery);
+          
+          if (userProfilesSnap.empty) {
+            throw new Error('No account found with this email address.');
+          }
+        }
+      } catch (checkError: any) {
+        if (checkError.message === 'No account found with this email address.') {
+          throw checkError;
+        }
+        // If there's an error checking, we'll proceed anyway to avoid blocking legitimate users
+        console.warn('Could not verify user existence, proceeding with password reset:', checkError);
+      }
+      
       // Use the SAME system as working verification codes
       const code = generateCode();
       const codeHash = await hashCode(code);
@@ -574,10 +619,14 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       // Handle specific error types
       if (error.message?.includes('Failed to send password reset email')) {
         setError(error.message);
+      } else if (error.message === 'No account found with this email address.') {
+        setError('No account found with this email address.');
       } else if (error.code === 'auth/user-not-found') {
         setError('No account found with this email address.');
       } else if (error.code === 'auth/invalid-email') {
         setError('Invalid email address. Please check and try again.');
+      } else if (error.code === 'auth/invalid-credential') {
+        setError('Invalid email address or account not found. Please check your email and try again.');
       } else if (error.code === 'auth/too-many-requests') {
         setError('Too many password reset attempts. Please wait before trying again.');
       } else if (error.code === 'auth/network-request-failed') {

@@ -10,6 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [debugInfo, setDebugInfo] = useState('');
+  const [showPasswordResetMessage, setShowPasswordResetMessage] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,13 +25,24 @@ export default function Login() {
     }
   }, [user, navigate, from]);
 
+  // Check if user just came from password reset
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    if (urlParams.get('reset') === 'success') {
+      setShowPasswordResetMessage(true);
+      // Clear the URL parameter
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
+
   function getFriendlyErrorMessage(err: any): string {
     if (!err) return '';
     const code = err.code || err.message || '';
     if (typeof code !== 'string') return 'An unknown error occurred. Please try again.';
     if (code.includes('auth/invalid-email')) return 'Invalid email address. Please check and try again.';
     if (code.includes('auth/user-not-found')) return 'No account found with this email. Please sign up or check your email.';
-    if (code.includes('auth/wrong-password')) return 'Incorrect password. Please try again or reset your password.';
+    if (code.includes('auth/invalid-credential')) return 'Invalid email address or account not found. Please check your email and try again.';
+    if (code.includes('auth/wrong-password')) return 'Incorrect password. If you just reset your password, please use your NEW password. Otherwise, try resetting your password.';
     if (code.includes('auth/too-many-requests')) return 'Too many failed attempts. Please wait a moment and try again.';
     if (code.includes('auth/popup-closed-by-user')) return 'Google sign-in was cancelled.';
     if (code.includes('auth/network-request-failed')) return 'Network error. Please check your connection and try again.';
@@ -44,6 +56,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+    setShowPasswordResetMessage(false); // Clear password reset message when attempting to sign in
     setDebugInfo('Starting authentication...');
     if (!email || !password) {
       setDebugInfo('Please enter both email and password.');
@@ -136,6 +149,17 @@ export default function Login() {
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-red-400 rounded-full flex-shrink-0"></div>
                   <p className="text-red-100 text-sm font-medium">{getFriendlyErrorMessage(error)}</p>
+                </div>
+              </div>
+            )}
+            {/* Password Reset Success Message */}
+            {showPasswordResetMessage && (
+              <div className="mb-6 p-4 bg-green-500/20 border border-green-300/30 rounded-xl backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0"></div>
+                  <p className="text-green-100 text-sm font-medium">
+                    ✅ Password reset successful! Please use your NEW password to sign in.
+                  </p>
                 </div>
               </div>
             )}

@@ -381,7 +381,14 @@ const PropsPdfExportPage: React.FC = () => {
   };
 
   const handlePreview = async () => {
-    if (!props || props.length === 0) return;
+    if (!currentShowId) {
+      alert('Please select a show first to export props.');
+      return;
+    }
+    if (!props || props.length === 0) {
+      alert('No props found for this show. Please add some props first before generating a PDF.');
+      return;
+    }
     console.log('Props count for PDF preview:', props.length);
     let logoUrl: string | undefined = undefined;
     if (logo) {
@@ -480,6 +487,43 @@ const PropsPdfExportPage: React.FC = () => {
           {/* Left panel: options */}
           <div className="w-full md:w-1/2 max-w-md">
             <h2 className="text-2xl font-bold mb-2">Export Props List to PDF</h2>
+            
+            {/* Status indicator */}
+            <div className="mb-4 p-3 rounded-lg border border-pb-primary/20 bg-pb-darker/40">
+              {!currentShowId ? (
+                <div className="text-amber-400 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div className="text-sm">
+                    No show selected. 
+                    <a href="/shows/list" className="text-pb-primary hover:text-pb-secondary underline ml-1">
+                      Select a show first
+                    </a>
+                  </div>
+                </div>
+              ) : props.length === 0 ? (
+                <div className="text-amber-400 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div className="text-sm">
+                    No props found for "{showTitle}". 
+                    <a href="/props/add" className="text-pb-primary hover:text-pb-secondary underline ml-1">
+                      Add some props first
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-green-400 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm">Ready to export {props.length} props from "{showTitle}"</span>
+                </div>
+              )}
+            </div>
+            
             <div className="rounded-2xl border border-pb-primary/20 bg-pb-darker/40 p-4">
               <div className="flex items-center justify-between mb-1">
                 <button
@@ -614,8 +658,13 @@ const PropsPdfExportPage: React.FC = () => {
             </div>
             <div className="flex gap-2 mt-4">
               <button
-                className="px-4 py-2 rounded-lg bg-pb-primary text-white font-semibold shadow hover:bg-pb-secondary transition-colors w-full"
+                className={`px-4 py-2 rounded-lg font-semibold shadow transition-colors w-full ${
+                  !currentShowId || props.length === 0
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-pb-primary text-white hover:bg-pb-secondary'
+                }`}
                 onClick={handlePreview}
+                disabled={!currentShowId || props.length === 0}
               >
                 Preview PDF
               </button>

@@ -230,8 +230,9 @@ const DashboardHome: React.FC = () => {
     daysLeft = Math.max(0, Math.ceil((perfDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
   }
 
-  // Find the next upcoming show date label
+  // Find the next upcoming show date label and check if any dates are set
   let nextShowDateLabel = '';
+  let hasAnyDates = false;
   if (show) {
     const nowLocal = new Date();
     const dateFields = [
@@ -242,6 +243,16 @@ const DashboardHome: React.FC = () => {
       { key: 'startDate', label: 'Start' },
       { key: 'endDate', label: 'End' },
     ];
+    
+    // Check if any dates are set (not just upcoming ones)
+    hasAnyDates = dateFields.some(({ key }) => {
+      const raw = (show as any)[key];
+      const temp = raw as any;
+      return (isValidDateString(temp) && temp !== undefined && temp.trim() !== '') ||
+             (typeof temp === 'number' && !isNaN(temp)) ||
+             (temp && typeof temp.toDate === 'function');
+    });
+    
     const upcoming = dateFields
       .map(({ key, label }) => {
         const raw = (show as any)[key];
@@ -291,6 +302,20 @@ const DashboardHome: React.FC = () => {
                   {show?.name || 'Select a Show'}
                 </h2>
                 <p className="text-pb-light/80">{nextShowDateLabel}</p>
+                {/* Gentle prompt for missing show dates */}
+                {show && !hasAnyDates && (
+                  <div className="mt-3 p-3 bg-pb-light/10 rounded-lg border border-pb-light/20">
+                    <p className="text-pb-light/90 text-sm">
+                      💡 <strong>Tip:</strong> Add your show dates to see countdown timers and better track your production timeline. 
+                      <Link 
+                        to={`/shows/${show.id}/edit`} 
+                        className="text-pb-accent hover:text-pb-accent/80 underline ml-1"
+                      >
+                        Add dates now
+                      </Link>
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-white">{daysLeft !== null ? `${daysLeft} days` : '--'}</div>

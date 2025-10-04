@@ -5,6 +5,7 @@ import { useShowSelection } from '../contexts/ShowSelectionContext';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useNavigate } from 'react-router-dom';
 import { useWebAuth } from '../contexts/WebAuthContext';
+import { useLimitChecker } from '../hooks/useLimitChecker';
 import SubFootnote from '../components/SubFootnote';
 
 const PackingListPage: React.FC = () => {
@@ -17,6 +18,41 @@ const PackingListPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
   const { user, loading: webAuthLoading } = useWebAuth();
+  const { checkPackingBoxesLimit, checkPackingBoxesLimitForShow } = useLimitChecker();
+  const [limitWarning, setLimitWarning] = useState<string | null>(null);
+
+  // Check limits on page load and when packing lists change
+  useEffect(() => {
+    const checkLimits = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        // Check per-plan packing boxes limit
+        const planLimitCheck = await checkPackingBoxesLimit(user.uid);
+        if (!planLimitCheck.withinLimit) {
+          setLimitWarning(planLimitCheck.message || 'Packing boxes limit reached');
+          return;
+        }
+
+        // Check per-show packing boxes limit if show is selected
+        if (currentShowId) {
+          const showLimitCheck = await checkPackingBoxesLimitForShow(currentShowId);
+          if (!showLimitCheck.withinLimit) {
+            setLimitWarning(showLimitCheck.message || 'Show packing boxes limit reached');
+            return;
+          }
+        }
+
+        // Clear warning if within limits
+        setLimitWarning(null);
+      } catch (error) {
+        console.error('Error checking packing boxes limits:', error);
+        // Don't show error to user, just log it
+      }
+    };
+
+    checkLimits();
+  }, [user?.uid, currentShowId, packingLists.length, checkPackingBoxesLimit, checkPackingBoxesLimitForShow]);
 
   useEffect(() => {
     if (webAuthLoading) return;
@@ -54,6 +90,30 @@ const PackingListPage: React.FC = () => {
       console.log('No ownerId');
       return;
     }
+
+    // Check packing boxes limits before creating
+    try {
+      // Check per-plan packing boxes limit
+      const planLimitCheck = await checkPackingBoxesLimit(user.uid);
+      if (!planLimitCheck.withinLimit) {
+        setError(planLimitCheck.message || 'Packing boxes limit reached');
+        return;
+      }
+
+      // Check per-show packing boxes limit if show is selected
+      if (currentShowId) {
+        const showLimitCheck = await checkPackingBoxesLimitForShow(currentShowId);
+        if (!showLimitCheck.withinLimit) {
+          setError(showLimitCheck.message || 'Show packing boxes limit reached');
+          return;
+        }
+      }
+    } catch (limitError) {
+      console.error('Error checking packing boxes limits:', limitError);
+      setError('Error checking limits. Please try again.');
+      return;
+    }
+
     setCreating(true);
     setError(null);
     console.log('Creating DigitalPackListService...');
@@ -98,6 +158,29 @@ const PackingListPage: React.FC = () => {
 
   return (
     <DashboardLayout>
+      {/* Limit Warning Banner */}
+      {limitWarning && (
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="text-red-200 font-semibold mb-1">Subscription Limit Reached</div>
+              <div className="text-red-100 text-sm mb-3">{limitWarning}</div>
+              <a 
+                href="/profile"
+                className="inline-block px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-sm"
+              >
+                Upgrade Plan
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto p-8">
         <h1 className="text-2xl font-bold mb-6">Packing Lists</h1>
         <SubFootnote features={["Packing labels", "Shipping QR codes", "Advanced packing tools"]} />

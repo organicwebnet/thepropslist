@@ -39,8 +39,8 @@ export default function CompleteSignup() {
       setDebugInfo('Please enter your name and a password.');
       return;
     }
-    if (password.length < 12) {
-      setDebugInfo('Use at least 12 characters for better security.');
+    if (password.length < 8) {
+      setDebugInfo('Password must be at least 8 characters long.');
       return;
     }
     try {
@@ -98,7 +98,7 @@ export default function CompleteSignup() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full pl-10 pr-4 py-3.5 bg-white/15 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/40 focus:border-white/40 text-white placeholder-white/50 backdrop-blur-sm transition-all duration-200 font-medium"
-                placeholder="At least 12 characters"
+                placeholder="At least 8 characters"
                 autoComplete="new-password"
               />
             </div>

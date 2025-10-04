@@ -441,21 +441,6 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ isOpen, onComplete }) =
             </div>
           </div>
 
-          {/* Debug Panel - Remove in production */}
-          {import.meta.env?.DEV && (
-            <div className="mt-6 p-4 bg-pb-darker/50 rounded-lg border border-pb-gray/20">
-              <h4 className="text-sm font-medium text-white mb-2">Debug Info:</h4>
-              <div className="text-xs text-pb-gray space-y-1">
-                <div>Current Step: {currentStep} ({steps[currentStep]?.id})</div>
-                <div>Show Created: {showCreated ? 'Yes' : 'No'}</div>
-                <div>Prop Added: {propAdded ? 'Yes' : 'No'}</div>
-                <div>User UID: {userProfile?.uid || user?.uid || 'None'}</div>
-                <div>User Profile UID: {userProfile?.uid || 'None'}</div>
-                <div>Firebase User UID: {user?.uid || 'None'}</div>
-                <div>Step Complete: {isStepComplete ? 'Yes' : 'No'}</div>
-              </div>
-            </div>
-          )}
 
           {/* Help Text */}
           <div className="mt-6 text-center">

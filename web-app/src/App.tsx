@@ -23,6 +23,7 @@ const AddPropPage = lazy(() => import('./pages/AddPropPage'));
 const PropsPdfExportPage = lazy(() => import('./pages/PropsPdfExportPage'));
 
 const ShowsListPage = lazy(() => import('./ShowsListPage'));
+const ShowsRedirect = lazy(() => import('./components/ShowsRedirect'));
 const ShowDetailPage = lazy(() => import('./pages/ShowDetailPage'));
 const AddShowPage = lazy(() => import('./pages/AddShowPage'));
 const EditShowPage = lazy(() => import('./pages/EditShowPage'));
@@ -72,7 +73,8 @@ function App() {
           <Route path="/props/:id" element={<ProtectedRoute><PropDetailPage /></ProtectedRoute>} />
           <Route path="/props" element={<ProtectedRoute><PropsListPage /></ProtectedRoute>} />
           <Route path="/" element={user ? <DashboardHome /> : <Navigate to="/login" replace />} />
-          <Route path="/shows" element={<ShowsListPage />} />
+          <Route path="/shows" element={<ProtectedRoute><ShowsRedirect /></ProtectedRoute>} />
+          <Route path="/shows/list" element={<ProtectedRoute><ShowsListPage /></ProtectedRoute>} />
           <Route path="/shows/new" element={<AddShowPage />} />
           <Route path="/shows/:id/edit" element={<EditShowPage />} />
           <Route path="/shows/:id" element={<ShowDetailPage />} />

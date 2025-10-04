@@ -7,7 +7,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import UpgradeModal from '../components/UpgradeModal';
 import { cleanFirestoreData } from '../utils/firestore';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, UploadCloud, Users, UserPlus } from 'lucide-react';
+import { Plus, Trash2, UploadCloud, Users, UserPlus, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EntitySelect from '../components/EntitySelect';
 
@@ -238,6 +238,22 @@ const AddShowPage: React.FC = () => {
   // Handle form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('AddShowPage: Form submitted');
+    console.log('AddShowPage: Show data:', show);
+    console.log('AddShowPage: Loading state:', loading);
+    
+    // Check required fields
+    if (!show.name || !show.description || !show.startDate || !show.endDate) {
+      console.error('AddShowPage: Missing required fields:', {
+        name: show.name,
+        description: show.description,
+        startDate: show.startDate,
+        endDate: show.endDate
+      });
+      setError('Please fill in all required fields (Show Name, Description, Start Date, End Date)');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -249,8 +265,13 @@ const AddShowPage: React.FC = () => {
     }
     
     try {
+      console.log('AddShowPage: Starting show creation process');
+      console.log('AddShowPage: User:', user?.uid);
+      console.log('AddShowPage: Firebase service:', !!firebaseService);
+      
       let logoUrl = '';
       if (show.logoImage) {
+        console.log('AddShowPage: Uploading logo image');
         // Upload logo to Firebase Storage
         const uploadResult = await firebaseService.uploadFile(`show_logos/${Date.now()}_${show.logoImage.name}`, show.logoImage) as unknown as { url: string } | undefined;
         if (uploadResult && uploadResult.url) {
@@ -265,6 +286,8 @@ const AddShowPage: React.FC = () => {
         createdBy: user?.uid,
         createdAt: new Date(),
       });
+      
+      console.log('AddShowPage: Show data to be saved:', showData);
       const docId = await firebaseService.addDocument('shows', showData);
       console.log('AddShowPage: Show created with ID:', docId);
       setLoading(false);
@@ -277,14 +300,18 @@ const AddShowPage: React.FC = () => {
       // Check if user is in onboarding process
       const isOnboarding = !userProfile?.onboardingCompleted;
       
+      console.log('AddShowPage: About to navigate, isOnboarding:', isOnboarding);
       if (isOnboarding) {
         // If in onboarding, go back to dashboard to continue onboarding flow
+        console.log('AddShowPage: Navigating to dashboard');
         navigate('/');
       } else {
-        // If onboarding is complete, go to the show detail page
-        navigate(`/shows/${docId}`);
+        // If onboarding is complete, go to the shows list page to see all shows
+        console.log('AddShowPage: Navigating to shows list');
+        navigate('/shows');
       }
     } catch (err: any) {
+      console.error('AddShowPage: Error submitting form:', err);
       setError(err.message || 'Failed to add show.');
       setLoading(false);
     }
@@ -406,11 +433,44 @@ const AddShowPage: React.FC = () => {
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1">
                     <label className="block text-pb-gray mb-1 font-medium">Start Date *</label>
-                    <input type="date" name="startDate" value={show.startDate} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" />
+                    <div className="relative">
+                      <input 
+                        type="date" 
+                        name="startDate" 
+                        value={show.startDate} 
+                        onChange={handleChange} 
+                        required 
+                        className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary date-input-light" 
+                        style={{
+                          colorScheme: 'dark',
+                          WebkitCalendarPickerIndicator: {
+                            filter: 'invert(1) brightness(1.5)',
+                            opacity: 1,
+                            cursor: 'pointer'
+                          }
+                        } as any}
+                      />
+                      <Calendar 
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60 cursor-pointer hover:text-white/80 transition-colors" 
+                        onClick={() => {
+                          const input = document.querySelector('input[name="startDate"]') as HTMLInputElement;
+                          input?.showPicker?.();
+                        }}
+                      />
+                    </div>
                   </div>
                   <div className="flex-1">
                     <label className="block text-pb-gray mb-1 font-medium">End Date *</label>
-                    <input type="date" name="endDate" value={show.endDate} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" />
+                    <div className="relative">
+                      <input type="date" name="endDate" value={show.endDate} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary date-input-light" />
+                      <Calendar 
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60 cursor-pointer hover:text-white/80 transition-colors" 
+                        onClick={() => {
+                          const input = document.querySelector('input[name="endDate"]') as HTMLInputElement;
+                          input?.showPicker?.();
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
                 {/* Important Dates */}
@@ -419,19 +479,55 @@ const AddShowPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-pb-gray mb-1 font-medium">Start of Rehearsal</label>
-                      <input type="date" name="rehearsalStartDate" value={show.rehearsalStartDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                      <div className="relative">
+                        <input type="date" name="rehearsalStartDate" value={show.rehearsalStartDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 pr-10 text-white date-input-light" />
+                        <Calendar 
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60 cursor-pointer hover:text-white/80 transition-colors" 
+                          onClick={() => {
+                            const input = document.querySelector('input[name="rehearsalStartDate"]') as HTMLInputElement;
+                            input?.showPicker?.();
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-pb-gray mb-1 font-medium">Start of Tech Week</label>
-                      <input type="date" name="techWeekStartDate" value={show.techWeekStartDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                      <div className="relative">
+                        <input type="date" name="techWeekStartDate" value={show.techWeekStartDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 pr-10 text-white date-input-light" />
+                        <Calendar 
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60 cursor-pointer hover:text-white/80 transition-colors" 
+                          onClick={() => {
+                            const input = document.querySelector('input[name="techWeekStartDate"]') as HTMLInputElement;
+                            input?.showPicker?.();
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-pb-gray mb-1 font-medium">First Performance</label>
-                      <input type="date" name="firstPerformanceDate" value={show.firstPerformanceDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                      <div className="relative">
+                        <input type="date" name="firstPerformanceDate" value={show.firstPerformanceDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 pr-10 text-white date-input-light" />
+                        <Calendar 
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60 cursor-pointer hover:text-white/80 transition-colors" 
+                          onClick={() => {
+                            const input = document.querySelector('input[name="firstPerformanceDate"]') as HTMLInputElement;
+                            input?.showPicker?.();
+                          }}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-pb-gray mb-1 font-medium">Press Night</label>
-                      <input type="date" name="pressNightDate" value={show.pressNightDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                      <div className="relative">
+                        <input type="date" name="pressNightDate" value={show.pressNightDate} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 pr-10 text-white date-input-light" />
+                        <Calendar 
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/60 cursor-pointer hover:text-white/80 transition-colors" 
+                          onClick={() => {
+                            const input = document.querySelector('input[name="pressNightDate"]') as HTMLInputElement;
+                            input?.showPicker?.();
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </fieldset>

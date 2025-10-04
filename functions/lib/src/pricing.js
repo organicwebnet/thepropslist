@@ -1,8 +1,13 @@
+"use strict";
 /**
  * Pricing utilities for Firebase Functions
  * This file contains shared pricing logic that matches the web-app implementation
  */
-export const DEFAULT_PLAN_FEATURES = {
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DEFAULT_PRICING_CONFIG = exports.DEFAULT_PLAN_FEATURES = void 0;
+exports.getDefaultFeaturesForPlan = getDefaultFeaturesForPlan;
+exports.calculateDiscount = calculateDiscount;
+exports.DEFAULT_PLAN_FEATURES = {
     'free': [
         '1 Show', '2 Task Boards', '20 Packing Boxes',
         '3 Collaborators per Show', '10 Props', 'No Archived Shows', 'Basic Support'
@@ -22,7 +27,7 @@ export const DEFAULT_PLAN_FEATURES = {
         'Custom Branding'
     ]
 };
-export const DEFAULT_PRICING_CONFIG = {
+exports.DEFAULT_PRICING_CONFIG = {
     currency: 'USD',
     billingInterval: 'monthly',
     plans: [
@@ -31,7 +36,7 @@ export const DEFAULT_PRICING_CONFIG = {
             name: 'Free',
             description: 'Perfect for small productions',
             price: { monthly: 0, yearly: 0, currency: 'USD' },
-            features: DEFAULT_PLAN_FEATURES['free'],
+            features: exports.DEFAULT_PLAN_FEATURES['free'],
             limits: {
                 shows: 1, boards: 2, packingBoxes: 20,
                 collaboratorsPerShow: 3, props: 10, archivedShows: 0
@@ -45,7 +50,7 @@ export const DEFAULT_PRICING_CONFIG = {
             name: 'Starter',
             description: 'Great for growing productions',
             price: { monthly: 9, yearly: 90, currency: 'USD' },
-            features: DEFAULT_PLAN_FEATURES['starter'],
+            features: exports.DEFAULT_PLAN_FEATURES['starter'],
             limits: {
                 shows: 3, boards: 5, packingBoxes: 200,
                 collaboratorsPerShow: 5, props: 50, archivedShows: 2
@@ -59,7 +64,7 @@ export const DEFAULT_PRICING_CONFIG = {
             name: 'Standard',
             description: 'Perfect for professional productions',
             price: { monthly: 19, yearly: 190, currency: 'USD' },
-            features: DEFAULT_PLAN_FEATURES['standard'],
+            features: exports.DEFAULT_PLAN_FEATURES['standard'],
             limits: {
                 shows: 10, boards: 20, packingBoxes: 1000,
                 collaboratorsPerShow: 15, props: 100, archivedShows: 5
@@ -73,7 +78,7 @@ export const DEFAULT_PRICING_CONFIG = {
             name: 'Pro',
             description: 'For large-scale productions',
             price: { monthly: 39, yearly: 390, currency: 'USD' },
-            features: DEFAULT_PLAN_FEATURES['pro'],
+            features: exports.DEFAULT_PLAN_FEATURES['pro'],
             limits: {
                 shows: 100, boards: 200, packingBoxes: 10000,
                 collaboratorsPerShow: 100, props: 1000, archivedShows: 10
@@ -84,13 +89,13 @@ export const DEFAULT_PRICING_CONFIG = {
         }
     ]
 };
-export function getDefaultFeaturesForPlan(planId) {
-    return DEFAULT_PLAN_FEATURES[planId] || [];
+function getDefaultFeaturesForPlan(planId) {
+    return exports.DEFAULT_PLAN_FEATURES[planId] || [];
 }
 /**
  * Helper function to calculate discount between monthly and yearly pricing
  */
-export function calculateDiscount(monthlyPrice, yearlyPrice) {
+function calculateDiscount(monthlyPrice, yearlyPrice) {
     const monthlyTotal = monthlyPrice * 12;
     const savings = monthlyTotal - yearlyPrice;
     // Handle division by zero case

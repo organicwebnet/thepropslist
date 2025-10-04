@@ -8,6 +8,8 @@ import { PropFormData, propCategories } from '../../shared/types/props';
 import { ImageUpload } from '../components/ImageUpload';
 import { DigitalAssetForm } from '../components/DigitalAssetForm';
 import ImportPropsModal from '../components/ImportPropsModal';
+import { useLimitChecker } from '../hooks/useLimitChecker';
+import { useWebAuth } from '../contexts/WebAuthContext';
 
 const initialForm: PropFormData = {
   name: '',
@@ -32,9 +34,12 @@ const initialForm: PropFormData = {
 const AddPropPage: React.FC = () => {
   const { service: firebaseService } = useFirebase();
   const { currentShowId } = useShowSelection();
+  const { user } = useWebAuth();
+  const { checkPropsLimit, checkPropsLimitForShow } = useLimitChecker();
   const [form, setForm] = useState<PropFormData>(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [limitError, setLimitError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [, setShowOptions] = useState<{ id: string; name: string }[]>([]);
   const [actOptions, setActOptions] = useState<{ id: string; name: string }[]>([]);
@@ -47,6 +52,40 @@ const AddPropPage: React.FC = () => {
   const [hireCompanies, setHireCompanies] = useState<{ id: string; name: string }[]>([]);
   const [importOpen, setImportOpen] = useState(false);
   const [showImportNudge, setShowImportNudge] = useState(() => localStorage.getItem('hideImportNudge') !== '1');
+  const [limitWarning, setLimitWarning] = useState<string | null>(null);
+
+  // Check limits on page load and when show changes
+  useEffect(() => {
+    const checkLimits = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        // Check per-plan props limit
+        const planLimitCheck = await checkPropsLimit(user.uid);
+        if (!planLimitCheck.withinLimit) {
+          setLimitWarning(planLimitCheck.message || 'Props limit reached');
+          return;
+        }
+
+        // Check per-show props limit if show is selected
+        if (form.showId) {
+          const showLimitCheck = await checkPropsLimitForShow(form.showId);
+          if (!showLimitCheck.withinLimit) {
+            setLimitWarning(showLimitCheck.message || 'Show props limit reached');
+            return;
+          }
+        }
+
+        // Clear warning if within limits
+        setLimitWarning(null);
+      } catch (error) {
+        console.error('Error checking limits:', error);
+        // Don't show error to user, just log it
+      }
+    };
+
+    checkLimits();
+  }, [user?.uid, form.showId, checkPropsLimit, checkPropsLimitForShow]);
 
   // Fetch shows for assignment
   useEffect(() => {
@@ -156,7 +195,33 @@ const AddPropPage: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    setLimitError(null);
+    
     try {
+      // Check props limits before creating
+      if (!user?.uid) {
+        setError('You must be signed in to create props.');
+        setSaving(false);
+        return;
+      }
+
+      // Check per-plan props limit
+      const planLimitCheck = await checkPropsLimit(user.uid);
+      if (!planLimitCheck.withinLimit) {
+        setLimitError(planLimitCheck.message || 'Props limit reached');
+        setSaving(false);
+        return;
+      }
+
+      // Check per-show props limit if show is selected
+      if (form.showId) {
+        const showLimitCheck = await checkPropsLimitForShow(form.showId);
+        if (!showLimitCheck.withinLimit) {
+          setLimitError(showLimitCheck.message || 'Show props limit reached');
+          setSaving(false);
+          return;
+        }
+      }
       // Persist new maker / hire company if user typed a new one
       const payload: any = { ...form };
       if (form.source === 'made') {
@@ -205,6 +270,30 @@ const AddPropPage: React.FC = () => {
             View Props List
           </Link>
         </div>
+        
+        {/* Limit Warning Banner */}
+        {limitWarning && (
+          <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="text-red-200 font-semibold mb-1">Subscription Limit Reached</div>
+                <div className="text-red-100 text-sm mb-3">{limitWarning}</div>
+                <Link 
+                  to="/profile" 
+                  className="inline-block px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-sm"
+                >
+                  Upgrade Plan
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {showImportNudge && (
           <div className="mb-4 p-4 rounded-lg border border-pb-primary/30 bg-pb-darker/50 flex items-center justify-between">
             <div className="text-white">Have a spreadsheet already? Import props and fill in details later.</div>
@@ -220,10 +309,24 @@ const AddPropPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-pb-darker/60 rounded-xl shadow-lg p-8 space-y-6"
+          className={`bg-pb-darker/60 rounded-xl shadow-lg p-8 space-y-6 ${limitWarning ? 'opacity-50 pointer-events-none' : ''}`}
         >
           <h1 className="text-2xl font-bold text-white mb-4">Add Prop</h1>
           {error && <div className="text-red-500 mb-2">{error}</div>}
+          {limitError && (
+            <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-4">
+              <div className="text-red-200 font-semibold mb-2">Subscription Limit Reached</div>
+              <div className="text-red-100 text-sm">{limitError}</div>
+              <div className="mt-3">
+                <Link 
+                  to="/profile" 
+                  className="inline-block px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors"
+                >
+                  Upgrade Plan
+                </Link>
+              </div>
+            </div>
+          )}
           {/* Primary image uploader at the top (profile-like) */}
           <div>
             <label className="block text-pb-gray mb-2 font-medium">Photos</label>

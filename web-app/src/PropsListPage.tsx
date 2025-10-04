@@ -66,7 +66,7 @@ const PropsListPage: React.FC = () => {
   const [props, setProps] = useState<Prop[]>([]);
   const { service: firebaseService, isInitialized, error: firebaseInitError } = useFirebase();
   const { currentShowId } = useShowSelection();
-  const { userProfile } = useWebAuth();
+  const { userProfile, user } = useWebAuth();
   const { effectiveLimits } = useSubscription();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string>('');
@@ -107,7 +107,7 @@ const PropsListPage: React.FC = () => {
     if (!currentShowId) {
       setProps([]);
       setLoading(false);
-      setError(null);
+      setError("No show selected. Please select a show from the Shows page to view its props.");
       return;
     }
 
@@ -125,7 +125,30 @@ const PropsListPage: React.FC = () => {
       },
       (err: Error) => {
         console.error("Error fetching props:", err);
-        setError(`Failed to load props: ${err.message}. Please check your network connection and Firebase permissions.`);
+        console.log("Debug info:", {
+          currentShowId,
+          userId: user?.uid,
+          userEmail: user?.email,
+          userRole: userProfile?.role,
+          isSystemAdmin: userProfile?.groups?.['system-admin']
+        });
+        
+        // Provide more specific error messages based on error type
+        let errorMessage = "Failed to load props.";
+        
+        if (err.message.includes("permission-denied") || err.message.includes("Missing or insufficient permissions")) {
+          errorMessage = "You don't have permission to view props for this show. You may need to be added to the show's team or have administrator privileges.";
+        } else if (err.message.includes("unavailable") || err.message.includes("network")) {
+          errorMessage = "Network error. Please check your internet connection and try again.";
+        } else if (err.message.includes("unauthenticated")) {
+          errorMessage = "You need to sign in to view props. Please refresh the page and sign in again.";
+        } else if (err.message.includes("not-found")) {
+          errorMessage = "The show or props collection could not be found.";
+        } else {
+          errorMessage = `Failed to load props: ${err.message}. Please check your network connection and try again.`;
+        }
+        
+        setError(errorMessage);
         setLoading(false);
       }
     );
@@ -413,7 +436,49 @@ const PropsListPage: React.FC = () => {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
             </svg>
-            <div className="text-red-500 font-semibold">{error}</div>
+            <div className="text-red-500 font-semibold text-center mb-4">{error}</div>
+            <div className="flex gap-2">
+              {error.includes("No show selected") && (
+                <Link
+                  to="/shows"
+                  className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors"
+                >
+                  Go to Shows
+                </Link>
+              )}
+              {(error.includes("Network error") || error.includes("Failed to load props")) && (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors"
+                >
+                  Retry
+                </button>
+              )}
+              {error.includes("You need to sign in") && (
+                <Link
+                  to="/login"
+                  className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors"
+                >
+                  Sign In
+                </Link>
+              )}
+              {error.includes("don't have permission") && (
+                <div className="flex flex-col gap-2">
+                  <Link
+                    to="/shows"
+                    className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-center"
+                  >
+                    Check Shows
+                  </Link>
+                  <a
+                    href="mailto:support@thepropslist.uk?subject=Props Access Issue&body=Hi, I'm having trouble accessing props for a show. Please help me get the proper permissions."
+                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors text-center"
+                  >
+                    Contact Support
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         ) : filteredProps.length === 0 ? (
           <div 

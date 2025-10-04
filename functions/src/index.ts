@@ -115,9 +115,10 @@ const reportError = (error: any, context: string, userId?: string) => {
   // }
 };
 
-// Initialize Admin SDK - simple approach for Cloud Functions v2
+// Initialize Admin SDK - robust approach for Cloud Functions v2
 try {
   if (!admin.apps || admin.apps.length === 0) {
+    // In Cloud Functions, the default service account is automatically used
     admin.initializeApp();
   }
 } catch (error) {
@@ -1201,6 +1202,12 @@ export const updateUserPasswordWithCode = onCall({
     // Ensure Firebase Admin is initialized
     if (!admin.apps || admin.apps.length === 0) {
       admin.initializeApp();
+    }
+
+    // Verify admin.firestore is available
+    if (typeof admin.firestore !== 'function') {
+      logger.error("admin.firestore is not a function. Admin apps:", admin.apps?.length || 0);
+      throw new functions.https.HttpsError('internal', 'Firebase Admin SDK not properly initialized');
     }
 
     const db = admin.firestore();

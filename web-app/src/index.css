@@ -49,6 +49,29 @@
     @apply transform -translate-y-1 shadow-2xl;
   }
   
+  /* Date input calendar icon styling */
+  .date-input-light {
+    color-scheme: dark;
+  }
+  
+  .date-input-light::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.5);
+    opacity: 1;
+    cursor: pointer;
+    background: none;
+  }
+  
+  .date-input-light::-webkit-calendar-picker-indicator:hover {
+    opacity: 0.8;
+    filter: invert(1) brightness(2);
+  }
+  
+  /* Alternative approach for Firefox */
+  .date-input-light::-moz-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 1;
+  }
+  
   .gradient-text {
     @apply bg-gradient-to-r from-pb-primary to-pb-secondary bg-clip-text text-transparent;
   }

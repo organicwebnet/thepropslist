@@ -264,14 +264,13 @@ service cloud.firestore {
       ));
     }
     match /props/{propId} {
-      allow read, write: if isSystemAdmin() ||
-        (request.auth != null &&
-          (
-            isTeamMember(resource.data.showId) ||
-            get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
-          )
-        );
-
+      // Allow any authenticated user to read props
+      allow read: if request.auth != null;
+      
+      // Allow any authenticated user to create props (temporarily more permissive)
+      allow create: if request.auth != null;
+      
+      // Update/delete permissions still require proper team membership or admin role
       allow update, delete: if isSystemAdmin() ||
         (request.auth != null &&
           (
@@ -287,6 +286,34 @@ service cloud.firestore {
       allow create: if isSystemAdmin() || (request.auth != null && request.auth.token.email == request.resource.data.requestedBy);
       allow update: if isSystemAdmin() || (request.auth != null); // Allow any authenticated user to add options
       allow delete: if isSystemAdmin() || (request.auth != null && request.auth.token.email == resource.data.requestedBy);
+    }
+
+    // Makers collection - allow authenticated users to read and create
+    match /makers/{makerId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if isSystemAdmin();
+    }
+
+    // Hire companies collection - allow authenticated users to read and create
+    match /hire_companies/{companyId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if isSystemAdmin();
+    }
+
+    // Acts collection - allow authenticated users to read and create
+    match /acts/{actId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if isSystemAdmin();
+    }
+
+    // Scenes collection - allow authenticated users to read and create
+    match /scenes/{sceneId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if isSystemAdmin();
     }
 
     // --- Collaborative Team & Role-Based Access Rules (ACTIVE) ---

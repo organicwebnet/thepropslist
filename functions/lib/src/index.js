@@ -1,10 +1,49 @@
-import { onCall, onRequest } from "firebase-functions/v2/https";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import * as logger from "firebase-functions/logger";
-import * as functions from "firebase-functions";
-import * as functionsV1 from "firebase-functions/v1";
-import * as admin from "firebase-admin";
-import * as nodemailer from "nodemailer";
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteShowWithAdminPrivileges = exports.submitContactForm = exports.getAddOnsForMarketing = exports.cancelAddOn = exports.purchaseAddOn = exports.batchOptimizeImages = exports.optimizeImage = exports.joinWaitlist = exports.adminNormalizeContainers = exports.normalizeContainersHttp = exports.setContainerParent = exports.normalizeContainers = exports.publicContainerInfoLegacyV1 = exports.publicContainerInfo = exports.getSubscriptionStats = exports.seedRoleBasedTestUsers = exports.seedTestUsers = exports.getPricingConfig = exports.getStripePromotionCodes = exports.getStripeCoupons = exports.createStripePromotionCode = exports.createStripeCoupon = exports.updateUserPasswordWithCode = exports.sendCustomPasswordResetEmail = exports.createCheckoutSession = exports.createBillingPortalSession = exports.stripeWebhook = exports.feedbackToGithubEU = exports.feedbackIssueBridge = exports.sendEmailDirect = exports.processEmail = exports.sendInviteEmail = void 0;
+const https_1 = require("firebase-functions/v2/https");
+const firestore_1 = require("firebase-functions/v2/firestore");
+const logger = __importStar(require("firebase-functions/logger"));
+const functions = __importStar(require("firebase-functions"));
+const functionsV1 = __importStar(require("firebase-functions/v1"));
+const admin = __importStar(require("firebase-admin"));
+const nodemailer = __importStar(require("nodemailer"));
 // Inline pricing configuration to avoid import issues
 const DEFAULT_PRICING_CONFIG = {
     currency: 'USD',
@@ -110,9 +149,10 @@ const reportError = (error, context, userId) => {
     //   });
     // }
 };
-// Initialize Admin SDK - simple approach for Cloud Functions v2
+// Initialize Admin SDK - robust approach for Cloud Functions v2
 try {
     if (!admin.apps || admin.apps.length === 0) {
+        // In Cloud Functions, the default service account is automatically used
         admin.initializeApp();
     }
 }
@@ -126,7 +166,7 @@ let GMAIL_PASS;
 // Initialize secrets
 const initializeSecrets = async () => {
     try {
-        const { defineSecret } = await import("firebase-functions/params");
+        const { defineSecret } = await Promise.resolve().then(() => __importStar(require("firebase-functions/params")));
         const gmailUserSecret = defineSecret("GMAIL_USER");
         const gmailPassSecret = defineSecret("GMAIL_PASS");
         GMAIL_USER = gmailUserSecret.value();
@@ -149,7 +189,7 @@ const MS_FROM_NAME = process.env.MAILERSEND_FROM_NAME || "The Props List";
 if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
     logger.warn("Brevo secrets not set (BREVO_API_KEY, BREVO_FROM_EMAIL). Will fallback to MailerSend if configured.");
 }
-export const sendInviteEmail = onCall(async (req) => {
+exports.sendInviteEmail = (0, https_1.onCall)(async (req) => {
     const { to, role, showName, inviteUrl, fromName } = (req.data || {});
     if (!to)
         throw new Error("Missing 'to' recipient email");
@@ -227,7 +267,7 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOK
 const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || "";
 // NOTE: use a unique name to avoid collisions with existing HTTP functions
 // Email processing function for verification codes and invites
-export const processEmail = onDocumentCreated({
+exports.processEmail = (0, firestore_1.onDocumentCreated)({
     document: "emails/{id}",
     region: "us-central1",
     timeoutSeconds: 60,
@@ -396,7 +436,7 @@ export const processEmail = onDocumentCreated({
     }
 });
 // Direct email sending endpoint to avoid cold start delays
-export const sendEmailDirect = onRequest({
+exports.sendEmailDirect = (0, https_1.onRequest)({
     region: "us-central1",
     timeoutSeconds: 30,
     memory: "256MiB",
@@ -515,7 +555,7 @@ export const sendEmailDirect = onRequest({
         res.status(500).json({ error: "Internal server error" });
     }
 });
-export const feedbackIssueBridge = onDocumentCreated("feedback/{id}", async (event) => {
+exports.feedbackIssueBridge = (0, firestore_1.onDocumentCreated)("feedback/{id}", async (event) => {
     const snap = event.data;
     if (!snap)
         return;
@@ -578,7 +618,7 @@ export const feedbackIssueBridge = onDocumentCreated("feedback/{id}", async (eve
 });
 // EU-region Firestore trigger to match Firestore (eur3) and avoid Eventarc/Run region mismatch
 // NOTE: renamed (EU) to avoid function type-change collisions
-export const feedbackToGithubEU = functionsV1
+exports.feedbackToGithubEU = functionsV1
     .region('europe-west1')
     .firestore.document('feedback/{id}')
     .onCreate(async (snap, context) => {
@@ -650,7 +690,7 @@ let PRICE_STANDARD;
 let PRICE_PRO;
 const initializeStripeSecrets = async () => {
     try {
-        const { defineSecret } = await import("firebase-functions/params");
+        const { defineSecret } = await Promise.resolve().then(() => __importStar(require("firebase-functions/params")));
         const stripeSecretKeySecret = defineSecret("STRIPE_SECRET_KEY");
         const stripeWebhookSecretSecret = defineSecret("STRIPE_WEBHOOK_SECRET");
         const priceStarterSecret = defineSecret("PRICE_STARTER");
@@ -679,7 +719,7 @@ async function ensureStripe() {
         logger.warn("Stripe secret key not configured; billing endpoints will be inert.");
         return null;
     }
-    const mod = await import("stripe");
+    const mod = await Promise.resolve().then(() => __importStar(require("stripe")));
     const StripeCtor = mod.default;
     stripe = new StripeCtor(STRIPE_SECRET_KEY, { apiVersion: "2024-06-20" });
     return stripe;
@@ -695,7 +735,7 @@ function mapPlan(priceId) {
         return "pro";
     return undefined;
 }
-export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, res) => {
+exports.stripeWebhook = (0, https_1.onRequest)({ region: "us-central1" }, async (req, res) => {
     try {
         const s = await ensureStripe();
         if (!s || !STRIPE_WEBHOOK_SECRET) {
@@ -801,7 +841,7 @@ export const stripeWebhook = onRequest({ region: "us-central1" }, async (req, re
         res.status(400).send(`webhook error`);
     }
 });
-export const createBillingPortalSession = onCall({
+exports.createBillingPortalSession = (0, https_1.onCall)({
     region: "us-central1",
     secrets: ["STRIPE_SECRET_KEY"]
 }, async (req) => {
@@ -839,7 +879,7 @@ export const createBillingPortalSession = onCall({
     return { url: session.url };
 });
 // --- Create Stripe Checkout session for new/upgrades ---
-export const createCheckoutSession = onCall({
+exports.createCheckoutSession = (0, https_1.onCall)({
     region: "us-central1",
     secrets: ["STRIPE_SECRET_KEY"]
 }, async (req) => {
@@ -958,7 +998,7 @@ ${t.footer}
     return { subject: t.subject, html, text };
 }
 // --- Custom Password Reset Function ---
-export const sendCustomPasswordResetEmail = onCall({
+exports.sendCustomPasswordResetEmail = (0, https_1.onCall)({
     region: "us-central1",
     secrets: ["GMAIL_USER", "GMAIL_PASS"]
 }, async (req) => {
@@ -1088,7 +1128,7 @@ export const sendCustomPasswordResetEmail = onCall({
     }
 });
 // --- Password Reset Update Function ---
-export const updateUserPasswordWithCode = onCall({
+exports.updateUserPasswordWithCode = (0, https_1.onCall)({
     region: "us-central1"
 }, async (req) => {
     try {
@@ -1107,6 +1147,11 @@ export const updateUserPasswordWithCode = onCall({
         // Ensure Firebase Admin is initialized
         if (!admin.apps || admin.apps.length === 0) {
             admin.initializeApp();
+        }
+        // Verify admin.firestore is available
+        if (typeof admin.firestore !== 'function') {
+            logger.error("admin.firestore is not a function. Admin apps:", admin.apps?.length || 0);
+            throw new functions.https.HttpsError('internal', 'Firebase Admin SDK not properly initialized');
         }
         const db = admin.firestore();
         // Check if the reset code is valid
@@ -1147,7 +1192,7 @@ export const updateUserPasswordWithCode = onCall({
     }
 });
 // --- Create Stripe Coupon ---
-export const createStripeCoupon = onCall({ region: "us-central1" }, async (req) => {
+exports.createStripeCoupon = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     const s = await ensureStripe();
     if (!s) {
         throw new Error("Stripe not configured");
@@ -1171,7 +1216,7 @@ export const createStripeCoupon = onCall({ region: "us-central1" }, async (req) 
     }
 });
 // --- Create Stripe Promotion Code ---
-export const createStripePromotionCode = onCall({ region: "us-central1" }, async (req) => {
+exports.createStripePromotionCode = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     const s = await ensureStripe();
     if (!s) {
         throw new Error("Stripe not configured");
@@ -1191,7 +1236,7 @@ export const createStripePromotionCode = onCall({ region: "us-central1" }, async
     }
 });
 // --- Get Stripe Coupons ---
-export const getStripeCoupons = onCall({ region: "us-central1" }, async (req) => {
+exports.getStripeCoupons = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     const s = await ensureStripe();
     if (!s) {
         throw new Error("Stripe not configured");
@@ -1206,7 +1251,7 @@ export const getStripeCoupons = onCall({ region: "us-central1" }, async (req) =>
     }
 });
 // --- Get Stripe Promotion Codes ---
-export const getStripePromotionCodes = onCall({ region: "us-central1" }, async (req) => {
+exports.getStripePromotionCodes = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     const s = await ensureStripe();
     if (!s) {
         throw new Error("Stripe not configured");
@@ -1246,7 +1291,7 @@ function getDefaultFeaturesForPlan(planId) {
     return DEFAULT_PLAN_FEATURES[planId] || [];
 }
 // --- Get pricing configuration from Stripe ---
-export const getPricingConfig = onCall({
+exports.getPricingConfig = (0, https_1.onCall)({
     region: "us-central1",
     secrets: ["STRIPE_SECRET_KEY", "PRICE_STARTER", "PRICE_STANDARD", "PRICE_PRO"]
 }, async (req) => {
@@ -1313,7 +1358,7 @@ export const getPricingConfig = onCall({
     }
 });
 // --- Seed test users (god/system-admin only) ---
-export const seedTestUsers = onCall({ region: "us-central1" }, async (req) => {
+exports.seedTestUsers = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     if (!req.auth)
         throw new Error("unauthenticated");
     const uid = req.auth.uid;
@@ -1358,7 +1403,7 @@ export const seedTestUsers = onCall({ region: "us-central1" }, async (req) => {
     return { ok: true, users: out };
 });
 // --- Seed role-based test users (god/system-admin only) ---
-export const seedRoleBasedTestUsers = onCall({ region: "us-central1" }, async (req) => {
+exports.seedRoleBasedTestUsers = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     if (!req.auth)
         throw new Error("unauthenticated");
     const uid = req.auth.uid;
@@ -1488,7 +1533,7 @@ export const seedRoleBasedTestUsers = onCall({ region: "us-central1" }, async (r
     return { ok: true, users: out };
 });
 // --- Admin: Subscription stats (god/system-admin only) ---
-export const getSubscriptionStats = onCall({ region: "us-central1" }, async (req) => {
+exports.getSubscriptionStats = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     if (!req.auth)
         throw new Error("unauthenticated");
     const uid = req.auth.uid;
@@ -1514,7 +1559,7 @@ export const getSubscriptionStats = onCall({ region: "us-central1" }, async (req
     return { total, byPlan, byStatus };
 });
 // --- Public container info for marketing site (/c/:id) ---
-export const publicContainerInfo = onRequest({ region: "us-central1", timeoutSeconds: 120, memory: "512MiB", minInstances: 1 }, async (req, res) => {
+exports.publicContainerInfo = (0, https_1.onRequest)({ region: "us-central1", timeoutSeconds: 120, memory: "512MiB", minInstances: 1 }, async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     if (req.method === "OPTIONS") {
@@ -1641,7 +1686,7 @@ export const publicContainerInfo = onRequest({ region: "us-central1", timeoutSec
 });
 // Gen1 fallback for public container info to bypass Cloud Run startup issues
 // Renamed to avoid version-downgrade conflicts if a V2 function with the same name ever existed
-export const publicContainerInfoLegacyV1 = functionsV1.https.onRequest(async (req, res) => {
+exports.publicContainerInfoLegacyV1 = functionsV1.https.onRequest(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     if (req.method === "OPTIONS") {
@@ -1748,7 +1793,7 @@ export const publicContainerInfoLegacyV1 = functionsV1.https.onRequest(async (re
     }
 });
 // --- Normalization utilities ---
-export const normalizeContainers = onCall({ region: "us-central1" }, async (req) => {
+exports.normalizeContainers = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     const commit = !!req.data?.commit;
     const dryRun = [];
     const db = admin.firestore();
@@ -1801,7 +1846,7 @@ export const normalizeContainers = onCall({ region: "us-central1" }, async (req)
     }
     return { ok: true, dryRun, committed: commit };
 });
-export const setContainerParent = onCall({ region: "us-central1" }, async (req) => {
+exports.setContainerParent = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     const { boxId, parentId } = req.data || {};
     if (!boxId)
         throw new Error("boxId required");
@@ -1810,7 +1855,7 @@ export const setContainerParent = onCall({ region: "us-central1" }, async (req) 
     return { ok: true };
 });
 // Convenience HTTP wrappers (guarded by token) to run admin tasks from CLI
-export const normalizeContainersHttp = onRequest({ region: "us-central1" }, async (req, res) => {
+exports.normalizeContainersHttp = (0, https_1.onRequest)({ region: "us-central1" }, async (req, res) => {
     try {
         const token = req.query.token || "";
         const commit = String(req.query.commit || "false").toLowerCase() === "true";
@@ -1878,7 +1923,7 @@ export const normalizeContainersHttp = onRequest({ region: "us-central1" }, asyn
     }
 });
 // Gen1 fallback endpoint for ease of invocation
-export const adminNormalizeContainers = functions.https.onRequest(async (req, res) => {
+exports.adminNormalizeContainers = functions.https.onRequest(async (req, res) => {
     try {
         const token = req.query.token || "";
         const commit = String(req.query.commit || "false").toLowerCase() === "true";
@@ -1946,7 +1991,7 @@ export const adminNormalizeContainers = functions.https.onRequest(async (req, re
     }
 });
 // --- Simple marketing waitlist collector ---
-export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res) => {
+exports.joinWaitlist = (0, https_1.onRequest)({ region: "us-central1" }, async (req, res) => {
     // Minimal CORS (allow marketing site origins)
     const origin = req.headers.origin || "";
     const allowedOrigins = [
@@ -1992,9 +2037,9 @@ export const joinWaitlist = onRequest({ region: "us-central1" }, async (req, res
     }
 });
 // --- Image Optimization Functions ---
-import sharp from 'sharp';
+const sharp_1 = __importDefault(require("sharp"));
 // Image optimization function
-export const optimizeImage = onRequest({
+exports.optimizeImage = (0, https_1.onRequest)({
     region: "us-central1",
     timeoutSeconds: 60,
     memory: "1GiB"
@@ -2023,7 +2068,7 @@ export const optimizeImage = onRequest({
         }
         const imageBuffer = Buffer.from(await response.arrayBuffer());
         // Process with Sharp
-        let sharpInstance = sharp(imageBuffer);
+        let sharpInstance = (0, sharp_1.default)(imageBuffer);
         // Resize if dimensions provided
         if (width || height) {
             sharpInstance = sharpInstance.resize(width, height, {
@@ -2101,7 +2146,7 @@ export const optimizeImage = onRequest({
     }
 });
 // Batch image optimization for existing images
-export const batchOptimizeImages = onCall({ region: "us-central1" }, async (req) => {
+exports.batchOptimizeImages = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     if (!req.auth)
         throw new Error("unauthenticated");
     const { collection = 'props', limit = 10, format = 'webp', quality = 80 } = req.data || {};
@@ -2156,7 +2201,7 @@ export const batchOptimizeImages = onCall({ region: "us-central1" }, async (req)
 });
 // --- Add-Ons Management Functions ---
 // Purchase an add-on
-export const purchaseAddOn = onCall({ region: "us-central1" }, async (req) => {
+exports.purchaseAddOn = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     try {
         if (!req.auth)
             throw new Error("unauthenticated");
@@ -2246,7 +2291,7 @@ export const purchaseAddOn = onCall({ region: "us-central1" }, async (req) => {
     }
 });
 // Cancel an add-on
-export const cancelAddOn = onCall({ region: "us-central1" }, async (req) => {
+exports.cancelAddOn = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
     try {
         if (!req.auth)
             throw new Error("unauthenticated");
@@ -2292,7 +2337,7 @@ export const cancelAddOn = onCall({ region: "us-central1" }, async (req) => {
     }
 });
 // Get add-ons for marketing site
-export const getAddOnsForMarketing = onRequest({ region: "us-central1" }, async (req, res) => {
+exports.getAddOnsForMarketing = (0, https_1.onRequest)({ region: "us-central1" }, async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -2394,9 +2439,10 @@ export const getAddOnsForMarketing = onRequest({ region: "us-central1" }, async 
     }
 });
 // Export the contact form function
-export { submitContactForm } from './contact.js';
+var contact_js_1 = require("./contact.js");
+Object.defineProperty(exports, "submitContactForm", { enumerable: true, get: function () { return contact_js_1.submitContactForm; } });
 // Show deletion function with admin privileges - MINIMAL TEST VERSION
-export const deleteShowWithAdminPrivileges = onCall(async (req) => {
+exports.deleteShowWithAdminPrivileges = (0, https_1.onCall)(async (req) => {
     try {
         // Verify user is authenticated
         if (!req.auth) {

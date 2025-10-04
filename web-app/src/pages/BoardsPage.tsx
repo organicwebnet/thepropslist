@@ -25,7 +25,8 @@ import ShowDetailPage from "../pages/ShowDetailPage";
 import JoinInvitePage from "../pages/JoinInvitePage";
 import PropsBibleHomepage from '../PropsBibleHomepage';
 import { useSubscription } from '../hooks/useSubscription';
-// import UpgradeModal from '../components/UpgradeModal';
+import { useLimitChecker } from '../hooks/useLimitChecker';
+import UpgradeModal from '../components/UpgradeModal';
 
 const BoardsPage: React.FC = () => {
   const { service } = useFirebase();
@@ -142,10 +143,45 @@ function BoardsPageContent() {
   const [_showTitle, setShowTitle] = useState<string>("");
   const { user } = useWebAuth();
   const { limits } = useSubscription();
-  const [_upgradeOpen, setUpgradeOpen] = useState(false);
+  const { checkBoardLimit, checkBoardLimitForShow } = useLimitChecker();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [limitWarning, setLimitWarning] = useState<string | null>(null);
 
   console.log("[BoardsPage] currentShowId:", currentShowId);
   console.log("[BoardsPage] Current user:", user);
+
+  // Check limits on page load and when boards change
+  useEffect(() => {
+    const checkLimits = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        // Check per-plan board limit
+        const planLimitCheck = await checkBoardLimit(user.uid);
+        if (!planLimitCheck.withinLimit) {
+          setLimitWarning(planLimitCheck.message || 'Board limit reached');
+          return;
+        }
+
+        // Check per-show board limit if show is selected
+        if (currentShowId) {
+          const showLimitCheck = await checkBoardLimitForShow(currentShowId);
+          if (!showLimitCheck.withinLimit) {
+            setLimitWarning(showLimitCheck.message || 'Show board limit reached');
+            return;
+          }
+        }
+
+        // Clear warning if within limits
+        setLimitWarning(null);
+      } catch (error) {
+        console.error('Error checking board limits:', error);
+        // Don't show error to user, just log it
+      }
+    };
+
+    checkLimits();
+  }, [user?.uid, currentShowId, boards.length, checkBoardLimit, checkBoardLimitForShow]);
 
   useEffect(() => {
     // Listen to boards collection, filter by showId if selected
@@ -196,7 +232,33 @@ function BoardsPageContent() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
     try {
+      // Check board limits before creating
+      if (!user?.uid) {
+        setError('You must be signed in to create boards.');
+        setLoading(false);
+        return;
+      }
+
+      // Check per-plan board limit
+      const planLimitCheck = await checkBoardLimit(user.uid);
+      if (!planLimitCheck.withinLimit) {
+        setError(planLimitCheck.message || 'Board limit reached');
+        setLoading(false);
+        return;
+      }
+
+      // Check per-show board limit if show is selected
+      if (currentShowId) {
+        const showLimitCheck = await checkBoardLimitForShow(currentShowId);
+        if (!showLimitCheck.withinLimit) {
+          setError(showLimitCheck.message || 'Show board limit reached');
+          setLoading(false);
+          return;
+        }
+      }
+
       // Create a new board in Firestore
       await service.addDocument("boards", {
         title: boardName,
@@ -217,6 +279,29 @@ function BoardsPageContent() {
 
   return (
     <DashboardLayout>
+      {/* Limit Warning Banner */}
+      {limitWarning && (
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="text-red-200 font-semibold mb-1">Subscription Limit Reached</div>
+              <div className="text-red-100 text-sm mb-3">{limitWarning}</div>
+              <button 
+                onClick={() => setUpgradeOpen(true)}
+                className="inline-block px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-sm"
+              >
+                Upgrade Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {effectiveBoardId ? (
         <div className="w-full h-[calc(100vh-4.5rem)] overflow-hidden flex flex-col p-0">
           {/* Header with title, dropdown if multiple boards, and create button */}
@@ -331,6 +416,13 @@ function BoardsPageContent() {
             </form>
           )}
         </motion.div>
+      )}
+      
+      {upgradeOpen && (
+        <UpgradeModal 
+          open={upgradeOpen} 
+          onClose={() => setUpgradeOpen(false)} 
+        />
       )}
     </DashboardLayout>
   );

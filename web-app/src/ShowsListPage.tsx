@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Gem, AlertTriangle, Archive } from 'lucide-react';
 import { useShowSelection } from './contexts/ShowSelectionContext';
 import { useSubscription } from './hooks/useSubscription';
+import { useLimitChecker } from './hooks/useLimitChecker';
+import { useWebAuth } from './contexts/WebAuthContext';
 import UpgradeModal from './components/UpgradeModal';
 import { showNeedsAttention } from './utils/showUtils';
 import ArchivedShowsModal from './components/ArchivedShowsModal';
@@ -16,14 +18,36 @@ const ShowsListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shows, setShows] = useState<Show[]>([]);
-  // const { user: _user } = useWebAuth(); // Not used in current implementation
+  const { user } = useWebAuth();
   const { service: firebaseService, isInitialized, error: firebaseInitError }: FirebaseContextType = useFirebase();
   const navigate = useNavigate();
   const { currentShowId, setCurrentShowId } = useShowSelection();
   const { limits, effectiveLimits } = useSubscription();
+  const { checkShowLimit } = useLimitChecker();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [archivedShowsOpen, setArchivedShowsOpen] = useState(false);
+  const [limitWarning, setLimitWarning] = useState<string | null>(null);
 
+  // Check limits on page load and when shows change
+  useEffect(() => {
+    const checkLimits = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        const limitCheck = await checkShowLimit(user.uid);
+        if (!limitCheck.withinLimit) {
+          setLimitWarning(limitCheck.message || 'Show limit reached');
+        } else {
+          setLimitWarning(null);
+        }
+      } catch (error) {
+        console.error('Error checking show limits:', error);
+        // Don't show error to user, just log it
+      }
+    };
+
+    checkLimits();
+  }, [user?.uid, shows.length, checkShowLimit]);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -44,9 +68,17 @@ const ShowsListPage: React.FC = () => {
     const unsubscribe = firebaseService.listenToCollection<Show>(
       'shows',
       (data) => {
+        console.log('ShowsListPage: Received shows data:', data);
         const showList = data.map(doc => ({ ...doc.data, id: doc.id }));
+        console.log('ShowsListPage: Mapped show list:', showList);
         setShows(showList);
         setLoading(false);
+        
+        // If user has no shows, redirect to add show form
+        if (showList.length === 0 && user?.uid) {
+          console.log('ShowsListPage: No shows found, redirecting to /shows/new');
+          navigate('/shows/new');
+        }
       },
       (err: Error) => {
         console.error("Error fetching shows:", err);
@@ -56,16 +88,52 @@ const ShowsListPage: React.FC = () => {
     );
 
     return () => unsubscribe();
-  }, [firebaseService, isInitialized, firebaseInitError]);
+  }, [firebaseService, isInitialized, firebaseInitError, navigate, user?.uid]);
 
   // const _handleAddShow = () => {
   //   // TODO: Route to add show form
   //   alert('Add Show (not implemented)');
   // };
 
+  // Debug logging
+  console.log('ShowsListPage render:', { 
+    loading, 
+    error, 
+    showsCount: shows.length, 
+    isInitialized, 
+    firebaseInitError: !!firebaseInitError,
+    user: !!user 
+  });
+
   return (
     <DashboardLayout>
-      {/* Debug info removed per request */}
+      {/* Temporary debug info */}
+      <div className="mb-4 p-2 bg-yellow-500/20 text-yellow-200 text-xs">
+        Debug: Loading={loading.toString()}, Error={error || 'none'}, Shows={shows.length}, Init={isInitialized.toString()}
+      </div>
+
+      {/* Limit Warning Banner */}
+      {limitWarning && (
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="text-red-200 font-semibold mb-1">Subscription Limit Reached</div>
+              <div className="text-red-100 text-sm mb-3">{limitWarning}</div>
+              <button 
+                onClick={() => setUpgradeOpen(true)}
+                className="inline-block px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-sm"
+              >
+                Upgrade Plan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="relative min-h-[70vh] flex flex-col justify-center items-center bg-gradient-to-br from-pb-primary/40 via-pb-darker/80 to-pb-accent/30 rounded-xl shadow-xl p-6">
         <div className="flex w-full justify-between items-center mb-6">
@@ -88,8 +156,18 @@ const ShowsListPage: React.FC = () => {
             </button>
             
             <button
-              onClick={() => {
-                if (shows.length >= effectiveLimits.shows) { setUpgradeOpen(true); return; }
+              onClick={async () => {
+                if (!user?.uid) {
+                  navigate('/login');
+                  return;
+                }
+                
+                const limitCheck = await checkShowLimit(user.uid);
+                if (!limitCheck.withinLimit) {
+                  setUpgradeOpen(true);
+                  return;
+                }
+                
                 navigate('/shows/new');
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg ${shows.length >= effectiveLimits.shows ? 'bg-pb-primary/20 text-pb-gray cursor-not-allowed' : 'bg-pb-primary hover:bg-pb-accent text-white'} shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50`}

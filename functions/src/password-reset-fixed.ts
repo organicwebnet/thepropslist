@@ -87,3 +87,5 @@ export const sendCustomPasswordResetEmailFixed = onCall({
     throw new functions.https.HttpsError('internal', `Failed to send password reset email: ${error.message}`);
   }
 });
+
+

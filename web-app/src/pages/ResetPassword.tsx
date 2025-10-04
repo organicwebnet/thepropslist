@@ -175,9 +175,14 @@ export default function ResetPassword() {
           <div className="text-center">
             <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-white mb-4">Password Reset Successfully!</h2>
-            <p className="text-white/70 mb-6">Your password has been updated. You can now sign in with your new password.</p>
+            <p className="text-white/70 mb-4">Your password has been updated successfully.</p>
+            <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4 mb-6">
+              <p className="text-yellow-200 text-sm font-medium">
+                ⚠️ Important: Please use your NEW password to sign in. Do not use your old password.
+              </p>
+            </div>
             <Link 
-              to="/login" 
+              to="/login?reset=success" 
               className="inline-block bg-pb-primary hover:bg-pb-secondary text-white font-bold py-3 px-6 rounded-xl transition-colors"
             >
               Sign In

@@ -5,6 +5,7 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import type { Show } from '../types/Show';
 import { buildInviteEmailDocTo, buildReminderEmailDoc } from '../services/EmailService';
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
+import { useLimitChecker } from '../hooks/useLimitChecker';
 
 type Invitation = {
   id?: string;
@@ -36,6 +37,29 @@ const TeamPage: React.FC = () => {
   const [inviteJobRole, setInviteJobRole] = useState<string>('propmaker');
   const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
   const [submitting, setSubmitting] = useState(false);
+  const { checkCollaboratorsLimitForShow } = useLimitChecker();
+  const [limitWarning, setLimitWarning] = useState<string | null>(null);
+
+  // Check limits on page load and when collaborators change
+  useEffect(() => {
+    const checkLimits = async () => {
+      if (!id || !user?.uid) return;
+      
+      try {
+        const limitCheck = await checkCollaboratorsLimitForShow(id);
+        if (!limitCheck.withinLimit) {
+          setLimitWarning(limitCheck.message || 'Collaborators limit reached');
+        } else {
+          setLimitWarning(null);
+        }
+      } catch (error) {
+        console.error('Error checking collaborators limits:', error);
+        // Don't show error to user, just log it
+      }
+    };
+
+    checkLimits();
+  }, [id, user?.uid, collaborators.length, checkCollaboratorsLimitForShow]);
 
   // const _showId = id || show?.id || '';
 
@@ -85,6 +109,20 @@ const TeamPage: React.FC = () => {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !inviteEmail) return;
+    
+    // Check collaborators limit before inviting
+    try {
+      const limitCheck = await checkCollaboratorsLimitForShow(id);
+      if (!limitCheck.withinLimit) {
+        setError(limitCheck.message || 'Collaborators limit reached');
+        return;
+      }
+    } catch (limitError) {
+      console.error('Error checking collaborators limits:', limitError);
+      setError('Error checking limits. Please try again.');
+      return;
+    }
+    
     setSubmitting(true);
     setError(null);
     try {
@@ -174,6 +212,29 @@ const TeamPage: React.FC = () => {
 
   return (
     <DashboardLayout>
+      {/* Limit Warning Banner */}
+      {limitWarning && (
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="text-red-200 font-semibold mb-1">Subscription Limit Reached</div>
+              <div className="text-red-100 text-sm mb-3">{limitWarning}</div>
+              <a 
+                href="/profile"
+                className="inline-block px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-sm"
+              >
+                Upgrade Plan
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>

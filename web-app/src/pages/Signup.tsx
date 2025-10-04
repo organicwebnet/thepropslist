@@ -1,26 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Loader2, LogIn, Mail, Lock, User } from 'lucide-react';
+import { Loader2, LogIn, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Signup() {
   const { finalizeSignup, loading, error, clearError, signInWithGoogle, signInWithApple, startCodeVerification, verifyCode } = useWebAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [debugInfo, setDebugInfo] = useState('');
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [code, setCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+
+  // Check if user has verified email when component mounts
+  useEffect(() => {
+    const verifiedEmail = window.localStorage.getItem('propsbible_signup_email');
+    if (verifiedEmail && step === 'email') {
+      setEmail(verifiedEmail);
+      setStep('password');
+      setDebugInfo('Email already verified. Please complete your account setup.');
+    }
+  }, [step]);
+
+  // Reset form when user changes email
+  const handleEmailChange = (newEmail: string) => {
+    setEmail(newEmail);
+    // Clear any existing verified email if user changes the email
+    const storedEmail = window.localStorage.getItem('propsbible_signup_email');
+    if (storedEmail && storedEmail !== newEmail) {
+      window.localStorage.removeItem('propsbible_signup_email');
+      setStep('email');
+      setDebugInfo('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     setDebugInfo('Creating account...');
-    if (!email || !password || !displayName) {
+    if (!email || !password || !confirmPassword || !displayName) {
       setDebugInfo('All fields are required');
+      return;
+    }
+    if (password.length < 8) {
+      setDebugInfo('Password must be at least 8 characters long');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setDebugInfo('Passwords do not match');
       return;
     }
     try {
@@ -28,7 +61,8 @@ export default function Signup() {
       setDebugInfo('Account created! Redirecting...');
       setTimeout(() => navigate('/', { replace: true }), 1000);
     } catch (err: any) {
-      setDebugInfo(`Sign up error: ${err.code || 'Unknown error'} - ${err.message || 'No message'}`);
+      console.error('Sign up error:', err);
+      setDebugInfo(`❌ ${err.message || 'Sign up failed. Please try again.'}`);
     }
   };
 
@@ -65,10 +99,11 @@ export default function Signup() {
       setDebugInfo('Sending verification code...');
       await startCodeVerification(email);
       setStep('code');
-      setDebugInfo('Verification code sent. Check your inbox.');
+      setDebugInfo('✅ Verification code sent! Check your email (including spam folder).');
       setResendCooldown(10);
     } catch (err: any) {
-      setDebugInfo(`Failed to send code: ${err.code || 'Unknown error'} - ${err.message || 'No message'}`);
+      console.error('Send code error:', err);
+      setDebugInfo(`❌ Failed to send code: ${err.message || 'Unknown error'}`);
     }
   };
 
@@ -78,10 +113,11 @@ export default function Signup() {
       clearError();
       setDebugInfo('Resending verification code...');
       await startCodeVerification(email);
-      setDebugInfo('Code re-sent. It can take a minute to arrive.');
+      setDebugInfo('✅ Code re-sent successfully! Check your email (including spam folder).');
       setResendCooldown(10);
     } catch (err: any) {
-      setDebugInfo(`Failed to resend: ${err.code || 'Unknown error'} - ${err.message || 'No message'}`);
+      console.error('Resend code error:', err);
+      setDebugInfo(`❌ Failed to resend: ${err.message || 'Unknown error'}`);
     }
   };
 
@@ -164,7 +200,7 @@ export default function Signup() {
                     <input
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => handleEmailChange(e.target.value)}
                       required
                       className="w-full pl-10 pr-4 py-3.5 bg-white/15 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/40 focus:border-white/40 text-white placeholder-white/50 backdrop-blur-sm transition-all duration-200 font-medium"
                       placeholder="your@email.com"
@@ -235,12 +271,43 @@ export default function Signup() {
                 >
                   Verify code
                 </button>
-                <p className="text-white/60 text-sm">If the email hasn't arrived, check your Spam/Junk folder and filters, or try resending.</p>
+                <p className="text-white/60 text-sm">If the email hasn't arrived, check your Spam/Junk folder and filters, or try resending. The resend button will generate a new code.</p>
               </form>
             )}
 
             {step === 'password' && (
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Verify user has completed email verification */}
+                {!window.localStorage.getItem('propsbible_signup_email') && (
+                  <div className="mb-6 p-4 bg-red-500/20 border border-red-300/30 rounded-xl backdrop-blur-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full flex-shrink-0"></div>
+                      <p className="text-red-100 text-sm font-medium">Email verification required. Please start over.</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show current email and allow changing */}
+                <div className="mb-4 p-3 bg-blue-500/20 border border-blue-300/30 rounded-xl backdrop-blur-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-100 text-sm font-medium">Creating account for:</p>
+                      <p className="text-blue-200 text-sm">{email}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.localStorage.removeItem('propsbible_signup_email');
+                        setStep('email');
+                        setEmail('');
+                        setDebugInfo('');
+                      }}
+                      className="text-blue-300 hover:text-blue-100 text-sm transition-colors underline"
+                    >
+                      Change email
+                    </button>
+                  </div>
+                </div>
                 {/* Display Name Field */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white/90">Display Name</label>
@@ -263,21 +330,51 @@ export default function Signup() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full pl-10 pr-4 py-3.5 bg-white/15 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/40 focus:border-white/40 text-white placeholder-white/50 backdrop-blur-sm transition-all duration-200 font-medium"
-                      placeholder="Create a password"
+                      className="w-full pl-10 pr-12 py-3.5 bg-white/15 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/40 focus:border-white/40 text-white placeholder-white/50 backdrop-blur-sm transition-all duration-200 font-medium"
+                      placeholder="Create a password (min 8 characters)"
                       autoComplete="new-password"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/70 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+                {/* Confirm Password Field */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-white/90">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      className="w-full pl-10 pr-12 py-3.5 bg-white/15 border border-white/20 rounded-xl focus:ring-2 focus:ring-white/40 focus:border-white/40 text-white placeholder-white/50 backdrop-blur-sm transition-all duration-200 font-medium"
+                      placeholder="Confirm your password"
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/70 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
                   </div>
                 </div>
                 {/* Submit Button */}
                 <button
                   type="submit"
                   className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-pb-primary hover:bg-pb-secondary transition-colors text-white font-bold rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-white/40 focus:ring-offset-2 focus:ring-offset-pb-primary/20 text-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                  disabled={loading}
+                  disabled={loading || !window.localStorage.getItem('propsbible_signup_email')}
                 >
                   {loading ? <Loader2 className="animate-spin w-5 h-5" /> : <LogIn className="w-5 h-5" />}
                   Create Account
