@@ -44,10 +44,12 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={handleCancel}
+      accessibilityViewIsModal={true}
+      accessibilityLabel={title}
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay} accessibilityRole="dialog">
         <View style={styles.modal}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title} accessibilityRole="header">{title}</Text>
           
           <TextInput
             style={[styles.input, multiline && styles.multilineInput]}
@@ -58,6 +60,8 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             numberOfLines={multiline ? 4 : 1}
             maxLength={maxLength}
             autoFocus
+            accessibilityLabel={`${title} input field`}
+            accessibilityHint={`Enter text for ${title.toLowerCase()}`}
           />
           
           <Text style={styles.charCount}>
@@ -65,11 +69,21 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
           </Text>
           
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={handleCancel}
+              accessibilityLabel="Cancel"
+              accessibilityHint="Close modal without saving"
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+            <TouchableOpacity 
+              style={styles.saveButton} 
+              onPress={handleSave}
+              accessibilityLabel="Save"
+              accessibilityHint="Save changes and close modal"
+            >
               <Text style={styles.saveButtonText}>Save</Text>
             </TouchableOpacity>
           </View>

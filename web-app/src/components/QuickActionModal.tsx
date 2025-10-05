@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface QuickActionModalProps {
   visible: boolean;
@@ -37,18 +37,44 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
     onCancel();
   };
 
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!visible) return;
+      
+      if (event.key === 'Escape') {
+        handleCancel();
+      } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        handleSave();
+      }
+    };
+
+    if (visible) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [visible, value]);
+
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      aria-describedby="modal-description"
+    >
       <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
         <div className="p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 text-center">
+          <h3 id="modal-title" className="text-lg font-bold text-gray-900 mb-4 text-center">
             {title}
           </h3>
           
           {multiline ? (
             <textarea
+              id="modal-description"
               className="w-full border border-gray-300 rounded-lg p-3 text-base mb-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               placeholder={placeholder}
               value={value}
@@ -56,9 +82,12 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               rows={4}
               maxLength={maxLength}
               autoFocus
+              aria-label={`${title} input field`}
+              aria-describedby="char-count"
             />
           ) : (
             <input
+              id="modal-description"
               type="text"
               className="w-full border border-gray-300 rounded-lg p-3 text-base mb-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder={placeholder}
@@ -66,10 +95,12 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
               onChange={(e) => setValue(e.target.value)}
               maxLength={maxLength}
               autoFocus
+              aria-label={`${title} input field`}
+              aria-describedby="char-count"
             />
           )}
           
-          <div className="text-right text-sm text-gray-500 mb-4">
+          <div id="char-count" className="text-right text-sm text-gray-500 mb-4">
             {value.length}/{maxLength} characters
           </div>
           
@@ -77,6 +108,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             <button
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
               onClick={handleCancel}
+              aria-label="Cancel"
             >
               Cancel
             </button>
@@ -84,6 +116,7 @@ export const QuickActionModal: React.FC<QuickActionModalProps> = ({
             <button
               className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               onClick={handleSave}
+              aria-label="Save"
             >
               Save
             </button>

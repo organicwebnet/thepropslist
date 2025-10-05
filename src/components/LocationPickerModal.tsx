@@ -64,10 +64,12 @@ export const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={handleCancel}
+      accessibilityViewIsModal={true}
+      accessibilityLabel="Update Location"
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay} accessibilityRole="dialog">
         <View style={styles.modal}>
-          <Text style={styles.title}>Update Location</Text>
+          <Text style={styles.title} accessibilityRole="header">Update Location</Text>
           
           <Text style={styles.sectionTitle}>Current Location:</Text>
           <Text style={styles.currentLocation}>{currentLocation || 'Not set'}</Text>
@@ -83,6 +85,9 @@ export const LocationPickerModal: React.FC<LocationPickerModalProps> = ({
                   selectedLocation === item && styles.selectedLocationItem,
                 ]}
                 onPress={() => handlePredefinedSelect(item)}
+                accessibilityLabel={`Select location: ${item}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: selectedLocation === item }}
               >
                 <Text
                   style={[

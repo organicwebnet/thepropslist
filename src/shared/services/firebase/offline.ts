@@ -1,5 +1,5 @@
-import { FirebaseService } from './types.ts';
-import { FirebaseDocument } from './types.ts';
+import { FirebaseService } from './types';
+import { FirebaseDocument } from './types';
 
 interface SyncMetadata {
   lastSyncTimestamp: number;

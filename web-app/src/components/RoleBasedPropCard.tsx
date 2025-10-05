@@ -1,7 +1,7 @@
 import { Prop } from '../types/props';
 import { UserProfile } from '../../shared/types/auth';
-import { useRoleBasedDataView } from '../hooks/useRoleBasedDataView';
-import { PropFieldCategory } from '../types/dataViews';
+import { useRoleBasedDataView } from '../../../src/hooks/useRoleBasedDataView';
+import { PropFieldCategory } from '../../../src/shared/types/dataViews';
 
 interface RoleBasedPropCardProps {
   prop: Prop;

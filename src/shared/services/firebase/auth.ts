@@ -1,6 +1,6 @@
 import { User } from 'firebase/auth';
-import { FirebaseService, FirebaseDocument } from './types.ts';
-import { UserRole, UserProfile, UserPermissions, DEFAULT_ROLE_PERMISSIONS } from '../../types/auth.ts';
+import { FirebaseService, FirebaseDocument } from './types';
+import { UserRole, UserProfile, UserPermissions, DEFAULT_ROLE_PERMISSIONS } from '../../types/auth';
 
 export class AuthService {
   constructor(private firebase: FirebaseService) {}
