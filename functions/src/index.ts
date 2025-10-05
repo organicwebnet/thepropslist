@@ -1,5 +1,6 @@
 import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
 import * as functions from "firebase-functions";
 import * as functionsV1 from "firebase-functions/v1";
@@ -1449,13 +1450,9 @@ export const seedTestUsers = onCall({ region: "us-central1" }, async (req) => {
   if (!req.auth) throw new Error("unauthenticated");
   const uid = req.auth.uid;
   const db = admin.firestore();
-  // Check role from userProfiles OR fallback to users. Also allow custom claim 'admin'
+  // Get user profile from userProfiles collection
   const prof = await db.doc(`userProfiles/${uid}`).get();
-  let me = prof.exists ? (prof.data() as any) : {};
-  if (!me || Object.keys(me).length === 0) {
-    const userDoc = await db.doc(`users/${uid}`).get();
-    if (userDoc.exists) me = { ...(userDoc.data() as any) };
-  }
+  const me = prof.exists ? (prof.data() as any) : {};
   const token = (req as any).auth?.token || {};
   const isGod = String(me?.role || '').toLowerCase() === 'god';
   const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
@@ -1480,8 +1477,23 @@ export const seedTestUsers = onCall({ region: "us-central1" }, async (req) => {
     }
     if (!userRecord) continue;
     const userId = userRecord.uid;
-    await db.doc(`users/${userId}`).set({ uid: userId, email, displayName: userRecord.displayName || email.split('@')[0], role: 'user', createdAt: Date.now(), lastLogin: null }, { merge: true });
-    await db.doc(`userProfiles/${userId}`).set({ email, role: 'user', groups: {}, plan, subscriptionStatus: 'active', lastStripeEventTs: Date.now() }, { merge: true });
+    await db.doc(`userProfiles/${userId}`).set({ 
+      uid: userId, 
+      email, 
+      displayName: userRecord.displayName || email.split('@')[0], 
+      role: 'user', 
+      createdAt: Date.now(), 
+      lastLogin: null,
+      groups: {}, 
+      plan, 
+      subscriptionStatus: 'active', 
+      lastStripeEventTs: Date.now(),
+      themePreference: 'light',
+      notifications: true,
+      defaultView: 'grid',
+      organizations: [],
+      onboardingCompleted: false
+    }, { merge: true });
     out.push({ email, password, uid: userId, plan });
   }
   return { ok: true, users: out } as any;
@@ -1493,13 +1505,9 @@ export const seedRoleBasedTestUsers = onCall({ region: "us-central1" }, async (r
   const uid = req.auth.uid;
   const db = admin.firestore();
   
-  // Check role from userProfiles OR fallback to users. Also allow custom claim 'admin'
+  // Get user profile from userProfiles collection
   const prof = await db.doc(`userProfiles/${uid}`).get();
-  let me = prof.exists ? (prof.data() as any) : {};
-  if (!me || Object.keys(me).length === 0) {
-    const userDoc = await db.doc(`users/${uid}`).get();
-    if (userDoc.exists) me = { ...(userDoc.data() as any) };
-  }
+  const me = prof.exists ? (prof.data() as any) : {};
   const token = (req as any).auth?.token || {};
   const isGod = String(me?.role || '').toLowerCase() === 'god';
   const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
@@ -1588,26 +1596,24 @@ export const seedRoleBasedTestUsers = onCall({ region: "us-central1" }, async (r
     
     const userId = userRecord.uid;
     
-    // Create user document
-    await db.doc(`users/${userId}`).set({ 
+    // Create user document in userProfiles collection
+    await db.doc(`userProfiles/${userId}`).set({ 
       uid: userId, 
       email: userConfig.email, 
       displayName: userRecord.displayName || userConfig.email.split('@')[0], 
       role: userConfig.role, 
       createdAt: Date.now(), 
       lastLogin: null,
-      permissions: userConfig.permissions
-    }, { merge: true });
-    
-    // Create user profile document
-    await db.doc(`userProfiles/${userId}`).set({ 
-      email: userConfig.email, 
-      role: userConfig.role, 
-      groups: userConfig.groups, 
-      plan: 'pro', // Give all role-based test users pro plan for testing
-      subscriptionStatus: 'active', 
+      permissions: userConfig.permissions,
+      groups: {},
+      plan: 'free',
+      subscriptionStatus: 'inactive',
       lastStripeEventTs: Date.now(),
-      permissions: userConfig.permissions
+      themePreference: 'light',
+      notifications: true,
+      defaultView: 'grid',
+      organizations: [],
+      onboardingCompleted: false
     }, { merge: true });
     
     out.push({ 
@@ -2686,6 +2692,742 @@ export const deleteShowWithAdminPrivileges = onCall(async (req) => {
     }
     
     throw new functions.https.HttpsError('internal', `Failed to delete show: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+});
+
+// ============================================================================
+// DATABASE GARBAGE COLLECTION AND MAINTENANCE FUNCTIONS
+// ============================================================================
+
+/**
+ * Scheduled function to clean up old emails from the emails collection
+ * Runs daily at 2 AM UTC to clean up processed emails older than 30 days
+ */
+export const cleanupOldEmails = onSchedule({
+  schedule: "0 2 * * *", // Daily at 2 AM UTC
+  timeZone: "UTC",
+  region: "us-central1",
+  memory: "256MiB",
+  timeoutSeconds: 540 // 9 minutes
+}, async (event) => {
+  const db = admin.firestore();
+  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  
+  logger.info('Starting email cleanup process', { cutoffTime: new Date(thirtyDaysAgo).toISOString() });
+  
+  try {
+    // Query for processed emails older than 30 days
+    const oldEmailsQuery = db.collection('emails')
+      .where('processed', '==', true)
+      .where('processingAt', '<', admin.firestore.Timestamp.fromMillis(thirtyDaysAgo))
+      .limit(500); // Process in batches
+    
+    const snapshot = await oldEmailsQuery.get();
+    
+    if (snapshot.empty) {
+      logger.info('No old emails found to clean up');
+      return;
+    }
+    
+    logger.info(`Found ${snapshot.size} old emails to delete`);
+    
+    // Delete in batches to avoid hitting Firestore limits
+    let deletedCount = 0;
+    const batchSize = 450; // Leave buffer for safety (Firestore limit is 500)
+    
+    for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+      const batch = db.batch();
+      const batchDocs = snapshot.docs.slice(i, i + batchSize);
+      
+      for (const doc of batchDocs) {
+        batch.delete(doc.ref);
+        deletedCount++;
+      }
+      
+      await batch.commit();
+      logger.info(`Deleted ${deletedCount} emails so far`);
+    }
+    
+    logger.info(`Email cleanup completed. Deleted ${deletedCount} old emails`);
+    
+  } catch (error) {
+    logger.error('Error during email cleanup:', error);
+    throw error;
+  }
+});
+
+/**
+ * Scheduled function to clean up expired verification codes
+ * Runs every 6 hours to clean up expired signup and password reset codes
+ */
+export const cleanupExpiredCodes = onSchedule({
+  schedule: "0 */6 * * *", // Every 6 hours
+  timeZone: "UTC", 
+  region: "us-central1",
+  memory: "256MiB",
+  timeoutSeconds: 300 // 5 minutes
+}, async (event) => {
+  const db = admin.firestore();
+  const now = Date.now();
+  
+  logger.info('Starting expired codes cleanup process');
+  
+  try {
+    // Clean up expired signup codes
+    const expiredSignupCodes = await db.collection('pending_signups')
+      .where('expiresAt', '<', now)
+      .limit(500)
+      .get();
+    
+    if (!expiredSignupCodes.empty) {
+      const batchSize = 450;
+      let deletedCount = 0;
+      
+      for (let i = 0; i < expiredSignupCodes.docs.length; i += batchSize) {
+        const batch = db.batch();
+        const batchDocs = expiredSignupCodes.docs.slice(i, i + batchSize);
+        
+        for (const doc of batchDocs) {
+          batch.delete(doc.ref);
+          deletedCount++;
+        }
+        
+        await batch.commit();
+      }
+      
+      logger.info(`Deleted ${deletedCount} expired signup codes`);
+    }
+    
+    // Clean up expired password reset codes
+    const expiredResetCodes = await db.collection('pending_password_resets')
+      .where('expiresAt', '<', now)
+      .limit(500)
+      .get();
+    
+    if (!expiredResetCodes.empty) {
+      const batchSize = 450;
+      let deletedCount = 0;
+      
+      for (let i = 0; i < expiredResetCodes.docs.length; i += batchSize) {
+        const batch = db.batch();
+        const batchDocs = expiredResetCodes.docs.slice(i, i + batchSize);
+        
+        for (const doc of batchDocs) {
+          batch.delete(doc.ref);
+          deletedCount++;
+        }
+        
+        await batch.commit();
+      }
+      
+      logger.info(`Deleted ${deletedCount} expired password reset codes`);
+    }
+    
+    logger.info('Expired codes cleanup completed');
+    
+  } catch (error) {
+    logger.error('Error during expired codes cleanup:', error);
+    throw error;
+  }
+});
+
+/**
+ * Scheduled function to clean up old failed emails
+ * Runs weekly to clean up emails that failed to send and are older than 7 days
+ */
+export const cleanupFailedEmails = onSchedule({
+  schedule: "0 3 * * 0", // Weekly on Sunday at 3 AM UTC
+  timeZone: "UTC",
+  region: "us-central1", 
+  memory: "256MiB",
+  timeoutSeconds: 300 // 5 minutes
+}, async (event) => {
+  const db = admin.firestore();
+  const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  
+  logger.info('Starting failed emails cleanup process', { cutoffTime: new Date(sevenDaysAgo).toISOString() });
+  
+  try {
+    // Query for failed emails older than 7 days
+    const failedEmailsQuery = db.collection('emails')
+      .where('delivery.state', '==', 'failed')
+      .where('delivery.failedAt', '<', admin.firestore.Timestamp.fromMillis(sevenDaysAgo))
+      .limit(500);
+    
+    const snapshot = await failedEmailsQuery.get();
+    
+    if (snapshot.empty) {
+      logger.info('No old failed emails found to clean up');
+      return;
+    }
+    
+    logger.info(`Found ${snapshot.size} old failed emails to delete`);
+    
+    // Delete in batches
+    let deletedCount = 0;
+    const batchSize = 450; // Leave buffer for safety (Firestore limit is 500)
+    
+    for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+      const batch = db.batch();
+      const batchDocs = snapshot.docs.slice(i, i + batchSize);
+      
+      for (const doc of batchDocs) {
+        batch.delete(doc.ref);
+        deletedCount++;
+      }
+      
+      await batch.commit();
+      logger.info(`Deleted ${deletedCount} failed emails so far`);
+    }
+    
+    logger.info(`Failed emails cleanup completed. Deleted ${deletedCount} old failed emails`);
+    
+  } catch (error) {
+    logger.error('Error during failed emails cleanup:', error);
+    throw error;
+  }
+});
+
+/**
+ * Manual cleanup function for admin use
+ * Allows admins to manually trigger cleanup of specific collections
+ */
+export const manualCleanup = onCall({ region: "us-central1" }, async (req) => {
+  if (!req.auth) throw new Error("unauthenticated");
+  
+  const uid = req.auth.uid;
+  const db = admin.firestore();
+  
+  // Get user profile from userProfiles collection
+  const prof = await db.doc(`userProfiles/${uid}`).get();
+  const me = prof.exists ? (prof.data() as any) : {};
+  const token = (req as any).auth?.token || {};
+  const isGod = String(me?.role || '').toLowerCase() === 'god';
+  const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
+  if (!isGod && !isSystemAdmin) throw new Error("forbidden");
+  
+  const { collection, daysOld = 30, dryRun = true } = req.data || {};
+  
+  // Input validation
+  if (!collection || typeof collection !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'Collection name is required and must be a string');
+  }
+  
+  if (typeof daysOld !== 'number' || daysOld < 1 || daysOld > 365) {
+    throw new functions.https.HttpsError('invalid-argument', 'daysOld must be a number between 1 and 365');
+  }
+  
+  if (typeof dryRun !== 'boolean') {
+    throw new functions.https.HttpsError('invalid-argument', 'dryRun must be a boolean');
+  }
+  
+  // Validate collection name to prevent arbitrary access
+  const allowedCollections = ['emails', 'pending_signups', 'pending_password_resets', 'userProfiles'];
+  if (!allowedCollections.includes(collection)) {
+    throw new functions.https.HttpsError('invalid-argument', `Collection '${collection}' is not allowed for cleanup`);
+  }
+  
+  const cutoffTime = Date.now() - (daysOld * 24 * 60 * 60 * 1000);
+  
+  logger.info('Manual cleanup started', { collection, daysOld, dryRun, cutoffTime: new Date(cutoffTime).toISOString() });
+  
+  try {
+    let query: admin.firestore.Query;
+    
+    // Build query based on collection type
+    switch (collection) {
+      case 'emails':
+        query = db.collection(collection)
+          .where('processed', '==', true)
+          .where('processingAt', '<', admin.firestore.Timestamp.fromMillis(cutoffTime));
+        break;
+      case 'pending_signups':
+      case 'pending_password_resets':
+        query = db.collection(collection).where('expiresAt', '<', cutoffTime);
+        break;
+      default:
+        // For other collections, try to find createdAt field
+        query = db.collection(collection).where('createdAt', '<', admin.firestore.Timestamp.fromMillis(cutoffTime));
+    }
+    
+    const snapshot = await query.limit(1000).get();
+    
+    if (snapshot.empty) {
+      return { 
+        success: true, 
+        message: `No documents found in ${collection} older than ${daysOld} days`,
+        deletedCount: 0,
+        dryRun 
+      };
+    }
+    
+    if (dryRun) {
+      return {
+        success: true,
+        message: `Dry run: Would delete ${snapshot.size} documents from ${collection}`,
+        wouldDeleteCount: snapshot.size,
+        dryRun: true
+      };
+    }
+    
+    // Actually delete the documents
+    let deletedCount = 0;
+    const batchSize = 450; // Leave buffer for safety (Firestore limit is 500)
+    
+    // If deleting userProfiles, also clean up storage files
+    if (collection === 'userProfiles' && !dryRun) {
+      const bucket = admin.storage().bucket();
+      const userIdsToDelete = snapshot.docs.map(doc => doc.id);
+      
+      logger.info(`Cleaning up storage files for ${userIdsToDelete.length} users`);
+      
+      for (const userId of userIdsToDelete) {
+        // Clean up profile images (both casing variations)
+        const profileImagePaths = [
+          `profile_images/${userId}`,
+          `profileImages/${userId}`
+        ];
+        
+        for (const imagePath of profileImagePaths) {
+          try {
+            const file = bucket.file(imagePath);
+            const [exists] = await file.exists();
+            
+            if (exists) {
+              await file.delete();
+              logger.info(`Deleted storage file: ${imagePath}`);
+            }
+          } catch (error) {
+            logger.warn(`Could not delete ${imagePath}: ${error}`);
+          }
+        }
+        
+        // Clean up any other user-specific storage files
+        try {
+          const [files] = await bucket.getFiles({
+            prefix: `users/${userId}/`,
+            maxResults: 1000
+          });
+          
+          for (const file of files) {
+            await file.delete();
+            logger.info(`Deleted user storage file: ${file.name}`);
+          }
+        } catch (error) {
+          // This is expected if the prefix doesn't exist
+          logger.info(`No user-specific storage files found for ${userId}`);
+        }
+      }
+    }
+    
+    for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+      const batch = db.batch();
+      const batchDocs = snapshot.docs.slice(i, i + batchSize);
+      
+      for (const doc of batchDocs) {
+        batch.delete(doc.ref);
+        deletedCount++;
+      }
+      
+      await batch.commit();
+      logger.info(`Deleted ${deletedCount} documents so far`);
+    }
+    
+    logger.info(`Manual cleanup completed. Deleted ${deletedCount} documents from ${collection}`);
+    
+    return {
+      success: true,
+      message: `Successfully deleted ${deletedCount} documents from ${collection}`,
+      deletedCount,
+      dryRun: false
+    };
+    
+  } catch (error) {
+    logger.error('Error during manual cleanup:', error);
+    throw new functions.https.HttpsError('internal', `Cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+});
+
+/**
+ * Database health check function
+ * Provides insights into database usage and cleanup opportunities
+ */
+export const databaseHealthCheck = onCall({ region: "us-central1" }, async (req) => {
+  if (!req.auth) throw new Error("unauthenticated");
+  
+  const uid = req.auth.uid;
+  const db = admin.firestore();
+  
+  // Get user profile from userProfiles collection
+  const prof = await db.doc(`userProfiles/${uid}`).get();
+  const me = prof.exists ? (prof.data() as any) : {};
+  const token = (req as any).auth?.token || {};
+  const isGod = String(me?.role || '').toLowerCase() === 'god';
+  const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
+  if (!isGod && !isSystemAdmin) throw new Error("forbidden");
+  
+  const now = Date.now();
+  const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+  
+  logger.info('Starting database health check');
+  
+  try {
+    const healthReport: any = {
+      timestamp: new Date().toISOString(),
+      collections: {}
+    };
+    
+    // Check emails collection
+    const emailsTotal = await db.collection('emails').count().get();
+    const emailsOld = await db.collection('emails')
+      .where('processed', '==', true)
+      .where('processingAt', '<', admin.firestore.Timestamp.fromMillis(thirtyDaysAgo))
+      .count()
+      .get();
+    const emailsFailed = await db.collection('emails')
+      .where('delivery.state', '==', 'failed')
+      .where('delivery.failedAt', '<', admin.firestore.Timestamp.fromMillis(sevenDaysAgo))
+      .count()
+      .get();
+    
+    healthReport.collections.emails = {
+      total: emailsTotal.data().count,
+      oldProcessed: emailsOld.data().count,
+      oldFailed: emailsFailed.data().count,
+      cleanupOpportunity: emailsOld.data().count + emailsFailed.data().count
+    };
+    
+    // Check pending signup codes
+    const signupCodesTotal = await db.collection('pending_signups').count().get();
+    const signupCodesExpired = await db.collection('pending_signups')
+      .where('expiresAt', '<', now)
+      .count()
+      .get();
+    
+    healthReport.collections.pending_signups = {
+      total: signupCodesTotal.data().count,
+      expired: signupCodesExpired.data().count,
+      cleanupOpportunity: signupCodesExpired.data().count
+    };
+    
+    // Check pending password reset codes
+    const resetCodesTotal = await db.collection('pending_password_resets').count().get();
+    const resetCodesExpired = await db.collection('pending_password_resets')
+      .where('expiresAt', '<', now)
+      .count()
+      .get();
+    
+    healthReport.collections.pending_password_resets = {
+      total: resetCodesTotal.data().count,
+      expired: resetCodesExpired.data().count,
+      cleanupOpportunity: resetCodesExpired.data().count
+    };
+    
+    // Calculate total cleanup opportunity
+    const totalCleanupOpportunity = 
+      healthReport.collections.emails.cleanupOpportunity +
+      healthReport.collections.pending_signups.cleanupOpportunity +
+      healthReport.collections.pending_password_resets.cleanupOpportunity;
+    
+    healthReport.summary = {
+      totalCleanupOpportunity,
+      recommendations: []
+    };
+    
+    // Add recommendations
+    if (healthReport.collections.emails.oldProcessed > 0) {
+      healthReport.summary.recommendations.push(
+        `Consider running email cleanup to remove ${healthReport.collections.emails.oldProcessed} old processed emails`
+      );
+    }
+    
+    if (healthReport.collections.emails.oldFailed > 0) {
+      healthReport.summary.recommendations.push(
+        `Consider running failed email cleanup to remove ${healthReport.collections.emails.oldFailed} old failed emails`
+      );
+    }
+    
+    if (healthReport.collections.pending_signups.expired > 0) {
+      healthReport.summary.recommendations.push(
+        `Consider running expired codes cleanup to remove ${healthReport.collections.pending_signups.expired} expired signup codes`
+      );
+    }
+    
+    if (healthReport.collections.pending_password_resets.expired > 0) {
+      healthReport.summary.recommendations.push(
+        `Consider running expired codes cleanup to remove ${healthReport.collections.pending_password_resets.expired} expired password reset codes`
+      );
+    }
+    
+    if (totalCleanupOpportunity === 0) {
+      healthReport.summary.recommendations.push('Database is clean - no cleanup needed');
+    }
+    
+    logger.info('Database health check completed', healthReport);
+    
+    return {
+      success: true,
+      healthReport
+    };
+    
+  } catch (error) {
+    logger.error('Error during database health check:', error);
+    throw new functions.https.HttpsError('internal', `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+});
+
+/**
+ * Orphaned Storage Cleanup Function
+ * 
+ * This function finds and deletes orphaned files in Firebase Storage that are no longer
+ * referenced by any Firestore documents. It also finds Firestore documents that reference
+ * missing storage files.
+ */
+// Helper function to delete files in parallel with concurrency control
+async function deleteFilesInParallel(files: any[], concurrency = 10): Promise<{ deleted: number; failed: number; errors: string[] }> {
+  const results = { deleted: 0, failed: 0, errors: [] as string[] };
+  
+  // Process files in chunks to control concurrency
+  for (let i = 0; i < files.length; i += concurrency) {
+    const chunk = files.slice(i, i + concurrency);
+    
+    const promises = chunk.map(async (file) => {
+      try {
+        await deleteFileWithRetry(file);
+        results.deleted++;
+        logger.info(`Deleted orphaned file: ${file.name}`);
+      } catch (error) {
+        results.failed++;
+        const errorMsg = `Failed to delete file ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        results.errors.push(errorMsg);
+        logger.error(errorMsg);
+      }
+    });
+    
+    await Promise.all(promises);
+    
+    // Log progress for large operations
+    if (files.length > 50) {
+      logger.info(`Progress: ${Math.min(i + concurrency, files.length)}/${files.length} files processed`);
+    }
+  }
+  
+  return results;
+}
+
+// Helper function to delete a file with retry logic
+async function deleteFileWithRetry(file: any, maxRetries = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await file.delete();
+      return;
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = Math.pow(2, attempt) * 1000;
+      logger.warn(`Delete attempt ${attempt} failed for ${file.name}, retrying in ${delay}ms:`, error);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
+// Helper function to extract storage URLs from known fields only
+function extractStorageUrls(data: any): string[] {
+  const urls: string[] = [];
+  const knownStorageFields = [
+    'photoURL', 'profileImage', 'imageUrl', 'image', 'avatar', 'thumbnail',
+    'images', 'photos', 'attachments', 'media', 'files'
+  ];
+  
+  const extractFromObject = (obj: any): void => {
+    if (typeof obj === 'string' && obj.includes('firebasestorage.googleapis.com')) {
+      urls.push(obj);
+    } else if (Array.isArray(obj)) {
+      obj.forEach(item => extractFromObject(item));
+    } else if (obj && typeof obj === 'object') {
+      Object.entries(obj).forEach(([key, value]) => {
+        // Only check known fields or if the key suggests it might contain URLs
+        if (knownStorageFields.some(field => key.toLowerCase().includes(field.toLowerCase())) || 
+            typeof value === 'string' && value.includes('firebasestorage.googleapis.com')) {
+          extractFromObject(value);
+        }
+      });
+    }
+  };
+  
+  extractFromObject(data);
+  return urls;
+}
+
+export const cleanupOrphanedStorage = onCall({ 
+  region: "us-central1",
+  timeoutSeconds: 540, // 9 minutes for large operations
+  memory: "512MiB" // More memory for parallel processing
+}, async (req) => {
+  if (!req.auth) throw new functions.https.HttpsError("unauthenticated", "Authentication required");
+
+  const db = admin.firestore();
+  
+  // Check if user has admin permissions
+  const userProfile = await db.collection('userProfiles').doc(req.auth.uid).get();
+  const userData = userProfile.exists ? userProfile.data() : {};
+  const isGod = String(userData?.role || '').toLowerCase() === 'god';
+  const isSystemAdmin = !!(userData?.groups && userData.groups['system-admin'] === true);
+  
+  if (!isGod && !isSystemAdmin) {
+    throw new functions.https.HttpsError("permission-denied", "Admin access required");
+  }
+
+  // Input validation
+  const { dryRun = true, maxFiles = 1000, concurrency = 10 } = req.data || {};
+  
+  if (typeof maxFiles !== 'number' || maxFiles < 1 || maxFiles > 10000) {
+    throw new functions.https.HttpsError("invalid-argument", "maxFiles must be a number between 1 and 10000");
+  }
+  
+  if (typeof concurrency !== 'number' || concurrency < 1 || concurrency > 50) {
+    throw new functions.https.HttpsError("invalid-argument", "concurrency must be a number between 1 and 50");
+  }
+  
+  logger.info('Orphaned storage cleanup started', { dryRun, maxFiles, concurrency });
+
+  try {
+    const bucket = admin.storage().bucket();
+    const results = {
+      orphanedFiles: [] as Array<{
+        name: string;
+        size: string | number | undefined;
+        timeCreated: string | undefined;
+        url: string;
+      }>,
+      missingReferences: [] as string[],
+      deletedFiles: 0,
+      failedDeletions: 0,
+      totalFilesScanned: 0,
+      deletionErrors: [] as string[]
+    };
+
+    // Get all storage files
+    const [files] = await bucket.getFiles({ maxResults: maxFiles });
+    results.totalFilesScanned = files.length;
+    
+    logger.info(`Scanning ${files.length} storage files for orphaned references`);
+
+    // Get all Firestore documents that might reference storage files
+    // Only check collections that are likely to contain storage references
+    const collections = ['userProfiles', 'shows', 'props', 'todo_boards', 'feedback'];
+    const storageReferences = new Set<string>();
+    
+    for (const collectionName of collections) {
+      try {
+        const snapshot = await db.collection(collectionName).get();
+        logger.info(`Processing ${snapshot.size} documents from ${collectionName} collection`);
+        
+        for (const doc of snapshot.docs) {
+          const data = doc.data();
+          const urls = extractStorageUrls(data);
+          urls.forEach(url => storageReferences.add(url));
+        }
+      } catch (error) {
+        logger.warn(`Error processing collection ${collectionName}:`, error);
+        // Continue with other collections
+      }
+    }
+
+    logger.info(`Found ${storageReferences.size} storage references in Firestore`);
+
+    // Identify orphaned files
+    const orphanedFiles: any[] = [];
+    
+    for (const file of files) {
+      const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(file.name)}?alt=media`;
+      
+      if (!storageReferences.has(fileUrl)) {
+        results.orphanedFiles.push({
+          name: file.name,
+          size: file.metadata.size,
+          timeCreated: file.metadata.timeCreated,
+          url: fileUrl
+        });
+        orphanedFiles.push(file);
+      }
+    }
+
+    logger.info(`Found ${orphanedFiles.length} orphaned files`);
+
+    // Delete orphaned files if not in dry run mode
+    if (!dryRun && orphanedFiles.length > 0) {
+      logger.info(`Starting deletion of ${orphanedFiles.length} orphaned files with concurrency ${concurrency}`);
+      const deletionResults = await deleteFilesInParallel(orphanedFiles, concurrency);
+      results.deletedFiles = deletionResults.deleted;
+      results.failedDeletions = deletionResults.failed;
+      results.deletionErrors = deletionResults.errors;
+    }
+
+    // Check for missing references (Firestore docs that reference non-existent files)
+    logger.info('Checking for missing storage references...');
+    const missingRefs: string[] = [];
+    
+    // Process in batches to avoid overwhelming the storage API
+    const urlArray = Array.from(storageReferences);
+    const batchSize = 50;
+    
+    for (let i = 0; i < urlArray.length; i += batchSize) {
+      const batch = urlArray.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async (url) => {
+        try {
+          const urlParts = url.split('/o/');
+          if (urlParts.length === 2) {
+            const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
+            const file = bucket.file(filePath);
+            const [exists] = await file.exists();
+            
+            if (!exists) {
+              missingRefs.push(url);
+            }
+          }
+        } catch (error) {
+          logger.warn(`Error checking file existence for ${url}:`, error);
+        }
+      });
+      
+      await Promise.all(batchPromises);
+      
+      if (urlArray.length > 100) {
+        logger.info(`Progress: ${Math.min(i + batchSize, urlArray.length)}/${urlArray.length} references checked`);
+      }
+    }
+    
+    results.missingReferences = missingRefs;
+
+    const summary = {
+      totalFilesScanned: results.totalFilesScanned,
+      orphanedFilesFound: results.orphanedFiles.length,
+      missingReferencesFound: results.missingReferences.length,
+      filesDeleted: results.deletedFiles,
+      failedDeletions: results.failedDeletions,
+      dryRun,
+      concurrency
+    };
+
+    logger.info('Orphaned storage cleanup completed', summary);
+
+    return {
+      success: true,
+      summary,
+      orphanedFiles: results.orphanedFiles,
+      missingReferences: results.missingReferences,
+      deletionErrors: results.deletionErrors
+    };
+
+  } catch (error) {
+    logger.error('Error during orphaned storage cleanup:', error);
+    throw new functions.https.HttpsError('internal', `Storage cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 });
 

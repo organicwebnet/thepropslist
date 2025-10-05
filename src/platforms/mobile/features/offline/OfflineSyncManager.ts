@@ -48,7 +48,7 @@ export class OfflineSyncManager {
       if (!metadata) {
         await this.updateSyncMetadata({
           lastSyncTimestamp: 0,
-          collections: ['props', 'shows', 'users', 'packs'],
+          collections: ['props', 'shows', 'userProfiles', 'packs'],
         });
       }
 

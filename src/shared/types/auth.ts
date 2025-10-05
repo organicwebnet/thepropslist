@@ -1,9 +1,17 @@
-import { Address } from './address.ts'; // Import the new Address type
+import { Address } from './address'; // Import the new Address type
 
 export enum UserRole {
   ADMIN = 'admin',
   EDITOR = 'editor',
   VIEWER = 'viewer',
+  // Theatre-specific roles
+  GOD = 'god',
+  PROPS_SUPERVISOR = 'props_supervisor',
+  STAGE_MANAGER = 'stage_manager',
+  ASSISTANT_STAGE_MANAGER = 'assistant_stage_manager',
+  PROP_MAKER = 'prop_maker',
+  ART_DIRECTOR = 'art_director',
+  PROPS_SUPERVISOR_ASSISTANT = 'props_supervisor_assistant',
 }
 
 /**
@@ -15,6 +23,7 @@ export interface UserPermissions {
   canManageUsers?: boolean;
   canEditShows?: boolean;
   canCreateProps?: boolean;
+  canCustomizeDataViews?: boolean;
 }
 
 /**
@@ -45,6 +54,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canManageUsers: true,
     canEditShows: true,
     canCreateProps: true,
+    canCustomizeDataViews: true,
   },
   [UserRole.EDITOR]: {
     canEditProps: true,
@@ -52,6 +62,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canManageUsers: true,
     canEditShows: true,
     canCreateProps: true,
+    canCustomizeDataViews: false,
   },
   [UserRole.VIEWER]: {
     canEditProps: false,
@@ -59,5 +70,63 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {
     canManageUsers: false,
     canEditShows: false,
     canCreateProps: false,
-  }
+    canCustomizeDataViews: false,
+  },
+  // Theatre-specific roles
+  [UserRole.GOD]: {
+    canEditProps: true,
+    canDeleteProps: true,
+    canManageUsers: true,
+    canEditShows: true,
+    canCreateProps: true,
+    canCustomizeDataViews: true,
+  },
+  [UserRole.PROPS_SUPERVISOR]: {
+    canEditProps: true,
+    canDeleteProps: true,
+    canManageUsers: true,
+    canEditShows: true,
+    canCreateProps: true,
+    canCustomizeDataViews: true,
+  },
+  [UserRole.STAGE_MANAGER]: {
+    canEditProps: true,
+    canDeleteProps: false,
+    canManageUsers: false,
+    canEditShows: false,
+    canCreateProps: true,
+    canCustomizeDataViews: false,
+  },
+  [UserRole.ASSISTANT_STAGE_MANAGER]: {
+    canEditProps: true,
+    canDeleteProps: false,
+    canManageUsers: false,
+    canEditShows: false,
+    canCreateProps: true,
+    canCustomizeDataViews: false,
+  },
+  [UserRole.PROP_MAKER]: {
+    canEditProps: true,
+    canDeleteProps: false,
+    canManageUsers: false,
+    canEditShows: false,
+    canCreateProps: true,
+    canCustomizeDataViews: false,
+  },
+  [UserRole.ART_DIRECTOR]: {
+    canEditProps: true,
+    canDeleteProps: true,
+    canManageUsers: false,
+    canEditShows: false,
+    canCreateProps: true,
+    canCustomizeDataViews: false,
+  },
+  [UserRole.PROPS_SUPERVISOR_ASSISTANT]: {
+    canEditProps: true,
+    canDeleteProps: false,
+    canManageUsers: false,
+    canEditShows: false,
+    canCreateProps: true,
+    canCustomizeDataViews: false,
+  },
 }; 

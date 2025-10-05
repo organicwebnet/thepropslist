@@ -10,7 +10,7 @@ export class AuthService {
   }
 
   async getUserProfile(uid: string): Promise<UserProfile | null> {
-    const userDoc = await this.firebase.getDocument<UserProfile>('users', uid);
+    const userDoc = await this.firebase.getDocument<UserProfile>('userProfiles', uid);
     
     if (!userDoc || !userDoc.data) {
       return null;
@@ -57,7 +57,7 @@ export class AuthService {
       updatedAt: now
     };
 
-    await this.firebase.addDocument<Partial<UserProfile>>(`users/${user.uid}`, profileData);
+    await this.firebase.addDocument<Partial<UserProfile>>(`userProfiles/${user.uid}`, profileData);
   }
 
   async updateUserRole(uid: string, newRole: UserRole): Promise<void> {
@@ -66,7 +66,7 @@ export class AuthService {
       permissions: DEFAULT_ROLE_PERMISSIONS[newRole],
       updatedAt: new Date() 
     };
-    await this.firebase.updateDocument<UserProfile>('users', uid, updateData);
+    await this.firebase.updateDocument<UserProfile>('userProfiles', uid, updateData);
   }
 
   async updateUserPermissions(uid: string, permissionsInput: Partial<UserPermissions>): Promise<void> {
@@ -75,7 +75,7 @@ export class AuthService {
         permissions: permissionsInput, 
         updatedAt: new Date() 
     };
-    await this.firebase.updateDocument<UserProfile>('users', uid, updateData);
+    await this.firebase.updateDocument<UserProfile>('userProfiles', uid, updateData);
   }
 
   async hasPermission(uid: string, permission: keyof UserPermissions): Promise<boolean> {

@@ -25,7 +25,7 @@ export class OfflineSyncService {
     }
     return {
       lastSyncTimestamp: 0,
-      collections: ['props', 'shows', 'users', 'packs']
+      collections: ['props', 'shows', 'userProfiles', 'packs']
     };
   }
 

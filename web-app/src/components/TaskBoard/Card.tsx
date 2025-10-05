@@ -132,7 +132,7 @@ const CardDetailModal: React.FC<{
   useEffect(() => {
     firebaseService.getDocuments("props").then(docs => setPropsList(docs.map(d => ({ id: d.id, name: d.data.name }))));
     firebaseService.getDocuments("containers").then(docs => setContainersList(docs.map(d => ({ id: d.id, name: d.data.name }))));
-    firebaseService.getDocuments("users").then(docs => setUsersList(docs.map(d => ({ id: d.data?.uid || d.id, name: d.data?.displayName || d.data?.name || d.data?.email }))));
+    firebaseService.getDocuments("userProfiles").then(docs => setUsersList(docs.map(d => ({ id: d.data?.uid || d.id, name: d.data?.displayName || d.data?.name || d.data?.email }))));
   }, [firebaseService]);
 
   const [description, setDescription] = useState(card.description || "");

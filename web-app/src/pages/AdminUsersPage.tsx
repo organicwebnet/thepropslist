@@ -22,7 +22,7 @@ const AdminUsersPage: React.FC = () => {
   const [seedOutput, setSeedOutput] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub = service.listenToCollection<UserDoc>('users', (docs) => {
+    const unsub = service.listenToCollection<UserDoc>('userProfiles', (docs) => {
       setUsers(docs.map(d => ({ id: d.id, data: d.data as any })));
       setLoading(false);
     }, (err) => {

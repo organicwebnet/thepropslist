@@ -51,7 +51,7 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
         // noop
       }
       try {
-        const u = await service.getDocuments<any>('users');
+        const u = await service.getDocuments<any>('userProfiles');
         setUsersList(u.map(d => ({ id: d.id, name: d.data?.displayName || d.data?.name || d.data?.email || 'User' })));
       } catch {
         // noop

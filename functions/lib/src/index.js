@@ -36,9 +36,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteShowWithAdminPrivileges = exports.submitContactForm = exports.getAddOnsForMarketing = exports.cancelAddOn = exports.purchaseAddOn = exports.batchOptimizeImages = exports.optimizeImage = exports.joinWaitlist = exports.adminNormalizeContainers = exports.normalizeContainersHttp = exports.setContainerParent = exports.normalizeContainers = exports.publicContainerInfoLegacyV1 = exports.publicContainerInfo = exports.getSubscriptionStats = exports.seedRoleBasedTestUsers = exports.seedTestUsers = exports.getPricingConfig = exports.getStripePromotionCodes = exports.getStripeCoupons = exports.createStripePromotionCode = exports.createStripeCoupon = exports.updateUserPasswordWithCode = exports.sendCustomPasswordResetEmail = exports.createCheckoutSession = exports.createBillingPortalSession = exports.stripeWebhook = exports.feedbackToGithubEU = exports.feedbackIssueBridge = exports.sendEmailDirect = exports.processEmail = exports.sendInviteEmail = void 0;
+exports.databaseHealthCheck = exports.manualCleanup = exports.cleanupFailedEmails = exports.cleanupExpiredCodes = exports.cleanupOldEmails = exports.deleteShowWithAdminPrivileges = exports.submitContactForm = exports.getAddOnsForMarketing = exports.cancelAddOn = exports.purchaseAddOn = exports.batchOptimizeImages = exports.optimizeImage = exports.joinWaitlist = exports.adminNormalizeContainers = exports.normalizeContainersHttp = exports.setContainerParent = exports.normalizeContainers = exports.publicContainerInfoLegacyV1 = exports.publicContainerInfo = exports.getSubscriptionStats = exports.seedRoleBasedTestUsers = exports.seedTestUsers = exports.getPricingConfig = exports.getStripePromotionCodes = exports.getStripeCoupons = exports.createStripePromotionCode = exports.createStripeCoupon = exports.updateUserPasswordWithCode = exports.sendCustomPasswordResetEmail = exports.createCheckoutSession = exports.createBillingPortalSession = exports.stripeWebhook = exports.feedbackToGithubEU = exports.feedbackIssueBridge = exports.sendEmailDirect = exports.processEmail = exports.sendInviteEmail = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
+const scheduler_1 = require("firebase-functions/v2/scheduler");
 const logger = __importStar(require("firebase-functions/logger"));
 const functions = __importStar(require("firebase-functions"));
 const functionsV1 = __importStar(require("firebase-functions/v1"));
@@ -1363,14 +1364,9 @@ exports.seedTestUsers = (0, https_1.onCall)({ region: "us-central1" }, async (re
         throw new Error("unauthenticated");
     const uid = req.auth.uid;
     const db = admin.firestore();
-    // Check role from userProfiles OR fallback to users. Also allow custom claim 'admin'
+    // Get user profile from userProfiles collection
     const prof = await db.doc(`userProfiles/${uid}`).get();
-    let me = prof.exists ? prof.data() : {};
-    if (!me || Object.keys(me).length === 0) {
-        const userDoc = await db.doc(`users/${uid}`).get();
-        if (userDoc.exists)
-            me = { ...userDoc.data() };
-    }
+    const me = prof.exists ? prof.data() : {};
     const token = req.auth?.token || {};
     const isGod = String(me?.role || '').toLowerCase() === 'god';
     const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
@@ -1396,8 +1392,23 @@ exports.seedTestUsers = (0, https_1.onCall)({ region: "us-central1" }, async (re
         if (!userRecord)
             continue;
         const userId = userRecord.uid;
-        await db.doc(`users/${userId}`).set({ uid: userId, email, displayName: userRecord.displayName || email.split('@')[0], role: 'user', createdAt: Date.now(), lastLogin: null }, { merge: true });
-        await db.doc(`userProfiles/${userId}`).set({ email, role: 'user', groups: {}, plan, subscriptionStatus: 'active', lastStripeEventTs: Date.now() }, { merge: true });
+        await db.doc(`userProfiles/${userId}`).set({
+            uid: userId,
+            email,
+            displayName: userRecord.displayName || email.split('@')[0],
+            role: 'user',
+            createdAt: Date.now(),
+            lastLogin: null,
+            groups: {},
+            plan,
+            subscriptionStatus: 'active',
+            lastStripeEventTs: Date.now(),
+            themePreference: 'light',
+            notifications: true,
+            defaultView: 'grid',
+            organizations: [],
+            onboardingCompleted: false
+        }, { merge: true });
         out.push({ email, password, uid: userId, plan });
     }
     return { ok: true, users: out };
@@ -1408,14 +1419,9 @@ exports.seedRoleBasedTestUsers = (0, https_1.onCall)({ region: "us-central1" }, 
         throw new Error("unauthenticated");
     const uid = req.auth.uid;
     const db = admin.firestore();
-    // Check role from userProfiles OR fallback to users. Also allow custom claim 'admin'
+    // Get user profile from userProfiles collection
     const prof = await db.doc(`userProfiles/${uid}`).get();
-    let me = prof.exists ? prof.data() : {};
-    if (!me || Object.keys(me).length === 0) {
-        const userDoc = await db.doc(`users/${uid}`).get();
-        if (userDoc.exists)
-            me = { ...userDoc.data() };
-    }
+    const me = prof.exists ? prof.data() : {};
     const token = req.auth?.token || {};
     const isGod = String(me?.role || '').toLowerCase() === 'god';
     const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
@@ -1502,25 +1508,24 @@ exports.seedRoleBasedTestUsers = (0, https_1.onCall)({ region: "us-central1" }, 
         if (!userRecord)
             continue;
         const userId = userRecord.uid;
-        // Create user document
-        await db.doc(`users/${userId}`).set({
+        // Create user document in userProfiles collection
+        await db.doc(`userProfiles/${userId}`).set({
             uid: userId,
             email: userConfig.email,
             displayName: userRecord.displayName || userConfig.email.split('@')[0],
             role: userConfig.role,
             createdAt: Date.now(),
             lastLogin: null,
-            permissions: userConfig.permissions
-        }, { merge: true });
-        // Create user profile document
-        await db.doc(`userProfiles/${userId}`).set({
-            email: userConfig.email,
-            role: userConfig.role,
-            groups: userConfig.groups,
-            plan: 'pro', // Give all role-based test users pro plan for testing
-            subscriptionStatus: 'active',
+            permissions: userConfig.permissions,
+            groups: {},
+            plan: 'free',
+            subscriptionStatus: 'inactive',
             lastStripeEventTs: Date.now(),
-            permissions: userConfig.permissions
+            themePreference: 'light',
+            notifications: true,
+            defaultView: 'grid',
+            organizations: [],
+            onboardingCompleted: false
         }, { merge: true });
         out.push({
             email: userConfig.email,
@@ -2544,5 +2549,356 @@ exports.deleteShowWithAdminPrivileges = (0, https_1.onCall)(async (req) => {
             throw error;
         }
         throw new functions.https.HttpsError('internal', `Failed to delete show: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+});
+// ============================================================================
+// DATABASE GARBAGE COLLECTION AND MAINTENANCE FUNCTIONS
+// ============================================================================
+/**
+ * Scheduled function to clean up old emails from the emails collection
+ * Runs daily at 2 AM UTC to clean up processed emails older than 30 days
+ */
+exports.cleanupOldEmails = (0, scheduler_1.onSchedule)({
+    schedule: "0 2 * * *", // Daily at 2 AM UTC
+    timeZone: "UTC",
+    region: "us-central1",
+    memory: "256MiB",
+    timeoutSeconds: 540 // 9 minutes
+}, async (event) => {
+    const db = admin.firestore();
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    logger.info('Starting email cleanup process', { cutoffTime: new Date(thirtyDaysAgo).toISOString() });
+    try {
+        // Query for processed emails older than 30 days
+        const oldEmailsQuery = db.collection('emails')
+            .where('processed', '==', true)
+            .where('processingAt', '<', admin.firestore.Timestamp.fromMillis(thirtyDaysAgo))
+            .limit(500); // Process in batches
+        const snapshot = await oldEmailsQuery.get();
+        if (snapshot.empty) {
+            logger.info('No old emails found to clean up');
+            return;
+        }
+        logger.info(`Found ${snapshot.size} old emails to delete`);
+        // Delete in batches to avoid hitting Firestore limits
+        let deletedCount = 0;
+        const batchSize = 450; // Leave buffer for safety (Firestore limit is 500)
+        for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+            const batch = db.batch();
+            const batchDocs = snapshot.docs.slice(i, i + batchSize);
+            for (const doc of batchDocs) {
+                batch.delete(doc.ref);
+                deletedCount++;
+            }
+            await batch.commit();
+            logger.info(`Deleted ${deletedCount} emails so far`);
+        }
+        logger.info(`Email cleanup completed. Deleted ${deletedCount} old emails`);
+    }
+    catch (error) {
+        logger.error('Error during email cleanup:', error);
+        throw error;
+    }
+});
+/**
+ * Scheduled function to clean up expired verification codes
+ * Runs every 6 hours to clean up expired signup and password reset codes
+ */
+exports.cleanupExpiredCodes = (0, scheduler_1.onSchedule)({
+    schedule: "0 */6 * * *", // Every 6 hours
+    timeZone: "UTC",
+    region: "us-central1",
+    memory: "256MiB",
+    timeoutSeconds: 300 // 5 minutes
+}, async (event) => {
+    const db = admin.firestore();
+    const now = Date.now();
+    logger.info('Starting expired codes cleanup process');
+    try {
+        // Clean up expired signup codes
+        const expiredSignupCodes = await db.collection('pending_signups')
+            .where('expiresAt', '<', now)
+            .limit(500)
+            .get();
+        if (!expiredSignupCodes.empty) {
+            const batchSize = 450;
+            let deletedCount = 0;
+            for (let i = 0; i < expiredSignupCodes.docs.length; i += batchSize) {
+                const batch = db.batch();
+                const batchDocs = expiredSignupCodes.docs.slice(i, i + batchSize);
+                for (const doc of batchDocs) {
+                    batch.delete(doc.ref);
+                    deletedCount++;
+                }
+                await batch.commit();
+            }
+            logger.info(`Deleted ${deletedCount} expired signup codes`);
+        }
+        // Clean up expired password reset codes
+        const expiredResetCodes = await db.collection('pending_password_resets')
+            .where('expiresAt', '<', now)
+            .limit(500)
+            .get();
+        if (!expiredResetCodes.empty) {
+            const batchSize = 450;
+            let deletedCount = 0;
+            for (let i = 0; i < expiredResetCodes.docs.length; i += batchSize) {
+                const batch = db.batch();
+                const batchDocs = expiredResetCodes.docs.slice(i, i + batchSize);
+                for (const doc of batchDocs) {
+                    batch.delete(doc.ref);
+                    deletedCount++;
+                }
+                await batch.commit();
+            }
+            logger.info(`Deleted ${deletedCount} expired password reset codes`);
+        }
+        logger.info('Expired codes cleanup completed');
+    }
+    catch (error) {
+        logger.error('Error during expired codes cleanup:', error);
+        throw error;
+    }
+});
+/**
+ * Scheduled function to clean up old failed emails
+ * Runs weekly to clean up emails that failed to send and are older than 7 days
+ */
+exports.cleanupFailedEmails = (0, scheduler_1.onSchedule)({
+    schedule: "0 3 * * 0", // Weekly on Sunday at 3 AM UTC
+    timeZone: "UTC",
+    region: "us-central1",
+    memory: "256MiB",
+    timeoutSeconds: 300 // 5 minutes
+}, async (event) => {
+    const db = admin.firestore();
+    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    logger.info('Starting failed emails cleanup process', { cutoffTime: new Date(sevenDaysAgo).toISOString() });
+    try {
+        // Query for failed emails older than 7 days
+        const failedEmailsQuery = db.collection('emails')
+            .where('delivery.state', '==', 'failed')
+            .where('delivery.failedAt', '<', admin.firestore.Timestamp.fromMillis(sevenDaysAgo))
+            .limit(500);
+        const snapshot = await failedEmailsQuery.get();
+        if (snapshot.empty) {
+            logger.info('No old failed emails found to clean up');
+            return;
+        }
+        logger.info(`Found ${snapshot.size} old failed emails to delete`);
+        // Delete in batches
+        let deletedCount = 0;
+        const batchSize = 450; // Leave buffer for safety (Firestore limit is 500)
+        for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+            const batch = db.batch();
+            const batchDocs = snapshot.docs.slice(i, i + batchSize);
+            for (const doc of batchDocs) {
+                batch.delete(doc.ref);
+                deletedCount++;
+            }
+            await batch.commit();
+            logger.info(`Deleted ${deletedCount} failed emails so far`);
+        }
+        logger.info(`Failed emails cleanup completed. Deleted ${deletedCount} old failed emails`);
+    }
+    catch (error) {
+        logger.error('Error during failed emails cleanup:', error);
+        throw error;
+    }
+});
+/**
+ * Manual cleanup function for admin use
+ * Allows admins to manually trigger cleanup of specific collections
+ */
+exports.manualCleanup = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
+    if (!req.auth)
+        throw new Error("unauthenticated");
+    const uid = req.auth.uid;
+    const db = admin.firestore();
+    // Get user profile from userProfiles collection
+    const prof = await db.doc(`userProfiles/${uid}`).get();
+    const me = prof.exists ? prof.data() : {};
+    const token = req.auth?.token || {};
+    const isGod = String(me?.role || '').toLowerCase() === 'god';
+    const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
+    if (!isGod && !isSystemAdmin)
+        throw new Error("forbidden");
+    const { collection, daysOld = 30, dryRun = true } = req.data || {};
+    // Input validation
+    if (!collection || typeof collection !== 'string') {
+        throw new functions.https.HttpsError('invalid-argument', 'Collection name is required and must be a string');
+    }
+    if (typeof daysOld !== 'number' || daysOld < 1 || daysOld > 365) {
+        throw new functions.https.HttpsError('invalid-argument', 'daysOld must be a number between 1 and 365');
+    }
+    if (typeof dryRun !== 'boolean') {
+        throw new functions.https.HttpsError('invalid-argument', 'dryRun must be a boolean');
+    }
+    // Validate collection name to prevent arbitrary access
+    const allowedCollections = ['emails', 'pending_signups', 'pending_password_resets'];
+    if (!allowedCollections.includes(collection)) {
+        throw new functions.https.HttpsError('invalid-argument', `Collection '${collection}' is not allowed for cleanup`);
+    }
+    const cutoffTime = Date.now() - (daysOld * 24 * 60 * 60 * 1000);
+    logger.info('Manual cleanup started', { collection, daysOld, dryRun, cutoffTime: new Date(cutoffTime).toISOString() });
+    try {
+        let query;
+        // Build query based on collection type
+        switch (collection) {
+            case 'emails':
+                query = db.collection(collection)
+                    .where('processed', '==', true)
+                    .where('processingAt', '<', admin.firestore.Timestamp.fromMillis(cutoffTime));
+                break;
+            case 'pending_signups':
+            case 'pending_password_resets':
+                query = db.collection(collection).where('expiresAt', '<', cutoffTime);
+                break;
+            default:
+                // For other collections, try to find createdAt field
+                query = db.collection(collection).where('createdAt', '<', admin.firestore.Timestamp.fromMillis(cutoffTime));
+        }
+        const snapshot = await query.limit(1000).get();
+        if (snapshot.empty) {
+            return {
+                success: true,
+                message: `No documents found in ${collection} older than ${daysOld} days`,
+                deletedCount: 0,
+                dryRun
+            };
+        }
+        if (dryRun) {
+            return {
+                success: true,
+                message: `Dry run: Would delete ${snapshot.size} documents from ${collection}`,
+                wouldDeleteCount: snapshot.size,
+                dryRun: true
+            };
+        }
+        // Actually delete the documents
+        let deletedCount = 0;
+        const batchSize = 450; // Leave buffer for safety (Firestore limit is 500)
+        for (let i = 0; i < snapshot.docs.length; i += batchSize) {
+            const batch = db.batch();
+            const batchDocs = snapshot.docs.slice(i, i + batchSize);
+            for (const doc of batchDocs) {
+                batch.delete(doc.ref);
+                deletedCount++;
+            }
+            await batch.commit();
+            logger.info(`Deleted ${deletedCount} documents so far`);
+        }
+        logger.info(`Manual cleanup completed. Deleted ${deletedCount} documents from ${collection}`);
+        return {
+            success: true,
+            message: `Successfully deleted ${deletedCount} documents from ${collection}`,
+            deletedCount,
+            dryRun: false
+        };
+    }
+    catch (error) {
+        logger.error('Error during manual cleanup:', error);
+        throw new functions.https.HttpsError('internal', `Cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+});
+/**
+ * Database health check function
+ * Provides insights into database usage and cleanup opportunities
+ */
+exports.databaseHealthCheck = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
+    if (!req.auth)
+        throw new Error("unauthenticated");
+    const uid = req.auth.uid;
+    const db = admin.firestore();
+    // Get user profile from userProfiles collection
+    const prof = await db.doc(`userProfiles/${uid}`).get();
+    const me = prof.exists ? prof.data() : {};
+    const token = req.auth?.token || {};
+    const isGod = String(me?.role || '').toLowerCase() === 'god';
+    const isSystemAdmin = !!(me?.groups && me.groups['system-admin'] === true) || !!token.admin;
+    if (!isGod && !isSystemAdmin)
+        throw new Error("forbidden");
+    const now = Date.now();
+    const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+    logger.info('Starting database health check');
+    try {
+        const healthReport = {
+            timestamp: new Date().toISOString(),
+            collections: {}
+        };
+        // Check emails collection
+        const emailsTotal = await db.collection('emails').count().get();
+        const emailsOld = await db.collection('emails')
+            .where('processed', '==', true)
+            .where('processingAt', '<', admin.firestore.Timestamp.fromMillis(thirtyDaysAgo))
+            .count()
+            .get();
+        const emailsFailed = await db.collection('emails')
+            .where('delivery.state', '==', 'failed')
+            .where('delivery.failedAt', '<', admin.firestore.Timestamp.fromMillis(sevenDaysAgo))
+            .count()
+            .get();
+        healthReport.collections.emails = {
+            total: emailsTotal.data().count,
+            oldProcessed: emailsOld.data().count,
+            oldFailed: emailsFailed.data().count,
+            cleanupOpportunity: emailsOld.data().count + emailsFailed.data().count
+        };
+        // Check pending signup codes
+        const signupCodesTotal = await db.collection('pending_signups').count().get();
+        const signupCodesExpired = await db.collection('pending_signups')
+            .where('expiresAt', '<', now)
+            .count()
+            .get();
+        healthReport.collections.pending_signups = {
+            total: signupCodesTotal.data().count,
+            expired: signupCodesExpired.data().count,
+            cleanupOpportunity: signupCodesExpired.data().count
+        };
+        // Check pending password reset codes
+        const resetCodesTotal = await db.collection('pending_password_resets').count().get();
+        const resetCodesExpired = await db.collection('pending_password_resets')
+            .where('expiresAt', '<', now)
+            .count()
+            .get();
+        healthReport.collections.pending_password_resets = {
+            total: resetCodesTotal.data().count,
+            expired: resetCodesExpired.data().count,
+            cleanupOpportunity: resetCodesExpired.data().count
+        };
+        // Calculate total cleanup opportunity
+        const totalCleanupOpportunity = healthReport.collections.emails.cleanupOpportunity +
+            healthReport.collections.pending_signups.cleanupOpportunity +
+            healthReport.collections.pending_password_resets.cleanupOpportunity;
+        healthReport.summary = {
+            totalCleanupOpportunity,
+            recommendations: []
+        };
+        // Add recommendations
+        if (healthReport.collections.emails.oldProcessed > 0) {
+            healthReport.summary.recommendations.push(`Consider running email cleanup to remove ${healthReport.collections.emails.oldProcessed} old processed emails`);
+        }
+        if (healthReport.collections.emails.oldFailed > 0) {
+            healthReport.summary.recommendations.push(`Consider running failed email cleanup to remove ${healthReport.collections.emails.oldFailed} old failed emails`);
+        }
+        if (healthReport.collections.pending_signups.expired > 0) {
+            healthReport.summary.recommendations.push(`Consider running expired codes cleanup to remove ${healthReport.collections.pending_signups.expired} expired signup codes`);
+        }
+        if (healthReport.collections.pending_password_resets.expired > 0) {
+            healthReport.summary.recommendations.push(`Consider running expired codes cleanup to remove ${healthReport.collections.pending_password_resets.expired} expired password reset codes`);
+        }
+        if (totalCleanupOpportunity === 0) {
+            healthReport.summary.recommendations.push('Database is clean - no cleanup needed');
+        }
+        logger.info('Database health check completed', healthReport);
+        return {
+            success: true,
+            healthReport
+        };
+    }
+    catch (error) {
+        logger.error('Error during database health check:', error);
+        throw new functions.https.HttpsError('internal', `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 });

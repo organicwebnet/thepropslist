@@ -108,7 +108,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       // If using cache, try cache first
       // const cached = await webCache.get<UserProfile>(`user-profile-${uid}`);
       // if (cached) { setUserProfile(cached); return cached; }
-      const userDocRef = doc(firestoreDb, 'users', uid);
+      const userDocRef = doc(firestoreDb, 'userProfiles', uid);
       const userDoc = await getDoc(userDocRef);
       console.log('WebAuthContext: User document exists:', userDoc.exists());
       if (userDoc.exists()) {
@@ -212,7 +212,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
 
   const updateLastLogin = async (uid: string) => {
     try {
-      const userDocRef = doc(firestoreDb, 'users', uid);
+      const userDocRef = doc(firestoreDb, 'userProfiles', uid);
       await updateDoc(userDocRef, { lastLogin: Timestamp.now() });
     } catch (error) {
       console.error('Error updating last login:', error);
@@ -312,25 +312,20 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       // Update Firebase user profile with display name
       await updateProfile(newUser, { displayName });
       
-      // Create the user profile document in Firestore
-      const userDocRef = doc(firestoreDb, 'users', newUser.uid);
-      await setDoc(userDocRef, {
+      // Create the user profile document in userProfiles collection
+      const userProfileRef = doc(firestoreDb, 'userProfiles', newUser.uid);
+      await setDoc(userProfileRef, {
         uid: newUser.uid,
         email: storedEmail,
         displayName: displayName.trim(),
         role: 'user',
         createdAt: new Date(),
         lastLogin: new Date(),
-        preferences: { theme: 'light', notifications: true, defaultView: 'grid' },
+        themePreference: 'light',
+        notifications: true,
+        defaultView: 'grid',
         organizations: [],
-        onboardingCompleted: false
-      });
-      
-      // Create the user profile document
-      const userProfileRef = doc(firestoreDb, 'userProfiles', newUser.uid);
-      await setDoc(userProfileRef, {
-        email: storedEmail,
-        role: 'user',
+        onboardingCompleted: false,
         groups: {},
         plan: 'free',
         subscriptionStatus: 'inactive',
@@ -562,7 +557,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       // This will fail but won't throw an error for non-existent users in some cases
       // We'll use a different approach - check if there's a user profile in Firestore
       try {
-        const userProfileRef = doc(firestoreDb, 'users', email.toLowerCase());
+        const userProfileRef = doc(firestoreDb, 'userProfiles', email.toLowerCase());
         const userProfileSnap = await getDoc(userProfileRef);
         
         if (!userProfileSnap.exists()) {
@@ -646,7 +641,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       setLoading(true);
       setError(null);
       if (!user) throw new Error('No user');
-      const userDocRef = doc(firestoreDb, 'users', user.uid);
+      const userDocRef = doc(firestoreDb, 'userProfiles', user.uid);
       await updateDoc(userDocRef, updates);
       await loadUserProfile(user.uid);
     } catch (error: any) {
@@ -664,7 +659,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       if (!user) throw new Error('No user');
       
       console.log('WebAuthContext: Marking onboarding as completed for user:', user.uid);
-      const userDocRef = doc(firestoreDb, 'users', user.uid);
+      const userDocRef = doc(firestoreDb, 'userProfiles', user.uid);
       await updateDoc(userDocRef, { onboardingCompleted: true });
       console.log('WebAuthContext: Successfully updated user document with onboardingCompleted: true');
       

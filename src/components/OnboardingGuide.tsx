@@ -28,7 +28,7 @@ export function OnboardingGuide({ show, onComplete }: OnboardingGuideProps) {
       if (show && service && user) {
         try {
           const firestore = service.getFirestoreJsInstance();
-          const completionRef = doc(firestore, 'users', user.uid, 'onboarding', 'guideCompleted');
+          const completionRef = doc(firestore, 'userProfiles', user.uid, 'onboarding', 'guideCompleted');
           const docSnap = await getDoc(completionRef);
           if (docSnap.exists()) {
             // Already completed, maybe call onComplete immediately or hide guide
@@ -61,7 +61,7 @@ export function OnboardingGuide({ show, onComplete }: OnboardingGuideProps) {
     if (service && user) {
       try {
         const firestore = service.getFirestoreJsInstance();
-        const completionRef = doc(firestore, 'users', user.uid, 'onboarding', 'guideCompleted');
+        const completionRef = doc(firestore, 'userProfiles', user.uid, 'onboarding', 'guideCompleted');
         await setDoc(completionRef, { completed: true, completedAt: new Date() });
       } catch (error) {
         console.error("Error marking onboarding complete:", error);

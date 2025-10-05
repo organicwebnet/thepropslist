@@ -102,14 +102,20 @@ This document captures the current Firestore collections/Storage paths observed 
 5) Orphan scan
    - Function to find Storage files with no referencing Firestore doc and Firestore docs referencing missing Storage URLs; dry-run then delete
 
-6) Scheduled cleanups
+6) Scheduled cleanups ✅ IMPLEMENTED
    - Expired invites, email outbox TTL, temp collections
+   - See `DATABASE_MAINTENANCE_AND_GARBAGE_COLLECTION.md` for details
 
-7) Indexes
+7) Indexes ✅ IMPLEMENTED
    - Composite indexes for:
      - props: showId + status/order
      - todo_boards: showId
      - nested cards lists: order (if queried with filters)
+   - Cleanup indexes (required for garbage collection):
+     - emails: ['processed', 'processingAt']
+     - emails: ['delivery.state', 'delivery.failedAt']
+     - pending_signups: ['expiresAt']
+     - pending_password_resets: ['expiresAt']
 
 8) Auth domains
    - Add custom subdomains to Firebase Auth Authorized domains (for web sign-in)

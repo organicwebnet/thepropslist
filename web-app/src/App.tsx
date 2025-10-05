@@ -21,6 +21,7 @@ const PropDetailPage = lazy(() => import('./pages/PropDetailPage'));
 const EditPropPage = lazy(() => import('./pages/EditPropPage'));
 const AddPropPage = lazy(() => import('./pages/AddPropPage'));
 const PropsPdfExportPage = lazy(() => import('./pages/PropsPdfExportPage'));
+const TestPdfExport = lazy(() => import('./pages/TestPdfExport'));
 
 const ShowsListPage = lazy(() => import('./ShowsListPage'));
 const ShowsRedirect = lazy(() => import('./components/ShowsRedirect'));
@@ -67,6 +68,7 @@ function App() {
           <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/props/pdf-export" element={<ProtectedRoute><PropsPdfExportPage /></ProtectedRoute>} />
+          <Route path="/test-pdf-export" element={<ProtectedRoute><TestPdfExport /></ProtectedRoute>} />
           <Route path="/branding" element={<ProtectedRoute><BrandingStudioPage /></ProtectedRoute>} />
           <Route path="/props/:id/edit" element={<ProtectedRoute><EditPropPage /></ProtectedRoute>} />
           <Route path="/props/add" element={<ProtectedRoute><AddPropPage /></ProtectedRoute>} />

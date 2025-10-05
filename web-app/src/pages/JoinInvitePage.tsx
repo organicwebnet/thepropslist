@@ -108,7 +108,6 @@ const JoinInvitePage: React.FC = () => {
           lastLogin: new Date(),
           preferences: { theme: 'light', notifications: true, defaultView: 'grid' },
         } as any;
-        await service.setDocument('users', uid, profile);
         await service.setDocument('userProfiles', uid, profile);
       }
 
@@ -175,7 +174,6 @@ const JoinInvitePage: React.FC = () => {
               createdAt: new Date(),
               lastLogin: new Date(),
             } as any;
-            await service.setDocument('users', uid, profileDoc);
             await service.setDocument('userProfiles', uid, profileDoc);
           }
 
