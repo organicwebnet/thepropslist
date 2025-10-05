@@ -21,7 +21,7 @@ is the js comon or ES as firestore dosent work well with ES yet?
 - Are inputs validated and sanitized?
 - Are secrets, credentials, or sensitive data exposed?
 - Is error handling robust and user-friendly?
-
+- are there any other concerns with this feature is the ui and ux functional and actully working ?
 - Are tests meaningful and isolated?
 - Do they fail for the right reasons?
 - Is mocking/stubbing used appropriately?
