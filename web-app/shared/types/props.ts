@@ -203,6 +203,8 @@ export interface Prop {
   digitalAssets?: DigitalAsset[];
   videos?: DigitalAsset[];
   materials?: string[];
+  specialRequirements?: string;
+  dimensions?: string; // Formatted dimensions string like "10x5x3 inches"
   statusHistory?: PropStatusUpdate[];
   maintenanceHistory?: MaintenanceRecord[];
   nextMaintenanceDue?: string;

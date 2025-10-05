@@ -6,7 +6,7 @@ import { propCategories, Prop } from '../shared/types/props';
 import { FirebaseDocument } from '../shared/services/firebase/types';
 import { useShowSelection } from './contexts/ShowSelectionContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import PropCardWeb from './PropCardWeb';
+import { EnhancedPropList } from './components/EnhancedPropList';
 import jsPDF from 'jspdf';
 import type { PdfGenerationOptions } from '../shared/types/pdf';
 import ImportPropsModal from './components/ImportPropsModal';
@@ -498,11 +498,16 @@ const PropsListPage: React.FC = () => {
             <div className="text-pb-gray">No props found.</div>
           </div>
         ) : (
-          <div className="w-full max-w-3xl mx-auto">
-            {filteredProps.map((prop) => (
-              <PropCardWeb key={prop.id} prop={prop} />
-            ))}
-          </div>
+          <EnhancedPropList
+            props={filteredProps}
+            showId={currentShowId}
+            onPropPress={(prop) => navigate(`/props/${prop.id}`)}
+            onEdit={(prop) => navigate(`/props/${prop.id}/edit`)}
+            onDelete={(prop) => {
+              // TODO: Implement delete functionality
+              console.log('Delete prop:', prop.id);
+            }}
+          />
         )}
         <Link
           to="/props/add"

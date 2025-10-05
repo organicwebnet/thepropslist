@@ -1,18 +1,20 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Link, useRouter } from 'expo-router';
 import { Eye, Edit3, Trash2, Search, ChevronDown, ChevronUp, ExternalLink, Printer, QrCode, Package, PackageCheck, PackageX, History, AlertTriangle, CheckCircle, Theater, Share2, ChevronsUp, Activity, HelpCircle } from 'lucide-react';
-import type { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, DimensionUnit } from '../shared/types/props.ts';
-import type { Show } from '../types/index.ts';
-import type { Prop } from '../shared/types/props.ts';
-import { lifecycleStatusLabels, lifecycleStatusPriority, PropLifecycleStatus, StatusPriority } from '../types/lifecycle.ts';
-import { HelpTooltip } from './HelpTooltip.tsx';
+import type { PropFormData, PropCategory, propCategories, PropImage, DigitalAsset, DimensionUnit } from '../shared/types/props';
+import type { Show } from '../types/index';
+import type { Prop } from '../shared/types/props';
+import { lifecycleStatusLabels, lifecycleStatusPriority, PropLifecycleStatus, StatusPriority } from '../types/lifecycle';
+import { HelpTooltip } from './HelpTooltip';
 import PropCard from '../shared/components/PropCard/index.tsx';
+import { EnhancedPropList } from './EnhancedPropList';
 import { View, Text, FlatList, StyleSheet, FlatListProps, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 
 interface ExplicitPropListProps {
   props: Prop[];
   onDelete: (id: string) => void;
   onEdit: (prop: Prop) => void;
+  showId?: string;
 }
 
 type PropListProps = ExplicitPropListProps & Omit<FlatListProps<Prop>, 'data' | 'renderItem' | 'keyExtractor'>;
@@ -21,6 +23,7 @@ export function PropList({
   props, 
   onDelete, 
   onEdit,
+  showId,
   ...rest
 }: PropListProps) {
   const router = useRouter();
@@ -63,15 +66,12 @@ export function PropList({
   );
 
   return (
-    <FlatList
-      data={props}
-      renderItem={renderPropCard}
-      keyExtractor={item => item.id}
-      numColumns={1}
-      contentContainerStyle={styles.listContainer}
-      ListEmptyComponent={defaultEmptyList}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
+    <EnhancedPropList
+      props={props}
+      showId={showId}
+      onPropPress={(prop) => router.push(`/(tabs)/props/${prop.id}` as any)}
+      onEdit={onEdit}
+      onDelete={(prop) => onDelete(prop.id)}
       {...rest}
     />
   );

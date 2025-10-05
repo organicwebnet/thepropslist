@@ -1,5 +1,6 @@
 import { Prop } from '../types/props';
 import { UserProfile } from '../types/auth';
+import { PropLifecycleStatus } from '../../types/lifecycle';
 
 export interface QuickActionResult {
   success: boolean;
@@ -118,11 +119,60 @@ export class QuickActionsService {
   }
 
   private async handleUpdateStatus(prop: Prop, user: UserProfile): Promise<QuickActionResult> {
-    // TODO: Implement status update logic
-    return {
-      success: true,
-      message: 'Status update feature coming soon',
-    };
+    try {
+      // Define common status transitions
+      const statusTransitions: Record<PropLifecycleStatus, PropLifecycleStatus[]> = {
+        'on_order': ['to_buy', 'confirmed'],
+        'to_buy': ['on_order', 'confirmed'],
+        'confirmed': ['available_in_storage', 'in_use_on_set', 'under_review'],
+        'available_in_storage': ['checked_out', 'in_use_on_set', 'under_maintenance'],
+        'checked_out': ['in_use_on_set', 'available_in_storage'],
+        'in_use_on_set': ['available_in_storage', 'checked_out', 'under_maintenance'],
+        'under_maintenance': ['available_in_storage', 'out_for_repair'],
+        'out_for_repair': ['repaired_back_in_show', 'damaged_awaiting_repair'],
+        'damaged_awaiting_repair': ['repaired_back_in_show', 'damaged_awaiting_replacement'],
+        'damaged_awaiting_replacement': ['on_order', 'to_buy'],
+        'repaired_back_in_show': ['available_in_storage', 'in_use_on_set'],
+        'missing': ['available_in_storage', 'under_review'],
+        'in_transit': ['available_in_storage', 'checked_out'],
+        'loaned_out': ['available_in_storage'],
+        'on_hold': ['available_in_storage', 'under_review'],
+        'under_review': ['available_in_storage', 'confirmed', 'cut'],
+        'being_modified': ['available_in_storage', 'under_maintenance'],
+        'backup': ['available_in_storage', 'confirmed'],
+        'temporarily_retired': ['available_in_storage', 'ready_for_disposal'],
+        'ready_for_disposal': ['cut'],
+        'cut': ['confirmed', 'temporarily_retired'],
+      };
+
+      const currentStatus = prop.status;
+      const availableTransitions = statusTransitions[currentStatus] || ['available_in_storage'];
+      
+      // For now, just cycle to the first available transition
+      // In a real implementation, you'd show a UI to let the user choose
+      const newStatus = availableTransitions[0];
+      
+      // In a real implementation, you would:
+      // 1. Show a modal/dialog with available status options
+      // 2. Update the prop in Firestore
+      // 3. Add a status history entry
+      // 4. Send notifications if needed
+      
+      return {
+        success: true,
+        message: `Status updated from "${currentStatus}" to "${newStatus}". (This is a demo - actual update would require Firestore integration)`,
+        data: { 
+          previousStatus: currentStatus, 
+          newStatus: newStatus,
+          availableTransitions 
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to update status: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
   }
 
   private async handleAddNote(prop: Prop, user: UserProfile): Promise<QuickActionResult> {

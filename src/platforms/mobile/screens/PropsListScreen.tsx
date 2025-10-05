@@ -9,6 +9,7 @@ import { ActivityIndicator, IconButton } from 'react-native-paper';
 import { FAB } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import PropCard from '../../../shared/components/PropCard/index';
+import { EnhancedPropList } from '../../../components/EnhancedPropList';
 import { Filters } from '../../../types/props';
 import { Prop } from '../../../shared/types/props';
 import { FirebaseDocument } from '../../../shared/services/firebase/types';
@@ -219,40 +220,12 @@ export function PropsListScreen() {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={filteredProps}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }: { item: Prop }) => {
-            if (!item) {
-              console.warn(`Prop data missing for item`);
-              return null;
-            }
-            return (
-              <PropCard 
-                prop={item}
-                onDeletePress={() => handleDeleteProp(item.id)}
-              />
-            );
-          }}
-          contentContainerStyle={styles.listContentContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#2563eb']}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <MaterialIcons name="inventory" size={48} color="#94a3b8" />
-              <Text style={styles.emptySubtext}>
-                {searchQuery || selectedCategory || selectedStatus 
-                  ? 'No props match your search criteria' 
-                  : 'Add your first prop to get started'
-                }
-              </Text>
-            </View>
-          }
+        <EnhancedPropList
+          props={filteredProps}
+          showId={selectedShow?.id}
+          onPropPress={(prop) => navigation.navigate('PropDetails', { propId: prop.id })}
+          onEdit={(prop) => navigation.navigate('PropForm', { propId: prop.id })}
+          onDelete={(prop) => handleDeleteProp(prop.id)}
         />
         <TouchableOpacity 
           style={styles.fab}
