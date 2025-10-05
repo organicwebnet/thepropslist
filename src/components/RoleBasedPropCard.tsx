@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Prop } from '../shared/types/props';
 import { UserProfile } from '../shared/types/auth';
-import { useRoleBasedDataView } from '../hooks/useRoleBasedDataView';
+import { useRoleBasedDataView } from '../shared/hooks/useRoleBasedDataView';
 import { PropFieldCategory } from '../shared/types/dataViews';
 
 interface RoleBasedPropCardProps {

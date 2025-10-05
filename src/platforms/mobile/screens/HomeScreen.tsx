@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   Button,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRouter } from 'expo-router';
 import { FAB } from 'react-native-paper';
@@ -559,18 +560,25 @@ export function HomeScreen() {
                {
                  icon: ({ color, size }) => (
                    <View style={{ position: 'relative' }}>
-                     <Ionicons name="rose-outline" size={size} color="#FFFFFF" />
+                     <Ionicons name="rose-outline" size={size} color={selectedShow ? "#FFFFFF" : "#666666"} />
                      <Ionicons
                        name="add-circle"
                        size={size * 0.4}
-                       color="#FFFFFF"
-                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: darkColors.primary, borderRadius: size * 0.2 }}
+                       color={selectedShow ? "#FFFFFF" : "#666666"}
+                       style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: selectedShow ? darkColors.primary : "#666666", borderRadius: size * 0.2 }}
                      />
                    </View>
                  ),
-                 label: 'Add Prop',
-                 onPress: () => router.navigate({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } }),
-                 style: styles.fabAction,
+                 label: selectedShow ? 'Add Prop' : 'Add Prop (Select Show First)',
+                 onPress: selectedShow ? () => router.navigate({ pathname: '/(tabs)/props/create', params: { showId: selectedShow?.id } }) : () => {
+                   // Show alert to select a show first
+                   Alert.alert(
+                     "No Show Selected",
+                     "Please select a show first before adding props.",
+                     [{ text: "OK" }]
+                   );
+                 },
+                 style: [styles.fabAction, { opacity: selectedShow ? 1 : 0.5 }],
                  labelStyle: styles.fabLabel,
                },
                {

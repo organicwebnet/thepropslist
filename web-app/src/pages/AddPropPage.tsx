@@ -141,6 +141,18 @@ const AddPropPage: React.FC = () => {
     }
   };
 
+  // Redirect if no show is selected
+  useEffect(() => {
+    if (!currentShowId) {
+      navigate('/props', { 
+        state: { 
+          message: 'Please select a show first before adding props.',
+          type: 'warning'
+        }
+      });
+    }
+  }, [currentShowId, navigate]);
+
   // Prefill selected show if available
   useEffect(() => {
     if (currentShowId && !form.showId) {

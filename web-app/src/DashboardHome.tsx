@@ -96,8 +96,11 @@ const DashboardHome: React.FC = () => {
     if (!currentShowId) return;
     const unsub = service.listenToCollection<Prop>(
       'props',
-      data => setProps(data.filter(doc => doc.data.showId === currentShowId).map(doc => ({ ...doc.data, id: doc.id })) as any),
-      () => setProps([])
+      data => setProps(data.map(doc => ({ ...doc.data, id: doc.id })) as any),
+      () => setProps([]),
+      {
+        where: [['showId', '==', currentShowId]]
+      }
     );
     return () => { if (unsub) unsub(); };
   }, [service, currentShowId]);
@@ -309,7 +312,7 @@ const DashboardHome: React.FC = () => {
                       💡 <strong>Tip:</strong> Add your show dates to see countdown timers and better track your production timeline. 
                       <Link 
                         to={`/shows/${show.id}/edit`} 
-                        className="text-pb-accent hover:text-pb-accent/80 underline ml-1"
+                        className="text-pb-primary hover:text-pb-secondary underline ml-1 font-medium"
                       >
                         Add dates now
                       </Link>

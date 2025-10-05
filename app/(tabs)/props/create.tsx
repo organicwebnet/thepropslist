@@ -1,16 +1,39 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { NativePropForm } from '../../../src/components/NativePropForm';
 import { PropFormData } from '../../../src/shared/types/props';
 import { useFirebase } from '../../../src/platforms/mobile/contexts/FirebaseContext';
 import { useAuth } from '../../../src/contexts/AuthContext';
+import { useShows } from '../../../src/contexts/ShowsContext';
 import LinearGradient from 'react-native-linear-gradient';
 
 export default function CreatePropScreen() {
   const router = useRouter();
   const { service } = useFirebase();
   const { user } = useAuth();
+  const { selectedShow } = useShows();
+
+  // Redirect if no show is selected
+  useEffect(() => {
+    if (!selectedShow) {
+      Alert.alert(
+        "No Show Selected",
+        "Please select a show first before adding props.",
+        [
+          {
+            text: "Go to Shows",
+            onPress: () => router.navigate('/(tabs)/shows'),
+          },
+          {
+            text: "Cancel",
+            onPress: () => router.back(),
+            style: "cancel",
+          },
+        ]
+      );
+    }
+  }, [selectedShow, router]);
 
   const handleSubmit = async (data: PropFormData): Promise<boolean> => {
     if (!service || !user) {

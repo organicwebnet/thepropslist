@@ -168,7 +168,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
       setLoading(false);
     };
 
-    const ownedShowsQuery: QueryOptions = { where: [['ownerId', '==', user.uid]] };
+    const ownedShowsQuery: QueryOptions = { where: [['userId', '==', user.uid]] };
     const ownedUnsubscribe = firebaseService.listenToCollection<Show>(
       'shows',
       (docs) => {
@@ -182,6 +182,7 @@ export const ShowsProvider: React.FC<ShowsProviderProps> = ({ children }) => {
 
     let teamUnsubscribe = () => { /* no-op */ };
     if (!isAdmin) {
+      // Query shows where user is in the team field
       const teamShowsQuery: QueryOptions = { where: [[`team.${user.uid}`, '>=', '']] };
       teamUnsubscribe = firebaseService.listenToCollection<Show>(
         'shows',

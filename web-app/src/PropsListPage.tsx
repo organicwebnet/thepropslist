@@ -323,8 +323,22 @@ const PropsListPage: React.FC = () => {
           </div>
         </div>
         {!currentShowId && (
-          <div className="flex flex-col items-center justify-center h-64">
-            <div className="text-pb-primary font-semibold text-lg mb-2">Please select a show to view its props.</div>
+          <div className="flex flex-col items-center justify-center h-96 bg-gradient-to-br from-pb-primary/10 via-pb-secondary/5 to-pb-accent/10 rounded-xl border border-pb-primary/20 p-8">
+            <div className="text-6xl mb-4">🎭</div>
+            <h3 className="text-2xl font-bold text-pb-primary mb-3">No Show Selected</h3>
+            <p className="text-pb-gray text-center mb-6 max-w-md">
+              Please select a show or create a new one to view and manage props.
+            </p>
+            <Link
+              to="/shows/add"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-pb-primary hover:bg-pb-secondary text-white font-semibold rounded-lg shadow transition-colors"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Create Show
+            </Link>
           </div>
         )}
         <div className="w-full max-w-3xl flex justify-between items-center mb-6">
@@ -509,14 +523,16 @@ const PropsListPage: React.FC = () => {
             }}
           />
         )}
-        <Link
-          to="/props/add"
-          className="fixed bottom-10 right-10 z-50 bg-pb-primary hover:bg-pb-accent text-white rounded-full shadow-lg p-4 flex items-center justify-center transition focus:outline-none focus:ring-2 focus:ring-pb-primary"
-          title="Add Prop"
-          aria-label="Add Prop"
-        >
-          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-        </Link>
+        {currentShowId && (
+          <Link
+            to="/props/add"
+            className="fixed bottom-10 right-10 z-50 bg-pb-primary hover:bg-pb-accent text-white rounded-full shadow-lg p-4 flex items-center justify-center transition focus:outline-none focus:ring-2 focus:ring-pb-primary"
+            title="Add Prop"
+            aria-label="Add Prop"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          </Link>
+        )}
         {importOpen && (
           <ImportPropsModal
             open={importOpen}

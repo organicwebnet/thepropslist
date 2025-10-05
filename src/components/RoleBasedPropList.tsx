@@ -3,7 +3,7 @@ import { FlatList, FlatListProps, View, Text, StyleSheet } from 'react-native';
 import { Prop } from '../shared/types/props';
 import { UserProfile } from '../shared/types/auth';
 import { RoleBasedPropCard } from './RoleBasedPropCard';
-import { useRoleBasedDataView } from '../hooks/useRoleBasedDataView';
+import { useRoleBasedDataView } from '../shared/hooks/useRoleBasedDataView';
 
 interface RoleBasedPropListProps extends Omit<FlatListProps<Prop>, 'data' | 'renderItem' | 'keyExtractor'> {
   props: Prop[];

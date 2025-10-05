@@ -36,7 +36,10 @@ export function Home({ navigation }: RootStackScreenProps<'Home'>) {
     if (user && service && isInitialized) {
       setIsLoadingShows(true);
       try {
-        const showDocuments = await service.getDocuments<{ name: string }>('shows', { limit: 1 });
+        const showDocuments = await service.getDocuments<{ name: string }>('shows', { 
+          where: [['createdBy', '==', user.uid]],
+          limit: 1 
+        });
         if (showDocuments.length > 0) {
           const firstShowDoc = showDocuments[0];
           setCurrentShowId(firstShowDoc.id);

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { UserProfile } from '../../shared/types/auth';
 import { Prop } from '../types/props';
 import { RoleBasedPropCard } from './RoleBasedPropCard';
-import { useRoleBasedDataView } from '../hooks/useRoleBasedDataView';
+import { useRoleBasedDataView } from '@shared/hooks/useRoleBasedDataView';
 
 interface RoleBasedPropListProps {
   props: Prop[];

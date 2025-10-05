@@ -220,19 +220,38 @@ export function PropsListScreen() {
           </TouchableOpacity>
         </View>
 
-        <EnhancedPropList
-          props={filteredProps}
-          showId={selectedShow?.id}
-          onPropPress={(prop) => navigation.navigate('PropDetails', { propId: prop.id })}
-          onEdit={(prop) => navigation.navigate('PropForm', { propId: prop.id })}
-          onDelete={(prop) => handleDeleteProp(prop.id)}
-        />
-        <TouchableOpacity 
-          style={styles.fab}
-          onPress={handleAddProp}
-        >
-          <MaterialIcons name="add" size={24} color="#ffffff" />
-        </TouchableOpacity>
+        {!selectedShow ? (
+          <View style={styles.centerContainer}>
+            <MaterialIcons name="theater-comedy" size={64} color="#ffffff" />
+            <Text style={styles.noShowTitle}>No Show Selected</Text>
+            <Text style={styles.noShowMessage}>
+              Please select a show or create a new one to view and manage props.
+            </Text>
+            <TouchableOpacity 
+              style={styles.createShowButton}
+              onPress={() => router.navigate('/(tabs)/shows/create')}
+            >
+              <MaterialIcons name="add" size={20} color="#ffffff" />
+              <Text style={styles.createShowButtonText}>Create Show</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <EnhancedPropList
+              props={filteredProps}
+              showId={selectedShow?.id}
+              onPropPress={(prop) => navigation.navigate('PropDetails', { propId: prop.id })}
+              onEdit={(prop) => navigation.navigate('PropForm', { propId: prop.id })}
+              onDelete={(prop) => handleDeleteProp(prop.id)}
+            />
+            <TouchableOpacity 
+              style={styles.fab}
+              onPress={handleAddProp}
+            >
+              <MaterialIcons name="add" size={24} color="#ffffff" />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {/* Filter Modal */}
@@ -511,6 +530,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   applyFiltersText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // No Show Selected Styles
+  noShowTitle: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  noShowMessage: {
+    color: '#ffffff',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 32,
+    lineHeight: 22,
+  },
+  createShowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  createShowButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',

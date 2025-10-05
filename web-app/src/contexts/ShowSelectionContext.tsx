@@ -42,10 +42,24 @@ export const ShowSelectionProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log('ShowSelectionContext: Checking for auto-selection of single show');
         setHasCheckedAutoSelection(true);
         
-        // Get all shows for the user
-        const shows = await service.getDocuments('shows', {
-          where: [['createdBy', '==', user.uid]]
+        // Get all shows for the user (owned + collaborative)
+        const ownedShows = await service.getDocuments('shows', {
+          where: [['userId', '==', user.uid]]
         });
+        
+        const collaborativeShows = await service.getDocuments('shows', {
+          where: [['team.' + user.uid, '>=', '']]
+        });
+        
+        // Combine and deduplicate
+        const allShows = [...ownedShows];
+        collaborativeShows.forEach(show => {
+          if (!allShows.find(s => s.id === show.id)) {
+            allShows.push(show);
+          }
+        });
+        
+        const shows = allShows;
 
         console.log('ShowSelectionContext: Found shows:', shows.length);
         

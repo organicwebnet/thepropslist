@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { UserProfile } from '../../shared/types/auth';
 import { Prop } from '../types/props';
 import { RoleBasedPropList } from './RoleBasedPropList';
-import { quickActionsService } from '../../../src/shared/services/QuickActionsService';
+import { quickActionsService } from '@shared/services/QuickActionsService';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { QuickActionModal } from './QuickActionModal';
 import { LocationPickerModal } from './LocationPickerModal';
