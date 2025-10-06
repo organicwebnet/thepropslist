@@ -1,10 +1,8 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BrowserRouter } from 'react-router-dom';
 import { useSubscription, SubscriptionInfo } from '../hooks/useSubscription';
-import { useLimitChecker, LimitCheckResult } from '../hooks/useLimitChecker';
+import { useLimitChecker } from '../hooks/useLimitChecker';
 import { AddOnService } from '../services/AddOnService';
-import { calculateAddOnLimits, DEFAULT_ADDONS, UserAddOn } from '../types/AddOns';
+import { calculateAddOnLimits, UserAddOn } from '../types/AddOns';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { useFirebase } from '../contexts/FirebaseContext';
 

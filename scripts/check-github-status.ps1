@@ -6,7 +6,7 @@
 param(
     [string]$Token = $env:GITHUB_TOKEN,
     [string]$Owner = "organicwebnet",
-    [string]$Repo = "the_props_bible"
+    [string]$Repo = "thepropslist"
 )
 
 if (-not $Token) {

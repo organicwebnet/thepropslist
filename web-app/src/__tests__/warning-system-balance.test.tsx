@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { useSubscription } from '../hooks/useSubscription';
 import { useLimitChecker } from '../hooks/useLimitChecker';
@@ -57,7 +57,7 @@ describe('Warning System Balance Tests', () => {
 
   describe('Warning Frequency and Timing', () => {
     it('should show warnings at 80% of limit (not too early)', () => {
-      const { render: renderCounter } = render(
+      render(
         <BrowserRouter>
           <AvailabilityCounter
             currentCount={8}
@@ -74,7 +74,7 @@ describe('Warning System Balance Tests', () => {
     });
 
     it('should NOT show warnings below 80% of limit', () => {
-      const { render: renderCounter } = render(
+      render(
         <BrowserRouter>
           <AvailabilityCounter
             currentCount={7}
@@ -91,7 +91,7 @@ describe('Warning System Balance Tests', () => {
     });
 
     it('should show critical warnings at 100% of limit', () => {
-      const { render: renderCounter } = render(
+      render(
         <BrowserRouter>
           <AvailabilityCounter
             currentCount={10}

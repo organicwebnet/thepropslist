@@ -1,4 +1,4 @@
-import { onCall, onRequest, HttpsError } from "firebase-functions/v2/https";
+import { onCall, onRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
@@ -250,7 +250,7 @@ export const sendInviteEmail = onCall(async (req: any) => {
 // --- Feedback → GitHub Issues bridge ---
 // Required environment variables:
 //   GITHUB_TOKEN: a repo-scoped PAT with issues:write
-//   GITHUB_REPO:  "owner/repo" (e.g., organicwebnet/the_props_bible)
+//   GITHUB_REPO:  "owner/repo" (e.g., organicwebnet/thepropslist)
 // Read from environment variables
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || "";
@@ -285,7 +285,7 @@ export const processEmail = onDocumentCreated({
   }
 
   const toEmail = to[0].email;
-  const fromEmail = from.email;
+  const _fromEmail = from.email;
   const fromName = from.name || "The Props List";
 
   try {
@@ -477,7 +477,7 @@ export const sendEmailDirect = onRequest({
     }
 
     const toEmail = to[0].email;
-    const fromEmail = from.email;
+    const _fromEmail = from.email;
     const fromName = from.name || "The Props List";
 
     // Prefer Gmail SMTP if configured (fastest delivery)
@@ -1315,7 +1315,7 @@ export const createStripePromotionCode = onCall({ region: "us-central1" }, async
 });
 
 // --- Get Stripe Coupons ---
-export const getStripeCoupons = onCall({ region: "us-central1" }, async (req) => {
+export const getStripeCoupons = onCall({ region: "us-central1" }, async (_req) => {
   const s = await ensureStripe();
   if (!s) {
     throw new Error("Stripe not configured");
@@ -1331,7 +1331,7 @@ export const getStripeCoupons = onCall({ region: "us-central1" }, async (req) =>
 });
 
 // --- Get Stripe Promotion Codes ---
-export const getStripePromotionCodes = onCall({ region: "us-central1" }, async (req) => {
+export const getStripePromotionCodes = onCall({ region: "us-central1" }, async (_req) => {
   const s = await ensureStripe();
   if (!s) {
     throw new Error("Stripe not configured");
@@ -1377,7 +1377,7 @@ function getDefaultFeaturesForPlan(planId: string): string[] {
 export const getPricingConfig = onCall({ 
   region: "us-central1",
   secrets: ["STRIPE_SECRET_KEY", "PRICE_STARTER", "PRICE_STANDARD", "PRICE_PRO"]
-}, async (req) => {
+}, async (_req) => {
   await initializeStripeSecrets();
   const s = await ensureStripe();
   if (!s) {
@@ -2353,7 +2353,7 @@ export const purchaseAddOn = onCall({ region: "us-central1" }, async (req) => {
   }
   
   // Add the add-on to the subscription
-  const subscription = await s.subscriptions.retrieve(subscriptionId);
+  const _subscription = await s.subscriptions.retrieve(subscriptionId);
   const subscriptionItem = await s.subscriptionItems.create({
     subscription: subscriptionId,
     price: price.id,

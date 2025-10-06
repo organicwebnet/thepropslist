@@ -3,7 +3,7 @@
 
 param(
     [string]$Owner = "organicwebnet",
-    [string]$Repo = "the_props_bible",
+    [string]$Repo = "thepropslist",
     [int]$Count = 10
 )
 

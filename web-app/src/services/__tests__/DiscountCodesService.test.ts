@@ -1,6 +1,6 @@
 import { DiscountCodesService } from '../DiscountCodesService';
-import { setDoc, updateDoc, collection, getDocs, query, where, orderBy, runTransaction } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { setDoc, getDocs, runTransaction } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 
 // Mock Firebase
 jest.mock('firebase/firestore');

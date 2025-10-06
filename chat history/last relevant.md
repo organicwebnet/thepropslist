@@ -78106,9 +78106,9 @@ You’ll see each as an inline player (YouTube, Vimeo, Google Drive, or direct M
 
 please fix this npm run dev
 
-PS C:\projects\the_props_bible\web-app> npm run dev
+PS C:\projects\thepropslist\web-app> npm run dev
 
-> the-props-list-web-app@1.0.0 dev
+> thepropslist-web-app@1.0.0 dev
 > vite
 
 Re-optimizing dependencies because lockfile has changed
@@ -78119,7 +78119,7 @@ Re-optimizing dependencies because lockfile has changed
   ➜  Network: use --host to expose
   ➜  press h + enter to show help
 Error:   Failed to scan for dependencies from entries:
-  C:/projects/the_props_bible/web-app/index.html
+  C:/projects/thepropslist/web-app/index.html
 
   X [ERROR] No matching export in "src/firebase.ts" for import "storage"    
 
@@ -78128,16 +78128,16 @@ Error:   Failed to scan for dependencies from entries:
         ╵          ~~~~~~~
 
 
-    at failureErrorWithLog (C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:1472:15)                                               
-    at C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:945:25                                                                      
-    at runOnEndCallbacks (C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:1315:45)                                                 
-    at buildResponseToResult (C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:943:7)                                               
-    at C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:955:9                                                                       
+    at failureErrorWithLog (C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:1472:15)                                               
+    at C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:945:25                                                                      
+    at runOnEndCallbacks (C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:1315:45)                                                 
+    at buildResponseToResult (C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:943:7)                                               
+    at C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:955:9                                                                       
     at new Promise (<anonymous>)
-    at requestCallbacks.on-end (C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:954:54)                                            
-    at handleRequest (C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:647:17)                                                      
-    at handleIncomingPacket (C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:672:7)                                                
-    at Socket.readFromStdout (C:\projects\the_props_bible\web-app\node_modules\esbuild\lib\main.js:600:7)                                               
+    at requestCallbacks.on-end (C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:954:54)                                            
+    at handleRequest (C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:647:17)                                                      
+    at handleIncomingPacket (C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:672:7)                                                
+    at Socket.readFromStdout (C:\projects\thepropslist\web-app\node_modules\esbuild\lib\main.js:600:7)                                               
 
 ---
 

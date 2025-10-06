@@ -1,7 +1,7 @@
 # Secrets to Copy from Old Repository
 
 ## Instructions:
-1. Go to: https://github.com/organicwebnet/the_props_bible/settings/secrets/actions
+1. Go to: https://github.com/organicwebnet/thepropslist/settings/secrets/actions
 2. For each secret below, click on it, reveal the value, and copy it
 3. Go to: https://github.com/organicwebnet/thepropslist/settings/secrets/actions
 4. Click "New repository secret" and paste the name and value
@@ -38,5 +38,5 @@
 - All secret names must match exactly (case-sensitive)
 
 ## Quick Links:
-- **Old Repository Secrets**: https://github.com/organicwebnet/the_props_bible/settings/secrets/actions
+- **Old Repository Secrets**: https://github.com/organicwebnet/thepropslist/settings/secrets/actions
 - **New Repository Secrets**: https://github.com/organicwebnet/thepropslist/settings/secrets/actions

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { UserProfile } from '../../shared/types/auth';
 import { Prop } from '../types/props';
 import { RoleBasedPropList } from './RoleBasedPropList';
 import { quickActionsService } from '@shared/services/QuickActionsService';
@@ -19,11 +18,11 @@ export function EnhancedPropList({
   props, 
   showId,
   onPropPress,
-  onEdit,
-  onDelete,
+  onEdit: _onEdit,
+  onDelete: _onDelete,
 }: EnhancedPropListProps) {
   const { userProfile } = useWebAuth();
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   
   // Modal states
   const [showNoteModal, setShowNoteModal] = useState(false);

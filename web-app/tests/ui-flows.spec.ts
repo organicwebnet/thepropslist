@@ -196,7 +196,6 @@ test.describe('Props Bible Web App - UI Flows', () => {
       await page.goto('/login');
       
       // Look for loading indicators
-      const loadingElements = page.locator('.loading, .spinner, [aria-label*="loading"]');
       // Note: This test might not find loading elements if they're not currently loading
       // In a real test, you'd trigger an action that causes loading
     });
@@ -262,7 +261,7 @@ test.describe('Props Bible Web App - UI Flows', () => {
   });
 
   test.describe('Cross-Browser Compatibility', () => {
-    test('should work in different browsers', async ({ page, browserName }) => {
+    test('should work in different browsers', async ({ page }) => {
       await page.goto('/login');
       
       // Basic functionality should work across browsers

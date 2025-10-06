@@ -1,6 +1,7 @@
 {
   "projects": {
-    "default": "props-bible-app-1c1cb"
+    "default": "props-bible-app-1c1cb",
+    "live": "props-bible-app-1c1cb"
   },
   "targets": {
     "props-bible-app-1c1cb": {

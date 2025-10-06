@@ -338,6 +338,7 @@ export function WebAuthProvider({ children }: WebAuthProviderProps) {
       // The onAuthStateChanged will automatically load the user profile
     } catch (error: any) {
       // Don't set error state here - let the calling component handle it
+      console.error('Error in completeSignup:', error);
       throw error;
     } finally {
       setLoading(false);

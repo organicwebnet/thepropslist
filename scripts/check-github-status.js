@@ -13,7 +13,7 @@ const path = require('path');
 
 // Configuration
 const GITHUB_OWNER = 'organicwebnet';
-const GITHUB_REPO = 'the_props_bible';
+const GITHUB_REPO = 'thepropslist';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Set this as an environment variable
 
 if (!GITHUB_TOKEN) {

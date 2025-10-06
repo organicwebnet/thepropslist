@@ -7,7 +7,7 @@
 **Core Objectives:**
 
 *   **Replicate Core Functionality:** Implement all essential features of the Android application on the web, acting as the primary source of truth for functionality.
-*   **Maintain Existing Web Design:** Adhere strictly to the established design, UI/UX patterns, and visual aesthetics of the current web application's template (located in `the_props_bible/web-app`). This includes leveraging its React, Tailwind CSS, and Framer Motion foundation.
+*   **Maintain Existing Web Design:** Adhere strictly to the established design, UI/UX patterns, and visual aesthetics of the current web application's template (located in `thepropslist/web-app`). This includes leveraging its React, Tailwind CSS, and Framer Motion foundation.
 *   **Clean and High-Quality Code:** Develop with a strong emphasis on clean, well-structured, modular, and maintainable code, following best practices for modern web development.
 *   **User-Friendly Experience:** Ensure the web application is highly intuitive, responsive across devices, and provides clear, consistent feedback to users.
 *   **No Android Code Modification:** The existing Android application codebase must remain untouched.
@@ -92,7 +92,7 @@ The application revolves around several key entities, managed via Firebase Fires
 
 ## 3. Design Guidelines (Derived from Existing Web App)
 
-The new web application must strictly adhere to the existing design principles and aesthetics established in the provided `the_props_bible/web-app` template. This ensures a consistent brand identity and user experience.
+The new web application must strictly adhere to the existing design principles and aesthetics established in the provided `thepropslist/web-app` template. This ensures a consistent brand identity and user experience.
 
 ### 3.1. Overall Aesthetic and Layout
 
@@ -158,7 +158,7 @@ The web application will be built using modern React best practices, integrating
 
 ### 4.1. Technology Stack
 
-*   **Frontend Framework:** React (as per `the_props_bible/web-app/package.json`)
+*   **Frontend Framework:** React (as per `thepropslist/web-app/package.json`)
 *   **Build Tool:** Vite
 *   **Language:** TypeScript
 *   **Styling:** Tailwind CSS (configured in `postcss.config.js`, `tailwind.config.js`, and `index.css` in `web-app/src`)
@@ -169,14 +169,14 @@ The web application will be built using modern React best practices, integrating
 
 ### 4.2. Firebase Integration
 
-The existing `WebFirebaseService` (`the_props_bible/src/platforms/web/services/firebase.ts`) will be the foundation for Firebase interactions.
+The existing `WebFirebaseService` (`thepropslist/src/platforms/web/services/firebase.ts`) will be the foundation for Firebase interactions.
 
 *   **Authentication:**
     *   Utilize `WebFirebaseService.auth` for `signInWithEmailAndPassword`, `createUserWithEmailAndPassword`, `sendPasswordResetEmail`, and `signOut`.
     *   Implement `onAuthStateChanged` listener to manage user session and update UI.
     *   Map `CustomUser` and `UserProfile` to web-specific Firebase `User` objects, ensuring consistency with the Android app's `AuthContext` (including `isAdmin` and `permissions` based on custom claims or user profile roles).
 *   **Firestore (Database):**
-    *   **Data Models:** Ensure strict adherence to the `Prop`, `Show`, `Task`, `Board`, `List`, `User`, `Address`, `Contact`, `Venue`, `Act`, `Scene`, `DigitalAsset`, `ShowCollaborator` data models defined in `the_props_bible/src/shared/types/` and `the_props_bible/src/types/`.
+    *   **Data Models:** Ensure strict adherence to the `Prop`, `Show`, `Task`, `Board`, `List`, `User`, `Address`, `Contact`, `Venue`, `Act`, `Scene`, `DigitalAsset`, `ShowCollaborator` data models defined in `thepropslist/src/shared/types/` and `thepropslist/src/types/`.
     *   **CRUD Operations:** Implement `getDocument`, `getDocuments`, `addDocument`, `setDocument`, `updateDocument`, `deleteDocument` using the `WebFirebaseService.firestore` instance for all entities (Props, Shows, Tasks, etc.).
     *   **Real-time Updates:** Leverage `listenToDocument` and `listenToCollection` (Firebase `onSnapshot`) for real-time synchronization of data across connected clients, crucial for collaborative features.
     *   **Queries:** Implement filtering, sorting, and limiting using Firestore queries for efficient data retrieval.
@@ -222,11 +222,11 @@ This roadmap outlines a phased approach to building the web application, priorit
 **Objective:** Establish the basic web application structure, integrate core Firebase services, and implement the authentication flow.
 
 *   **Task 1.1: Project Setup & Dependencies**
-    *   Verify `the_props_bible/web-app` project setup (Vite, React, TypeScript, Tailwind CSS).
+    *   Verify `thepropslist/web-app` project setup (Vite, React, TypeScript, Tailwind CSS).
     *   Ensure all `package.json` dependencies are correctly installed.
     *   Familiarize with existing build (`vite`) and dev (`npm run dev`) scripts.
 *   **Task 1.2: Firebase Service Implementation**
-    *   **Complete `WebFirebaseService.ts`:** Fully implement all "Not implemented" methods within `the_props_bible/src/platforms/web/services/firebase.ts`, especially `updateCard`, `deleteCard`, `reorderCardsInList`, `addList`, `addCard`, `moveCardToList`, `reorderLists` using Firebase Firestore batch writes and transactions for atomicity.
+    *   **Complete `WebFirebaseService.ts`:** Fully implement all "Not implemented" methods within `thepropslist/src/platforms/web/services/firebase.ts`, especially `updateCard`, `deleteCard`, `reorderCardsInList`, `addList`, `addCard`, `moveCardToList`, `reorderLists` using Firebase Firestore batch writes and transactions for atomicity.
     *   Ensure `uploadFile` and `deleteFile` work correctly with Firebase Storage.
 *   **Task 1.3: Authentication Flow**
     *   Implement `AuthContext` (similar to Android's `AuthContext.tsx`) for web.
@@ -242,7 +242,7 @@ This roadmap outlines a phased approach to building the web application, priorit
 **Objective:** Enable users to view, create, edit, and manage Shows and Props.
 
 *   **Task 2.1: Show Management**
-    *   **Data Models:** Ensure accurate TypeScript interfaces for `Show`, `Act`, `Scene`, `Venue`, `Contact`, `ShowCollaborator` based on `the_props_bible/src/types/index.ts`.
+    *   **Data Models:** Ensure accurate TypeScript interfaces for `Show`, `Act`, `Scene`, `Venue`, `Contact`, `ShowCollaborator` based on `thepropslist/src/types/index.ts`.
     *   **Show Listing Page (`ShowsListPage.tsx`):**
         *   Fetch all shows from Firestore using `WebFirebaseService.getDocuments` and `listenToCollection`.
         *   Display shows in a user-friendly list or grid view, adhering to existing card designs if available.
@@ -252,7 +252,7 @@ This roadmap outlines a phased approach to building the web application, priorit
         *   Integrate with `WebFirebaseService.addDocument` and `updateDocument`.
         *   Implement input validation and error handling.
 *   **Task 2.2: Prop Management**
-    *   **Data Models:** Ensure accurate TypeScript interface for `Prop` based on `the_props_bible/src/shared/types/props.ts`.
+    *   **Data Models:** Ensure accurate TypeScript interface for `Prop` based on `thepropslist/src/shared/types/props.ts`.
     *   **Prop Listing Page (`PropsListPage.tsx`):**
         *   Fetch props from Firestore using `WebFirebaseService.getDocuments` and `listenToCollection`, potentially filtering by `showId`.
         *   Display props using the `PropCardWeb.tsx` component, maintaining its design.
@@ -270,7 +270,7 @@ This roadmap outlines a phased approach to building the web application, priorit
 **Objective:** Implement the Trello-like task board and other complex features.
 
 *   **Task 3.1: Task Board Implementation**
-    *   **Data Models:** Use `BoardData`, `ListData`, `CardData` from `the_props_bible/src/shared/types/taskManager.ts`.
+    *   **Data Models:** Use `BoardData`, `ListData`, `CardData` from `thepropslist/src/shared/types/taskManager.ts`.
     *   **Board View:** Create the Kanban board layout with draggable lists and cards.
     *   **List Operations:** Implement creation, renaming, and deletion of lists using `WebFirebaseService`.
     *   **Card Operations:**

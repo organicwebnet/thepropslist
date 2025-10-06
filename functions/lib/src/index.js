@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.databaseHealthCheck = exports.manualCleanup = exports.cleanupFailedEmails = exports.cleanupExpiredCodes = exports.cleanupOldEmails = exports.deleteShowWithAdminPrivileges = exports.submitContactForm = exports.getAddOnsForMarketing = exports.cancelAddOn = exports.purchaseAddOn = exports.batchOptimizeImages = exports.optimizeImage = exports.joinWaitlist = exports.adminNormalizeContainers = exports.normalizeContainersHttp = exports.setContainerParent = exports.normalizeContainers = exports.publicContainerInfoLegacyV1 = exports.publicContainerInfo = exports.getSubscriptionStats = exports.seedRoleBasedTestUsers = exports.seedTestUsers = exports.getPricingConfig = exports.getStripePromotionCodes = exports.getStripeCoupons = exports.createStripePromotionCode = exports.createStripeCoupon = exports.updateUserPasswordWithCode = exports.sendCustomPasswordResetEmail = exports.createCheckoutSession = exports.createBillingPortalSession = exports.stripeWebhook = exports.feedbackToGithubEU = exports.feedbackIssueBridge = exports.sendEmailDirect = exports.processEmail = exports.sendInviteEmail = void 0;
+exports.cleanupOrphanedStorage = exports.databaseHealthCheck = exports.manualCleanup = exports.cleanupFailedEmails = exports.cleanupExpiredCodes = exports.cleanupOldEmails = exports.deleteShowWithAdminPrivileges = exports.submitContactForm = exports.getAddOnsForMarketing = exports.cancelAddOn = exports.purchaseAddOn = exports.batchOptimizeImages = exports.optimizeImage = exports.joinWaitlist = exports.adminNormalizeContainers = exports.normalizeContainersHttp = exports.setContainerParent = exports.normalizeContainers = exports.publicContainerInfoLegacyV1 = exports.publicContainerInfo = exports.getSubscriptionStats = exports.seedRoleBasedTestUsers = exports.seedTestUsers = exports.getPricingConfig = exports.getStripePromotionCodes = exports.getStripeCoupons = exports.createStripePromotionCode = exports.createStripeCoupon = exports.updateUserPasswordWithCode = exports.sendCustomPasswordResetEmail = exports.createCheckoutSession = exports.createBillingPortalSession = exports.stripeWebhook = exports.feedbackToGithubEU = exports.feedbackIssueBridge = exports.sendEmailDirect = exports.processEmail = exports.sendInviteEmail = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -262,7 +262,7 @@ exports.sendInviteEmail = (0, https_1.onCall)(async (req) => {
 // --- Feedback → GitHub Issues bridge ---
 // Required environment variables:
 //   GITHUB_TOKEN: a repo-scoped PAT with issues:write
-//   GITHUB_REPO:  "owner/repo" (e.g., organicwebnet/the_props_bible)
+//   GITHUB_REPO:  "owner/repo" (e.g., organicwebnet/thepropslist)
 // Read from environment variables
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.FEEDBACK_GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO || process.env.FEEDBACK_GITHUB_REPO || "";
@@ -2735,7 +2735,7 @@ exports.manualCleanup = (0, https_1.onCall)({ region: "us-central1" }, async (re
         throw new functions.https.HttpsError('invalid-argument', 'dryRun must be a boolean');
     }
     // Validate collection name to prevent arbitrary access
-    const allowedCollections = ['emails', 'pending_signups', 'pending_password_resets'];
+    const allowedCollections = ['emails', 'pending_signups', 'pending_password_resets', 'userProfiles'];
     if (!allowedCollections.includes(collection)) {
         throw new functions.https.HttpsError('invalid-argument', `Collection '${collection}' is not allowed for cleanup`);
     }
@@ -2778,6 +2778,47 @@ exports.manualCleanup = (0, https_1.onCall)({ region: "us-central1" }, async (re
         // Actually delete the documents
         let deletedCount = 0;
         const batchSize = 450; // Leave buffer for safety (Firestore limit is 500)
+        // If deleting userProfiles, also clean up storage files
+        if (collection === 'userProfiles' && !dryRun) {
+            const bucket = admin.storage().bucket();
+            const userIdsToDelete = snapshot.docs.map(doc => doc.id);
+            logger.info(`Cleaning up storage files for ${userIdsToDelete.length} users`);
+            for (const userId of userIdsToDelete) {
+                // Clean up profile images (both casing variations)
+                const profileImagePaths = [
+                    `profile_images/${userId}`,
+                    `profileImages/${userId}`
+                ];
+                for (const imagePath of profileImagePaths) {
+                    try {
+                        const file = bucket.file(imagePath);
+                        const [exists] = await file.exists();
+                        if (exists) {
+                            await file.delete();
+                            logger.info(`Deleted storage file: ${imagePath}`);
+                        }
+                    }
+                    catch (error) {
+                        logger.warn(`Could not delete ${imagePath}: ${error}`);
+                    }
+                }
+                // Clean up any other user-specific storage files
+                try {
+                    const [files] = await bucket.getFiles({
+                        prefix: `users/${userId}/`,
+                        maxResults: 1000
+                    });
+                    for (const file of files) {
+                        await file.delete();
+                        logger.info(`Deleted user storage file: ${file.name}`);
+                    }
+                }
+                catch (error) {
+                    // This is expected if the prefix doesn't exist
+                    logger.info(`No user-specific storage files found for ${userId}`);
+                }
+            }
+        }
         for (let i = 0; i < snapshot.docs.length; i += batchSize) {
             const batch = db.batch();
             const batchDocs = snapshot.docs.slice(i, i + batchSize);
@@ -2900,5 +2941,219 @@ exports.databaseHealthCheck = (0, https_1.onCall)({ region: "us-central1" }, asy
     catch (error) {
         logger.error('Error during database health check:', error);
         throw new functions.https.HttpsError('internal', `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+});
+/**
+ * Orphaned Storage Cleanup Function
+ *
+ * This function finds and deletes orphaned files in Firebase Storage that are no longer
+ * referenced by any Firestore documents. It also finds Firestore documents that reference
+ * missing storage files.
+ */
+// Helper function to delete files in parallel with concurrency control
+async function deleteFilesInParallel(files, concurrency = 10) {
+    const results = { deleted: 0, failed: 0, errors: [] };
+    // Process files in chunks to control concurrency
+    for (let i = 0; i < files.length; i += concurrency) {
+        const chunk = files.slice(i, i + concurrency);
+        const promises = chunk.map(async (file) => {
+            try {
+                await deleteFileWithRetry(file);
+                results.deleted++;
+                logger.info(`Deleted orphaned file: ${file.name}`);
+            }
+            catch (error) {
+                results.failed++;
+                const errorMsg = `Failed to delete file ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+                results.errors.push(errorMsg);
+                logger.error(errorMsg);
+            }
+        });
+        await Promise.all(promises);
+        // Log progress for large operations
+        if (files.length > 50) {
+            logger.info(`Progress: ${Math.min(i + concurrency, files.length)}/${files.length} files processed`);
+        }
+    }
+    return results;
+}
+// Helper function to delete a file with retry logic
+async function deleteFileWithRetry(file, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            await file.delete();
+            return;
+        }
+        catch (error) {
+            if (attempt === maxRetries) {
+                throw error;
+            }
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = Math.pow(2, attempt) * 1000;
+            logger.warn(`Delete attempt ${attempt} failed for ${file.name}, retrying in ${delay}ms:`, error);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+// Helper function to extract storage URLs from known fields only
+function extractStorageUrls(data) {
+    const urls = [];
+    const knownStorageFields = [
+        'photoURL', 'profileImage', 'imageUrl', 'image', 'avatar', 'thumbnail',
+        'images', 'photos', 'attachments', 'media', 'files'
+    ];
+    const extractFromObject = (obj) => {
+        if (typeof obj === 'string' && obj.includes('firebasestorage.googleapis.com')) {
+            urls.push(obj);
+        }
+        else if (Array.isArray(obj)) {
+            obj.forEach(item => extractFromObject(item));
+        }
+        else if (obj && typeof obj === 'object') {
+            Object.entries(obj).forEach(([key, value]) => {
+                // Only check known fields or if the key suggests it might contain URLs
+                if (knownStorageFields.some(field => key.toLowerCase().includes(field.toLowerCase())) ||
+                    typeof value === 'string' && value.includes('firebasestorage.googleapis.com')) {
+                    extractFromObject(value);
+                }
+            });
+        }
+    };
+    extractFromObject(data);
+    return urls;
+}
+exports.cleanupOrphanedStorage = (0, https_1.onCall)({
+    region: "us-central1",
+    timeoutSeconds: 540, // 9 minutes for large operations
+    memory: "512MiB" // More memory for parallel processing
+}, async (req) => {
+    if (!req.auth)
+        throw new functions.https.HttpsError("unauthenticated", "Authentication required");
+    const db = admin.firestore();
+    // Check if user has admin permissions
+    const userProfile = await db.collection('userProfiles').doc(req.auth.uid).get();
+    const userData = userProfile.exists ? userProfile.data() : {};
+    const isGod = String(userData?.role || '').toLowerCase() === 'god';
+    const isSystemAdmin = !!(userData?.groups && userData.groups['system-admin'] === true);
+    if (!isGod && !isSystemAdmin) {
+        throw new functions.https.HttpsError("permission-denied", "Admin access required");
+    }
+    // Input validation
+    const { dryRun = true, maxFiles = 1000, concurrency = 10 } = req.data || {};
+    if (typeof maxFiles !== 'number' || maxFiles < 1 || maxFiles > 10000) {
+        throw new functions.https.HttpsError("invalid-argument", "maxFiles must be a number between 1 and 10000");
+    }
+    if (typeof concurrency !== 'number' || concurrency < 1 || concurrency > 50) {
+        throw new functions.https.HttpsError("invalid-argument", "concurrency must be a number between 1 and 50");
+    }
+    logger.info('Orphaned storage cleanup started', { dryRun, maxFiles, concurrency });
+    try {
+        const bucket = admin.storage().bucket();
+        const results = {
+            orphanedFiles: [],
+            missingReferences: [],
+            deletedFiles: 0,
+            failedDeletions: 0,
+            totalFilesScanned: 0,
+            deletionErrors: []
+        };
+        // Get all storage files
+        const [files] = await bucket.getFiles({ maxResults: maxFiles });
+        results.totalFilesScanned = files.length;
+        logger.info(`Scanning ${files.length} storage files for orphaned references`);
+        // Get all Firestore documents that might reference storage files
+        // Only check collections that are likely to contain storage references
+        const collections = ['userProfiles', 'shows', 'props', 'todo_boards', 'feedback'];
+        const storageReferences = new Set();
+        for (const collectionName of collections) {
+            try {
+                const snapshot = await db.collection(collectionName).get();
+                logger.info(`Processing ${snapshot.size} documents from ${collectionName} collection`);
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+                    const urls = extractStorageUrls(data);
+                    urls.forEach(url => storageReferences.add(url));
+                }
+            }
+            catch (error) {
+                logger.warn(`Error processing collection ${collectionName}:`, error);
+                // Continue with other collections
+            }
+        }
+        logger.info(`Found ${storageReferences.size} storage references in Firestore`);
+        // Identify orphaned files
+        const orphanedFiles = [];
+        for (const file of files) {
+            const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(file.name)}?alt=media`;
+            if (!storageReferences.has(fileUrl)) {
+                results.orphanedFiles.push({
+                    name: file.name,
+                    size: file.metadata.size,
+                    timeCreated: file.metadata.timeCreated,
+                    url: fileUrl
+                });
+                orphanedFiles.push(file);
+            }
+        }
+        logger.info(`Found ${orphanedFiles.length} orphaned files`);
+        // Delete orphaned files if not in dry run mode
+        if (!dryRun && orphanedFiles.length > 0) {
+            logger.info(`Starting deletion of ${orphanedFiles.length} orphaned files with concurrency ${concurrency}`);
+            const deletionResults = await deleteFilesInParallel(orphanedFiles, concurrency);
+            results.deletedFiles = deletionResults.deleted;
+            results.failedDeletions = deletionResults.failed;
+            results.deletionErrors = deletionResults.errors;
+        }
+        // Check for missing references (Firestore docs that reference non-existent files)
+        logger.info('Checking for missing storage references...');
+        const missingRefs = [];
+        // Process in batches to avoid overwhelming the storage API
+        const urlArray = Array.from(storageReferences);
+        const batchSize = 50;
+        for (let i = 0; i < urlArray.length; i += batchSize) {
+            const batch = urlArray.slice(i, i + batchSize);
+            const batchPromises = batch.map(async (url) => {
+                try {
+                    const urlParts = url.split('/o/');
+                    if (urlParts.length === 2) {
+                        const filePath = decodeURIComponent(urlParts[1].split('?')[0]);
+                        const file = bucket.file(filePath);
+                        const [exists] = await file.exists();
+                        if (!exists) {
+                            missingRefs.push(url);
+                        }
+                    }
+                }
+                catch (error) {
+                    logger.warn(`Error checking file existence for ${url}:`, error);
+                }
+            });
+            await Promise.all(batchPromises);
+            if (urlArray.length > 100) {
+                logger.info(`Progress: ${Math.min(i + batchSize, urlArray.length)}/${urlArray.length} references checked`);
+            }
+        }
+        results.missingReferences = missingRefs;
+        const summary = {
+            totalFilesScanned: results.totalFilesScanned,
+            orphanedFilesFound: results.orphanedFiles.length,
+            missingReferencesFound: results.missingReferences.length,
+            filesDeleted: results.deletedFiles,
+            failedDeletions: results.failedDeletions,
+            dryRun,
+            concurrency
+        };
+        logger.info('Orphaned storage cleanup completed', summary);
+        return {
+            success: true,
+            summary,
+            orphanedFiles: results.orphanedFiles,
+            missingReferences: results.missingReferences,
+            deletionErrors: results.deletionErrors
+        };
+    }
+    catch (error) {
+        logger.error('Error during orphaned storage cleanup:', error);
+        throw new functions.https.HttpsError('internal', `Storage cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 });

@@ -251,7 +251,6 @@ test.describe('Design Consistency & Visual Regression Tests', () => {
 
       // Check for consistent button styling patterns
       const borderRadiuses = buttonStyles.map(b => b.styles.borderRadius);
-      const fontSizes = buttonStyles.map(b => b.styles.fontSize);
       
       // Should have consistent border radius patterns
       const uniqueBorderRadiuses = [...new Set(borderRadiuses)];
@@ -468,8 +467,6 @@ test.describe('Design Consistency & Visual Regression Tests', () => {
       await page.goto('/login');
       
       const emailInput = page.locator('input[type="email"]').first();
-      const passwordInput = page.locator('input[type="password"]').first();
-      const submitButton = page.locator('button[type="submit"]').first();
 
       if (await emailInput.count() > 0) {
         // Test default state
@@ -571,7 +568,7 @@ test.describe('Design Consistency & Visual Regression Tests', () => {
   });
 
   test.describe('Cross-Browser Visual Consistency', () => {
-    test('should maintain visual consistency across browsers', async ({ page, browserName }) => {
+    test('should maintain visual consistency across browsers', async ({ page }) => {
       await page.goto('/login'); // Use login page instead of protected route
       await page.waitForLoadState('networkidle');
 
