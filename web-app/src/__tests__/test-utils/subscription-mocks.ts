@@ -415,3 +415,4 @@ export function createMockFirebaseService(mockData: any) {
     deleteDocument: vi.fn().mockResolvedValue(undefined)
   };
 }
+

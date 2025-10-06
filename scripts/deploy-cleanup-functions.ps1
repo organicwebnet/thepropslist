@@ -62,3 +62,4 @@ try {
 }
 
 Write-Host "🎉 Deployment completed!" -ForegroundColor Green
+

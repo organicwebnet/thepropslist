@@ -126,3 +126,4 @@ async function checkGodUser() {
 
 // Run check
 checkGodUser().catch(console.error);
+

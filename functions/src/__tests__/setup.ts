@@ -81,3 +81,4 @@ vi.mock('sharp', () => ({
     toBuffer: vi.fn(() => Promise.resolve(Buffer.from('mock-image-data')))
   }))
 }));
+

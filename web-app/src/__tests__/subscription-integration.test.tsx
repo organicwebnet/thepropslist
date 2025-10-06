@@ -467,3 +467,4 @@ test.describe('Subscription Plans and Addon Enforcement - Integration Tests', ()
     await playwrightExpect(addonSection).not.toBeVisible();
   });
 });
+

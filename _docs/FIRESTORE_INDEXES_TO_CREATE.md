@@ -69,3 +69,4 @@ After indexes are created:
 - ✅ `cleanupExpiredCodes` will run every 6 hours  
 - ✅ `cleanupFailedEmails` will run weekly on Sunday at 3:00 AM UTC
 - ✅ `manualCleanup` and `databaseHealthCheck` will be available for admin use
+
