@@ -21,12 +21,25 @@ const SubscriberStatsPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
+        
+        console.log('SubscriberStatsPage: Loading stats...', {
+          user: user?.uid,
+          userProfile: userProfile?.role,
+          isGod: userProfile?.role === 'god'
+        });
+        
         if (!user) throw new Error('Not signed in');
-        if (!(userProfile?.role === 'god')) throw new Error('Forbidden');
+        if (!userProfile) throw new Error('User profile not loaded');
+        if (!(userProfile?.role === 'god')) throw new Error(`Forbidden: Role is '${userProfile?.role}', required 'god'`);
+        
+        console.log('SubscriberStatsPage: Calling getSubscriptionStats function...');
         const fn = httpsCallable<unknown, StatsResponse>(getFunctions(), 'getSubscriptionStats');
         const res = await fn({});
+        
+        console.log('SubscriberStatsPage: Function response:', res.data);
         if (isMounted) setStats(res.data);
       } catch (e: any) {
+        console.error('SubscriberStatsPage: Error loading stats:', e);
         if (isMounted) setError(e?.message || 'Failed to load');
       } finally {
         if (isMounted) setLoading(false);
@@ -59,7 +72,23 @@ const SubscriberStatsPage: React.FC = () => {
         {loading ? (
           <div className="text-pb-gray">Loading…</div>
         ) : error ? (
-          <div className="text-red-400">{error}</div>
+          <div className="space-y-4">
+            <div className="text-red-400 bg-red-900/20 border border-red-500/30 rounded p-4">
+              <div className="font-semibold mb-2">Error loading subscriber stats:</div>
+              <div className="text-sm">{error}</div>
+            </div>
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                // Trigger reload by updating a dependency
+                setStats(null);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            >
+              Retry
+            </button>
+          </div>
         ) : !stats ? (
           <div className="text-pb-gray">No data.</div>
         ) : (

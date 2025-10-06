@@ -65,53 +65,69 @@ const ShowsListPage: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    // Fetch shows the user created
-    const ownedShowsUnsubscribe = firebaseService.listenToCollection<Show>(
+    // Track all owned shows from both field names
+    let allOwnedShows: Show[] = [];
+    let createdByShows: Show[] = [];
+    let userIdShows: Show[] = [];
+    
+    const updateCombinedShows = () => {
+      // Combine and deduplicate shows from both queries
+      allOwnedShows = [...createdByShows];
+      userIdShows.forEach(show => {
+        if (!allOwnedShows.find(s => s.id === show.id)) {
+          allOwnedShows.push(show);
+        }
+      });
+      
+      // Fetch shows the user collaborates on
+      const collaborativeShowsUnsubscribe = firebaseService.listenToCollection<Show>(
+        'shows',
+        (collaborativeData) => {
+          console.log('ShowsListPage: Received collaborative shows data:', collaborativeData);
+          const collaborativeShows = collaborativeData.map(doc => ({ ...doc.data, id: doc.id }));
+          
+          // Combine and deduplicate shows
+          const allShows = [...allOwnedShows];
+          collaborativeShows.forEach(show => {
+            if (!allShows.find(s => s.id === show.id)) {
+              allShows.push(show);
+            }
+          });
+          
+          console.log('ShowsListPage: Combined show list:', allShows);
+          setShows(allShows);
+          setLoading(false);
+          
+          // If user has no shows, redirect to add show form
+          if (allShows.length === 0 && user?.uid) {
+            console.log('ShowsListPage: No shows found, redirecting to /shows/new');
+            navigate('/shows/new');
+          }
+        },
+        (err: Error) => {
+          console.error("Error fetching collaborative shows:", err);
+          setError(`Failed to load collaborative shows: ${err.message}. Please check your network connection and Firebase permissions.`);
+          setLoading(false);
+        },
+        {
+          where: [['collaborators', 'array-contains', user?.uid || '']]
+        }
+      );
+      
+      return collaborativeShowsUnsubscribe;
+    };
+
+    // Listen to shows with createdBy field
+    const createdByShowsUnsubscribe = firebaseService.listenToCollection<Show>(
       'shows',
       (ownedData) => {
-        console.log('ShowsListPage: Received owned shows data:', ownedData);
-        const ownedShows = ownedData.map(doc => ({ ...doc.data, id: doc.id }));
-        
-        // Fetch shows the user collaborates on
-        const collaborativeShowsUnsubscribe = firebaseService.listenToCollection<Show>(
-          'shows',
-          (collaborativeData) => {
-            console.log('ShowsListPage: Received collaborative shows data:', collaborativeData);
-            const collaborativeShows = collaborativeData.map(doc => ({ ...doc.data, id: doc.id }));
-            
-            // Combine and deduplicate shows
-            const allShows = [...ownedShows];
-            collaborativeShows.forEach(show => {
-              if (!allShows.find(s => s.id === show.id)) {
-                allShows.push(show);
-              }
-            });
-            
-            console.log('ShowsListPage: Combined show list:', allShows);
-            setShows(allShows);
-            setLoading(false);
-            
-            // If user has no shows, redirect to add show form
-            if (allShows.length === 0 && user?.uid) {
-              console.log('ShowsListPage: No shows found, redirecting to /shows/new');
-              navigate('/shows/new');
-            }
-          },
-          (err: Error) => {
-            console.error("Error fetching collaborative shows:", err);
-            setError(`Failed to load collaborative shows: ${err.message}. Please check your network connection and Firebase permissions.`);
-            setLoading(false);
-          },
-          {
-            where: [['collaborators', 'array-contains', user?.uid || '']]
-          }
-        );
-        
-        return () => collaborativeShowsUnsubscribe();
+        console.log('ShowsListPage: Received createdBy shows data:', ownedData);
+        createdByShows = ownedData.map(doc => ({ ...doc.data, id: doc.id }));
+        updateCombinedShows();
       },
       (err: Error) => {
-        console.error("Error fetching owned shows:", err);
-        setError(`Failed to load owned shows: ${err.message}. Please check your network connection and Firebase permissions.`);
+        console.error("Error fetching createdBy shows:", err);
+        setError(`Failed to load createdBy shows: ${err.message}. Please check your network connection and Firebase permissions.`);
         setLoading(false);
       },
       {
@@ -119,7 +135,28 @@ const ShowsListPage: React.FC = () => {
       }
     );
 
-    return () => ownedShowsUnsubscribe();
+    // Listen to shows with userId field
+    const userIdShowsUnsubscribe = firebaseService.listenToCollection<Show>(
+      'shows',
+      (ownedData) => {
+        console.log('ShowsListPage: Received userId shows data:', ownedData);
+        userIdShows = ownedData.map(doc => ({ ...doc.data, id: doc.id }));
+        updateCombinedShows();
+      },
+      (err: Error) => {
+        console.error("Error fetching userId shows:", err);
+        setError(`Failed to load userId shows: ${err.message}. Please check your network connection and Firebase permissions.`);
+        setLoading(false);
+      },
+      {
+        where: [['userId', '==', user?.uid || '']]
+      }
+    );
+
+    return () => {
+      createdByShowsUnsubscribe();
+      userIdShowsUnsubscribe();
+    };
   }, [firebaseService, isInitialized, firebaseInitError, navigate, user?.uid]);
 
   // const _handleAddShow = () => {

@@ -43,8 +43,22 @@ export const ShowSelectionProvider: React.FC<{ children: React.ReactNode }> = ({
         setHasCheckedAutoSelection(true);
         
         // Get all shows for the user (owned + collaborative)
-        const ownedShows = await service.getDocuments('shows', {
-          where: [['userId', '==', user.uid]]
+        // Query for both createdBy and userId fields for backward compatibility
+        const [createdByShows, userIdShows] = await Promise.all([
+          service.getDocuments('shows', {
+            where: [['createdBy', '==', user.uid]]
+          }),
+          service.getDocuments('shows', {
+            where: [['userId', '==', user.uid]]
+          })
+        ]);
+        
+        // Combine and deduplicate shows from both queries
+        const ownedShows = [...createdByShows];
+        userIdShows.forEach(show => {
+          if (!ownedShows.find(s => s.id === show.id)) {
+            ownedShows.push(show);
+          }
         });
         
         const collaborativeShows = await service.getDocuments('shows', {

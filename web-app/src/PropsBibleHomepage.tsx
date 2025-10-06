@@ -83,6 +83,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   ] as Array<{ icon: any; text: string; subtext: string; link?: string }>;
   if (userProfile?.role === 'god') {
     navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers' });
+    navItems.push({ icon: FileText, text: 'Admin Debug', subtext: 'Debug admin functionality', link: '/admin/debug' });
   }
 
   return (

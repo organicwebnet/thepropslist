@@ -32,8 +32,11 @@ service cloud.firestore {
       allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
     }
     match /userProfiles/{userId} {
-      // Secure access: only allow reading own profile or system admin can read all
-      allow read: if isSystemAdmin() || (request.auth != null && request.auth.uid == userId);
+      // Secure access: allow reading own profile, system admin can read all, or god users can read all for admin functions
+      allow read: if isSystemAdmin() || 
+        (request.auth != null && request.auth.uid == userId) ||
+        (request.auth != null && 
+          get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god");
       // Only allow writing to own profile
       allow write: if isSystemAdmin() || (request.auth != null && request.auth.uid == userId);
     }

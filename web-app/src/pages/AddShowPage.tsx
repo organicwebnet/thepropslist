@@ -100,19 +100,56 @@ const AddShowPage: React.FC = () => {
   React.useEffect(() => {
     if (!user?.uid) return;
     
-    const unsubscribe = firebaseService.listenToCollection(
+    let allShows: any[] = [];
+    
+    const updateCount = () => {
+      // Deduplicate and count
+      const uniqueShows = [...allShows];
+      const seen = new Set();
+      const deduplicated = uniqueShows.filter(show => {
+        if (seen.has(show.id)) return false;
+        seen.add(show.id);
+        return true;
+      });
+      setCurrentShowCount(deduplicated.length);
+    };
+    
+    // Listen to shows with createdBy field
+    const createdByUnsubscribe = firebaseService.listenToCollection(
       'shows',
       (docs) => {
-        const userShows = docs.filter(doc => doc.data.userId === user.uid);
-        setCurrentShowCount(userShows.length);
+        const createdByShows = docs.filter(doc => doc.data.createdBy === user.uid);
+        // Update allShows array
+        allShows = allShows.filter(show => !createdByShows.find(s => s.id === show.id));
+        allShows.push(...createdByShows);
+        updateCount();
       },
       (err: Error) => {
-        console.error('Error loading show count:', err);
+        console.error('Error loading createdBy show count:', err);
+      },
+      { where: [['createdBy', '==', user.uid]] }
+    );
+    
+    // Listen to shows with userId field
+    const userIdUnsubscribe = firebaseService.listenToCollection(
+      'shows',
+      (docs) => {
+        const userIdShows = docs.filter(doc => doc.data.userId === user.uid);
+        // Update allShows array
+        allShows = allShows.filter(show => !userIdShows.find(s => s.id === show.id));
+        allShows.push(...userIdShows);
+        updateCount();
+      },
+      (err: Error) => {
+        console.error('Error loading userId show count:', err);
       },
       { where: [['userId', '==', user.uid]] }
     );
     
-    return () => unsubscribe && unsubscribe();
+    return () => {
+      createdByUnsubscribe && createdByUnsubscribe();
+      userIdUnsubscribe && userIdUnsubscribe();
+    };
   }, [user?.uid, firebaseService]);
 
   // Mock user lookup function
