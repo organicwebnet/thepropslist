@@ -5,7 +5,7 @@ import { useFirebase } from '../contexts/FirebaseContext';
 
 const ShowsRedirect: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useWebAuth();
+  const { user, userProfile } = useWebAuth();
   const { service } = useFirebase();
   const [loading, setLoading] = useState(true);
 
@@ -17,16 +17,58 @@ const ShowsRedirect: React.FC = () => {
       }
 
       try {
-        // Check if user has any shows
-        const shows = await service.getDocuments('shows', {
-          where: [['createdBy', '==', user.uid]]
+        // Check if user has any shows - check multiple ways
+        const [createdByShows, userIdShows, collaborativeShows] = await Promise.all([
+          // Shows created by this user
+          service.getDocuments('shows', {
+            where: [['createdBy', '==', user.uid]]
+          }).catch(() => []),
+          // Shows with userId field (legacy)
+          service.getDocuments('shows', {
+            where: [['userId', '==', user.uid]]
+          }).catch(() => []),
+          // Shows where user is a collaborator
+          service.getDocuments('shows', {
+            where: [['collaborators', 'array-contains', user.uid]]
+          }).catch(() => [])
+        ]);
+
+        // Combine and deduplicate shows
+        const allShows = [...createdByShows, ...userIdShows, ...collaborativeShows];
+        const uniqueShows = allShows.filter((show, index, self) => 
+          index === self.findIndex(s => s.id === show.id)
+        );
+
+        console.log('ShowsRedirect: Found shows for user', { 
+          userId: user.uid, 
+          createdByCount: createdByShows.length, 
+          userIdCount: userIdShows.length,
+          collaborativeCount: collaborativeShows.length,
+          totalUnique: uniqueShows.length 
         });
 
-        if (shows.length === 0) {
+        if (uniqueShows.length === 0) {
+          // No shows found, but if user is god, they might have access to all shows
+          if (userProfile?.role === 'god') {
+            console.log('ShowsRedirect: God user with no direct shows, checking for any shows in system');
+            try {
+              const allShows = await service.getDocuments('shows').catch(() => []);
+              if (allShows.length > 0) {
+                console.log('ShowsRedirect: God user found system shows, redirecting to shows list');
+                navigate('/shows/list');
+                return;
+              }
+            } catch (error) {
+              console.error('ShowsRedirect: Error checking all shows for god user:', error);
+            }
+          }
+          
           // No shows, redirect to create first show
+          console.log('ShowsRedirect: No shows found, redirecting to create show');
           navigate('/shows/new');
         } else {
           // Has shows, show the actual shows list
+          console.log('ShowsRedirect: Shows found, redirecting to shows list');
           navigate('/shows/list');
         }
       } catch (error) {
