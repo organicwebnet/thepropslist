@@ -80,6 +80,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation(); // Prevent form submission from bubbling up to parent form
+    e.stopImmediatePropagation(); // Prevent any other event handlers from running
     console.log('EntitySelect: handleAddAddress called', { newAddress });
     setSaving(true);
     setError(null);
@@ -161,7 +162,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
               <button className="absolute top-3 right-3 text-pb-gray hover:text-pb-primary" onClick={handleCancelAdd}><X className="w-5 h-5" /></button>
               <h2 className="text-xl font-bold mb-4 text-white">Add New {label}</h2>
               {error && <div className="text-red-500 mb-2">{error}</div>}
-              <form onSubmit={handleAddAddress} className="space-y-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-pb-gray mb-1 font-medium">Name *</label>
                   <input type="text" value={newAddress.name} onChange={e => setNewAddress(v => ({ ...v, name: e.target.value }))} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
@@ -187,11 +188,11 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
                   <button type="button" onClick={handleCancelAdd} disabled={saving} className="flex-1 py-2 rounded-lg bg-pb-darker hover:bg-pb-darker/80 text-white font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed">
                     Cancel
                   </button>
-                  <button type="submit" disabled={saving} className="flex-1 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-bold shadow transition disabled:opacity-60 disabled:cursor-not-allowed">
+                  <button type="button" onClick={handleAddAddress} disabled={saving} className="flex-1 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-bold shadow transition disabled:opacity-60 disabled:cursor-not-allowed">
                     {saving ? 'Saving...' : 'Add'}
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </motion.div>
         )}
