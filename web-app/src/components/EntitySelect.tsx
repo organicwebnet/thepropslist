@@ -23,6 +23,7 @@ interface EntitySelectProps {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   allowMultiple?: boolean;
+  onBeforeAddNew?: () => void; // Callback to cache form state before opening modal
 }
 
 const defaultAddress: Address = {
@@ -39,7 +40,7 @@ const defaultAddress: Address = {
   nickname: '',
 };
 
-const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, onChange, allowMultiple }) => {
+const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, onChange, allowMultiple, onBeforeAddNew }) => {
   const { service: firebaseService } = useFirebase();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,8 +81,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation(); // Prevent form submission from bubbling up to parent form
-    e.stopImmediatePropagation(); // Prevent any other event handlers from running
-    console.log('EntitySelect: handleAddAddress called', { newAddress });
+    console.log('EntitySelect: handleAddAddress called', { newAddress, type });
     setSaving(true);
     setError(null);
     try {
@@ -100,7 +100,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
       setLoading(true);
       firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
         .then((docs: any[]) => {
-          console.log('EntitySelect: Addresses refreshed', { count: docs.length });
+          console.log('EntitySelect: Addresses refreshed', { count: docs.length, type });
           setAddresses(docs.map(doc => ({ id: doc.id, ...doc.data })));
           setLoading(false);
         })
@@ -138,7 +138,14 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
           onChange={e => setSearch(e.target.value)}
           className="flex-1 rounded bg-pb-darker border border-pb-primary/30 p-2 text-white"
         />
-        <button type="button" onClick={() => setShowAddModal(true)} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent px-3 py-2 rounded bg-pb-primary/10">
+        <button type="button" onClick={() => {
+          console.log('EntitySelect: Add New button clicked, caching form state...');
+          // Cache form state before opening modal
+          if (onBeforeAddNew) {
+            onBeforeAddNew();
+          }
+          setShowAddModal(true);
+        }} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent px-3 py-2 rounded bg-pb-primary/10">
           <Plus className="w-4 h-4" /> Add New
         </button>
       </div>

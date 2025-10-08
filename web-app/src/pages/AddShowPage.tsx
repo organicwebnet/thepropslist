@@ -72,8 +72,11 @@ const AddShowPage: React.FC = () => {
       const saved = localStorage.getItem('showFormState');
       if (saved) {
         const parsed = JSON.parse(saved);
-        setFormRestored(true);
-        console.log('AddShowPage: Form state restored from localStorage');
+        console.log('AddShowPage: Form state restored from localStorage', {
+          hasName: !!parsed.name,
+          hasDescription: !!parsed.description,
+          venueIds: parsed.venueIds?.length || 0
+        });
         // Convert dates back to strings and handle file objects
         return {
           ...parsed,
@@ -85,6 +88,7 @@ const AddShowPage: React.FC = () => {
     }
     
     // Default state
+    console.log('AddShowPage: Using default form state');
     return {
       name: '',
       description: '',
@@ -114,25 +118,62 @@ const AddShowPage: React.FC = () => {
   };
 
   const [show, setShow] = useState<ShowFormState>(getInitialFormState());
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formInitialized, setFormInitialized] = useState(false);
+
+  // Set form restored state after component mounts
+  React.useEffect(() => {
+    const saved = localStorage.getItem('showFormState');
+    if (saved) {
+      setFormRestored(true);
+    }
+    setFormInitialized(true);
+  }, []);
 
   // Debug: Log form state changes
   React.useEffect(() => {
     console.log('AddShowPage: Form state changed', show);
   }, [show]);
 
+  // Function to manually cache form state (called before opening address modal)
+  const cacheFormState = () => {
+    try {
+      localStorage.setItem('showFormState', JSON.stringify(show));
+      console.log('AddShowPage: Form state manually cached before opening modal', {
+        showName: show.name,
+        venueIds: show.venueIds?.length || 0,
+        formInitialized
+      });
+    } catch (error) {
+      console.warn('Failed to manually cache form state:', error);
+    }
+  };
+
   // Save form state to localStorage whenever it changes
   React.useEffect(() => {
+    // Only save after form is initialized to prevent saving during initial load
+    if (!formInitialized) return;
+    
     try {
-      // Don't save if form is empty (initial state)
-      if (show.name || show.description || show.startDate || show.endDate || 
-          show.venueIds?.length || show.rehearsalAddressIds?.length || show.storageAddressIds?.length) {
+      // Don't save if form is empty (initial state) or if we just restored from localStorage
+      const hasContent = show.name || show.description || show.startDate || show.endDate || 
+          show.venueIds?.length || show.rehearsalAddressIds?.length || show.storageAddressIds?.length ||
+          show.stageManager || show.stageManagerEmail || show.propsSupervisor || show.propsSupervisorEmail ||
+          show.productionCompany || show.acts.some(act => act.name) || show.team.some(member => member.email);
+      
+      if (hasContent) {
         localStorage.setItem('showFormState', JSON.stringify(show));
-        console.log('AddShowPage: Form state saved to localStorage');
+        console.log('AddShowPage: Form state saved to localStorage', { 
+          hasContent, 
+          showName: show.name,
+          venueIds: show.venueIds?.length || 0,
+          formInitialized
+        });
       }
     } catch (error) {
       console.warn('Failed to save form state to localStorage:', error);
     }
-  }, [show]);
+  }, [show, formInitialized]);
 
   // Cleanup: Clear form state when component unmounts after successful submission
   React.useEffect(() => {
@@ -153,7 +194,6 @@ const AddShowPage: React.FC = () => {
   const { service: firebaseService } = useFirebase();
   const [activeTab, setActiveTab] = useState<'details' | 'team'>('details');
   const [formRestored, setFormRestored] = useState(false);
-  const [formSubmitted, setFormSubmitted] = useState(false);
 
   // Load current show count to check limits
   React.useEffect(() => {
@@ -718,10 +758,22 @@ const AddShowPage: React.FC = () => {
                   type="venue"
                   selectedIds={show.venueIds || []}
                   onChange={(ids) => {
-                    console.log('AddShowPage: Venue selection changed', { ids, currentShow: show });
-                    setShow(prev => ({ ...prev, venueIds: ids }));
+                    console.log('AddShowPage: Venue selection changed', { 
+                      ids, 
+                      currentShow: show,
+                      previousVenueIds: show.venueIds 
+                    });
+                    setShow(prev => {
+                      const newShow = { ...prev, venueIds: ids };
+                      console.log('AddShowPage: Setting new show state', { 
+                        previous: prev, 
+                        new: newShow 
+                      });
+                      return newShow;
+                    });
                   }}
                   allowMultiple={show.isTouringShow}
+                  onBeforeAddNew={cacheFormState}
                 />
                 {/* Touring Status */}
                 <div className="flex items-center gap-2">
@@ -744,6 +796,7 @@ const AddShowPage: React.FC = () => {
                   selectedIds={show.rehearsalAddressIds || []}
                   onChange={(ids) => setShow(prev => ({ ...prev, rehearsalAddressIds: ids }))}
                   allowMultiple={true}
+                  onBeforeAddNew={cacheFormState}
                 />
                 {/* Storage Addresses */}
                 <EntitySelect
@@ -752,6 +805,7 @@ const AddShowPage: React.FC = () => {
                   selectedIds={show.storageAddressIds || []}
                   onChange={(ids) => setShow(prev => ({ ...prev, storageAddressIds: ids }))}
                   allowMultiple={true}
+                  onBeforeAddNew={cacheFormState}
                 />
               </motion.div>
             )}
