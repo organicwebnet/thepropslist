@@ -68,7 +68,7 @@ export interface Show {
   isTouringShow: boolean;
   contacts: Contact[];
   logoImage?: { id: string; url: string; caption?: string };
-  status?: 'planning' | 'active' | 'completed' | 'in_storage' | 'cancelled';
+  status?: 'planning' | 'in_production' | 'in_rehearsals' | 'in_tech' | 'running' | 'on_hold' | 'cancelled' | 'in_storage';
   rehearsalAddresses?: Address[];
   storageAddresses?: Address[];
   defaultActId?: string | number;
@@ -96,7 +96,7 @@ export interface ShowFormData {
   logoImage?: { id: string; url: string; caption?: string };
   startDate?: string;
   endDate?: string;
-  status?: 'planning' | 'active' | 'completed' | 'in_storage' | 'cancelled';
+  status?: 'planning' | 'in_production' | 'in_rehearsals' | 'in_tech' | 'running' | 'on_hold' | 'cancelled' | 'in_storage';
   rehearsalAddresses?: Address[];
   storageAddresses?: Address[];
   collaborators?: ShowCollaborator[];

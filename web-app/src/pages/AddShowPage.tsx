@@ -53,10 +53,13 @@ interface ShowFormState {
 
 const statusOptions = [
   { value: 'planning', label: 'Planning' },
-  { value: 'active', label: 'Active' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'in_storage', label: 'In Storage' },
+  { value: 'in_production', label: 'In Production' },
+  { value: 'in_rehearsals', label: 'In Rehearsals' },
+  { value: 'in_tech', label: 'In Tech' },
+  { value: 'running', label: 'Running' },
+  { value: 'on_hold', label: 'On Hold' },
   { value: 'cancelled', label: 'Cancelled' },
+  { value: 'in_storage', label: 'In Storage' },
 ];
 
 const AddShowPage: React.FC = () => {
