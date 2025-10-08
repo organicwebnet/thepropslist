@@ -87,6 +87,11 @@ const AddShowPage: React.FC = () => {
     rehearsalAddressIds: [],
     storageAddressIds: [],
   });
+
+  // Debug: Log form state changes
+  React.useEffect(() => {
+    console.log('AddShowPage: Form state changed', show);
+  }, [show]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

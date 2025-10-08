@@ -57,7 +57,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [type, showAddModal, firebaseService]);
+  }, [type, firebaseService]);
 
   const handleSelect = (id: string) => {
     console.log('EntitySelect: handleSelect called', { id, selectedIds, allowMultiple });
@@ -88,6 +88,15 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
       setShowAddModal(false);
       setNewAddress({ ...defaultAddress, type });
       setSaving(false);
+      
+      // Refresh the addresses list after adding a new one
+      setLoading(true);
+      firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
+        .then((docs: any[]) => {
+          setAddresses(docs.map(doc => ({ id: doc.id, ...doc.data })));
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
     } catch (err: any) {
       setError(err.message || 'Failed to add.');
       setSaving(false);
