@@ -128,6 +128,17 @@ const AddShowPage: React.FC = () => {
       console.warn('Failed to save form state to localStorage:', error);
     }
   }, [show]);
+
+  // Cleanup: Clear form state when component unmounts after successful submission
+  React.useEffect(() => {
+    return () => {
+      if (formSubmitted) {
+        localStorage.removeItem('showFormState');
+        console.log('AddShowPage: Form state cleared on component unmount');
+      }
+    };
+  }, [formSubmitted]);
+
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,6 +148,7 @@ const AddShowPage: React.FC = () => {
   const { service: firebaseService } = useFirebase();
   const [activeTab, setActiveTab] = useState<'details' | 'team'>('details');
   const [formRestored, setFormRestored] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
 
   // Load current show count to check limits
   React.useEffect(() => {
@@ -375,6 +387,7 @@ const AddShowPage: React.FC = () => {
       
       // Clear saved form state since show was successfully created
       localStorage.removeItem('showFormState');
+      setFormSubmitted(true);
       console.log('AddShowPage: Form state cleared from localStorage');
       
       // Set the newly created show as the current show
