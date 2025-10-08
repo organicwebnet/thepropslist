@@ -21,7 +21,7 @@ interface EntitySelectProps {
   label: string;
   type: 'venue' | 'rehearsal' | 'storage'; // Address type to filter/add
   selectedIds: string[];
-  onChange: (ids: string[], addresses: Address[]) => void;
+  onChange: (ids: string[]) => void;
   allowMultiple?: boolean;
 }
 
@@ -63,13 +63,13 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
     if (allowMultiple) {
       if (selectedIds.includes(id)) {
         const newIds = selectedIds.filter(i => i !== id);
-        onChange(newIds, addresses.filter(a => newIds.includes(a.id)));
+        onChange(newIds);
       } else {
         const newIds = [...selectedIds, id];
-        onChange(newIds, addresses.filter(a => newIds.includes(a.id)));
+        onChange(newIds);
       }
     } else {
-      onChange([id], addresses.filter(a => a.id === id));
+      onChange([id]);
     }
   };
 
@@ -88,6 +88,12 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
       setError(err.message || 'Failed to add.');
       setSaving(false);
     }
+  };
+
+  const handleCancelAdd = () => {
+    setShowAddModal(false);
+    setNewAddress({ ...defaultAddress, type });
+    setError(null);
   };
 
   const filteredAddresses = addresses.filter(a =>
@@ -128,7 +134,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         {showAddModal && (
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
             <div className="bg-pb-darker rounded-xl shadow-lg p-8 w-full max-w-md relative">
-              <button className="absolute top-3 right-3 text-pb-gray hover:text-pb-primary" onClick={() => setShowAddModal(false)}><X className="w-5 h-5" /></button>
+              <button className="absolute top-3 right-3 text-pb-gray hover:text-pb-primary" onClick={handleCancelAdd}><X className="w-5 h-5" /></button>
               <h2 className="text-xl font-bold mb-4 text-white">Add New {label}</h2>
               {error && <div className="text-red-500 mb-2">{error}</div>}
               <form onSubmit={handleAddAddress} className="space-y-4">
@@ -153,7 +159,14 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
                     </div>
                   ))}
                 </fieldset>
-                <button type="submit" disabled={saving} className="w-full py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-bold text-lg shadow transition disabled:opacity-60 disabled:cursor-not-allowed mt-2">{saving ? 'Saving...' : 'Add'}</button>
+                <div className="flex gap-2 mt-2">
+                  <button type="button" onClick={handleCancelAdd} disabled={saving} className="flex-1 py-2 rounded-lg bg-pb-darker hover:bg-pb-darker/80 text-white font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={saving} className="flex-1 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-bold shadow transition disabled:opacity-60 disabled:cursor-not-allowed">
+                    {saving ? 'Saving...' : 'Add'}
+                  </button>
+                </div>
               </form>
             </div>
           </motion.div>
