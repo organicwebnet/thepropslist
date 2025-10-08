@@ -51,6 +51,8 @@ const statusOptions = [
   { value: 'planning', label: 'Planning' },
   { value: 'active', label: 'Active' },
   { value: 'completed', label: 'Completed' },
+  { value: 'in_storage', label: 'In Storage' },
+  { value: 'cancelled', label: 'Cancelled' },
 ];
 
 const initialShow: ShowFormState = {
