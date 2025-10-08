@@ -60,15 +60,19 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   }, [type, showAddModal, firebaseService]);
 
   const handleSelect = (id: string) => {
+    console.log('EntitySelect: handleSelect called', { id, selectedIds, allowMultiple });
     if (allowMultiple) {
       if (selectedIds.includes(id)) {
         const newIds = selectedIds.filter(i => i !== id);
+        console.log('EntitySelect: Removing venue', { newIds });
         onChange(newIds);
       } else {
         const newIds = [...selectedIds, id];
+        console.log('EntitySelect: Adding venue', { newIds });
         onChange(newIds);
       }
     } else {
+      console.log('EntitySelect: Setting single venue', { id });
       onChange([id]);
     }
   };

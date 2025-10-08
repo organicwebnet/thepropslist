@@ -169,6 +169,7 @@ const AddShowPage: React.FC = () => {
   // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    console.log('AddShowPage: handleChange called', { name, value, type });
     if (type === 'checkbox' && 'checked' in e.target) {
       setShow(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
     } else {
@@ -624,7 +625,10 @@ const AddShowPage: React.FC = () => {
                   label="Venue(s)"
                   type="venue"
                   selectedIds={show.venueIds || []}
-                  onChange={(ids) => setShow(prev => ({ ...prev, venueIds: ids }))}
+                  onChange={(ids) => {
+                    console.log('AddShowPage: Venue selection changed', { ids, currentShow: show });
+                    setShow(prev => ({ ...prev, venueIds: ids }));
+                  }}
                   allowMultiple={show.isTouringShow}
                 />
                 {/* Touring Status */}
