@@ -16,21 +16,36 @@ const ShowsRedirect: React.FC = () => {
         return;
       }
 
+      console.log('ShowsRedirect: Starting show check', { 
+        userId: user.uid, 
+        userProfile: userProfile?.role,
+        isGod: userProfile?.role === 'god'
+      });
+
       try {
         // Check if user has any shows - check multiple ways
         const [createdByShows, userIdShows, collaborativeShows] = await Promise.all([
           // Shows created by this user
           service.getDocuments('shows', {
             where: [['createdBy', '==', user.uid]]
-          }).catch(() => []),
+          }).catch((err) => {
+            console.error('ShowsRedirect: Error fetching createdBy shows:', err);
+            return [];
+          }),
           // Shows with userId field (legacy)
           service.getDocuments('shows', {
             where: [['userId', '==', user.uid]]
-          }).catch(() => []),
+          }).catch((err) => {
+            console.error('ShowsRedirect: Error fetching userId shows:', err);
+            return [];
+          }),
           // Shows where user is a collaborator
           service.getDocuments('shows', {
             where: [['collaborators', 'array-contains', user.uid]]
-          }).catch(() => [])
+          }).catch((err) => {
+            console.error('ShowsRedirect: Error fetching collaborative shows:', err);
+            return [];
+          })
         ]);
 
         // Combine and deduplicate shows
@@ -41,10 +56,14 @@ const ShowsRedirect: React.FC = () => {
 
         console.log('ShowsRedirect: Found shows for user', { 
           userId: user.uid, 
+          userRole: userProfile?.role,
           createdByCount: createdByShows.length, 
           userIdCount: userIdShows.length,
           collaborativeCount: collaborativeShows.length,
-          totalUnique: uniqueShows.length 
+          totalUnique: uniqueShows.length,
+          createdByShows: createdByShows.map(s => ({ id: s.id, name: s.data?.name })),
+          userIdShows: userIdShows.map(s => ({ id: s.id, name: s.data?.name })),
+          collaborativeShows: collaborativeShows.map(s => ({ id: s.id, name: s.data?.name }))
         });
 
         if (uniqueShows.length === 0) {
@@ -52,8 +71,12 @@ const ShowsRedirect: React.FC = () => {
           if (userProfile?.role === 'god') {
             console.log('ShowsRedirect: God user with no direct shows, checking for any shows in system');
             try {
-              const allShows = await service.getDocuments('shows').catch(() => []);
-              if (allShows.length > 0) {
+              const allSystemShows = await service.getDocuments('shows').catch((err) => {
+                console.error('ShowsRedirect: Error fetching all shows for god user:', err);
+                return [];
+              });
+              console.log('ShowsRedirect: All system shows for god user:', allSystemShows.length);
+              if (allSystemShows.length > 0) {
                 console.log('ShowsRedirect: God user found system shows, redirecting to shows list');
                 navigate('/shows/list');
                 return;
@@ -80,8 +103,19 @@ const ShowsRedirect: React.FC = () => {
       }
     };
 
-    checkShows();
-  }, [navigate, user?.uid, service]);
+    // Only run if we have user and userProfile is loaded (or we're not waiting for it)
+    if (user?.uid && (userProfile !== undefined || userProfile === null)) {
+      // If user is god, just go directly to shows list
+      if (userProfile?.role === 'god') {
+        console.log('ShowsRedirect: God user detected, going directly to shows list');
+        navigate('/shows/list');
+        setLoading(false);
+        return;
+      }
+      
+      checkShows();
+    }
+  }, [navigate, user?.uid, userProfile, service]);
 
   if (loading) {
     return (
