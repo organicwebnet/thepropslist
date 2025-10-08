@@ -61,36 +61,72 @@ const AddShowPage: React.FC = () => {
   const { userProfile, user, loading: authLoading } = useWebAuth();
   const { setCurrentShowId } = useShowSelection();
   const { limits } = useSubscription();
-  const [show, setShow] = useState<ShowFormState>({
-    name: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    logoImage: null,
-    acts: [{ name: '', scenes: [''] }],
-    team: [{ email: '', role: '', status: 'pending' }],
-    stageManager: '',
-    stageManagerEmail: '',
-    propsSupervisor: '',
-    propsSupervisorEmail: '',
-    productionCompany: '',
-    venues: [''],
-    isTouringShow: false,
-    status: 'planning',
-    rehearsalAddresses: [''],
-    storageAddresses: [''],
-    rehearsalStartDate: '',
-    techWeekStartDate: '',
-    firstPerformanceDate: '',
-    pressNightDate: '',
-    venueIds: [],
-    rehearsalAddressIds: [],
-    storageAddressIds: [],
-  });
+  // Load form state from localStorage on component mount
+  const getInitialFormState = (): ShowFormState => {
+    try {
+      const saved = localStorage.getItem('showFormState');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setFormRestored(true);
+        console.log('AddShowPage: Form state restored from localStorage');
+        // Convert dates back to strings and handle file objects
+        return {
+          ...parsed,
+          logoImage: null, // Don't restore file objects
+        };
+      }
+    } catch (error) {
+      console.warn('Failed to load form state from localStorage:', error);
+    }
+    
+    // Default state
+    return {
+      name: '',
+      description: '',
+      startDate: '',
+      endDate: '',
+      logoImage: null,
+      acts: [{ name: '', scenes: [''] }],
+      team: [{ email: '', role: '', status: 'pending' }],
+      stageManager: '',
+      stageManagerEmail: '',
+      propsSupervisor: '',
+      propsSupervisorEmail: '',
+      productionCompany: '',
+      venues: [''],
+      isTouringShow: false,
+      status: 'planning',
+      rehearsalAddresses: [''],
+      storageAddresses: [''],
+      rehearsalStartDate: '',
+      techWeekStartDate: '',
+      firstPerformanceDate: '',
+      pressNightDate: '',
+      venueIds: [],
+      rehearsalAddressIds: [],
+      storageAddressIds: [],
+    };
+  };
+
+  const [show, setShow] = useState<ShowFormState>(getInitialFormState());
 
   // Debug: Log form state changes
   React.useEffect(() => {
     console.log('AddShowPage: Form state changed', show);
+  }, [show]);
+
+  // Save form state to localStorage whenever it changes
+  React.useEffect(() => {
+    try {
+      // Don't save if form is empty (initial state)
+      if (show.name || show.description || show.startDate || show.endDate || 
+          show.venueIds?.length || show.rehearsalAddressIds?.length || show.storageAddressIds?.length) {
+        localStorage.setItem('showFormState', JSON.stringify(show));
+        console.log('AddShowPage: Form state saved to localStorage');
+      }
+    } catch (error) {
+      console.warn('Failed to save form state to localStorage:', error);
+    }
   }, [show]);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -100,6 +136,7 @@ const AddShowPage: React.FC = () => {
   const navigate = useNavigate();
   const { service: firebaseService } = useFirebase();
   const [activeTab, setActiveTab] = useState<'details' | 'team'>('details');
+  const [formRestored, setFormRestored] = useState(false);
 
   // Load current show count to check limits
   React.useEffect(() => {
@@ -336,6 +373,10 @@ const AddShowPage: React.FC = () => {
       console.log('AddShowPage: Show created with ID:', docId);
       setLoading(false);
       
+      // Clear saved form state since show was successfully created
+      localStorage.removeItem('showFormState');
+      console.log('AddShowPage: Form state cleared from localStorage');
+      
       // Set the newly created show as the current show
       console.log('AddShowPage: About to set current show to:', docId);
       setCurrentShowId(docId as unknown as string);
@@ -405,19 +446,46 @@ const AddShowPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 space-y-6">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold text-white">Add New Show</h1>
-            <div className="text-sm text-pb-gray">
-              Shows: {currentShowCount}/{limits.shows}
-              {currentShowCount >= limits.shows && (
-                <button
-                  onClick={() => setUpgradeOpen(true)}
-                  className="ml-2 text-pb-warning font-medium hover:text-pb-accent underline"
-                >
-                  Limit reached - Upgrade
-                </button>
-              )}
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem('showFormState');
+                  window.location.reload();
+                }}
+                className="text-sm text-pb-gray hover:text-pb-primary underline"
+                title="Clear saved form data"
+              >
+                Clear Form
+              </button>
+              <div className="text-sm text-pb-gray">
+                Shows: {currentShowCount}/{limits.shows}
+                {currentShowCount >= limits.shows && (
+                  <button
+                    onClick={() => setUpgradeOpen(true)}
+                    className="ml-2 text-pb-warning font-medium hover:text-pb-accent underline"
+                  >
+                    Limit reached - Upgrade
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           {error && <div className="text-red-500 mb-2">{error}</div>}
+          {formRestored && (
+            <div className="bg-blue-500/20 border border-blue-500/30 text-blue-300 px-4 py-2 rounded-lg mb-4">
+              <div className="flex items-center justify-between">
+                <span>✓ Form data restored from previous session</span>
+                <button
+                  type="button"
+                  onClick={() => setFormRestored(false)}
+                  className="text-blue-300 hover:text-blue-100"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Tabs */}
           <div className="flex gap-2 mb-6">
