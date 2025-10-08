@@ -82,12 +82,43 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
     e.preventDefault();
     e.stopPropagation(); // Prevent form submission from bubbling up to parent form
     console.log('EntitySelect: handleAddAddress called', { newAddress, type });
+    
+    // Validate required fields
+    if (!newAddress.name?.trim()) {
+      setError('Name is required');
+      return;
+    }
+    if (!newAddress.street1?.trim()) {
+      setError('Street address is required');
+      return;
+    }
+    if (!newAddress.city?.trim()) {
+      setError('City is required');
+      return;
+    }
+    if (!newAddress.region?.trim()) {
+      setError('Region/State is required');
+      return;
+    }
+    if (!newAddress.postalCode?.trim()) {
+      setError('Postal code is required');
+      return;
+    }
+    
     setSaving(true);
     setError(null);
     try {
       console.log('EntitySelect: Adding address to database...');
       const result = await firebaseService.addDocument('addresses', {
         ...newAddress,
+        name: newAddress.name.trim(),
+        street1: newAddress.street1.trim(),
+        city: newAddress.city.trim(),
+        region: newAddress.region.trim(),
+        postalCode: newAddress.postalCode.trim(),
+        street2: newAddress.street2?.trim() || '',
+        companyName: newAddress.companyName?.trim() || '',
+        nickname: newAddress.nickname?.trim() || '',
       });
       console.log('EntitySelect: Address added successfully', { result });
       
@@ -110,7 +141,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         });
     } catch (err: any) {
       console.error('EntitySelect: Error adding address', err);
-      setError(err.message || 'Failed to add.');
+      setError(err.message || 'Failed to add address. Please try again.');
       setSaving(false);
     }
   };
@@ -168,15 +199,29 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
             <div className="bg-pb-darker rounded-xl shadow-lg p-8 w-full max-w-md relative">
               <button className="absolute top-3 right-3 text-pb-gray hover:text-pb-primary" onClick={handleCancelAdd}><X className="w-5 h-5" /></button>
               <h2 className="text-xl font-bold mb-4 text-white">Add New {label}</h2>
-              {error && <div className="text-red-500 mb-2">{error}</div>}
+              {error && <div id="address-error" className="text-red-500 mb-2" role="alert" aria-live="polite">{error}</div>}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-pb-gray mb-1 font-medium">Name *</label>
-                  <input type="text" value={newAddress.name} onChange={e => setNewAddress(v => ({ ...v, name: e.target.value }))} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                  <label htmlFor="address-name" className="block text-pb-gray mb-1 font-medium">Name *</label>
+                  <input 
+                    id="address-name"
+                    type="text" 
+                    value={newAddress.name} 
+                    onChange={e => setNewAddress(v => ({ ...v, name: e.target.value }))} 
+                    required 
+                    className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" 
+                    aria-describedby={error ? "address-error" : undefined}
+                  />
                 </div>
                 <div>
-                  <label className="block text-pb-gray mb-1 font-medium">Type *</label>
-                  <select value={newAddress.type} onChange={e => setNewAddress(v => ({ ...v, type: e.target.value as Address['type'] }))} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white">
+                  <label htmlFor="address-type" className="block text-pb-gray mb-1 font-medium">Type *</label>
+                  <select 
+                    id="address-type"
+                    value={newAddress.type} 
+                    onChange={e => setNewAddress(v => ({ ...v, type: e.target.value as Address['type'] }))} 
+                    className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary"
+                    aria-describedby={error ? "address-error" : undefined}
+                  >
                     <option value="venue">Venue</option>
                     <option value="rehearsal">Rehearsal Space</option>
                     <option value="storage">Storage Space</option>
@@ -184,12 +229,27 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
                 </div>
                 <fieldset className="p-3 rounded bg-pb-darker/40 border border-pb-primary/20">
                   <legend className="px-2 text-pb-primary font-semibold">Postal Address</legend>
-                  {(Object.keys(defaultAddress) as Array<keyof Address>).filter(k => k !== 'id' && k !== 'nickname' && k !== 'name' && k !== 'companyName' && k !== 'type').map(key => (
-                    <div key={key} className="mb-2">
-                      <label className="block text-xs font-medium text-pb-gray mb-1">{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}</label>
-                      <input type="text" value={newAddress[key] || ''} onChange={e => setNewAddress(v => ({ ...v, [key]: e.target.value }))} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" required />
-                    </div>
-                  ))}
+                  {(Object.keys(defaultAddress) as Array<keyof Address>).filter(k => k !== 'id' && k !== 'nickname' && k !== 'name' && k !== 'companyName' && k !== 'type').map(key => {
+                    const fieldId = `address-${key}`;
+                    const isRequired = ['street1', 'city', 'region', 'postalCode'].includes(key);
+                    return (
+                      <div key={key} className="mb-2">
+                        <label htmlFor={fieldId} className="block text-xs font-medium text-pb-gray mb-1">
+                          {key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')}
+                          {isRequired && <span className="text-red-400 ml-1">*</span>}
+                        </label>
+                        <input 
+                          id={fieldId}
+                          type="text" 
+                          value={newAddress[key] || ''} 
+                          onChange={e => setNewAddress(v => ({ ...v, [key]: e.target.value }))} 
+                          className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary" 
+                          required={isRequired}
+                          aria-describedby={error ? "address-error" : undefined}
+                        />
+                      </div>
+                    );
+                  })}
                 </fieldset>
                 <div className="flex gap-2 mt-2">
                   <button type="button" onClick={handleCancelAdd} disabled={saving} className="flex-1 py-2 rounded-lg bg-pb-darker hover:bg-pb-darker/80 text-white font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed">

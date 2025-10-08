@@ -336,6 +336,13 @@ service cloud.firestore {
       allow update, delete: if isSystemAdmin();
     }
 
+    // Addresses collection - allow authenticated users to read and create
+    match /addresses/{addressId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if isSystemAdmin();
+    }
+
     // --- Collaborative Team & Role-Based Access Rules (ACTIVE) ---
     // These rules assume each show document has a 'team' map: { [userId]: role }
     // Remove or comment out any function definitions and .where() usage (not supported in Firestore rules)
