@@ -284,6 +284,7 @@ const AddShowPage: React.FC = () => {
     console.log('AddShowPage: Form submitted');
     console.log('AddShowPage: Show data:', show);
     console.log('AddShowPage: Loading state:', loading);
+    console.log('AddShowPage: Form submit event:', e);
     
     // Check required fields
     if (!show.name || !show.description || !show.startDate || !show.endDate) {

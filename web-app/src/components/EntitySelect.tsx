@@ -79,25 +79,36 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
 
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation(); // Prevent form submission from bubbling up to parent form
+    console.log('EntitySelect: handleAddAddress called', { newAddress });
     setSaving(true);
     setError(null);
     try {
-      await firebaseService.addDocument('addresses', {
+      console.log('EntitySelect: Adding address to database...');
+      const result = await firebaseService.addDocument('addresses', {
         ...newAddress,
       });
+      console.log('EntitySelect: Address added successfully', { result });
+      
       setShowAddModal(false);
       setNewAddress({ ...defaultAddress, type });
       setSaving(false);
       
       // Refresh the addresses list after adding a new one
+      console.log('EntitySelect: Refreshing addresses list...');
       setLoading(true);
       firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
         .then((docs: any[]) => {
+          console.log('EntitySelect: Addresses refreshed', { count: docs.length });
           setAddresses(docs.map(doc => ({ id: doc.id, ...doc.data })));
           setLoading(false);
         })
-        .catch(() => setLoading(false));
+        .catch((err) => {
+          console.error('EntitySelect: Error refreshing addresses', err);
+          setLoading(false);
+        });
     } catch (err: any) {
+      console.error('EntitySelect: Error adding address', err);
       setError(err.message || 'Failed to add.');
       setSaving(false);
     }
