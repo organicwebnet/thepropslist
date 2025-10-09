@@ -338,10 +338,14 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         ) : (
           <>
             <div className="text-xs text-pb-gray mb-2">
-              Select {allowMultiple ? 'one or more' : 'one'} {label.toLowerCase()} by checking the boxes or clicking the venue name:
+              Click anywhere on a {label.toLowerCase()} to select it:
             </div>
             {filteredAddresses.map(address => (
-          <div key={address.id} className={`flex items-center gap-3 p-3 rounded transition ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}>
+          <div 
+            key={address.id} 
+            className={`flex items-center gap-3 p-3 rounded transition cursor-pointer ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}
+            onClick={() => handleSelect(address.id)}
+          >
             <div className="flex items-center gap-3 flex-1">
               <input
                 type="checkbox"
@@ -354,7 +358,6 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
               <label 
                 htmlFor={`venue-${address.id}`}
                 className="flex-1 cursor-pointer"
-                onClick={() => handleSelect(address.id)}
               >
                 <div className="font-medium">{address.name}</div>
                 <div className="text-xs text-pb-gray">{address.street1}, {address.city}</div>
@@ -363,6 +366,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
             <button
               type="button"
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 handleEditAddress(address);
               }}
