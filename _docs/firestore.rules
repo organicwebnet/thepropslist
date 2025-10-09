@@ -131,13 +131,18 @@ service cloud.firestore {
     }
     match /shows/{showId} {
       // Secure access: only show owners and team members can read
+      // Support both old (userId, createdBy) and new (ownerId) field names
       allow read: if request.auth != null && (
         resource.data.ownerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid ||
         resource.data.team[request.auth.uid] != null
       );
       // Only show owners and elevated team members can modify
       allow update, delete: if request.auth != null && (
         resource.data.ownerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid ||
         resource.data.team[request.auth.uid] == "god" ||
         resource.data.team[request.auth.uid] == "props_supervisor"
       );
