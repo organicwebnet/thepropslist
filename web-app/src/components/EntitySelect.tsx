@@ -48,7 +48,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const [showAddModal, setShowAddModal] = useState(false);
   
   // Debug modal state changes
-  React.useEffect(() => {
+  useEffect(() => {
     console.log('EntitySelect: showAddModal state changed to:', showAddModal);
   }, [showAddModal]);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -293,6 +293,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         />
         <button type="button" onClick={() => {
           console.log('EntitySelect: Add New button clicked, caching form state...');
+          alert('Add New button clicked! Check console for details.');
           try {
             // Cache form state before opening modal
             if (onBeforeAddNew) {
@@ -305,10 +306,10 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
             
             // Fallback: if modal doesn't appear after a short delay, show alert
             setTimeout(() => {
-              if (!showAddModal) {
-                console.warn('EntitySelect: Modal did not open, showing fallback alert');
-                alert('Modal failed to open. Please check console for errors.');
-              }
+              console.log('EntitySelect: Checking if modal opened after timeout');
+              // We can't check showAddModal here as it might not have updated yet
+              // Instead, we'll just log that we're checking
+              console.log('EntitySelect: Timeout reached, modal should be visible if working');
             }, 100);
           } catch (error) {
             console.error('EntitySelect: Error in Add New button click:', error);
