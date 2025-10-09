@@ -9,7 +9,7 @@ import { cleanFirestoreData } from '../utils/firestore';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, UploadCloud, Users, UserPlus, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import EntitySelect from '../components/EntitySelect';
+import EntitySelectRefactored from '../components/EntitySelectRefactored';
 
 // Add types for show state
 interface Act {
@@ -753,24 +753,12 @@ const AddShowPage: React.FC = () => {
                   <input name="productionCompany" value={show.productionCompany} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
                 </div>
                 {/* Venues */}
-                <EntitySelect
+                <EntitySelectRefactored
                   label="Venue(s)"
                   type="venue"
                   selectedIds={show.venueIds || []}
                   onChange={(ids) => {
-                    console.log('AddShowPage: Venue selection changed', { 
-                      ids, 
-                      currentShow: show,
-                      previousVenueIds: show.venueIds 
-                    });
-                    setShow(prev => {
-                      const newShow = { ...prev, venueIds: ids };
-                      console.log('AddShowPage: Setting new show state', { 
-                        previous: prev, 
-                        new: newShow 
-                      });
-                      return newShow;
-                    });
+                    setShow(prev => ({ ...prev, venueIds: ids }));
                   }}
                   allowMultiple={show.isTouringShow}
                   onBeforeAddNew={cacheFormState}
@@ -790,7 +778,7 @@ const AddShowPage: React.FC = () => {
                   </select>
                 </div>
                 {/* Rehearsal Addresses */}
-                <EntitySelect
+                <EntitySelectRefactored
                   label="Rehearsal Space(s)"
                   type="rehearsal"
                   selectedIds={show.rehearsalAddressIds || []}
@@ -799,7 +787,7 @@ const AddShowPage: React.FC = () => {
                   onBeforeAddNew={cacheFormState}
                 />
                 {/* Storage Addresses */}
-                <EntitySelect
+                <EntitySelectRefactored
                   label="Storage Space(s)"
                   type="storage"
                   selectedIds={show.storageAddressIds || []}
