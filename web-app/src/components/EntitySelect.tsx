@@ -230,6 +230,13 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
       idLength: editingAddress.id?.length
     });
     
+    // Validate document ID
+    if (!editingAddress.id || editingAddress.id.trim() === '') {
+      setError('Invalid address ID. Cannot update address.');
+      setSaving(false);
+      return;
+    }
+    
     // Validate required fields
     if (!editingAddress.name?.trim()) {
       setError('Name is required');
