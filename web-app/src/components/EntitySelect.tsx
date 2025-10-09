@@ -263,28 +263,41 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
           <div className="text-pb-primary">Loading...</div>
         ) : filteredAddresses.length === 0 ? (
           <div className="text-pb-gray">No {label.toLowerCase()} found.</div>
-        ) : filteredAddresses.map(address => (
-          <div key={address.id} className={`flex items-center gap-2 p-2 rounded transition ${selectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}>
-            <div className="flex-1 cursor-pointer" onClick={() => handleSelect(address.id)}>
-              <span className="font-medium">{address.name}</span>
-              <span className="text-xs text-pb-gray ml-2">{address.street1}, {address.city}</span>
+        ) : (
+          <>
+            <div className="text-xs text-pb-gray mb-2">
+              Select {allowMultiple ? 'one or more' : 'one'} {label.toLowerCase()} by checking the boxes:
             </div>
-            <div className="flex items-center gap-2">
-              {selectedIds.includes(address.id) && <span className="text-pb-primary text-sm">Selected</span>}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditAddress(address);
-                }}
-                className="text-pb-gray hover:text-pb-primary text-sm px-2 py-1 rounded hover:bg-pb-primary/10 transition-colors"
-                title="Edit address"
-              >
-                Edit
-              </button>
+            {filteredAddresses.map(address => (
+          <div key={address.id} className={`flex items-center gap-3 p-3 rounded transition ${selectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}>
+            <div className="flex items-center gap-3 flex-1">
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(address.id)}
+                onChange={() => handleSelect(address.id)}
+                className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"
+                aria-label={`Select ${address.name}`}
+              />
+              <div className="flex-1">
+                <div className="font-medium">{address.name}</div>
+                <div className="text-xs text-pb-gray">{address.street1}, {address.city}</div>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditAddress(address);
+              }}
+              className="text-pb-gray hover:text-pb-primary text-sm px-3 py-1 rounded hover:bg-pb-primary/10 transition-colors"
+              title="Edit address"
+            >
+              Edit
+            </button>
           </div>
-        ))}
+            ))}
+          </>
+        )}
       </div>
       <AnimatePresence>
         {showAddModal && (
