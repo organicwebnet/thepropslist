@@ -75,8 +75,14 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         onChange(newIds);
       }
     } else {
-      console.log('EntitySelect: Setting single venue', { id });
-      onChange([id]);
+      // Single selection mode - allow deselection
+      if (selectedIds.includes(id)) {
+        console.log('EntitySelect: Deselecting single venue', { id });
+        onChange([]);
+      } else {
+        console.log('EntitySelect: Setting single venue', { id });
+        onChange([id]);
+      }
     }
   };
 
@@ -257,6 +263,14 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         }} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent px-3 py-2 rounded bg-pb-primary/10">
           <Plus className="w-4 h-4" /> Add New
         </button>
+        {selectedIds.length > 0 && (
+          <button type="button" onClick={() => {
+            console.log('EntitySelect: Clear all selected');
+            onChange([]);
+          }} className="flex items-center gap-1 text-red-400 hover:text-red-300 px-3 py-2 rounded bg-red-500/10">
+            <X className="w-4 h-4" /> Clear All
+          </button>
+        )}
       </div>
       <div className="space-y-2 max-h-48 overflow-y-auto">
         {loading ? (
@@ -267,6 +281,8 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
           <>
             <div className="text-xs text-pb-gray mb-2">
               Select {allowMultiple ? 'one or more' : 'one'} {label.toLowerCase()} by checking the boxes:
+              <br />
+              <span className="text-pb-primary">Debug: allowMultiple={String(allowMultiple)}, selectedCount={selectedIds.length}</span>
             </div>
             {filteredAddresses.map(address => (
           <div key={address.id} className={`flex items-center gap-3 p-3 rounded transition ${selectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}>
