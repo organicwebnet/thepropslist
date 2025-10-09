@@ -94,7 +94,8 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
       cleanSelectedIdsString: JSON.stringify(cleanSelectedIds),
       allowMultiple,
       addressesCount: addresses.length,
-      allAddressIds: addresses.map(a => a.id)
+      allAddressIds: addresses.map(a => a.id),
+      currentAddress: addresses.find(a => a.id === id)
     });
     
     if (allowMultiple) {
@@ -221,6 +222,13 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
     e.stopPropagation();
     
     if (!editingAddress) return;
+    
+    console.log('EntitySelect: Updating address', {
+      editingAddress,
+      id: editingAddress.id,
+      idType: typeof editingAddress.id,
+      idLength: editingAddress.id?.length
+    });
     
     // Validate required fields
     if (!editingAddress.name?.trim()) {
@@ -349,19 +357,15 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
             <div className="flex items-center gap-3 flex-1">
               <input
                 type="checkbox"
-                id={`venue-${address.id}`}
                 checked={cleanSelectedIds.includes(address.id)}
                 onChange={() => handleSelect(address.id)}
                 className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"
                 aria-label={`Select ${address.name}`}
               />
-              <label 
-                htmlFor={`venue-${address.id}`}
-                className="flex-1 cursor-pointer"
-              >
+              <div className="flex-1">
                 <div className="font-medium">{address.name}</div>
                 <div className="text-xs text-pb-gray">{address.street1}, {address.city}</div>
-              </label>
+              </div>
             </div>
             <button
               type="button"
