@@ -63,24 +63,21 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   useEffect(() => {
     console.log('EntitySelect: Loading addresses for type:', type);
     console.log('EntitySelect: Firebase service available:', !!firebaseService);
-    console.log('EntitySelect: Firebase service methods:', Object.keys(firebaseService || {}));
     setLoading(true);
     
-    // Simple test - just try to load all addresses without any filtering
-    console.log('EntitySelect: Starting simple test query...');
-    firebaseService.getDocuments('addresses')
-      .then((allDocs: any[]) => {
-        console.log('EntitySelect: SUCCESS - Loaded ALL addresses from database:', {
-          totalCount: allDocs.length,
-          allDocs: allDocs.map(doc => ({ id: doc.id, name: doc.data?.name, type: doc.data?.type }))
+    // Load addresses with proper type filtering
+    firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
+      .then((docs: any[]) => {
+        console.log('EntitySelect: Loaded addresses from database:', {
+          type,
+          count: docs.length,
+          docs: docs.map(doc => ({ id: doc.id, name: doc.data?.name, type: doc.data?.type }))
         });
-        
-        // For now, just set all addresses regardless of type to test
-        setAddresses(allDocs.map(doc => ({ id: doc.id, ...doc.data })));
+        setAddresses(docs.map(doc => ({ id: doc.id, ...doc.data })));
         setLoading(false);
       })
       .catch((error) => {
-        console.error('EntitySelect: ERROR loading addresses:', error);
+        console.error('EntitySelect: Error loading addresses:', error);
         console.error('EntitySelect: Error details:', error.message, error.code);
         setLoading(false);
       });
@@ -341,30 +338,27 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         ) : (
           <>
             <div className="text-xs text-pb-gray mb-2">
-              Select {allowMultiple ? 'one or more' : 'one'} {label.toLowerCase()} by checking the boxes:
-              <br />
-              <span className="text-pb-primary">Debug: allowMultiple={String(allowMultiple)}, selectedCount={cleanSelectedIds.length}</span>
-              <br />
-              <span className="text-pb-accent">Selected IDs: {JSON.stringify(cleanSelectedIds)}</span>
-              <br />
-              <span className="text-red-400">Raw IDs: {JSON.stringify(selectedIds)}</span>
-              <br />
-              <span className="text-yellow-400">Addresses loaded: {addresses.length}, loading: {String(loading)}</span>
+              Select {allowMultiple ? 'one or more' : 'one'} {label.toLowerCase()} by checking the boxes or clicking the venue name:
             </div>
             {filteredAddresses.map(address => (
           <div key={address.id} className={`flex items-center gap-3 p-3 rounded transition ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}>
             <div className="flex items-center gap-3 flex-1">
               <input
                 type="checkbox"
+                id={`venue-${address.id}`}
                 checked={cleanSelectedIds.includes(address.id)}
                 onChange={() => handleSelect(address.id)}
                 className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"
                 aria-label={`Select ${address.name}`}
               />
-              <div className="flex-1">
+              <label 
+                htmlFor={`venue-${address.id}`}
+                className="flex-1 cursor-pointer"
+                onClick={() => handleSelect(address.id)}
+              >
                 <div className="font-medium">{address.name}</div>
                 <div className="text-xs text-pb-gray">{address.street1}, {address.city}</div>
-              </div>
+              </label>
             </div>
             <button
               type="button"
