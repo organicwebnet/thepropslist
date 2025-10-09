@@ -355,17 +355,32 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
             <div className="text-xs text-pb-gray mb-2">
               Click anywhere on a {label.toLowerCase()} to select it:
             </div>
+            <div className="text-xs text-pb-accent mb-2 p-2 bg-pb-darker rounded">
+              Debug: {addresses.length} addresses loaded, {cleanSelectedIds.length} selected, allowMultiple={String(allowMultiple)}
+              <br />Selected IDs: {JSON.stringify(cleanSelectedIds)}
+              <br />All IDs: {JSON.stringify(addresses.map(a => a.id))}
+            </div>
             {filteredAddresses.map(address => (
           <div 
             key={address.id} 
             className={`flex items-center gap-3 p-3 rounded transition cursor-pointer ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}
-            onClick={() => handleSelect(address.id)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('EntitySelect: Venue row clicked', { addressId: address.id, addressName: address.name });
+              handleSelect(address.id);
+            }}
           >
             <div className="flex items-center gap-3 flex-1">
               <input
                 type="checkbox"
                 checked={cleanSelectedIds.includes(address.id)}
-                onChange={() => handleSelect(address.id)}
+                onChange={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('EntitySelect: Checkbox clicked', { addressId: address.id, addressName: address.name, checked: e.target.checked });
+                  handleSelect(address.id);
+                }}
                 className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"
                 aria-label={`Select ${address.name}`}
               />
