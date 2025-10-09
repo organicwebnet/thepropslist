@@ -295,11 +295,12 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
           console.log('EntitySelect: Add New button clicked, caching form state...');
           alert('Add New button clicked! Check console for details.');
           try {
-            // Cache form state before opening modal
-            if (onBeforeAddNew) {
-              console.log('EntitySelect: Calling onBeforeAddNew callback');
-              onBeforeAddNew();
-            }
+            // Temporarily skip onBeforeAddNew to test if it's causing issues
+            console.log('EntitySelect: Skipping onBeforeAddNew for testing');
+            // if (onBeforeAddNew) {
+            //   console.log('EntitySelect: Calling onBeforeAddNew callback');
+            //   onBeforeAddNew();
+            // }
             console.log('EntitySelect: Setting showAddModal to true');
             setShowAddModal(true);
             console.log('EntitySelect: Modal should now be open');
