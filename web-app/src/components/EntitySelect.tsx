@@ -46,6 +46,11 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  
+  // Debug modal state changes
+  React.useEffect(() => {
+    console.log('EntitySelect: showAddModal state changed to:', showAddModal);
+  }, [showAddModal]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [newAddress, setNewAddress] = useState<Address>({ ...defaultAddress, type });
@@ -288,11 +293,26 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         />
         <button type="button" onClick={() => {
           console.log('EntitySelect: Add New button clicked, caching form state...');
-          // Cache form state before opening modal
-          if (onBeforeAddNew) {
-            onBeforeAddNew();
+          try {
+            // Cache form state before opening modal
+            if (onBeforeAddNew) {
+              console.log('EntitySelect: Calling onBeforeAddNew callback');
+              onBeforeAddNew();
+            }
+            console.log('EntitySelect: Setting showAddModal to true');
+            setShowAddModal(true);
+            console.log('EntitySelect: Modal should now be open');
+            
+            // Fallback: if modal doesn't appear after a short delay, show alert
+            setTimeout(() => {
+              if (!showAddModal) {
+                console.warn('EntitySelect: Modal did not open, showing fallback alert');
+                alert('Modal failed to open. Please check console for errors.');
+              }
+            }, 100);
+          } catch (error) {
+            console.error('EntitySelect: Error in Add New button click:', error);
           }
-          setShowAddModal(true);
         }} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent px-3 py-2 rounded bg-pb-primary/10">
           <Plus className="w-4 h-4" /> Add New
         </button>
@@ -354,7 +374,13 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
       </div>
       <AnimatePresence>
         {showAddModal && (
-          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: 40 }} 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+            style={{ zIndex: 9999 }}
+          >
             <div className="bg-pb-darker rounded-xl shadow-lg p-8 w-full max-w-md relative">
               <button className="absolute top-3 right-3 text-pb-gray hover:text-pb-primary" onClick={handleCancelAdd}><X className="w-5 h-5" /></button>
               <h2 className="text-xl font-bold mb-4 text-white">Add New {label}</h2>
