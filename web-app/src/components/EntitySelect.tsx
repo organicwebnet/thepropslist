@@ -66,27 +66,21 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
     console.log('EntitySelect: Firebase service methods:', Object.keys(firebaseService || {}));
     setLoading(true);
     
-    // Try a simple query first to test if Firebase is working
+    // Simple test - just try to load all addresses without any filtering
+    console.log('EntitySelect: Starting simple test query...');
     firebaseService.getDocuments('addresses')
       .then((allDocs: any[]) => {
-        console.log('EntitySelect: Loaded ALL addresses from database:', {
+        console.log('EntitySelect: SUCCESS - Loaded ALL addresses from database:', {
           totalCount: allDocs.length,
           allDocs: allDocs.map(doc => ({ id: doc.id, name: doc.data?.name, type: doc.data?.type }))
         });
         
-        // Now filter by type
-        const filteredDocs = allDocs.filter(doc => doc.data?.type === type);
-        console.log('EntitySelect: Filtered addresses for type:', {
-          type,
-          filteredCount: filteredDocs.length,
-          filteredDocs: filteredDocs.map(doc => ({ id: doc.id, name: doc.data?.name, type: doc.data?.type }))
-        });
-        
-        setAddresses(filteredDocs.map(doc => ({ id: doc.id, ...doc.data })));
+        // For now, just set all addresses regardless of type to test
+        setAddresses(allDocs.map(doc => ({ id: doc.id, ...doc.data })));
         setLoading(false);
       })
       .catch((error) => {
-        console.error('EntitySelect: Error loading addresses:', error);
+        console.error('EntitySelect: ERROR loading addresses:', error);
         console.error('EntitySelect: Error details:', error.message, error.code);
         setLoading(false);
       });
