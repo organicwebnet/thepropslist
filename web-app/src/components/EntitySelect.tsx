@@ -93,7 +93,18 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
           const validDocs = docs.filter(doc => doc.id && doc.id.trim() !== '');
           console.log('EntitySelect: Valid docs after filtering:', validDocs.length);
           
-          setAddresses(validDocs.map(doc => ({ id: doc.id, ...doc.data })));
+          const mappedAddresses = validDocs.map(doc => {
+            // Ensure document ID takes precedence over any id field in the data
+            const address = { ...doc.data, id: doc.id };
+            console.log('EntitySelect: Mapping address', {
+              docId: doc.id,
+              docData: doc.data,
+              finalAddress: address,
+              finalId: address.id
+            });
+            return address;
+          });
+          setAddresses(mappedAddresses);
           setLoading(false);
         })
       .catch((error) => {
