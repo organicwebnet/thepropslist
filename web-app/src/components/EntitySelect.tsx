@@ -58,7 +58,15 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const [error, setError] = useState<string | null>(null);
 
   // Filter out empty strings and invalid IDs from selectedIds
-  const cleanSelectedIds = selectedIds.filter(id => id && id.trim() !== '');
+  const cleanSelectedIds = selectedIds.filter(id => id && id.trim() !== '' && typeof id === 'string');
+  
+  console.log('EntitySelect: Selection state', {
+    rawSelectedIds: selectedIds,
+    cleanSelectedIds,
+    selectedIdsType: typeof selectedIds,
+    selectedIdsLength: selectedIds?.length,
+    cleanSelectedIdsLength: cleanSelectedIds.length
+  });
 
   useEffect(() => {
     console.log('EntitySelect: Loading addresses for type:', type);
@@ -67,15 +75,27 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
     
     // Load addresses with proper type filtering
     firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
-      .then((docs: any[]) => {
-        console.log('EntitySelect: Loaded addresses from database:', {
-          type,
-          count: docs.length,
-          docs: docs.map(doc => ({ id: doc.id, name: doc.data?.name, type: doc.data?.type }))
-        });
-        setAddresses(docs.map(doc => ({ id: doc.id, ...doc.data })));
-        setLoading(false);
-      })
+        .then((docs: any[]) => {
+          console.log('EntitySelect: Loaded addresses from database:', {
+            type,
+            count: docs.length,
+            docs: docs.map(doc => ({ 
+              id: doc.id, 
+              name: doc.data?.name, 
+              type: doc.data?.type,
+              idLength: doc.id?.length,
+              idType: typeof doc.id,
+              hasId: !!doc.id
+            }))
+          });
+          
+          // Filter out any docs with invalid IDs
+          const validDocs = docs.filter(doc => doc.id && doc.id.trim() !== '');
+          console.log('EntitySelect: Valid docs after filtering:', validDocs.length);
+          
+          setAddresses(validDocs.map(doc => ({ id: doc.id, ...doc.data })));
+          setLoading(false);
+        })
       .catch((error) => {
         console.error('EntitySelect: Error loading addresses:', error);
         console.error('EntitySelect: Error details:', error.message, error.code);
@@ -97,6 +117,12 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
       allAddressIds: addresses.map(a => a.id),
       currentAddress: addresses.find(a => a.id === id)
     });
+    
+    // Validate the ID
+    if (!id || id.trim() === '') {
+      console.error('EntitySelect: Invalid ID provided to handleSelect', { id });
+      return;
+    }
     
     if (allowMultiple) {
       if (cleanSelectedIds.includes(id)) {
@@ -213,6 +239,20 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   };
 
   const handleEditAddress = (address: Address) => {
+    console.log('EntitySelect: handleEditAddress called', {
+      address,
+      addressId: address.id,
+      addressIdType: typeof address.id,
+      addressIdLength: address.id?.length,
+      hasValidId: !!(address.id && address.id.trim() !== '')
+    });
+    
+    if (!address.id || address.id.trim() === '') {
+      console.error('EntitySelect: Cannot edit address with invalid ID', { address });
+      setError('Cannot edit address: Invalid address ID');
+      return;
+    }
+    
     setEditingAddress(address);
     setShowEditModal(true);
   };
@@ -360,7 +400,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
               <br />Selected IDs: {JSON.stringify(cleanSelectedIds)}
               <br />All IDs: {JSON.stringify(addresses.map(a => a.id))}
             </div>
-            {filteredAddresses.map(address => (
+            {filteredAddresses.filter(address => address.id && address.id.trim() !== '').map(address => (
           <div 
             key={address.id} 
             className={`flex items-center gap-3 p-3 rounded transition cursor-pointer ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}
@@ -394,10 +434,12 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                console.log('EntitySelect: Edit button clicked for address', { addressId: address.id, addressName: address.name });
                 handleEditAddress(address);
               }}
               className="text-pb-gray hover:text-pb-primary text-sm px-3 py-1 rounded hover:bg-pb-primary/10 transition-colors"
               title="Edit address"
+              disabled={!address.id || address.id.trim() === ''}
             >
               Edit
             </button>
