@@ -61,13 +61,35 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const cleanSelectedIds = selectedIds.filter(id => id && id.trim() !== '');
 
   useEffect(() => {
+    console.log('EntitySelect: Loading addresses for type:', type);
+    console.log('EntitySelect: Firebase service available:', !!firebaseService);
+    console.log('EntitySelect: Firebase service methods:', Object.keys(firebaseService || {}));
     setLoading(true);
-    firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
-      .then((docs: any[]) => {
-        setAddresses(docs.map(doc => ({ id: doc.id, ...doc.data })));
+    
+    // Try a simple query first to test if Firebase is working
+    firebaseService.getDocuments('addresses')
+      .then((allDocs: any[]) => {
+        console.log('EntitySelect: Loaded ALL addresses from database:', {
+          totalCount: allDocs.length,
+          allDocs: allDocs.map(doc => ({ id: doc.id, name: doc.data?.name, type: doc.data?.type }))
+        });
+        
+        // Now filter by type
+        const filteredDocs = allDocs.filter(doc => doc.data?.type === type);
+        console.log('EntitySelect: Filtered addresses for type:', {
+          type,
+          filteredCount: filteredDocs.length,
+          filteredDocs: filteredDocs.map(doc => ({ id: doc.id, name: doc.data?.name, type: doc.data?.type }))
+        });
+        
+        setAddresses(filteredDocs.map(doc => ({ id: doc.id, ...doc.data })));
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((error) => {
+        console.error('EntitySelect: Error loading addresses:', error);
+        console.error('EntitySelect: Error details:', error.message, error.code);
+        setLoading(false);
+      });
   }, [type, firebaseService]);
 
   const handleSelect = (id: string) => {
@@ -293,25 +315,15 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         />
         <button type="button" onClick={() => {
           console.log('EntitySelect: Add New button clicked, caching form state...');
-          alert('Add New button clicked! Check console for details.');
           try {
-            // Temporarily skip onBeforeAddNew to test if it's causing issues
-            console.log('EntitySelect: Skipping onBeforeAddNew for testing');
-            // if (onBeforeAddNew) {
-            //   console.log('EntitySelect: Calling onBeforeAddNew callback');
-            //   onBeforeAddNew();
-            // }
+            // Cache form state before opening modal
+            if (onBeforeAddNew) {
+              console.log('EntitySelect: Calling onBeforeAddNew callback');
+              onBeforeAddNew();
+            }
             console.log('EntitySelect: Setting showAddModal to true');
             setShowAddModal(true);
             console.log('EntitySelect: Modal should now be open');
-            
-            // Fallback: if modal doesn't appear after a short delay, show alert
-            setTimeout(() => {
-              console.log('EntitySelect: Checking if modal opened after timeout');
-              // We can't check showAddModal here as it might not have updated yet
-              // Instead, we'll just log that we're checking
-              console.log('EntitySelect: Timeout reached, modal should be visible if working');
-            }, 100);
           } catch (error) {
             console.error('EntitySelect: Error in Add New button click:', error);
           }
@@ -342,6 +354,8 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
               <span className="text-pb-accent">Selected IDs: {JSON.stringify(cleanSelectedIds)}</span>
               <br />
               <span className="text-red-400">Raw IDs: {JSON.stringify(selectedIds)}</span>
+              <br />
+              <span className="text-yellow-400">Addresses loaded: {addresses.length}, loading: {String(loading)}</span>
             </div>
             {filteredAddresses.map(address => (
           <div key={address.id} className={`flex items-center gap-3 p-3 rounded transition ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}>
