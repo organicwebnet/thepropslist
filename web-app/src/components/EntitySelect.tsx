@@ -52,6 +52,9 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Filter out empty strings and invalid IDs from selectedIds
+  const cleanSelectedIds = selectedIds.filter(id => id && id.trim() !== '');
+
   useEffect(() => {
     setLoading(true);
     firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
@@ -63,24 +66,54 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   }, [type, firebaseService]);
 
   const handleSelect = (id: string) => {
-    console.log('EntitySelect: handleSelect called', { id, selectedIds, allowMultiple });
+    console.log('EntitySelect: handleSelect called', { 
+      id, 
+      selectedIds, 
+      cleanSelectedIds,
+      selectedIdsLength: selectedIds.length,
+      cleanSelectedIdsLength: cleanSelectedIds.length,
+      selectedIdsString: JSON.stringify(selectedIds),
+      cleanSelectedIdsString: JSON.stringify(cleanSelectedIds),
+      allowMultiple,
+      addressesCount: addresses.length,
+      allAddressIds: addresses.map(a => a.id)
+    });
+    
     if (allowMultiple) {
-      if (selectedIds.includes(id)) {
-        const newIds = selectedIds.filter(i => i !== id);
-        console.log('EntitySelect: Removing venue', { newIds });
+      if (cleanSelectedIds.includes(id)) {
+        const newIds = cleanSelectedIds.filter(i => i !== id);
+        console.log('EntitySelect: Removing venue (multiple mode)', { 
+          id, 
+          oldIds: cleanSelectedIds, 
+          newIds,
+          newIdsLength: newIds.length 
+        });
         onChange(newIds);
       } else {
-        const newIds = [...selectedIds, id];
-        console.log('EntitySelect: Adding venue', { newIds });
+        const newIds = [...cleanSelectedIds, id];
+        console.log('EntitySelect: Adding venue (multiple mode)', { 
+          id, 
+          oldIds: cleanSelectedIds, 
+          newIds,
+          newIdsLength: newIds.length 
+        });
         onChange(newIds);
       }
     } else {
       // Single selection mode - allow deselection
-      if (selectedIds.includes(id)) {
-        console.log('EntitySelect: Deselecting single venue', { id });
+      if (cleanSelectedIds.includes(id)) {
+        console.log('EntitySelect: Deselecting single venue', { 
+          id, 
+          oldIds: cleanSelectedIds,
+          newIds: []
+        });
         onChange([]);
       } else {
-        console.log('EntitySelect: Setting single venue', { id });
+        console.log('EntitySelect: Setting single venue', { 
+          id, 
+          oldIds: cleanSelectedIds,
+          newIds: [id]
+        });
         onChange([id]);
       }
     }
@@ -263,7 +296,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         }} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent px-3 py-2 rounded bg-pb-primary/10">
           <Plus className="w-4 h-4" /> Add New
         </button>
-        {selectedIds.length > 0 && (
+        {cleanSelectedIds.length > 0 && (
           <button type="button" onClick={() => {
             console.log('EntitySelect: Clear all selected');
             onChange([]);
@@ -282,14 +315,18 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
             <div className="text-xs text-pb-gray mb-2">
               Select {allowMultiple ? 'one or more' : 'one'} {label.toLowerCase()} by checking the boxes:
               <br />
-              <span className="text-pb-primary">Debug: allowMultiple={String(allowMultiple)}, selectedCount={selectedIds.length}</span>
+              <span className="text-pb-primary">Debug: allowMultiple={String(allowMultiple)}, selectedCount={cleanSelectedIds.length}</span>
+              <br />
+              <span className="text-pb-accent">Selected IDs: {JSON.stringify(cleanSelectedIds)}</span>
+              <br />
+              <span className="text-red-400">Raw IDs: {JSON.stringify(selectedIds)}</span>
             </div>
             {filteredAddresses.map(address => (
-          <div key={address.id} className={`flex items-center gap-3 p-3 rounded transition ${selectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}>
+          <div key={address.id} className={`flex items-center gap-3 p-3 rounded transition ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}>
             <div className="flex items-center gap-3 flex-1">
               <input
                 type="checkbox"
-                checked={selectedIds.includes(address.id)}
+                checked={cleanSelectedIds.includes(address.id)}
                 onChange={() => handleSelect(address.id)}
                 className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"
                 aria-label={`Select ${address.name}`}
