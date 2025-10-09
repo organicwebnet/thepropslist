@@ -76,8 +76,26 @@ export const useAddresses = (type: 'venue' | 'rehearsal' | 'storage') => {
       });
       
       const validAddresses = docs
-        .filter(doc => doc.id && doc.id.trim() !== '')
-        .map(doc => ({ ...doc.data, id: doc.id } as Address));
+        .filter(doc => {
+          const isValid = doc.id && doc.id.trim() !== '' && doc.id.length >= 10;
+          if (!isValid) {
+            console.warn('Filtering out invalid document:', {
+              id: doc.id,
+              idLength: doc.id?.length,
+              data: doc.data
+            });
+          }
+          return isValid;
+        })
+        .map(doc => {
+          const address = { ...doc.data, id: doc.id } as Address;
+          console.log('Mapped address:', {
+            id: address.id,
+            name: address.name,
+            type: address.type
+          });
+          return address;
+        });
       
       setAddresses(validAddresses);
     } catch (err: any) {
@@ -128,25 +146,40 @@ export const useAddresses = (type: 'venue' | 'rehearsal' | 'storage') => {
       throw new Error('Invalid address ID');
     }
 
+    // Validate that the ID looks like a proper Firestore document ID
+    if (id.length < 10 || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new Error(`Invalid document ID format: ${id}`);
+    }
+
     try {
+      // Remove the id field from updates to prevent conflicts
+      const { id: _, ...updateData } = updates;
+      
       await firebaseService.updateDocument('addresses', id, {
-        ...updates,
-        name: updates.name?.trim(),
-        street1: updates.street1?.trim(),
-        city: updates.city?.trim(),
-        region: updates.region?.trim(),
-        postalCode: updates.postalCode?.trim(),
-        street2: updates.street2?.trim() || '',
-        companyName: updates.companyName?.trim() || '',
-        nickname: updates.nickname?.trim() || '',
+        ...updateData,
+        name: updateData.name?.trim(),
+        street1: updateData.street1?.trim(),
+        city: updateData.city?.trim(),
+        region: updateData.region?.trim(),
+        postalCode: updateData.postalCode?.trim(),
+        street2: updateData.street2?.trim() || '',
+        companyName: updateData.companyName?.trim() || '',
+        nickname: updateData.nickname?.trim() || '',
       });
 
       setAddresses(prev => 
         prev.map(addr => 
-          addr.id === id ? { ...addr, ...updates } : addr
+          addr.id === id ? { ...addr, ...updateData } : addr
         )
       );
     } catch (err: any) {
+      console.error('Update address error:', {
+        id,
+        idLength: id.length,
+        idType: typeof id,
+        updates,
+        error: err
+      });
       const addressError = createAddressError(err);
       throw addressError;
     }

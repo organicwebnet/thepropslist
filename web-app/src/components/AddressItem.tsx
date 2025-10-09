@@ -21,6 +21,8 @@ export const AddressItem: React.FC<AddressItemProps> = ({
     }
   };
 
+  const checkboxId = `address-checkbox-${address.id}`;
+  
   return (
     <div 
       className={`flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer ${
@@ -38,13 +40,17 @@ export const AddressItem: React.FC<AddressItemProps> = ({
       <div className="flex items-center gap-3 flex-1">
         <input
           type="checkbox"
+          id={checkboxId}
           checked={isSelected}
           onChange={onSelect}
           className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"
           aria-label={`Select ${address.name}`}
           tabIndex={-1} // Prevent double tabbing
         />
-        <div className="flex-1 min-w-0">
+        <label 
+          htmlFor={checkboxId}
+          className="flex-1 min-w-0 cursor-pointer"
+        >
           <div className="font-medium text-sm truncate">
             {address.name}
           </div>
@@ -56,7 +62,7 @@ export const AddressItem: React.FC<AddressItemProps> = ({
               {address.companyName}
             </div>
           )}
-        </div>
+        </label>
       </div>
       <button
         type="button"
