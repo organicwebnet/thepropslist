@@ -407,7 +407,15 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log('EntitySelect: Venue row clicked', { addressId: address.id, addressName: address.name });
+              console.log('EntitySelect: Venue row clicked', { 
+                addressId: address.id, 
+                addressName: address.name,
+                addressIdType: typeof address.id,
+                addressIdLength: address.id?.length,
+                hasValidId: !!(address.id && address.id.trim() !== ''),
+                currentSelectedIds: cleanSelectedIds,
+                allowMultiple
+              });
               handleSelect(address.id);
             }}
           >
@@ -418,7 +426,16 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
                 onChange={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log('EntitySelect: Checkbox clicked', { addressId: address.id, addressName: address.name, checked: e.target.checked });
+                  console.log('EntitySelect: Checkbox clicked', { 
+                    addressId: address.id, 
+                    addressName: address.name, 
+                    checked: e.target.checked,
+                    addressIdType: typeof address.id,
+                    addressIdLength: address.id?.length,
+                    hasValidId: !!(address.id && address.id.trim() !== ''),
+                    currentSelectedIds: cleanSelectedIds,
+                    allowMultiple
+                  });
                   handleSelect(address.id);
                 }}
                 className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"

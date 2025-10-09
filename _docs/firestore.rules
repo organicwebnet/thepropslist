@@ -345,7 +345,7 @@ service cloud.firestore {
     match /addresses/{addressId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
-      allow update, delete: if isSystemAdmin();
+      allow update, delete: if request.auth != null;
     }
 
     // --- Collaborative Team & Role-Based Access Rules (ACTIVE) ---
