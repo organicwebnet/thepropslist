@@ -1,0 +1,954 @@
+[
+  {
+    "name": "His Majesty's Theatre",
+    "address": "Aberdeen",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "P&J Live",
+    "address": "Aberdeen",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Music Hall",
+    "address": "Aberdeen",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Aylesbury Waterside Theatre",
+    "address": "Aylesbury",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Queen's Theatre",
+    "address": "Barnstaple",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Bath",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Forum",
+    "address": "Bath",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Opera House",
+    "address": "Belfast",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "SSE Arena",
+    "address": "Belfast",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Forum Theatre",
+    "address": "Billingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Alexandra Theatre",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hippodrome Theatre",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Rep Theatre",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Utilita Arena",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Resorts World Arena",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Symphony Hall",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Winter Gardens",
+    "address": "Blackpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Theatre",
+    "address": "Blackpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Opera House",
+    "address": "Blackpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Pavilion Theatre",
+    "address": "Bournemouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Alhambra Theatre",
+    "address": "Bradford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "St Georges Hall",
+    "address": "Bradford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Bradford Live",
+    "address": "Bradford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Brighton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Brighton Dome",
+    "address": "Brighton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hippodrome Theatre",
+    "address": "Bristol",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Bristol Old Vic",
+    "address": "Bristol",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Buxton Opera House",
+    "address": "Buxton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Cambridge Arts Theatre",
+    "address": "Cambridge",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Corn Exchange",
+    "address": "Cambridge",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Marlowe Theatre",
+    "address": "Canterbury",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Theatre",
+    "address": "Cardiff",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Wales Millennium Centre",
+    "address": "Cardiff",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Sherman Theatre",
+    "address": "Cardiff",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Sands Centre",
+    "address": "Carlisle",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Everyman Theatre",
+    "address": "Cheltenham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Cheltenham Town Hall",
+    "address": "Cheltenham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Storyhouse",
+    "address": "Chester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Festival Theatre",
+    "address": "Chichester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Belgrade Theatre",
+    "address": "Coventry",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hawth Theatre",
+    "address": "Crawley",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Lyceum Theatre",
+    "address": "Crewe",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hippodrome",
+    "address": "Darlington",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Orchard Theatre",
+    "address": "Dartford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Millennium Forum Theatre and Conference Centre",
+    "address": "Derry",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Congress Theatre",
+    "address": "Eastbourne",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Devonshire Park Theatre",
+    "address": "Eastbourne",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Edinburgh Playhouse",
+    "address": "Edinburgh",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Festival Theatre",
+    "address": "Edinburgh",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Usher Hall",
+    "address": "Edinburgh",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Fareham Live",
+    "address": "Fareham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Leas Cliff Hall",
+    "address": "Folkestone",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "King's Theatre",
+    "address": "Glasgow",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Glasgow",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Pavilion Theatre",
+    "address": "Glasgow",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Ovo Hydro",
+    "address": "Glasgow",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grimsby Auditorium",
+    "address": "Grimsby",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "G Live",
+    "address": "Guildford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Yvonne Arnaud Theatre",
+    "address": "Guildford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "White Rock Theatre",
+    "address": "Hastings",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Beck Theatre",
+    "address": "Hayes",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Wycombe Swan",
+    "address": "High Wycombe",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Theatre",
+    "address": "Hull",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Connexin Live",
+    "address": "Hull",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Eden Court Theatre",
+    "address": "Inverness",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Regent Theatre",
+    "address": "Ipswich",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Corn Exchange",
+    "address": "Ipswich",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "First Direct Arena",
+    "address": "Leeds",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Theatre",
+    "address": "Leeds",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Leeds Playhouse",
+    "address": "Leeds",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Curve Theatre",
+    "address": "Leicester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "De Montfort Hall",
+    "address": "Leicester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Empire Theatre",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Playhouse Theatre",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Everyman Theatre",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "M&S Bank Arena",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Philharmonic Hall",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Venue Cymru",
+    "address": "Llandudno",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Malvern Theatres",
+    "address": "Malvern",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "AO Arena",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Opera House",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Palace Theatre",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Home",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Bridgewater Hall",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Milton Keynes Theatre",
+    "address": "Milton Keynes",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Floral Pavilion Theatre",
+    "address": "New Brighton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Watermill Theatre",
+    "address": "Newbury",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Utilita Arena",
+    "address": "Newcastle",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Newcastle",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "City Hall",
+    "address": "Newcastle upon Tyne",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Royal and Derngate",
+    "address": "Northampton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Norwich",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Motorpoint Arena",
+    "address": "Nottingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal & Concert Hall",
+    "address": "Nottingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Playhouse Theatre",
+    "address": "Nottingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Theatre",
+    "address": "Oxford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Playhouse Theatre",
+    "address": "Oxford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Theatre",
+    "address": "Peterborough",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Plymouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Pavilions",
+    "address": "Plymouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Lighthouse",
+    "address": "Poole",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "King's Theatre",
+    "address": "Portsmouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Guildhall",
+    "address": "Portsmouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Granville Theatre",
+    "address": "Ramsgate",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Saffron Hall",
+    "address": "Saffron Walden",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Lowry",
+    "address": "Salford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Utilita Arena",
+    "address": "Sheffield",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Crucible Theatre",
+    "address": "Sheffield",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Lyceum Theatre",
+    "address": "Sheffield",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Sheffield City Hall",
+    "address": "Sheffield",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Severn",
+    "address": "Shrewsbury",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Mayflower Theatre",
+    "address": "Southampton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Cliffs Pavilion",
+    "address": "Southend-on-Sea",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Palace Theatre",
+    "address": "Southend-on-Sea",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Globe Theatre",
+    "address": "Stockton-on-Tees",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Regent Theatre",
+    "address": "Stoke-on-Trent",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Victoria Hall",
+    "address": "Stoke-on-Trent",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Royal Shakespeare Theatre",
+    "address": "Stratford-upon-Avon",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Empire Theatre",
+    "address": "Sunderland",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Swansea Arena | Arena Abertawe",
+    "address": "Swansea",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Theatre",
+    "address": "Swansea",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Wyvern Theatre",
+    "address": "Swindon",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Arts Centre",
+    "address": "Swindon",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Princess Theatre",
+    "address": "Torquay",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hall for Cornwall",
+    "address": "Truro",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Windsor",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Victoria Theatre",
+    "address": "Woking",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Rhoda McGaw Theatre",
+    "address": "Woking",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Theatre",
+    "address": "Wolverhampton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Connaught Theatre & Studio",
+    "address": "Worthing",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Assembly Hall",
+    "address": "Worthing",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Pavilion Theatre",
+    "address": "Worthing",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Westlands Entertainment Venue",
+    "address": "Yeovil",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Opera House",
+    "address": "York",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "York",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Barbican",
+    "address": "York",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  }
+]

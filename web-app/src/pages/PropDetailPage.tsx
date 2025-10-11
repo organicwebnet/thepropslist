@@ -43,33 +43,67 @@ const PropDetailPage: React.FC = () => {
   const [locationSaving, setLocationSaving] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const gaps = React.useMemo(() => {
-    const items: { label: string; section: 'overview' | 'usage' | 'purchase' | 'storage' | 'media' | 'notes' }[] = [];
-    if (!prop?.location && !prop?.currentLocation) items.push({ label: 'Location', section: 'overview' });
-    if (!prop?.status) items.push({ label: 'Status', section: 'overview' });
-    if (prop?.status && !prop?.statusNotes) items.push({ label: 'Status Notes', section: 'overview' });
-    if (!prop?.act) items.push({ label: 'Act', section: 'overview' });
-    if (!prop?.sceneName && !prop?.scene) items.push({ label: 'Scene', section: 'overview' });
-    if (!prop?.images || prop.images.length === 0) items.push({ label: 'Main image', section: 'overview' });
+    const items: { label: string; section: 'basic' | 'show-assignment' | 'pricing' | 'source' | 'category-status' | 'transit' | 'location' | 'media' | 'notes' | 'relationships'; explanation: string }[] = [];
+    if (!prop?.location && !prop?.currentLocation) items.push({ 
+      label: 'Location', 
+      section: 'location',
+      explanation: 'Helps the team find this prop quickly and track its current whereabouts'
+    });
+    if (!prop?.status) items.push({ 
+      label: 'Status', 
+      section: 'category-status',
+      explanation: 'Shows the current state of the prop (in use, available, needs repair, etc.)'
+    });
+    if (prop?.status && !prop?.statusNotes) items.push({ 
+      label: 'Status Notes', 
+      section: 'category-status',
+      explanation: 'Provides context about why the prop has this status'
+    });
+    if (!prop?.act) items.push({ 
+      label: 'Act', 
+      section: 'show-assignment',
+      explanation: 'Helps organize props by show structure and track usage'
+    });
+    if (!prop?.sceneName && !prop?.scene) items.push({ 
+      label: 'Scene', 
+      section: 'show-assignment',
+      explanation: 'Shows which scene this prop is used in for better organization'
+    });
+    if (!prop?.images || prop.images.length === 0) items.push({ 
+      label: 'Main image', 
+      section: 'basic',
+      explanation: 'Visual reference helps identify the prop quickly'
+    });
     if (!prop?.assignment?.type && typeof prop?.location === 'string' && /box|container/i.test(prop.location)) {
-      items.push({ label: 'Location may be outdated (removed from container)', section: 'overview' });
+      items.push({ 
+        label: 'Location may be outdated (removed from container)', 
+        section: 'location',
+        explanation: 'Update the location to reflect where the prop currently is'
+      });
     }
     return items;
   }, [prop?.location, prop?.currentLocation, prop?.status, prop?.statusNotes, prop?.act, prop?.sceneName, prop?.scene, prop?.images, prop?.assignment?.type]);
   const [showGapsPanel, setShowGapsPanel] = useState(false);
   useEffect(() => { setShowGapsPanel(gaps.length > 0); }, [gaps.length]);
   const missingLabelSet = React.useMemo(() => new Set(gaps.map(g => g.label)), [gaps]);
+  
+  // Count missing items per section
+  const getMissingCountForSection = (sectionId: SectionId): number => {
+    return gaps.filter(gap => gap.section === sectionId).length;
+  };
   // Collapsible section state (to mirror mock UX inside Overview)
-  type SectionId = 'summary' | 'dimensions' | 'identification' | 'usage' | 'purchase' | 'storage' | 'media' | 'notes' | 'maintenance';
-  const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({
-    summary: true,
-    dimensions: false,
-    identification: false,
-    usage: false,
-    purchase: false,
-    storage: false,
-    media: false,
-    notes: false,
-    maintenance: false,
+  type SectionId = 'basic' | 'show-assignment' | 'pricing' | 'source' | 'category-status' | 'transit' | 'location' | 'media' | 'notes' | 'relationships';
+  const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({ 
+    basic: true,
+    'show-assignment': true,
+    pricing: true,
+    source: true,
+    'category-status': true,
+    transit: true,
+    location: true,
+    media: true,
+    notes: true,
+    relationships: true,
   });
   // Note: overview subnav removed; sections toggle via headers
 
@@ -171,7 +205,7 @@ const PropDetailPage: React.FC = () => {
   // Auto-open Usage & Safety section if we have videos to show
   React.useEffect(() => {
     if (videoUrls.length > 0) {
-      setOpenSections(s => s.usage ? s : { ...s, usage: true });
+      setOpenSections(s => s['show-assignment'] ? s : { ...s, 'show-assignment': true });
     }
   }, [videoUrls.length]);
 
@@ -359,20 +393,34 @@ const PropDetailPage: React.FC = () => {
       navigate(`/props/${id}/edit?focus=${encodeURIComponent(key)}`);
     };
     const effectiveKey = focusKey || (missing ? labelToFocusKey[label] : undefined);
+    
+    // Check if the value is potentially long text that should go under the label (like textarea content)
+    const isLongText = typeof value === 'string' && value.length > 50;
+    const displayValue = isDate ? formatDate(value) : (value ?? 'N/A');
+    
     const content = (
       <>
         {IconComp ? <IconComp className={`w-4 h-4 mt-0.5 ${missing ? 'text-pb-warning' : 'text-pb-primary'}`} /> : null}
-        <div>
-          <span className={`font-semibold ${missing ? 'text-pb-warning' : 'text-pb-primary'}`}>{label}:</span>{' '}
-          <span className={`${missing ? 'text-pb-warning' : 'text-white'}`}>{isDate ? formatDate(value) : (value ?? 'N/A')}</span>
-    </div>
+        {isLongText ? (
+          // For long text (textarea-like), put label on top
+          <div className="space-y-1">
+            <div className={`font-semibold ${missing ? 'text-pb-warning' : 'text-pb-primary'}`}>{label}:</div>
+            <div className={`${missing ? 'text-pb-warning' : 'text-white'} whitespace-pre-line`}>{displayValue}</div>
+          </div>
+        ) : (
+          // For short text, put label and value side-by-side
+          <div className="flex items-center gap-2">
+            <div className={`font-semibold ${missing ? 'text-pb-warning' : 'text-pb-primary'}`}>{label}:</div>
+            <span className={`${missing ? 'text-pb-warning' : 'text-white'}`}>{displayValue}</span>
+          </div>
+        )}
       </>
     );
     if (missing && effectiveKey) {
       return (
         <button
           type="button"
-          className={`mb-2 flex items-start gap-2 w-full text-left bg-pb-warning/10 rounded px-2 py-1 -mx-1 hover:bg-pb-warning/20`}
+          className={`mb-2 flex items-start gap-2 w-full text-left bg-pb-warning/20 border border-pb-warning/40 rounded-lg px-3 py-2 -mx-1 hover:bg-pb-warning/30 transition-colors`}
           onClick={() => { console.debug('[PropDetail] click missing field → edit', { label, effectiveKey, id }); goEdit(effectiveKey); }}
         >
           {content}
@@ -380,24 +428,18 @@ const PropDetailPage: React.FC = () => {
       );
     }
     return (
-      <div className={`mb-2 flex items-start gap-2 ${missing ? 'bg-pb-warning/10 rounded px-2 py-1 -mx-1' : ''}`}>{content}</div>
+      <div className={`mb-2 flex items-start gap-2 ${missing ? 'bg-pb-warning/15 border border-pb-warning/30 rounded-lg px-3 py-2 -mx-1' : ''}`}>{content}</div>
     );
   };
 
   // Anchor navigation to sections: open the target section and smooth scroll
-  const handleNavClick = (target: 'overview' | 'dimensions' | 'identification' | 'usage' | 'purchase' | 'storage' | 'media' | 'notes' | 'maintenance') => (e: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleNavClick = (target: SectionId) => (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     setOpenSections(prev => ({
       ...prev,
-      ...(target === 'dimensions' ? { dimensions: true } : {}),
-      ...(target === 'identification' ? { identification: true } : {}),
-      ...(target === 'usage' ? { usage: true } : {}),
-      ...(target === 'purchase' ? { purchase: true } : {}),
-      ...(target === 'storage' ? { storage: true } : {}),
-      ...(target === 'media' ? { media: true } : {}),
-      ...(target === 'notes' ? { notes: true } : {}),
+      [target]: true,
     }));
-    const id = target === 'overview' ? 'overview' : `ov-${target}`;
+    const id = target;
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     try { 
@@ -447,146 +489,275 @@ const PropDetailPage: React.FC = () => {
           {/* Sticky summary header (like mock) */}
           <div className="sticky top-0 z-10 -mx-6 px-6 py-3 bg-pb-darker/80 backdrop-blur-sm border-b border-pb-primary/20">
             <div className="mx-auto max-w-6xl flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-md overflow-hidden bg-pb-gray flex items-center justify-center">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-md overflow-hidden bg-pb-gray flex items-center justify-center">
                   {mainImage ? (
                     <img src={mainImage} alt={prop.name} className="object-cover w-full h-full" />
                   ) : (
                     <svg width="24" height="24" viewBox="0 0 24 24" className="text-white/50"><circle cx="12" cy="12" r="10" fill="currentColor" /></svg>
                   )}
-                </div>
-                <div>
-                  <div className="text-lg font-semibold text-white">{prop.name}</div>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-pb-primary/30 text-white">{prop.category}</span>
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-pb-accent/30 text-white">Qty: {prop.quantity}</span>
-                  </div>
-                </div>
               </div>
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                <span className="px-2 py-1 rounded-full text-xs bg-white/10 text-white flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-pb-primary" />
-                  {prop.location || prop.currentLocation || 'No location'}
-                </span>
-                <span className="px-2 py-1 rounded-full text-xs bg-pb-success/30 text-white">{(prop.status || '').toString().replace(/_/g, ' ')}</span>
-                {gaps.length > 0 && (
-          <button
-                    type="button"
-                    onClick={() => navigate(`/props/${id}/edit`)}
-                    className="px-3 py-1.5 rounded-md bg-pb-warning text-black text-sm hover:opacity-90"
-                  >
-                    Complete details ({gaps.length})
-          </button>
-                )}
-                {gaps.length > 0 && (
-                  <span className="hidden">{/* reserved for a11y */}{gaps.length}</span>
-                )}
-                <button onClick={handleEdit} className="px-3 py-1.5 rounded-md bg-pb-primary text-white text-sm hover:bg-pb-accent flex items-center gap-1"><Pencil className="w-4 h-4" /> Edit</button>
+              <div>
+                  <div className="text-lg font-semibold text-white">{prop.name}</div>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-pb-primary/30 text-white">{prop.category}</span>
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-pb-accent/30 text-white">Qty: {prop.quantity}</span>
+                </div>
               </div>
             </div>
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {/* Location pill - shows missing if in gaps */}
+              {(() => {
+                const locationGap = gaps.find(g => g.label === 'Location');
+                const hasLocation = prop.location || prop.currentLocation;
+                return (
+                  <span 
+                    className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
+                      locationGap 
+                        ? 'bg-pb-warning/30 text-pb-warning border border-pb-warning/50' 
+                        : 'bg-white/10 text-white'
+                    }`}
+                    title={locationGap ? `Missing: ${locationGap.explanation}` : undefined}
+                  >
+                    <MapPin className={`w-3 h-3 ${locationGap ? 'text-pb-warning' : 'text-pb-primary'}`} />
+                    {hasLocation || 'No location'}
+                  </span>
+                );
+              })()}
+              
+              {/* Status pill - shows missing if in gaps */}
+              {(() => {
+                const statusGap = gaps.find(g => g.label === 'Status');
+                const hasStatus = prop.status;
+                return (
+                  <span 
+                    className={`px-2 py-1 rounded-full text-xs ${
+                      statusGap
+                        ? 'bg-pb-warning/30 text-pb-warning border border-pb-warning/50'
+                        : 'bg-pb-success/30 text-white'
+                    }`}
+                    title={statusGap ? `Missing: ${statusGap.explanation}` : undefined}
+                  >
+                    {hasStatus ? (prop.status || '').toString().replace(/_/g, ' ') : 'No status'}
+                  </span>
+                );
+              })()}
+              
+              {/* Complete details button with tooltip */}
+              {gaps.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/props/${id}/edit`)}
+                  className="px-3 py-1.5 rounded-md bg-pb-warning text-black text-sm hover:opacity-90 relative group flex items-center gap-2"
+                  title={`Missing: ${gaps.map(g => g.label).join(', ')}`}
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  Complete details ({gaps.length})
+                </button>
+              )}
+              
+              <button onClick={handleEdit} className="px-3 py-1.5 rounded-md bg-pb-primary text-white text-sm hover:bg-pb-accent flex items-center gap-1"><Pencil className="w-4 h-4" /> Edit</button>
+            </div>
           </div>
+        </div>
           {/* Pill nav (mock-style) sticky directly under header, 1px spacer */}
           <div className="sticky top-[56px] z-10 -mx-6 px-6 py-[1px] mb-6 bg-pb-darker/80 backdrop-blur-sm border-b border-pb-primary/10" style={{ marginBottom: '24px' }}>
             <div className="mx-auto max-w-6xl">
               <nav className="flex items-center flex-wrap gap-3 py-2 text-sm">
-                <a href="#overview" onClick={handleNavClick('overview')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">Overview{(!prop.location && !prop.currentLocation) ? <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">1</span> : null}</a>
-                <a href="#dimensions" onClick={handleNavClick('dimensions')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">Dimensions</a>
-                <a href="#identification" onClick={handleNavClick('identification')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">Identification</a>
-                <a href="#usage" onClick={handleNavClick('usage')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">Usage & Safety</a>
-                <a href="#purchase" onClick={handleNavClick('purchase')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">Purchase & Rental</a>
-                <a href="#storage" onClick={handleNavClick('storage')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">Storage & Logistics</a>
-                <a href="#notes" onClick={handleNavClick('notes')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">Notes</a>
-                <a href="#maintenance" onClick={handleNavClick('maintenance')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">Maintenance</a>
-              </nav>
-            </div>
+                <a href="#basic" onClick={handleNavClick('basic')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Basic Info
+                  {getMissingCountForSection('basic') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('basic')}
+                    </span>
+                  )}
+                </a>
+                <a href="#show-assignment" onClick={handleNavClick('show-assignment')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Show Assignment
+                  {getMissingCountForSection('show-assignment') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('show-assignment')}
+                    </span>
+                  )}
+                </a>
+                <a href="#pricing" onClick={handleNavClick('pricing')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Pricing & Quantity
+                  {getMissingCountForSection('pricing') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('pricing')}
+                    </span>
+                  )}
+                </a>
+                <a href="#source" onClick={handleNavClick('source')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Source & Details
+                  {getMissingCountForSection('source') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('source')}
+                    </span>
+                  )}
+                </a>
+                <a href="#category-status" onClick={handleNavClick('category-status')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Category & Status
+                  {getMissingCountForSection('category-status') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('category-status')}
+                    </span>
+                  )}
+                </a>
+                <a href="#transit" onClick={handleNavClick('transit')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Transit & Dimensions
+                  {getMissingCountForSection('transit') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('transit')}
+                    </span>
+                  )}
+                </a>
+                <a href="#location" onClick={handleNavClick('location')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Location & Custody
+                  {getMissingCountForSection('location') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('location')}
+                    </span>
+                  )}
+                </a>
+                <a href="#media" onClick={handleNavClick('media')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Media & Assets
+                  {getMissingCountForSection('media') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('media')}
+                    </span>
+                  )}
+                </a>
+                <a href="#notes" onClick={handleNavClick('notes')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Notes
+                  {getMissingCountForSection('notes') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('notes')}
+                    </span>
+                  )}
+                </a>
+                <a href="#relationships" onClick={handleNavClick('relationships')} className="px-4 py-2 rounded-full bg-white/10 text-white/90 hover:bg-white/20 hover:text-white">
+                  Relationships
+                  {getMissingCountForSection('relationships') > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full bg-pb-warning text-black">
+                      {getMissingCountForSection('relationships')}
+                    </span>
+                  )}
+                </a>
+            </nav>
           </div>
-          {/* Missing / update-needed info banner (mock-style) */}
+          </div>
+          {/* Helpful information completion suggestions */}
           {showGapsPanel && gaps.length > 0 && (
             <>
-              <div className="mx-auto max-w-6xl border-2 border-pb-warning bg-pb-warning/10 px-5 py-4 my-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-base md:text-lg font-semibold text-white">Missing information</div>
-                    <div className="text-sm text-white/80">Please complete the following:</div>
-                    <ul className="mt-2 list-disc pl-5 text-sm text-white/90">
-                      {gaps.map((g, idx) => (
-                        <li key={idx}>
-                          {g.label} —
-                          <button onClick={() => {
-                            const container = document.getElementById('overview');
-                            if (container) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            setTimeout(() => {
-                              const notesInput = document.querySelector<HTMLInputElement | HTMLTextAreaElement>('#status-notes-input, [name="statusNotes"], textarea[placeholder="Status notes"], input[placeholder="Status notes"]');
-                              if (notesInput) {
-                                try { 
-                                  notesInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-                                } catch (error) {
-                                  console.warn('Failed to scroll into view:', error);
-                                }
-                                notesInput.focus();
-                              }
-                            }, 300);
-                          }} className="ml-2 underline text-black bg-pb-warning px-1 py-0.5 rounded">Go to section</button>
-                        </li>
-                      ))}
-                    </ul>
+              <div className="mx-auto max-w-6xl bg-pb-warning/5 border border-pb-warning/20 rounded-lg px-4 py-3 my-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-pb-warning mb-1 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      Missing information ({gaps.length})
+                    </div>
+                    <div className="text-xs text-pb-warning/70">Hover over the pills above for details, or click to edit</div>
                   </div>
-                  <button type="button" onClick={() => setShowGapsPanel(false)} className="text-white/80 hover:text-white text-sm pl-2">Dismiss</button>
+                  <button 
+                    type="button" 
+                    onClick={() => navigate(`/props/${id}/edit`)}
+                    className="px-3 py-1.5 bg-pb-warning hover:bg-pb-warning/80 text-white text-sm rounded-md transition-colors whitespace-nowrap"
+                  >
+                    Complete Details
+                  </button>
+                  <button type="button" onClick={() => setShowGapsPanel(false)} className="text-pb-warning/60 hover:text-pb-warning text-sm">✕</button>
                 </div>
               </div>
             </>
           )}
 
-          <div id="overview" className="space-y-4 mx-auto max-w-6xl px-6 scroll-mt-[120px]" style={{ marginTop: '32px', marginBottom: '32px' }}>
-            {/* Main image and description (moved into Overview to match mock) */}
-            <div className="grid grid-cols-1 md:grid-cols-[200px,1fr] gap-4">
-              <div className="w-full rounded-lg overflow-hidden bg-black/30 aspect-square flex items-center justify-center">
-              {mainImage ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const idx = galleryImages.findIndex(i => i.url === mainImage);
-                    openLightboxAt(idx >= 0 ? idx : 0);
-                  }}
-                  className="block w-full h-full cursor-zoom-in"
-                  title="Click to view larger"
-                >
-                <img src={mainImage} alt={prop.name} className="object-cover w-full h-full" />
-                </button>
-              ) : (
-                  <svg width="32" height="32" viewBox="0 0 24 24" className="text-white/50"><circle cx="12" cy="12" r="10" fill="currentColor" /></svg>
-                )}
-              </div>
-              <div>
-                {prop.description && <p className="text-pb-gray whitespace-pre-line">{prop.description}</p>}
-                {galleryImages.length > 1 && (
-                  <div className="mt-3 flex gap-2 flex-wrap">
-                    {galleryImages.slice(1).map((img, idx) => (
-                      <button
-                        key={img.id || img.url}
-                        type="button"
-                        onClick={() => openLightboxAt(idx + 1)}
-                        className="w-16 h-16 rounded border border-pb-primary/30 overflow-hidden focus:outline-none focus:ring-2 focus:ring-pb-primary"
-                        title="View larger"
-                      >
-                        <img src={img.url} alt={img.caption || prop.name} className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                </div>
-              )}
-              </div>
-            </div>
-            {/* Overview summary box (mock-style colors) */}
-            {/* Overview summary box (mock-style colors) */}
+          <div id="basic" className="space-y-4 mx-auto max-w-6xl px-6 scroll-mt-[120px]" style={{ marginTop: '32px', marginBottom: '32px' }}>
+            {/* Basic Info Container with integrated image */}
             <div className="bg-pb-darker/70 border border-white/10 rounded-xl p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {renderField('Show', showName || prop.showId, false, BadgeInfo)}
-              {renderField('Act', prop.act, false, Hash, 'act')}
-              {renderField('Scene', prop.sceneName || prop.scene, false, FileText, 'sceneName')}
-              {renderField('Location', prop.location || prop.currentLocation, false, MapPin, 'location')}
-              {renderField('Status', prop.status, false, Info, 'status')}
-              {renderField('Status Notes', prop.statusNotes, false, FileText, 'statusNotes')}
-              {renderField('Condition', prop.condition, false, Package)}
+              <div className="grid grid-cols-1 lg:grid-cols-[200px,1fr] gap-6">
+                {/* Image Section */}
+                <div className="relative group">
+                  <div className="w-full rounded-lg overflow-hidden bg-gradient-to-br from-pb-darker/60 to-pb-darker/80 border border-white/20 aspect-square flex items-center justify-center shadow-lg">
+                    {mainImage ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const idx = galleryImages.findIndex(i => i.url === mainImage);
+                          openLightboxAt(idx >= 0 ? idx : 0);
+                        }}
+                        className="block w-full h-full cursor-zoom-in hover:scale-105 transition-transform duration-300 relative overflow-hidden"
+                        title="Click to view larger"
+                      >
+                        <img 
+                          src={mainImage} 
+                          alt={prop.name} 
+                          className="object-cover w-full h-full transition-all duration-300 group-hover:brightness-110" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <svg width="14" height="14" viewBox="0 0 24 24" className="text-white">
+                            <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                          </svg>
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-white/40">
+                        <svg width="32" height="32" viewBox="0 0 24 24" className="mb-1">
+                          <path fill="currentColor" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                        </svg>
+                        <span className="text-xs">No image</span>
+                      </div>
+                    )}
+                  </div>
+                  {galleryImages.length > 1 && (
+                    <div className="mt-2 relative">
+                      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        {galleryImages.slice(1).map((img, idx) => (
+                          <button
+                            key={img.id || img.url}
+                            type="button"
+                            onClick={() => openLightboxAt(idx + 1)}
+                            className="flex-shrink-0 w-10 h-10 rounded-lg border border-white/30 overflow-hidden focus:outline-none focus:ring-2 focus:ring-pb-primary hover:border-pb-primary/70 hover:scale-105 transition-all duration-200 shadow-sm"
+                            title="View larger"
+                          >
+                            <img src={img.url} alt={img.caption || prop.name} className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                      {/* Scroll indicators */}
+                      <div className="absolute top-0 left-0 w-4 h-full bg-gradient-to-r from-pb-darker/80 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute top-0 right-0 w-4 h-full bg-gradient-to-l from-pb-darker/80 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Basic Info Fields */}
+                <div className="space-y-4">
+                  {prop.description && (
+                    <div className="mb-4">
+                      <div className="text-sm font-semibold text-pb-primary mb-2">Description:</div>
+                      <p className="text-white/90 whitespace-pre-line leading-relaxed text-sm">{prop.description}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {showName || prop.showId ? renderField('Show', showName || prop.showId, false, BadgeInfo) : null}
+              {prop.act ? renderField('Act', prop.act, false, Hash, 'act') : null}
+              {prop.sceneName || prop.scene ? renderField('Scene', prop.sceneName || prop.scene, false, FileText, 'sceneName') : null}
+              {prop.location || prop.currentLocation ? renderField('Location', prop.location || prop.currentLocation, false, MapPin, 'location') : null}
+              {prop.status ? renderField('Status', prop.status, false, Info, 'status') : null}
+              {prop.statusNotes ? renderField('Status Notes', prop.statusNotes, false, FileText, 'statusNotes') : null}
+              {prop.color ? renderField('Color', prop.color, false, Package) : null}
+              {prop.length != null ? renderField('Length', (prop.length != null && prop.unit) ? `${prop.length} ${prop.unit}` : String(prop.length)) : null}
+              {prop.width != null ? renderField('Width', (prop.width != null && prop.unit) ? `${prop.width} ${prop.unit}` : String(prop.width)) : null}
+              {prop.height != null ? renderField('Height', (prop.height != null && prop.unit) ? `${prop.height} ${prop.unit}` : String(prop.height)) : null}
+              {prop.weight ? renderField('Weight', `${prop.weight} ${prop.weightUnit || ''}`) : null}
+                  </div>
+                </div>
               </div>
             </div>
             {/* Removed secondary Overview subnav to avoid duplicate nav */}
@@ -610,38 +781,19 @@ const PropDetailPage: React.FC = () => {
                 >
                     {locationSaving ? 'Saving…' : 'Save'}
                 </button>
-            </div>
+              </div>
                 {locationError && <div className="text-red-400 text-sm mt-2">{locationError}</div>}
-          </div>
+              </div>
             )}
             {/* Collapsible sections matching mock */}
-            <Section id="ov-dimensions" title="Dimensions" open={openSections.dimensions} onToggle={() => setOpenSections(s => ({ ...s, dimensions: !s.dimensions }))}>
+            {(prop.usageInstructions || prop.handlingInstructions || prop.safetyNotes || prop.preShowSetupNotes || prop.preShowSetupVideo || prop.preShowSetupDuration || videoUrls.length > 0) && (
+            <Section id="ov-usage" title="Usage & Safety" open={openSections['show-assignment']} onToggle={() => setOpenSections(s => ({ ...s, 'show-assignment': !s['show-assignment'] }))}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderField('Length', (prop.length != null && (prop as any).unit) ? `${prop.length} ${(prop as any).unit}` : (prop.length != null ? String(prop.length) : 'N/A'))}
-                {renderField('Width', (prop.width != null && (prop as any).unit) ? `${prop.width} ${(prop as any).unit}` : (prop.width != null ? String(prop.width) : 'N/A'))}
-                {renderField('Height', (prop.height != null && (prop as any).unit) ? `${prop.height} ${(prop as any).unit}` : (prop.height != null ? String(prop.height) : 'N/A'))}
-                {renderField('Depth', (((prop as any).depth != null) && (prop as any).unit) ? `${(prop as any).depth} ${(prop as any).unit}` : ((prop as any).depth != null ? String((prop as any).depth) : 'N/A'))}
-            {renderField('Weight', prop.weight ? `${prop.weight} ${prop.weightUnit || ''}` : 'N/A')}
-            {renderField('Travel Weight', (prop as any).travelWeight)}
-            {renderField('Materials', prop.materials?.join(', '))}
-            {renderField('Color', (prop as any).color)}
-            {renderField('Style', (prop as any).style)}
-              </div>
-            </Section>
-            <Section id="ov-identification" title="Identification" open={openSections.identification} onToggle={() => setOpenSections(s => ({ ...s, identification: !s.identification }))}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {renderField('Manufacturer', (prop as any).manufacturer)}
-            {renderField('Model', (prop as any).model)}
-            {renderField('Serial Number', (prop as any).serialNumber)}
-            </div>
-            </Section>
-            <Section id="ov-usage" title="Usage & Safety" open={openSections.usage} onToggle={() => setOpenSections(s => ({ ...s, usage: !s.usage }))}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderField('Usage Instructions', prop.usageInstructions)}
+                {prop.usageInstructions ? renderField('Usage Instructions', prop.usageInstructions) : null}
                 {prop.handlingInstructions ? renderField('Handling Instructions', prop.handlingInstructions) : null}
-                {renderField('Safety Notes', prop.safetyNotes)}
-                {renderField('Pre-Show Setup', prop.preShowSetupNotes)}
-                {renderField('Pre-Show Setup Video', prop.preShowSetupVideo ? (
+                {prop.safetyNotes ? renderField('Safety Notes', prop.safetyNotes) : null}
+                {prop.preShowSetupNotes ? renderField('Pre-Show Setup', prop.preShowSetupNotes) : null}
+                {prop.preShowSetupVideo ? renderField('Pre-Show Setup Video', (
                   <a
                     href={prop.preShowSetupVideo as any}
                     target="_blank"
@@ -651,37 +803,41 @@ const PropDetailPage: React.FC = () => {
                   >
                     {getDisplayUrl(prop.preShowSetupVideo as any)}
                   </a>
-                ) : 'N/A')}
-                {renderField('Pre-Show Setup Duration', prop.preShowSetupDuration)}
+                )) : null}
+                {prop.preShowSetupDuration ? renderField('Pre-Show Setup Duration', prop.preShowSetupDuration) : null}
               </div>
               {videoUrls.length > 0 && (
                 <div className="mt-4 space-y-3">
-                  <div>
+                <div>
                     <div className="text-sm font-semibold text-pb-primary mb-2">Videos</div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {videoUrls.map((u, idx) => (
                         <div key={`${u}-${idx}`} className="space-y-2">
                           {renderEmbeddedVideo(u)}
-                        </div>
-                  ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-          </div>
-          )}
+                </div>
+              )}
             </Section>
-            <Section id="ov-purchase" title="Purchase & Rental" open={openSections.purchase} onToggle={() => setOpenSections(s => ({ ...s, purchase: !s.purchase }))}>
+            )}
+            {(prop.price || prop.source || prop.sourceDetails || prop.purchaseUrl || (prop.source === 'rented' && ((prop as any).rentalSource || (prop as any).rentalDueDate || (prop as any).rentalReferenceNumber))) && (
+            <Section id="ov-purchase" title="Purchase & Rental" open={openSections.pricing} onToggle={() => setOpenSections(s => ({ ...s, pricing: !s.pricing }))}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {renderField('Price', prop.price ? `£${prop.price}` : 'N/A')}
-            {renderField('Source', prop.source)}
-            {renderField('Source Details', prop.sourceDetails)}
-            {renderField('Purchase URL', prop.purchaseUrl ? <a href={prop.purchaseUrl} className="text-pb-accent underline" target="_blank" rel="noopener noreferrer">{prop.purchaseUrl}</a> : 'N/A')}
-            {(prop.source === 'rented') && renderField('Rental Source', (prop as any).rentalSource)}
-            {(prop.source === 'rented') && renderField('Rental Due Date', (prop as any).rentalDueDate, true)}
-            {(prop.source === 'rented') && renderField('Rental Reference', (prop as any).rentalReferenceNumber)}
+            {prop.price ? renderField('Price', `£${prop.price}`) : null}
+            {prop.source ? renderField('Source', prop.source) : null}
+            {prop.sourceDetails ? renderField('Source Details', prop.sourceDetails) : null}
+            {prop.purchaseUrl ? renderField('Purchase URL', <a href={prop.purchaseUrl} className="text-pb-accent underline" target="_blank" rel="noopener noreferrer">{prop.purchaseUrl}</a>) : null}
+            {(prop.source === 'rented' && (prop as any).rentalSource) && renderField('Rental Source', (prop as any).rentalSource)}
+            {(prop.source === 'rented' && (prop as any).rentalDueDate) && renderField('Rental Due Date', (prop as any).rentalDueDate, true)}
+            {(prop.source === 'rented' && (prop as any).rentalReferenceNumber) && renderField('Rental Reference', (prop as any).rentalReferenceNumber)}
               </div>
             </Section>
+            )}
             {/* Maintenance moved into Overview */}
-            <Section id="ov-maintenance" title="Maintenance" open={openSections.maintenance} onToggle={() => setOpenSections(s => ({ ...s, maintenance: !s.maintenance }))}>
+            {(linkedCards.length > 0) && (
+            <Section id="ov-maintenance" title="Maintenance" open={openSections.notes} onToggle={() => setOpenSections(s => ({ ...s, notes: !s.notes }))}>
               <div className="space-y-4">
               {linkedCards.length > 0 && (
                 <div className="bg-pb-darker/40 rounded-lg p-4">
@@ -696,23 +852,28 @@ const PropDetailPage: React.FC = () => {
               <MaintenanceInlineForm propId={id as string} initial={{ showId: prop.showId, name: prop.name }} />
             </div>
             </Section>
-            <Section id="ov-storage" title="Storage & Logistics" open={openSections.storage} onToggle={() => setOpenSections(s => ({ ...s, storage: !s.storage }))}>
+            )}
+            {(prop.storageRequirements || prop.replacementCost || prop.replacementLeadTime || prop.travelsUnboxed || prop.courier || prop.trackingNumber) && (
+            <Section id="ov-storage" title="Storage & Logistics" open={openSections.transit} onToggle={() => setOpenSections(s => ({ ...s, transit: !s.transit }))}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {renderField('Storage Requirements', prop.storageRequirements)}
-            {renderField('Replacement Cost', prop.replacementCost)}
-            {renderField('Replacement Lead Time', prop.replacementLeadTime)}
-            {renderField('Travels Unboxed', prop.travelsUnboxed ? 'Yes' : 'No')}
-            {renderField('Courier', prop.courier)}
-            {renderField('Tracking Number', prop.trackingNumber)}
+            {prop.storageRequirements ? renderField('Storage Requirements', prop.storageRequirements) : null}
+            {prop.replacementCost ? renderField('Replacement Cost', prop.replacementCost) : null}
+            {prop.replacementLeadTime ? renderField('Replacement Lead Time', prop.replacementLeadTime) : null}
+            {prop.travelsUnboxed !== undefined ? renderField('Travels Unboxed', prop.travelsUnboxed ? 'Yes' : 'No') : null}
+            {prop.courier ? renderField('Courier', prop.courier) : null}
+            {prop.trackingNumber ? renderField('Tracking Number', prop.trackingNumber) : null}
           </div>
             </Section>
+            )}
             {/* Notes */}
+            {(prop.notes || prop.publicNotes) && (
             <Section id="ov-notes" title="Notes" open={openSections.notes} onToggle={() => setOpenSections(s => ({ ...s, notes: !s.notes }))}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {renderField('Notes', prop.notes)}
-                {renderField('Public Notes', prop.publicNotes)}
-              </div>
-            </Section>
+                {prop.notes ? renderField('Notes', prop.notes) : null}
+                {prop.publicNotes ? renderField('Public Notes', prop.publicNotes) : null}
+            </div>
+          </Section>
+            )}
             {/* Gallery removed per request */}
           </div>
         </motion.div>
@@ -757,7 +918,7 @@ const PropDetailPage: React.FC = () => {
                 <div className="inline-block bg-black/50 text-white/90 text-sm md:text-base px-3 py-1 rounded">
                   {galleryImages[lightboxIndex].caption || prop.name}
                 </div>
-              </div>
+                </div>
               {galleryImages.length > 1 && (
                 <button
                   type="button"
@@ -792,8 +953,8 @@ const PropDetailPage: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
-        )}
+                </div>
+              )}
       </div>
     </DashboardLayout>
   );

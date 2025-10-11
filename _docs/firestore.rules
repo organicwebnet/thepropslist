@@ -130,13 +130,14 @@ service cloud.firestore {
       allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
     }
     match /shows/{showId} {
-      // Secure access: only show owners and team members can read
+      // Secure access: only show owners, team members, and god users can read
       // Support both old (userId, createdBy) and new (ownerId) field names
       allow read: if request.auth != null && (
         resource.data.ownerId == request.auth.uid ||
         resource.data.userId == request.auth.uid ||
         resource.data.createdBy == request.auth.uid ||
-        resource.data.team[request.auth.uid] != null
+        resource.data.team[request.auth.uid] != null ||
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
       );
       // Only show owners and elevated team members can modify
       allow update, delete: if request.auth != null && (
@@ -283,16 +284,18 @@ service cloud.firestore {
       ));
     }
     match /props/{propId} {
-      // Secure access: only show team members can read props
+      // Secure access: only show team members and god users can read props
       allow read: if request.auth != null && (
         get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null
+        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null ||
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
       );
       
-      // Only show team members can create props
+      // Only show team members and god users can create props
       allow create: if request.auth != null && (
         get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.ownerId == request.auth.uid ||
-        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] != null
+        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] != null ||
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
       );
       
       // Update/delete permissions require proper team membership or admin role

@@ -8,47 +8,49 @@ interface AddressItemProps {
   onEdit: () => void;
 }
 
+interface AddressItemProps {
+  address: Address;
+  isSelected: boolean;
+  onSelect: () => void;
+  onEdit: () => void;
+  allowMultiple?: boolean;
+  inputName?: string;
+}
+
 export const AddressItem: React.FC<AddressItemProps> = ({
   address,
   isSelected,
   onSelect,
-  onEdit
+  onEdit,
+  allowMultiple = true,
+  inputName = 'address-selection'
 }) => {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onSelect();
-    }
-  };
-
-  const checkboxId = `address-checkbox-${address.id}`;
+  const inputId = `address-${allowMultiple ? 'checkbox' : 'radio'}-${address.id}`;
   
   return (
     <div 
-      className={`flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer ${
+      className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
         isSelected 
-          ? 'bg-pb-primary/20 text-pb-primary border border-pb-primary/30' 
-          : 'hover:bg-pb-primary/10 border border-transparent'
+          ? 'bg-pb-primary/20 text-pb-primary border border-pb-primary/30 shadow-sm' 
+          : 'hover:bg-pb-primary/10 border border-transparent hover:border-pb-primary/20'
       }`}
-      onClick={onSelect}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      role="option"
-      aria-selected={isSelected}
-      aria-label={`${address.name} - ${address.street1}, ${address.city}`}
     >
       <div className="flex items-center gap-3 flex-1">
         <input
-          type="checkbox"
-          id={checkboxId}
+          type={allowMultiple ? "checkbox" : "radio"}
+          id={inputId}
+          name={inputName}
+          value={address.id}
           checked={isSelected}
           onChange={onSelect}
-          className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"
-          aria-label={`Select ${address.name}`}
-          tabIndex={-1} // Prevent double tabbing
+          className={`w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 focus:ring-pb-primary focus:ring-2 ${
+            allowMultiple 
+              ? 'rounded accent-pb-primary' 
+              : 'rounded-full border-pb-primary/30'
+          }`}
         />
         <label 
-          htmlFor={checkboxId}
+          htmlFor={inputId}
           className="flex-1 min-w-0 cursor-pointer"
         >
           <div className="font-medium text-sm truncate">
@@ -60,6 +62,11 @@ export const AddressItem: React.FC<AddressItemProps> = ({
           {address.companyName && (
             <div className="text-xs text-pb-gray/70 truncate">
               {address.companyName}
+            </div>
+          )}
+          {address.nickname && (
+            <div className="text-xs text-pb-primary/70 truncate">
+              "{address.nickname}"
             </div>
           )}
         </label>

@@ -7,9 +7,19 @@ interface DigitalAssetFormProps {
   assets: DigitalAsset[];
   onChange: (assets: DigitalAsset[]) => void;
   disabled?: boolean;
+  instructions?: string;
+  onInstructionsChange?: (instructions: string) => void;
+  instructionsPlaceholder?: string;
 }
 
-export function DigitalAssetForm({ assets = [], onChange, disabled = false }: DigitalAssetFormProps) {
+export function DigitalAssetForm({ 
+  assets = [], 
+  onChange, 
+  disabled = false, 
+  instructions = '', 
+  onInstructionsChange, 
+  instructionsPlaceholder = 'Enter instructions or notes...' 
+}: DigitalAssetFormProps) {
   const [validating, setValidating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'pending'>>({});
@@ -131,6 +141,21 @@ export function DigitalAssetForm({ assets = [], onChange, disabled = false }: Di
           Add File
         </button>
       </div>
+
+      {/* Instructions/Notes Text Area */}
+      {onInstructionsChange && (
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Instructions & Notes</label>
+          <textarea
+            value={instructions}
+            onChange={(e) => onInstructionsChange(e.target.value)}
+            placeholder={instructionsPlaceholder}
+            rows={3}
+            className="w-full bg-[#0A0A0A] border border-gray-800 rounded-md px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-vertical"
+            disabled={disabled}
+          />
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">

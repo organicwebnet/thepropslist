@@ -77,7 +77,7 @@ export const useAddresses = (type: 'venue' | 'rehearsal' | 'storage') => {
       
       const validAddresses = docs
         .filter(doc => {
-          const isValid = doc.id && doc.id.trim() !== '' && doc.id.length >= 10;
+          const isValid = doc.id && doc.id.trim() !== '' && doc.id.length >= 1;
           if (!isValid) {
             console.warn('Filtering out invalid document:', {
               id: doc.id,
@@ -89,11 +89,6 @@ export const useAddresses = (type: 'venue' | 'rehearsal' | 'storage') => {
         })
         .map(doc => {
           const address = { ...doc.data, id: doc.id } as Address;
-          console.log('Mapped address:', {
-            id: address.id,
-            name: address.name,
-            type: address.type
-          });
           return address;
         });
       
@@ -147,7 +142,8 @@ export const useAddresses = (type: 'venue' | 'rehearsal' | 'storage') => {
     }
 
     // Validate that the ID looks like a proper Firestore document ID
-    if (id.length < 10 || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+    // Firestore document IDs should be at least 1 character and contain valid characters
+    if (id.length < 1 || !/^[a-zA-Z0-9_-]+$/.test(id)) {
       throw new Error(`Invalid document ID format: ${id}`);
     }
 

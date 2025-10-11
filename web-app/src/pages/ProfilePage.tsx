@@ -28,6 +28,7 @@ import {
   Zap,
   X
 } from 'lucide-react';
+import { ROLE_OPTIONS } from '../constants/roleOptions';
 
 const ProfilePage: React.FC = () => {
   const { user, userProfile, updateUserProfile, signOut, loading } = useWebAuth();
@@ -71,19 +72,8 @@ const ProfilePage: React.FC = () => {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const roleOptions: { value: string; label: string }[] = [
-    { value: 'propmaker', label: 'Props Maker' },
-    { value: 'painter', label: 'Painter' },
-    { value: 'buyer', label: 'Buyer' },
-    { value: 'senior-propmaker', label: 'Senior Props Maker' },
-    { value: 'props-supervisor', label: 'Props Supervisor' },
-    { value: 'art-director', label: 'Art Director' },
-    { value: 'set-dresser', label: 'Set Dresser' },
-    { value: 'stage-manager', label: 'Stage Manager' },
-    { value: 'assistant-stage-manager', label: 'Assistant Stage Manager' },
-    { value: 'designer', label: 'Designer' },
-    { value: 'assistant-designer', label: 'Assistant Designer' },
-  ];
+  // Use shared role options for consistency
+  const roleOptions = ROLE_OPTIONS;
 
   // Initialize form data when userProfile loads
   useEffect(() => {

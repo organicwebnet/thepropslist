@@ -6,6 +6,7 @@ import { cleanFirestoreData } from '../utils/firestore';
 import { Plus, Trash2, UploadCloud, Users, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EntitySelect from '../components/EntitySelect';
+import { ROLE_OPTIONS } from '../constants/roleOptions';
 
 // Types (should match AddShowPage)
 interface Act {
@@ -254,16 +255,14 @@ const EditShowPage: React.FC = () => {
     try {
       let logoUrl = '';
       if (show.logoImage && show.logoImage instanceof File) {
-        const uploadResult = await firebaseService.uploadFile(`show_logos/${Date.now()}_${show.logoImage.name}`, show.logoImage) as unknown as { url: string } | undefined;
-        if (uploadResult && uploadResult.url) {
-          logoUrl = uploadResult.url;
-        }
+        logoUrl = await firebaseService.uploadFile(`show_logos/${Date.now()}_${show.logoImage.name}`, show.logoImage);
       } else if (show.logoImage && typeof show.logoImage === 'object' && 'url' in show.logoImage) {
         logoUrl = show.logoImage.url;
       }
       const showData = cleanFirestoreData({
         ...show,
-        logoImage: logoUrl ? { url: logoUrl } : null,
+        logoImage: logoUrl ? { id: `logo_${Date.now()}`, url: logoUrl, caption: 'Show Logo' } : null,
+        updatedAt: new Date(),
       });
       if (!id) throw new Error('Missing show id');
       await firebaseService.updateDocument('shows', id, showData);
@@ -430,7 +429,7 @@ const EditShowPage: React.FC = () => {
                   type="venue"
                   selectedIds={show.venueIds || []}
                   onChange={(ids) => setShow(prev => ({ ...prev, venueIds: ids }))}
-                  allowMultiple={show.isTouringShow}
+                  allowMultiple={true}
                 />
                 {/* Touring Status */}
                 <div className="flex items-center gap-2">
@@ -494,11 +493,9 @@ const EditShowPage: React.FC = () => {
                           required
                         >
                           <option value="">Select Role</option>
-                          <option value="Stage Manager">Stage Manager</option>
-                          <option value="Props Supervisor">Props Supervisor</option>
-                          <option value="Designer">Designer</option>
-                          <option value="Performer">Performer</option>
-                          <option value="Other">Other</option>
+                          {ROLE_OPTIONS.map(role => (
+                            <option key={role.value} value={role.value}>{role.label}</option>
+                          ))}
                         </select>
                         <button type="button" onClick={() => handleRemoveTeam(idx)} className="p-1 text-pb-accent hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
                       </div>

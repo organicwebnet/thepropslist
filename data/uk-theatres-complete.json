@@ -1,0 +1,357 @@
+[
+  {
+    "name": "Alban Arena",
+    "address": "Civic Centre, St Albans, Hertfordshire, AL1 3LD, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Warminster Athenaeum",
+    "address": "18-20 High Street, Warminster, Wiltshire, BA12 9AE, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Arena",
+    "address": "University of Wolverhampton, Wulfruna Street, Wolverhampton, West Midlands, WV1 1SE, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Ardhowen Theatre",
+    "address": "Dublin Road, Enniskillen, County Fermanagh, BT74 6FZ, Northern Ireland",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Arden Theatre",
+    "address": "Leslie Smith Drive, Faversham, Kent, ME13 8PW, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Archway Theatre",
+    "address": "The Drive, Horley, Surrey , RH6 7NQ, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "An Lanntair",
+    "address": "Kenneth Street, Stornoway, Isle of Lewis, Hebrides, HS1 2DS, Scotland",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Adam Smith Theatre",
+    "address": "Bennochy Road, Kirkcaldy, Fife, KY1 1ET, Scotland",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Albany Theatre",
+    "address": "Albany Road, Coventry, West Midlands, CV5 6JQ, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Amulet Theatre",
+    "address": "7 Market Place, Shepton Mallet, BA4 5AZ,",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Walthamstow Palace",
+    "address": "195-197 Walthamstow High Street, London, Waltham Forest, E17 7BU, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Applecart Arts",
+    "address": "170 Harold Road, London, Newham, E13 0SE, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Aberystwyth Arts Centre",
+    "address": "Aberystwyth University, Penglais Campus, Aberystwyth, Ceredigion, SY23 3DE, Wales",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Abbey Theatre",
+    "address": "Westminster Lodge, Holywell Hill, St Albans, Hertfordshire, AL1 2DL, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Abbeydale Picture House",
+    "address": "Abbeydale Road, Sheffield, South Yorkshire, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "ABC",
+    "address": "St Aldgate Street, King’s Square, Gloucester, Gloucestershire, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Aberdare Little Theatre",
+    "address": "Depot Road, Gadlys, Aberdare, Rhondda Cynon Taff, CF44 8DL, Wales",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Above the Stag",
+    "address": "15 Bressenden Place, London, Westminster, SW1E 5DD, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "ADC",
+    "address": "Park Street, Cambridge, Cambridgeshire, CB5 8AS, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Adelina Patti Theatre (Craig Y Nos)",
+    "address": "Craig-y-Nos Castle, Abercrave, Powys, SA9 1GL, Wales",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Adeline Genee",
+    "address": "Lingfield Road, East Grinstead, West Sussex, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Adelphi",
+    "address": "The Strand, London, Westminster, WC2E 7NN, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Adrian Mann Theatre",
+    "address": "NE Surrey College of Technology, Reigate Road, Ewell, Surrey, KT17 3DS, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Airdrie Arts Centre",
+    "address": "Anderson Street, Airdrie, North Lanarkshire, ML6 0AA, Scotland",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Albany Empire",
+    "address": "47 Creek Road, Deptford, London, Lewisham, SE8 3BU,",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Albert Hall",
+    "address": "Craddock Street, Swansea, West Glamorgan, Wales",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Albert Hall Theatre",
+    "address": "Ithon Road, Llandrindod Wells, Powys, LD1 6AS, Wales",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Albert Music Hall",
+    "address": "North Albert Street, Fleetwood, Lancashire, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Albert Theatre & Opera House",
+    "address": "Huddersfield Road, Brighouse, West Yorkshire, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Aldwych",
+    "address": "Aldwych, London, Westminster, WC2B 4DF, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Alexandra",
+    "address": "Market Street, Ilfracombe, Devon, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Alexandra Music Hall",
+    "address": "Aberdeen Walk, Scarborough, North Yorkshire, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Alexandra Music Hall (Penny Theatre)",
+    "address": "30/31 Northgate, Canterbury, Kent, CT1 1BL, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Alexandra Palace Theatre",
+    "address": "Alexandra Palace, Alexandra Palace Way, Wood Green, London, Haringey, N22 7AY, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Alhambra",
+    "address": "Morely Street, Bradford, West Yorkshire, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Alhambra Music Hall",
+    "address": "Crawford Arcade, King Street, Stirling, Stirling, FK8 1AY, Scotland",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Brighton Hippodrome",
+    "address": "Middle Street, Brighton, East Sussex, BN1 1AL, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Co-op Music Hall",
+    "address": "51-53 Bolton Street, Ramsbottom, Lancashire, BL0 9HU, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Victoria Theatre",
+    "address": "Great Clowes Street, Lower Broughton, Salford, Greater Manchester, M7 1RE, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Pier Theatre & Music Pavilion",
+    "address": "Pier, Eastbourne, East Sussex, BN21 3EL, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Peterborough New Theatre",
+    "address": "Broadway, Peterborough, Cambridgeshire, PE1 1RT, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Regent",
+    "address": "3 St Helen’s Street, Ipswich, Suffolk, IP4 1HE, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "New Theatre Royal Lincoln",
+    "address": "Clasketgate, Lincoln, Lincolnshire, LN2 1JJ, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "New Road, Brighton, East Sussex, BN1 1SD, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Bush Theatre (ii)",
+    "address": "7 Uxbridge Road, London, Hammersmith & Fulham, W12 8LJ, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Pier Pavilion",
+    "address": "The Esplanade, Penarth, South Glamorgan, CF64 3AU, Wales",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "The Space",
+    "address": "269 West Ferry Road, Isle of Dogs, London, Tower Hamlets, Greater London, E14 3RS, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "The Plymouth Athenaeum Theatre",
+    "address": "Derry's Cross, Plymouth, Devon, PL1 2SW, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Settle Victoria Hall",
+    "address": "Kirkgate, Settle, North Yorkshire, BD24 9DZ, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Regal Community Theatre",
+    "address": "24-34 North Bridge Street, Bathgate, West Lothian, Scotland",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Palace Theatre",
+    "address": "121-123 Union Street, Plymouth, Devon, PL1 3NB, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Leas Pavilion",
+    "address": "The Leas, Folkestone, Kent, CT20 2DP, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Golders Green Hippodrome",
+    "address": "North End Road, London, Barnet, NW11 7RP, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Fairfield Halls",
+    "address": "Park Lane, London, Croydon, CR9 1DG, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Grand",
+    "address": "Station Road, Doncaster, South Yorkshire, DN1, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Chats Palace",
+    "address": "42-44 Brooksby's Walk, London, Hackney, E9 6DF, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Streatham Hill Theatre",
+    "address": "110 Streatham Hill, London, Lambeth, SW2 4RD, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "The Institute",
+    "address": "Bocking End, Braintree, Essex, CM7 9AE, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Granada Theatre",
+    "address": "186 Hoe Street, Walthamstow, London, Waltham Forest, E17 4QH, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Winter Gardens I: Pavilion",
+    "address": "-",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "The Bunker",
+    "address": "53a Southwark Street, London, Southwark, SE1 1RU, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Georgian Theatre",
+    "address": "Green Dragon Yard, Stockton-on-Tees, Cleveland, TS18 1AT, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Joseph Rowntree Theatre",
+    "address": "Nestle Rowntree, Haxby Road, York, North Yorkshire, YO91 1RT, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Royal Victoria Hall",
+    "address": "London Road, Southborough, Kent, TN4 0NA, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Assembly Rooms",
+    "address": "54 George Street, Edinburgh, EH2 2LR, Scotland",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Theatre Royal Margate",
+    "address": "Addington Street, Margate, Kent, CT9 1PW, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Century Theatre",
+    "address": "Former Snibston Colliery Site, Ashby Road, Coalville, Leicestershire, LE67 3LN, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Gillian Lynne Theatre",
+    "address": "32 Parker Street, Drury Lane, London, Camden, WC2B 5PW, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Riley-Smith Hall",
+    "address": "28 Westgate, Tadcaster, North Yorkshire, LS24 9AB, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "Floral Hall",
+    "address": "Southport Theatre and Convention Centre, Promenade, Southport, Merseyside, PR9 0DZ, England",
+    "status": "Closed/Demolished"
+  },
+  {
+    "name": "The Lantern Theatre",
+    "address": "Kenwood Park Road, Sheffield, South Yorkshire, S7 1NF, England",
+    "status": "Closed/Demolished"
+  }
+]

@@ -1,13 +1,13 @@
-import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './types/lifecycle.ts';
-import { WeightUnit } from './shared/types/props.ts';
-import { Prop, PropCategory, PropFormData, PropImage, DigitalAsset, PropSource, DimensionUnit } from './shared/types/props.ts';
-import { Address } from './shared/types/address.ts';
+import { PropLifecycleStatus, MaintenanceRecord, PropStatusUpdate, RepairPriority } from './types/lifecycle';
+import { WeightUnit } from './shared/types/props';
+import { Prop, PropCategory, PropFormData, PropImage, DigitalAsset, PropSource, DimensionUnit } from './shared/types/props';
+import { Address } from './shared/types/address';
 import authImport, { FirebaseAuthTypes, firebase as authFirebase } from '@react-native-firebase/auth';
 import firestoreImport, { FirebaseFirestoreTypes, Timestamp } from '@react-native-firebase/firestore';
 
 // Re-export types from the more detailed new structure if they are intended to be public API
-export type { Show, Act, Scene, Venue, Contact, ShowCollaborator } from './types/index.ts';
-export type { PackingBox, PackedProp } from './types/packing.ts';
+export type { Show, Act, Scene, Venue, Contact, ShowCollaborator } from './types/index';
+export type { PackingBox, PackedProp } from './types/packing';
 
 // UserProfile remains unique to this file for now
 export interface UserProfile {
@@ -24,6 +24,8 @@ export interface UserProfile {
   createdAt?: string;
   lastUpdated?: string;
   googleLinked?: boolean;
+  storagePreference?: 'firebase' | 'google-drive' | 'hybrid';
+  googleDriveFolderId?: string;
 }
 
 // ShowFormData has been moved to src/types/index.ts

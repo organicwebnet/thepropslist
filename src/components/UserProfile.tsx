@@ -732,12 +732,20 @@ export function UserProfileModal({ onClose }: UserProfileModalProps) {
                       className="w-full bg-gray-900 border border-[var(--border-color)] rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--highlight-color)] focus:border-transparent"
                     >
                       <option value="">Select your role</option>
-                      <option value="props_master">Props Master</option>
-                      <option value="props_artisan">Props Artisan</option>
-                      <option value="stage_manager">Stage Manager</option>
-                      <option value="director">Director</option>
-                      <option value="producer">Producer</option>
-                      <option value="other">Other</option>
+                      <option value="propmaker">Props Maker</option>
+                      <option value="painter">Painter</option>
+                      <option value="buyer">Buyer</option>
+                      <option value="senior-propmaker">Senior Props Maker</option>
+                      <option value="props-supervisor">Props Supervisor</option>
+                      <option value="art-director">Art Director</option>
+                      <option value="set-dresser">Set Dresser</option>
+                      <option value="stage-manager">Stage Manager</option>
+                      <option value="assistant-stage-manager">Assistant Stage Manager</option>
+                      <option value="designer">Designer</option>
+                      <option value="assistant-designer">Assistant Designer</option>
+                      <option value="props-carpenter">Props Carpenter</option>
+                      <option value="show-carpenter">Show Carpenter</option>
+                      <option value="crew">Crew</option>
                     </select>
                   </div>
 

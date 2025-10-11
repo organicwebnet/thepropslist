@@ -1,0 +1,322 @@
+const fs = require('fs');
+const path = require('path');
+
+// Function to extract venues from the Show Tours list
+function extractShowToursVenues() {
+    try {
+        console.log('Extracting venues from Show Tours list...');
+        
+        // Based on the search results, here are the venues from Show Tours
+        const venueNames = [
+            "Aberdeen His Majestys Theatre",
+            "Aberdeen Music Hall",
+            "Aberdeen P&J Arena",
+            "ACC Liverpool",
+            "Adelphi Theatre",
+            "Aldershot Princes Hall Theatre",
+            "Aldwych Theatre",
+            "Alexandra Palace",
+            "Apollo Theatre",
+            "Apollo Victoria Theatre",
+            "Arts Theatre",
+            "artsdepot",
+            "Aylesbury Waterside Theatre",
+            "Ayr The Gaiety",
+            "Banbury The Mill Arts Centre",
+            "Barnstaple Queen's Theatre",
+            "Barrow-in-Furness The Coro",
+            "Basingstoke The Anvil",
+            "Basingstoke The Haymarket",
+            "Bath Forum",
+            "Bath Theatre Royal",
+            "Bedford Corn Exchange",
+            "Belfast Grand Opera House",
+            "Belfast SSE Arena",
+            "Belfast Waterfront Hall",
+            "Belfast Waterfront Theatre",
+            "Billingham Forum Theatre",
+            "Birmingham Alexandra",
+            "Birmingham Arena",
+            "Birmingham Hippodrome",
+            "Birmingham Rep Theatre",
+            "Birmingham Symphony Hall",
+            "Blackpool Grand Theatre",
+            "Blackpool Opera House",
+            "Bournemouth International Centre",
+            "Bournemouth Pavilion Theatre",
+            "Bournemouth Pavilions Theatre",
+            "Bradford Alhambra Theatre",
+            "Bradford Live",
+            "Bradford St George's Hall",
+            "Brighton Centre",
+            "Brighton Dome",
+            "Bristol Beacon",
+            "Bristol Hippodrome",
+            "Bristol Old Vic",
+            "Bromley Churchill Theatre",
+            "Bury St Edmunds The Apex",
+            "Buxton Opera House",
+            "Cadogan Hall",
+            "Cambridge Arts Theatre",
+            "Cambridge Corn Exchange",
+            "Cambridge Theatre",
+            "Canterbury Marlowe Theatre",
+            "Cardiff New Theatre",
+            "Cardiff Utilita Arena",
+            "Cardiff Wales Millennium Centre",
+            "Carlisle Sands Centre",
+            "Carlisle The Sands Centre",
+            "Chatham Central Theatre",
+            "Chelmsford Theatre",
+            "Cheltenham Everyman Theatre",
+            "Cheltenham The Centaur",
+            "Cheltenham Town Hall",
+            "Chester Storyhouse",
+            "Chester Storyhouse Theatre",
+            "Chesterfield Winding Wheel",
+            "Chichester Festival Theatre",
+            "Clacton Princess Theatre",
+            "Colchester Charter Hall",
+            "Colchester Mercury Theatre",
+            "Coventry Albany Theatre",
+            "Coventry Belgrade Theatre",
+            "Coventry Warwick Arts Centre",
+            "Crawley The Hawth",
+            "Crewe Lyceum Theatre",
+            "Darlington Hippodrome",
+            "Dartford Orchard Theatre",
+            "Derby Live",
+            "Derby Theatre",
+            "Derry Millennium Forum",
+            "Dominion Theatre",
+            "Doncaster Cast",
+            "Duchess Theatre",
+            "Duke of York's Theatre",
+            "Dundee Caird Hall",
+            "Dunfermline Alhambra",
+            "Dunstable Grove Theatre",
+            "Durham Gala Theatre",
+            "Eastbourne Congress Theatre",
+            "Eastbourne Devonshire Park Theatre",
+            "Eastbourne Royal Hippodrome Theatre",
+            "Edinburgh Festival Theatre",
+            "Edinburgh Playhouse",
+            "Edinburgh The Royal Lyceum Theatre",
+            "Edinburgh Usher Hall",
+            "Eventim Apollo",
+            "Exeter Northcott Theatre",
+            "Exeter University Hall",
+            "Fareham Live",
+            "Folkestone Leas Cliff Hall",
+            "Fortune Theatre",
+            "Gateshead The Glasshouse",
+            "Glasgow King's Theatre",
+            "Glasgow OVO Hydro",
+            "Glasgow Pavilion Theatre",
+            "Glasgow Royal Concert Hall",
+            "Glasgow Sec Armadillo",
+            "Glasgow Theatre Royal",
+            "Grimsby Auditorium",
+            "Guildford G-Live",
+            "Guildford Yvonne Arnaud Theatre",
+            "Hackney Empire",
+            "Halifax Victoria Theatre",
+            "Harlow Playhouse",
+            "Harrogate Royal Hall",
+            "Harrogate Theatre",
+            "Hastings White Rock Theatre",
+            "Hereford Courtyard",
+            "High Wycombe Swan Theatre",
+            "His Majesty's Theatre",
+            "Hornchurch Queen's Theatre",
+            "Hull City Hall",
+            "Hull Connexin Live",
+            "Hull New Theatre",
+            "Hull Truck Theatre",
+            "Inverness Eden Court",
+            "Ipswich Regent Theatre",
+            "King's Lynn Corn Exchange",
+            "Kit Kat Club at the Playhouse",
+            "Lancaster Grand Theatre",
+            "Leeds Carriageworks Theatre",
+            "Leeds First Direct Arena",
+            "Leeds Grand Theatre",
+            "Leeds Playhouse",
+            "Leicester Curve",
+            "Leicester De Montfort Hall",
+            "Lichfield Garrick Theatre",
+            "Lincoln Engine Shed",
+            "Lincoln New Theatre Royal",
+            "Liverpool Empire",
+            "Liverpool Epstein Theatre",
+            "Liverpool M&s Bank Arena",
+            "Liverpool Philharmonic",
+            "Liverpool Playhouse",
+            "Llandudno Venue Cymru",
+            "London Lyceum Theatre",
+            "London Palace Theatre",
+            "London Palladium",
+            "London The O2",
+            "Lyric Hammersmith Theatre",
+            "Lyric Theatre",
+            "Malvern Theatres",
+            "Manchester AO Arena",
+            "Manchester Aviva Studios",
+            "Manchester Bridgewater Hall",
+            "Manchester Co-op Live",
+            "Manchester HOME",
+            "Manchester O2 Apollo",
+            "Manchester Opera House",
+            "Manchester Palace Theatre",
+            "Milton Keynes The Stables",
+            "Milton Keynes Theatre",
+            "Mold Theatr Clwyd",
+            "New Brighton Floral Pavilion",
+            "New Victoria Theatre Woking",
+            "New Wimbledon Theatre",
+            "Newcastle Northern Stage",
+            "Newcastle O2 City Hall",
+            "Newcastle Theatre Royal",
+            "Newcastle Tyne Theatre & Opera House",
+            "Newcastle Utilita Arena",
+            "Newport ICC Wales",
+            "Northampton Royal & Derngate",
+            "Norwich Theatre Royal",
+            "Nottingham Motorpoint Arena",
+            "Nottingham Playhouse",
+            "Nottingham Royal Concert Hall",
+            "Nottingham Theatre Royal",
+            "Novello Theatre",
+            "OVO Arena Wembley",
+            "Oxford New Theatre",
+            "Oxford Playhouse",
+            "Perth Concert Hall",
+            "Peterborough Cresset",
+            "Peterborough New Theatre",
+            "Phoenix Theatre",
+            "Piccadilly Theatre",
+            "Plymouth Guild Hall",
+            "Plymouth Pavilions",
+            "Plymouth Theatre Royal",
+            "Poole Lighthouse",
+            "Portsmouth Guildhall",
+            "Portsmouth King's Theatre",
+            "Portsmouth New Theatre Royal",
+            "Prince Edward Theatre",
+            "Radlett Centre",
+            "Reading The Hexagon",
+            "Regent Theatre Stoke-on-Trent",
+            "Rhyl Pavilion Theatre",
+            "Richmond Theatre",
+            "Rose Theatre",
+            "Rotherham Civic Theatre",
+            "Sadlers Wells",
+            "Saffron Walden Saffron Hall",
+            "Salford The Lowry",
+            "Scunthorpe Baths Hall",
+            "Shaftesbury Theatre",
+            "Sheffield City Hall",
+            "Sheffield Lyceum Theatre",
+            "Sheffield Utilita Arena",
+            "Shepherd's Bush Empire",
+            "Shrewsbury Theatre Severn",
+            "Skegness Embassy Theatre",
+            "Sondheim Theatre",
+            "Southampton MAST Mayflower Studios",
+            "Southampton Mayflower Theatre",
+            "Southbank Centre",
+            "Southend Cliffs Pavilion",
+            "Southport The Atkinson",
+            "St Albans Arena",
+            "Stevenage Gordon Craig Theatre",
+            "Stockport Plaza",
+            "Stockton Globe",
+            "Sunderland Empire",
+            "Sunderland Fire Station",
+            "Swansea Arena",
+            "Swansea Grand Theatre",
+            "Swindon Wyvern Theatre",
+            "The Hippodrome Casino",
+            "The O2",
+            "Theatre Royal Brighton",
+            "Theatre Royal Drury Lane",
+            "Torquay Princess Theatre",
+            "Troubadour Wembley Park Theatre",
+            "Truro Hall For Cornwall",
+            "Tunbridge Wells Assembly Hall Theatre",
+            "Utilita Arena Sheffield",
+            "Vaudeville Theatre",
+            "Victoria Hall Stoke-on-Trent",
+            "Victoria Palace Theatre",
+            "Wakefield Theatre Royal",
+            "Wales Millennium Centre",
+            "Warrington Parr Hall",
+            "Warwick Arts Centre",
+            "Warwick Butterworth Hall",
+            "Watford Palace Theatre",
+            "Whitley Bay Playhouse",
+            "Windsor Theatre Royal",
+            "Wolverhampton Grand",
+            "Wolverhampton Grand Theatre",
+            "Worcester Swan Theatre",
+            "Worthing Pavilion",
+            "Wrexham William Aston Hall",
+            "Yeovil Westlands",
+            "York Barbican",
+            "York Grand Opera House",
+            "York Theatre Royal"
+        ];
+        
+        // Convert to the format we want
+        const venues = venueNames.map(name => ({
+            name: name,
+            address: '', // Will be filled in later if needed
+            status: 'Operating',
+            isExtant: true,
+            source: 'Show Tours (https://showtours.co.uk/venues/)'
+        }));
+        
+        console.log(`Extracted ${venues.length} operating venues from Show Tours`);
+        
+        // Create the output directory if it doesn't exist
+        const outputDir = path.join(__dirname, '..', 'data');
+        if (!fs.existsSync(outputDir)) {
+            fs.mkdirSync(outputDir, { recursive: true });
+        }
+        
+        // Save to JSON file
+        const outputPath = path.join(outputDir, 'uk-operating-theatres.json');
+        fs.writeFileSync(outputPath, JSON.stringify(venues, null, 2));
+        
+        console.log(`\n=== UK OPERATING THEATRES ===`);
+        console.log(`Total operating venues: ${venues.length}`);
+        console.log(`Data saved to: ${outputPath}`);
+        
+        console.log('\nSample operating theatres:');
+        venues.slice(0, 15).forEach((venue, index) => {
+            console.log(`${index + 1}. ${venue.name}`);
+        });
+        
+        console.log('\n... and many more!');
+        
+        return venues;
+        
+    } catch (error) {
+        console.error('Error extracting Show Tours venues:', error);
+        throw error;
+    }
+}
+
+// Run the extraction
+if (require.main === module) {
+    extractShowToursVenues()
+        .then(() => {
+            console.log('\nShow Tours venue extraction completed successfully!');
+        })
+        .catch((error) => {
+            console.error('Show Tours venue extraction failed:', error);
+            process.exit(1);
+        });
+}
+
+module.exports = { extractShowToursVenues };

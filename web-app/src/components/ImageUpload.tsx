@@ -132,30 +132,29 @@ export function ImageUpload({ onImagesChange, currentImages = [], disabled = fal
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="space-y-3">
         <label className="block text-sm font-medium text-gray-300">
           Images
         </label>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           {!showLinkInput && (
             <>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-primary-light hover:text-primary-light/80 text-sm flex items-center"
+                className="px-4 py-2 bg-pb-primary/20 hover:bg-pb-primary/40 border border-pb-primary/30 hover:border-pb-primary/50 text-pb-primary hover:text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={disabled || isUploading}
               >
-                <ImagePlus className="h-4 w-4 mr-1" />
+                <ImagePlus className="h-4 w-4" />
                 Upload
               </button>
-              <span className="text-gray-500">|</span>
               <button
                 type="button"
                 onClick={() => setShowLinkInput(true)}
-                className="text-primary-light hover:text-primary-light/80 text-sm flex items-center"
+                className="px-4 py-2 bg-pb-primary/20 hover:bg-pb-primary/40 border border-pb-primary/30 hover:border-pb-primary/50 text-pb-primary hover:text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={disabled || isUploading}
               >
-                <Link className="h-4 w-4 mr-1" />
+                <Link className="h-4 w-4" />
                 Add Link
               </button>
             </>

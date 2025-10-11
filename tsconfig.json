@@ -45,11 +45,17 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "lib": [
       "esnext",
       "dom"
     ],
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "target": "esnext",
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true
   },
   "exclude": [
     "node_modules"
@@ -61,6 +67,5 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "app/(tabs)/old_props_form.bak"
-  ],
-  "extends": "expo/tsconfig.base"
+  ]
 }

@@ -1,12 +1,13 @@
-# Role-Based Data Filtering - User Testing Script
+# Props Bible Application - Comprehensive User Testing Script
 
 ## 🎯 **Testing Objectives**
 
-This script will help you test the role-based data filtering system to ensure:
+This script will help you test the Props Bible application to ensure:
 1. Different user roles see appropriate prop information
 2. Quick actions work correctly for each role
-3. The UI is intuitive and responsive
-4. All features function as expected
+3. CSV import functionality works properly
+4. The UI is intuitive and responsive
+5. All features function as expected
 
 ## 📋 **Pre-Test Setup**
 
@@ -36,6 +37,7 @@ Create at least 5-10 test props with various:
 - Ensure you have props with different statuses and locations
 - Have at least one prop with images
 - Include props with maintenance notes and safety information
+- Prepare test CSV files with various data formats for import testing
 
 ---
 
@@ -209,7 +211,102 @@ Create at least 5-10 test props with various:
 
 ---
 
-### **Test 5: Cross-Platform Consistency**
+### **Test 5: CSV Import Functionality**
+
+**Objective**: Verify that CSV import works correctly with proper data validation and user feedback
+
+#### **Test Scenarios:**
+
+**A. Basic CSV Import**
+1. **Navigate to Props List page**
+2. **Click "Import Props" button**
+3. **Verify redirect to import page** (`/props/import`)
+4. **Test file upload:**
+   - Click "Choose File" button
+   - Select a valid CSV file
+   - Verify file name appears
+   - Check that column mapping interface loads
+
+**B. Column Mapping**
+1. **Verify auto-detection works:**
+   - Upload CSV with standard column names (name, description, category, etc.)
+   - Check that columns are automatically mapped
+   - Verify "Name" column is marked as required
+2. **Test manual mapping:**
+   - Upload CSV with non-standard column names
+   - Manually map columns using dropdowns
+   - Verify mapping is saved correctly
+
+**C. Data Preview**
+1. **Click "Show Preview" button**
+2. **Verify preview table displays:**
+   - First 10 rows of data
+   - Properly formatted prop information
+   - Correct column headers
+3. **Check data accuracy:**
+   - Compare preview data with original CSV
+   - Verify data types are correct (numbers, text, etc.)
+
+**D. Import Process**
+1. **Click "Import Props" button**
+2. **Verify import process:**
+   - Loading indicator appears
+   - Progress is shown (if applicable)
+   - Success message displays with count
+3. **Check imported data:**
+   - Navigate back to props list
+   - Verify new props appear
+   - Check that data matches CSV content
+
+**E. Error Handling**
+1. **Test invalid files:**
+   - Upload non-CSV file (should be rejected)
+   - Upload empty CSV file
+   - Upload CSV with no data rows
+2. **Test validation errors:**
+   - Upload CSV without name column
+   - Upload CSV with invalid data types
+   - Verify appropriate error messages
+
+**F. Template and AI Prompt**
+1. **Test template download:**
+   - Click "Download template" link
+   - Verify CSV template downloads
+   - Check template has correct headers
+2. **Test AI prompt:**
+   - Click "Copy AI prompt" button
+   - Verify prompt is copied to clipboard
+   - Check prompt contains helpful instructions
+
+#### **Test Files to Prepare:**
+
+**Valid CSV Files:**
+```csv
+name,description,category,quantity,price,act,scene,tags,location,status,imageUrl
+"Wooden Chair","Victorian style chair",Furniture,1,150,1,1,"period,wooden",Storage Room A,available_in_storage,
+"Silver Sword","Medieval prop sword",Weapon,1,75,2,3,"metal,sharp",Prop Storage,available_in_storage,
+"Red Curtain","Stage curtain",Set Dressing,2,200,,,"fabric,red",Backstage,available_in_storage,
+```
+
+**Invalid CSV Files:**
+- File with no name column
+- File with invalid data types
+- Empty file
+- File with too many rows (>1000)
+
+#### **Pass Criteria:**
+- ✅ Import page loads correctly
+- ✅ File upload works with proper validation
+- ✅ Column mapping interface functions properly
+- ✅ Data preview shows accurate information
+- ✅ Import process completes successfully
+- ✅ Imported props appear in props list
+- ✅ Error handling works for invalid inputs
+- ✅ Template download and AI prompt work correctly
+
+---
+
+### **Test 6: Cross-Platform Consistency**
 
 **Objective**: Verify consistent behavior across web and mobile
 
@@ -270,6 +367,18 @@ Create at least 5-10 test props with various:
 
 **Issues Found**: ________________________________
 
+#### **Test 4: CSV Import**
+- [ ] Import page loads correctly
+- [ ] File upload works properly
+- [ ] Column mapping functions correctly
+- [ ] Data preview is accurate
+- [ ] Import process completes successfully
+- [ ] Error handling works for invalid inputs
+- [ ] Template download works
+- [ ] AI prompt copy works
+
+**Issues Found**: ________________________________
+
 #### **Overall Assessment**
 **Pass/Fail**: ___________  
 **Notes**: ________________________________
@@ -306,6 +415,7 @@ Before considering testing complete, verify:
 
 - [ ] All roles have been tested
 - [ ] All quick actions have been tested
+- [ ] CSV import functionality has been tested
 - [ ] Both web and mobile platforms tested
 - [ ] Edge cases and error handling verified
 - [ ] Performance is acceptable

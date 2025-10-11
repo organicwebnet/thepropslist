@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { ImagePlus, Link, X, Loader2, Image as ImageIcon, Star, Trash2, AlertTriangle } from 'lucide-react';
-import { uploadImage } from '../lib/cloudinary.ts';
+import { uploadImage } from '../lib/cloudinary';
 import type { PropImage } from '../shared/types/props';
 import { v4 as uuidv4 } from 'uuid';
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
@@ -139,7 +139,7 @@ export function ImageUpload({ onImagesChange, currentImages = [], disabled = fal
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="space-y-3">
         <label className="block text-sm font-medium text-gray-300">
           Images
         </label>

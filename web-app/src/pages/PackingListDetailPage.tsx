@@ -58,6 +58,28 @@ const PackingListDetailPage: React.FC = () => {
     'Trunk': { length: 90, width: 50, height: 50, unit: 'cm' },
   };
 
+  // Calculate total weight for a container
+  const calculateContainerWeight = (container: any) => {
+    let totalWeight = 0;
+    let weightUnit = 'kg';
+    
+    container.props.forEach((packedProp: any) => {
+      const prop = propsList.find(p => p.id === packedProp.propId);
+      if (prop && prop.weight) {
+        // Convert to kg for consistent calculation
+        let weightInKg = prop.weight.value;
+        if (prop.weight.unit === 'lb') {
+          weightInKg = prop.weight.value * 0.453592;
+        }
+        // InventoryProp only supports 'kg' and 'lb', so no need for 'g' and 'oz' conversions
+        
+        totalWeight += weightInKg * packedProp.quantity;
+      }
+    });
+    
+    return { totalWeight, weightUnit };
+  };
+
   const handleContainerFormChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target;
     if (name === 'type') {
@@ -391,8 +413,23 @@ const PackingListDetailPage: React.FC = () => {
                         </button>
                       </div>
                       {container.description && <div className="text-xs text-gray-400 mb-1">{container.description}</div>}
+                      {container.dimensions && (
+                        <div className="text-xs text-gray-400 mb-1">
+                          Dimensions: {container.dimensions.width} × {container.dimensions.height} × {container.dimensions.depth} {container.dimensions.unit}
+                        </div>
+                      )}
                       <div className="rounded-xl border border-indigo-500/60 bg-indigo-950/30 p-3">
-                        <div className="font-semibold text-xs text-gray-300 mb-1">Props in this container:</div>
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="font-semibold text-xs text-gray-300">Props in this container:</div>
+                          {container.props.length > 0 && (
+                            <div className="text-xs text-pb-primary font-medium">
+                              Total Weight: {(() => {
+                                const { totalWeight } = calculateContainerWeight(container);
+                                return totalWeight > 0 ? `${totalWeight.toFixed(1)} kg` : 'No weight data';
+                              })()}
+                            </div>
+                          )}
+                        </div>
                         <DroppableContainer container={container}>
                         {container.props.length === 0 ? (
                           <div className="text-xs text-gray-500">Drag props here to add them to the container.</div>
@@ -400,9 +437,20 @@ const PackingListDetailPage: React.FC = () => {
                           <ul className="list-disc list-inside text-xs text-gray-200 w-full">
                             {container.props.map((p) => {
                               const prop = propsList.find((pr) => pr.id === p.propId);
+                              const propWeight = prop && prop.weight ? `${prop.weight.value} ${prop.weight.unit}` : 'No weight';
                               return (
                                 <li key={p.propId} className="flex items-center justify-between py-1">
-                                  <span>{prop ? prop.name : 'Unknown prop'} (Qty: {p.quantity})</span>
+                                  <div className="flex-1">
+                                    <span>{prop ? prop.name : 'Unknown prop'} (Qty: {p.quantity})</span>
+                                    <div className="text-xs text-gray-400">
+                                      Weight: {propWeight}
+                                      {prop && prop.dimensions && (
+                                        <span className="ml-2">
+                                          • Size: {prop.dimensions.width || '?'} × {prop.dimensions.height || '?'} × {prop.dimensions.depth || '?'} {prop.dimensions.unit || 'cm'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                   <button
                                     className="ml-2 text-red-400 hover:text-red-600 text-xs px-2 py-0.5 rounded"
                                     onClick={() => handleRemoveProp(container.id, p.propId)}

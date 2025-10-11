@@ -88,8 +88,10 @@ const EntitySelectRefactored: React.FC<EntitySelectProps> = ({
         />
 
         <div id={helpId} className="text-xs text-pb-gray">
-          Select {allowMultiple ? 'one or more' : 'one'} {label.toLowerCase()} by clicking on them.
-          {allowMultiple && ' Use Ctrl+Click to select multiple items.'}
+          {allowMultiple 
+            ? `Select one or more ${label.toLowerCase()} for your show. Click to select/deselect individual items.`
+            : `Select one ${label.toLowerCase()} for your show. Click to select/deselect.`
+          }
         </div>
 
         <AddressList

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 // Initialize storage
 const storage = getStorage();
 
-interface UploadResult {
+export interface UploadResult {
   url: string;
   filename: string;
   originalName: string;
@@ -13,7 +13,7 @@ interface UploadResult {
   type: string;
 }
 
-interface UploadError {
+export interface UploadError {
   file: string;
   error: string;
 }

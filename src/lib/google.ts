@@ -5,7 +5,8 @@ const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/user.phonenumbers.read',
   'https://www.googleapis.com/auth/user.organization.read',
-  'https://www.googleapis.com/auth/user.addresses.read'
+  'https://www.googleapis.com/auth/user.addresses.read',
+  'https://www.googleapis.com/auth/drive.file' // For app-created files in Google Drive
 ];
 
 let gapiInitialized = false;
@@ -51,7 +52,10 @@ export async function initGoogleApi() {
     await window.gapi.client.init({
       clientId,
       scope: SCOPES.join(' '),
-      discoveryDocs: ['https://people.googleapis.com/$discovery/rest?version=v1']
+      discoveryDocs: [
+        'https://people.googleapis.com/$discovery/rest?version=v1',
+        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+      ]
     });
 
     // Initialize Google Identity Services

@@ -43,7 +43,11 @@ import {
   DocumentData
 } from 'firebase/firestore';
 import {
-  getStorage
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject
 } from 'firebase/storage';
 
 // Minimal stub for base class
@@ -257,14 +261,65 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
     throw new Error('batch not implemented in WebFirebaseService');
   }
 
-  async uploadFile(_path: string, _file: string | File, _metadata?: any): Promise<string> {
-    // Stub implementation - would need to implement using Firebase Storage
-    throw new Error('uploadFile not implemented in WebFirebaseService');
+  async uploadFile(path: string, file: string | File, metadata?: any): Promise<string> {
+    try {
+      // Handle both File objects and file URIs (strings)
+      let fileToUpload: File;
+      
+      if (typeof file === 'string') {
+        // For string URIs, we need to fetch the file first
+        // This is typically used in mobile environments
+        throw new Error('File URI upload not supported in WebFirebaseService. Use File object instead.');
+      } else {
+        fileToUpload = file;
+      }
+
+      // Basic file validation
+      if (!fileToUpload.type.startsWith('image/')) {
+        throw new Error('Invalid file type. Only images are allowed.');
+      }
+
+      // File size validation (5MB)
+      const maxFileSize = 5 * 1024 * 1024;
+      if (fileToUpload.size > maxFileSize) {
+        throw new Error('File exceeds maximum size of 5MB.');
+      }
+
+      // Create storage reference
+      const storageRef = ref(this.storage, path);
+
+      // Prepare upload metadata
+      const uploadMetadata = {
+        contentType: fileToUpload.type,
+        customMetadata: {
+          'uploaded-by': 'props-bible-web-app',
+          'original-name': fileToUpload.name,
+          ...metadata?.customMetadata
+        },
+        ...metadata
+      };
+
+      // Upload the file
+      const snapshot = await uploadBytes(storageRef, fileToUpload, uploadMetadata);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      return downloadURL;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
-  async deleteFile(_path: string): Promise<void> {
-    // Stub implementation - would need to implement using Firebase Storage
-    throw new Error('deleteFile not implemented in WebFirebaseService');
+  async deleteFile(path: string): Promise<void> {
+    try {
+      const storageRef = ref(this.storage, path);
+      await deleteObject(storageRef);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async deleteShow(_showId: string): Promise<void> {

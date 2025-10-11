@@ -1,0 +1,1822 @@
+[
+  {
+    "name": "His Majesty's Theatre",
+    "address": "Aberdeen",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "P&J Live",
+    "address": "Aberdeen",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Music Hall",
+    "address": "Aberdeen",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Aylesbury Waterside Theatre",
+    "address": "Aylesbury",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Queen's Theatre",
+    "address": "Barnstaple",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Bath",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Forum",
+    "address": "Bath",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Opera House",
+    "address": "Belfast",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "SSE Arena",
+    "address": "Belfast",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Forum Theatre",
+    "address": "Billingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Alexandra Theatre",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hippodrome Theatre",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Rep Theatre",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Utilita Arena",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Resorts World Arena",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Symphony Hall",
+    "address": "Birmingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Winter Gardens",
+    "address": "Blackpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Theatre",
+    "address": "Blackpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Opera House",
+    "address": "Blackpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Pavilion Theatre",
+    "address": "Bournemouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Alhambra Theatre",
+    "address": "Bradford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "St Georges Hall",
+    "address": "Bradford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Bradford Live",
+    "address": "Bradford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Brighton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Brighton Dome",
+    "address": "Brighton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hippodrome Theatre",
+    "address": "Bristol",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Bristol Old Vic",
+    "address": "Bristol",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Buxton Opera House",
+    "address": "Buxton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Cambridge Arts Theatre",
+    "address": "Cambridge",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Corn Exchange",
+    "address": "Cambridge",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Marlowe Theatre",
+    "address": "Canterbury",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Theatre",
+    "address": "Cardiff",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Wales Millennium Centre",
+    "address": "Cardiff",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Sherman Theatre",
+    "address": "Cardiff",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Sands Centre",
+    "address": "Carlisle",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Everyman Theatre",
+    "address": "Cheltenham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Cheltenham Town Hall",
+    "address": "Cheltenham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Storyhouse",
+    "address": "Chester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Festival Theatre",
+    "address": "Chichester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Belgrade Theatre",
+    "address": "Coventry",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hawth Theatre",
+    "address": "Crawley",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Lyceum Theatre",
+    "address": "Crewe",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hippodrome",
+    "address": "Darlington",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Orchard Theatre",
+    "address": "Dartford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Millennium Forum Theatre and Conference Centre",
+    "address": "Derry",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Congress Theatre",
+    "address": "Eastbourne",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Devonshire Park Theatre",
+    "address": "Eastbourne",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Edinburgh Playhouse",
+    "address": "Edinburgh",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Festival Theatre",
+    "address": "Edinburgh",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Usher Hall",
+    "address": "Edinburgh",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Fareham Live",
+    "address": "Fareham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Leas Cliff Hall",
+    "address": "Folkestone",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "King's Theatre",
+    "address": "Glasgow",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Glasgow",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Pavilion Theatre",
+    "address": "Glasgow",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Ovo Hydro",
+    "address": "Glasgow",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grimsby Auditorium",
+    "address": "Grimsby",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "G Live",
+    "address": "Guildford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Yvonne Arnaud Theatre",
+    "address": "Guildford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "White Rock Theatre",
+    "address": "Hastings",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Beck Theatre",
+    "address": "Hayes",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Wycombe Swan",
+    "address": "High Wycombe",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Theatre",
+    "address": "Hull",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Connexin Live",
+    "address": "Hull",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Eden Court Theatre",
+    "address": "Inverness",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Regent Theatre",
+    "address": "Ipswich",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Corn Exchange",
+    "address": "Ipswich",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "First Direct Arena",
+    "address": "Leeds",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Theatre",
+    "address": "Leeds",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Leeds Playhouse",
+    "address": "Leeds",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Curve Theatre",
+    "address": "Leicester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "De Montfort Hall",
+    "address": "Leicester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Empire Theatre",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Playhouse Theatre",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Everyman Theatre",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "M&S Bank Arena",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Philharmonic Hall",
+    "address": "Liverpool",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Venue Cymru",
+    "address": "Llandudno",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Malvern Theatres",
+    "address": "Malvern",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "AO Arena",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Opera House",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Palace Theatre",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Home",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Bridgewater Hall",
+    "address": "Manchester",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Milton Keynes Theatre",
+    "address": "Milton Keynes",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Floral Pavilion Theatre",
+    "address": "New Brighton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Watermill Theatre",
+    "address": "Newbury",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Utilita Arena",
+    "address": "Newcastle",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Newcastle",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "City Hall",
+    "address": "Newcastle upon Tyne",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Royal and Derngate",
+    "address": "Northampton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Norwich",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Motorpoint Arena",
+    "address": "Nottingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal & Concert Hall",
+    "address": "Nottingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Playhouse Theatre",
+    "address": "Nottingham",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Theatre",
+    "address": "Oxford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Playhouse Theatre",
+    "address": "Oxford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Theatre",
+    "address": "Peterborough",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Plymouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Pavilions",
+    "address": "Plymouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Lighthouse",
+    "address": "Poole",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "King's Theatre",
+    "address": "Portsmouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Guildhall",
+    "address": "Portsmouth",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Granville Theatre",
+    "address": "Ramsgate",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Saffron Hall",
+    "address": "Saffron Walden",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Lowry",
+    "address": "Salford",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Utilita Arena",
+    "address": "Sheffield",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Crucible Theatre",
+    "address": "Sheffield",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Lyceum Theatre",
+    "address": "Sheffield",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Sheffield City Hall",
+    "address": "Sheffield",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Severn",
+    "address": "Shrewsbury",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Mayflower Theatre",
+    "address": "Southampton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Cliffs Pavilion",
+    "address": "Southend-on-Sea",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Palace Theatre",
+    "address": "Southend-on-Sea",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Globe Theatre",
+    "address": "Stockton-on-Tees",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Regent Theatre",
+    "address": "Stoke-on-Trent",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Victoria Hall",
+    "address": "Stoke-on-Trent",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Royal Shakespeare Theatre",
+    "address": "Stratford-upon-Avon",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Empire Theatre",
+    "address": "Sunderland",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Swansea Arena | Arena Abertawe",
+    "address": "Swansea",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Theatre",
+    "address": "Swansea",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Wyvern Theatre",
+    "address": "Swindon",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "The Arts Centre",
+    "address": "Swindon",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Princess Theatre",
+    "address": "Torquay",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Hall for Cornwall",
+    "address": "Truro",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "Windsor",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "New Victoria Theatre",
+    "address": "Woking",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Rhoda McGaw Theatre",
+    "address": "Woking",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Theatre",
+    "address": "Wolverhampton",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Connaught Theatre & Studio",
+    "address": "Worthing",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Assembly Hall",
+    "address": "Worthing",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Pavilion Theatre",
+    "address": "Worthing",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Westlands Entertainment Venue",
+    "address": "Yeovil",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Grand Opera House",
+    "address": "York",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Theatre Royal",
+    "address": "York",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "Barbican",
+    "address": "York",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre (https://www.westendtheatre.com/theatres/uk-ireland-regional-theatres/)"
+  },
+  {
+    "name": "@sohoplace Theatre",
+    "address": "4 Soho Place, London, W1D 3BG, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "1 America Square",
+    "address": "1 America Square, London, EC3N 2LS, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "56 Davies Street",
+    "address": "56 Davies Street, London, W1K 5HR, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "ABBA Arena",
+    "address": "Pudding Mill Lane, London, E15 2PJ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Actors Church Covent Garden",
+    "address": "Bedford St, London WC2E 9ED, London, WC2E 9ED, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Adelphi Theatre",
+    "address": "Strand, London, WC2E 7NA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Aldwych Theatre",
+    "address": "49 Aldwych, London, WC2B 4DF, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Alexandra Palace Theatre",
+    "address": "Alexandra Palace Way , London, N22 7AY, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Almeida Theatre",
+    "address": "Almeida Street, London, N1 1TA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Ambassadors Theatre",
+    "address": "West Street, London, WC2H 9ND, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Apollo Theatre",
+    "address": "Shaftesbury Avenue, London, W1D 7ES, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Apollo Victoria Theatre",
+    "address": "17 Wilton Road, London, SW1V 1LL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Arches Lane Theatre",
+    "address": "Arches Lane Circus West Village, London, SW11 8AB, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Arches London Bridge",
+    "address": "8 Bermondsey Street, London, SE12ER, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Arcola Theatre",
+    "address": "24 Ashwin Street , London, E8 3DL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Arts Theatre",
+    "address": "6-7 Great Newport Street, London, WC2H 7JB, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Barbican Theatre",
+    "address": "Silk Street, London, EC2Y 8DS, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Belle Livingstone's 58th Street Country Club",
+    "address": "133 Copeland Road, London, SE15 3SN, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Bloomsbury Theatre",
+    "address": "15 Gordon Street , London, WC1H 0AH, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Bridge Theatre",
+    "address": "3 Potters Fields Park, London, SE1 2SG, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Brixton House",
+    "address": "385 Coldharbour, London, SW9 8GL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Bush Theatre",
+    "address": "7 Uxbridge Road, London, W12 8LJ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Cadogan Hall",
+    "address": "5 Sloane Terrace, London, SW1X 9DQ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Cambridge Theatre",
+    "address": "32-34 Earlham Street, London, WC2 9HU, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Camden Garrison",
+    "address": "North Yard, Camden Stables, Chalk Farm Road, London, NW1 8AH, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Capital Theatre",
+    "address": "Ariel Way, London, W12 7SL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Charing Cross Theatre",
+    "address": "The Arches, Villiers Street, London, WC2N 6NL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Churchill Theatre Bromley",
+    "address": "High Street Bromley, London, BR1 1HA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Coronet Theatre",
+    "address": "103 Notting Hill Gate, London, W11 3LB, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "County Hall",
+    "address": "Belvedere Road, London, SE1 7PB, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Criterion Theatre",
+    "address": "Piccadilly Circus, London, SW1Y 4XA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Deptford Storehouse",
+    "address": "Off New King Street, Grove Street, London, SE8 3AA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Dock X",
+    "address": "Surrey Quays Road, London, SE16 2XU, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Dominion Theatre",
+    "address": "268-269 Tottenham Court Road, London, W1T 7AQ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Donmar Warehouse",
+    "address": "41 Earlham Street, London, WC2H 9LX, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Doyle's Opticians W12 Shopping",
+    "address": "Ground Floor, W12 Shopping, Shepherd's Bush, London, W12 8PP, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Duchess Theatre",
+    "address": "3-5 Catherine Street, London, WC2B 5LA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Duke of York's Theatre",
+    "address": "45 St Martin's Lane, London, WC2N 4BG, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Emerald Theatre",
+    "address": "8 Victoria Embankment, London, WC2R 2AB, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Empress Museum",
+    "address": "Empress Space, London, SW6 1TT, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Eventim Apollo",
+    "address": "2 Queen Caroline Street, London, W6 9QH, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Evolution",
+    "address": "Battersea Park, Queenstown Rd, Chelsea Bridge, London, SW11 4NJ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Fortune Theatre",
+    "address": "Russell Street, London, WC2B 5HH, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Garrick Theatre",
+    "address": "2 Charing Cross Road, London, WC2H 0HH, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Gate Theatre",
+    "address": "26 Crowndale Road , London, NW1 1TT, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Gielgud Theatre",
+    "address": "35-37 Shaftesbury Avenue, London, W1D 6AR, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Gillian Lynne Theatre",
+    "address": "166 Drury Lane, London, WC2B 5PW, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Greenwich Theatre",
+    "address": "Crooms Hill , London, SE10 8ES, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Hackney Empire",
+    "address": "291 Mare Street, London, E8 1EJ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Hackney Town Hall",
+    "address": "Mare Street, London, E8 1EA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Hallmark Building",
+    "address": "56 Leadenhall Street, London, EC3A 2DX, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Hampstead Theatre",
+    "address": "Eton Avenue, Swiss Cottage, London, NW3 3EU, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Harold Pinter Theatre",
+    "address": "6 Panton Street, London, SW1Y 4DN, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "HERE at Outernet",
+    "address": "Charing Cross Road, London, WC2H 8LH, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "The Theatre, Hippodrome Casino",
+    "address": "Cranbourn Street, London, WC2H 7JH, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "His Majesty's Theatre",
+    "address": "Haymarket, London, SW1Y 4QL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Immerse LDN",
+    "address": "ExCeL Waterfront ExCel London, London, E16 1XL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Kiln Theatre",
+    "address": "269 Kilburn High Road, London, NW6 7JR, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "King's Head Theatre",
+    "address": "115 Upper Street, London, N1 1QN, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Leicester Square Theatre",
+    "address": "6 Leicester Place, London, WC2H 7BX, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "London Coliseum",
+    "address": "St Martin's Lane, London, WC2N 4ES, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "London Palladium",
+    "address": "8 Argyll Street, London, W1F 7TF, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Lyceum Theatre",
+    "address": "21 Wellington Street, London, WC2E 7RQ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Lyric Hammersmith Theatre",
+    "address": "Lyric Square, King Street, London, W6 0QL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Lyric Theatre",
+    "address": "29 Shaftesbury Avenue, London, W1D 7ES, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Menier Chocolate Factory",
+    "address": "51-53 Southwark Street, London, SE1 1RU, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "National Theatre",
+    "address": "South Bank, London, SE1 9PX, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "New Wimbledon Theatre",
+    "address": "The Broadway, London, SW19 1QG, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Novello Theatre",
+    "address": "Aldwych, London, WC2B 4LD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Old Vic Theatre",
+    "address": "The Cut, London, SE1 8NB, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Open Air Theatre",
+    "address": "Inner Circle, Regent's Park, London, NW1 4NU, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Other Palace",
+    "address": "12 Palace Street, London, SW1E 5JA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Palace Theatre",
+    "address": "113 Shaftesbury Avenue, London, W1D 5AY, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Peacock Theatre",
+    "address": "Portugal Street, London, WC2A 2HT, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Phoenix Theatre",
+    "address": "110 Charing Cross Road, London, WC2H 0JP, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Piccadilly Theatre",
+    "address": "16 Denman Street, London, W1D 7DY, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Playhouse Theatre",
+    "address": "Northumberland Avenue, London, WC2N 5DE, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Prince Edward Theatre",
+    "address": "Old Compton Street, London, W1D 4HS, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Prince of Wales Theatre",
+    "address": "31 Coventry Street, London, W1D 6AS, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Queen's Theatre",
+    "address": "51 Shaftesbury Avenue, London, W1D 6BA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Richmond Theatre",
+    "address": "The Green, London, TW9 1QJ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Rose Theatre",
+    "address": "24-26 High Street, London, KT1 1HL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Royal Court Theatre",
+    "address": "Sloane Square, London, SW1W 8AS, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Royal Opera House",
+    "address": "Bow Street, London, WC2E 9DD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Sadler's Wells Theatre",
+    "address": "Rosebery Avenue, London, EC1R 4TN, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Savoy Theatre",
+    "address": "Strand, London, WC2R 0ET, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Shakespeare's Globe",
+    "address": "21 New Globe Walk, London, SE1 9DT, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Soho Theatre",
+    "address": "21 Dean Street, London, W1D 3NE, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Sondheim Theatre",
+    "address": "51 Shaftesbury Avenue, London, W1D 6BA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Southwark Playhouse Borough",
+    "address": "77-85 Newington Causeway, London, SE1 6BD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Southwark Playhouse Elephant",
+    "address": "Dante Place, 80 Newington Butts, London, SE11 4FL, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "St Martin's Theatre",
+    "address": "West Street, London, WC2H 9NZ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Stage Door Theatre",
+    "address": "Prince of Wales Pub 150-151 Drury Lane, London, WC2B 5TD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "The Comedy Store",
+    "address": "1a Oxendon Street, London, SW1Y 4EE, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "The Crown",
+    "address": "213-215 Tottenham Court Road, London, W1T 7PS, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "The Lost Estate",
+    "address": "7-9 Beaumont Avenue , London, W14 9LP, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "The Old Bauble Factory",
+    "address": "1 Launcelot Street , London, SE1 7AD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "The Other Palace",
+    "address": "12 Palace Street, London, SW1E 5JA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "The Truman Brewery",
+    "address": "91 Brick Lane, London, United Kingdom, , London, E1 6QR, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "The Vaults Theatre",
+    "address": "Launcelot Street, London, SE1 7AD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Yard Theatre",
+    "address": "Unit 2a Queen's Yard Hackney Wick, London, E9 5EN, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Theatre on Kew",
+    "address": "Royal Botanic Gardens, London, TW9 3AE, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Theatre Royal Drury Lane",
+    "address": "Catherine Street, London, WC2B 5JF, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Theatre Royal Haymarket",
+    "address": "8 Haymarket, London, SW1Y 4HT, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Theatre Royal Stratford East",
+    "address": "Gerry Raffles Square, London, E15 1BN, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Tower Bridge Quay",
+    "address": "St Katharine's Way, London, E1W 1LD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Tower Vaults",
+    "address": "8-12 Tower Hill Vaults, London , London, EC3N 4EE, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Trafalgar Theatre",
+    "address": "14 Whitehall, London, SW1A 2DY, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Troubadour Canary Wharf Theatre",
+    "address": "Charter Street, Canary Wharf, London, E14, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Troubadour Wembley Park Theatre",
+    "address": "1 Fulton Road, London, HA9 8TS, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Tuff Nutt Jazz Club",
+    "address": "Southbank Centre, Belvedere Road, London, SE1 8XX, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Turbine Theatre",
+    "address": "Arches Lane, Circus West Village, London, SW11 8AB, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Underbelly Boulevard",
+    "address": "6 Walker's Court, London, W1F 0BT, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Underbelly Festival Cavendish Square",
+    "address": "Cavendish Square Gardens, London, W1G 0AN, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Union Theatre",
+    "address": "Old Union Arches, 229 Union Street, London, SE1 0LR, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Upstairs at the Gatehouse",
+    "address": "1 North Road, London, N6 4BD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Vaudeville Theatre",
+    "address": "404 Strand, London, WC2R 0NH, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Victoria Palace Theatre",
+    "address": "Victoria Street, London, SW1E 5EA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Waterloo East Theatre",
+    "address": "Brad Street, London, SE1 8TN, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Wilton's Music Hall",
+    "address": "1 Graces Alley , London, E1 8JB, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Wonderville",
+    "address": "57-60 Haymarket, London, SW1Y 4QX, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Woolwich Works",
+    "address": "11 No. 1 Street, London, SE18 6HD, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Wyndham's Theatre",
+    "address": "32-36 Charing Cross Road, London, WC2H 0DA, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  },
+  {
+    "name": "Young Vic Theatre",
+    "address": "66 The Cut, London, SE1 8LZ, United Kingdom",
+    "status": "Operating",
+    "isExtant": true,
+    "source": "West End Theatre London (https://www.westendtheatre.com/theatres/london-theatres-a-z-listing/)"
+  }
+]

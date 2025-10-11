@@ -292,7 +292,7 @@ exports.processEmail = (0, firestore_1.onDocumentCreated)({
         return;
     }
     const toEmail = to[0].email;
-    const fromEmail = from.email;
+    const _fromEmail = from.email;
     const fromName = from.name || "The Props List";
     try {
         // Mark as processing
@@ -464,7 +464,7 @@ exports.sendEmailDirect = (0, https_1.onRequest)({
             return;
         }
         const toEmail = to[0].email;
-        const fromEmail = from.email;
+        const _fromEmail = from.email;
         const fromName = from.name || "The Props List";
         // Prefer Gmail SMTP if configured (fastest delivery)
         if (GMAIL_USER && GMAIL_PASS) {
@@ -1237,7 +1237,7 @@ exports.createStripePromotionCode = (0, https_1.onCall)({ region: "us-central1" 
     }
 });
 // --- Get Stripe Coupons ---
-exports.getStripeCoupons = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
+exports.getStripeCoupons = (0, https_1.onCall)({ region: "us-central1" }, async (_req) => {
     const s = await ensureStripe();
     if (!s) {
         throw new Error("Stripe not configured");
@@ -1252,7 +1252,7 @@ exports.getStripeCoupons = (0, https_1.onCall)({ region: "us-central1" }, async 
     }
 });
 // --- Get Stripe Promotion Codes ---
-exports.getStripePromotionCodes = (0, https_1.onCall)({ region: "us-central1" }, async (req) => {
+exports.getStripePromotionCodes = (0, https_1.onCall)({ region: "us-central1" }, async (_req) => {
     const s = await ensureStripe();
     if (!s) {
         throw new Error("Stripe not configured");
@@ -1295,7 +1295,7 @@ function getDefaultFeaturesForPlan(planId) {
 exports.getPricingConfig = (0, https_1.onCall)({
     region: "us-central1",
     secrets: ["STRIPE_SECRET_KEY", "PRICE_STARTER", "PRICE_STANDARD", "PRICE_PRO"]
-}, async (req) => {
+}, async (_req) => {
     await initializeStripeSecrets();
     const s = await ensureStripe();
     if (!s) {
@@ -2258,7 +2258,7 @@ exports.purchaseAddOn = (0, https_1.onCall)({ region: "us-central1" }, async (re
             throw new Error("Add-on price not found");
         }
         // Add the add-on to the subscription
-        const subscription = await s.subscriptions.retrieve(subscriptionId);
+        const _subscription = await s.subscriptions.retrieve(subscriptionId);
         const subscriptionItem = await s.subscriptionItems.create({
             subscription: subscriptionId,
             price: price.id,

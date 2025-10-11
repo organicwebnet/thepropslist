@@ -6,6 +6,7 @@ import type { Show } from '../types/Show';
 import { buildInviteEmailDocTo, buildReminderEmailDoc } from '../services/EmailService';
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { useLimitChecker } from '../hooks/useLimitChecker';
+import { ROLE_OPTIONS, JOB_ROLES } from '../constants/roleOptions';
 
 type Invitation = {
   id?: string;
@@ -35,7 +36,7 @@ const TeamPage: React.FC = () => {
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteJobRole, setInviteJobRole] = useState<string>('propmaker');
-  const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
+  const [inviteRole, setInviteRole] = useState<string>('propmaker');
   const [submitting, setSubmitting] = useState(false);
   const { checkCollaboratorsLimitForShow } = useLimitChecker();
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
@@ -88,23 +89,7 @@ const TeamPage: React.FC = () => {
     return () => { if (unsub) unsub(); };
   }, [service, id]);
 
-  // Job roles (same set used in ShowDetailPage)
-  const JOB_ROLES = [
-    { value: 'propmaker', label: 'Prop Maker' },
-    { value: 'senior-propmaker', label: 'Senior Prop Maker' },
-    { value: 'props-carpenter', label: 'Props Carpenter' },
-    { value: 'show-carpenter', label: 'Show Carpenter' },
-    { value: 'painter', label: 'Painter' },
-    { value: 'buyer', label: 'Buyer' },
-    { value: 'props-supervisor', label: 'Props Supervisor' },
-    { value: 'art-director', label: 'Art Director' },
-    { value: 'set-dresser', label: 'Set Dresser' },
-    { value: 'stage-manager', label: 'Stage Manager' },
-    { value: 'assistant-stage-manager', label: 'Assistant Stage Manager' },
-    { value: 'designer', label: 'Designer' },
-    { value: 'assistant-designer', label: 'Assistant Designer' },
-    { value: 'crew', label: 'Crew' },
-  ] as const;
+  // Use shared role options for consistency
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,7 +147,7 @@ const TeamPage: React.FC = () => {
       setInviteName('');
       setInviteEmail('');
       setInviteJobRole('propmaker');
-      setInviteRole('viewer');
+      setInviteRole('propmaker');
       alert('Invite email queued.');
     } catch (e: any) {
       setError(e.message || 'Failed to send invite.');
@@ -270,10 +255,9 @@ const TeamPage: React.FC = () => {
               <div>
                 <label className="block text-sm text-pb-gray mb-1">Role</label>
                 <select className="w-full rounded bg-[#1A1A1A] border border-pb-primary/40 px-3 py-2 text-white" value={inviteRole} onChange={e => setInviteRole(e.target.value as any)}>
-                  <option value="viewer">Viewer</option>
-                  <option value="editor">Editor</option>
-                  <option value="props_supervisor">Props Supervisor</option>
-                  <option value="god">Admin</option>
+                  {ROLE_OPTIONS.map(role => (
+                    <option key={role.value} value={role.value}>{role.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="flex items-center justify-end gap-2 pt-2">
@@ -295,8 +279,9 @@ const TeamPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-3">
                     <select value={c.role} onChange={e => handleRoleChange(c.email, e.target.value as any)} className="rounded bg-[#1A1A1A] border border-pb-primary/40 px-2 py-1 text-white text-sm">
-                      <option value="viewer">Viewer</option>
-                      <option value="editor">Editor</option>
+                      {ROLE_OPTIONS.map(role => (
+                        <option key={role.value} value={role.value}>{role.label}</option>
+                      ))}
                     </select>
                     <button onClick={() => handleRemove(c.email)} className="px-2 py-1 rounded bg-pb-darker/60 text-pb-gray border border-pb-primary/20 text-sm">Remove</button>
                   </div>

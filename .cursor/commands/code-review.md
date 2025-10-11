@@ -1,6 +1,6 @@
 Review the changes on code-review.md
 quality of code is more important than completeingthat task quickly so please take your time to complete the task i dont mind if you take longer to come up with a better quality product. i do mind if you rush through the task and dont complete it to a satisfactory standard becauces your trying to reduce the time on task. take your time do your research and product the best quality code you can quality is king!!
-
+- did you truly fix the issue?
 - is there any redundat code or files in the codebase?
 - is the code well written?
 - Think through how data flows in the app. Explain new patterns if they exist and why.
@@ -15,7 +15,13 @@ quality of code is more important than completeingthat task quickly so please ta
 - is the front end optimised? 
 - is the css in a style sheets that is reuse across the project? 
 -is the styles thar are no longer used?
+- when writing html keep it samantic and valid.
+- use proper html form structures.
+- is the html valid html.
+- is the ui responcive, will display on moblie and tablets
+- is the code DRY and meet wit hgood codeing standards?
 
+- have you considered the positioning of the elements on the page consider there relavance and how they should be weighted on the page  from a ux ui point of view and reapply them. 
 is the js comon or ES as firestore dosent work well with ES yet?
 
 - Are inputs validated and sanitized?
@@ -25,6 +31,8 @@ is the js comon or ES as firestore dosent work well with ES yet?
 - Are tests meaningful and isolated?
 - Do they fail for the right reasons?
 - Is mocking/stubbing used appropriately?
+
+-use uk engglish not us english check for typos and follow the writing rules in the writng.mdc file.
 
 
 - Are there any changes that could affect infrastructure?

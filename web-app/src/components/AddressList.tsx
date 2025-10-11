@@ -29,13 +29,28 @@ export const AddressList: React.FC<AddressListProps> = ({
     }
 
     const term = searchTerm.toLowerCase();
-    return addresses.filter(address => 
+    
+    // Always include selected addresses, even if they don't match the search
+    const selectedAddresses = addresses.filter(address => selectedIds.includes(address.id));
+    
+    // Filter addresses that match the search term
+    const matchingAddresses = addresses.filter(address => 
       address.name.toLowerCase().includes(term) ||
       address.city.toLowerCase().includes(term) ||
       address.street1.toLowerCase().includes(term) ||
       (address.companyName && address.companyName.toLowerCase().includes(term))
     );
-  }, [addresses, searchTerm]);
+    
+    // Combine selected addresses with matching addresses, removing duplicates
+    const combined = [...selectedAddresses];
+    matchingAddresses.forEach(address => {
+      if (!selectedIds.includes(address.id)) {
+        combined.push(address);
+      }
+    });
+    
+    return combined;
+  }, [addresses, searchTerm, selectedIds]);
 
   if (loading) {
     return (
@@ -65,27 +80,71 @@ export const AddressList: React.FC<AddressListProps> = ({
     return (
       <div className="text-center py-8">
         <div className="text-pb-gray text-sm">
-          {searchTerm ? 'No addresses found matching your search.' : 'No addresses available.'}
+          {searchTerm ? (
+            <div>
+              <div>No addresses found matching "{searchTerm}".</div>
+              <div className="text-xs text-pb-gray/70 mt-1">Try a different search term or add a new address.</div>
+            </div>
+          ) : (
+            <div>
+              <div>No addresses available.</div>
+              <div className="text-xs text-pb-gray/70 mt-1">Add your first address using the "Add New" button below.</div>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
+  // Separate selected and unselected addresses for better UX
+  const selectedAddresses = filteredAddresses.filter(address => selectedIds.includes(address.id));
+  const unselectedAddresses = filteredAddresses.filter(address => !selectedIds.includes(address.id));
+
   return (
-    <div
-      role="listbox"
-      aria-multiselectable={allowMultiple}
-      className="space-y-2 max-h-64 overflow-y-auto"
-    >
-      {filteredAddresses.map(address => (
-        <AddressItem
-          key={address.id}
-          address={address}
-          isSelected={selectedIds.includes(address.id)}
-          onSelect={() => onSelect(address.id)}
-          onEdit={() => onEdit(address)}
-        />
-      ))}
-    </div>
+    <fieldset className="space-y-4 max-h-64 overflow-y-auto">
+      <legend className="sr-only">Select addresses</legend>
+      
+      {/* Selected addresses section */}
+      {selectedAddresses.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-pb-primary uppercase tracking-wide">
+            Selected ({selectedAddresses.length})
+          </div>
+          {selectedAddresses.map(address => (
+            <AddressItem
+              key={address.id}
+              address={address}
+              isSelected={true}
+              onSelect={() => onSelect(address.id)}
+              onEdit={() => onEdit(address)}
+              allowMultiple={allowMultiple}
+              inputName={`address-${allowMultiple ? 'checkbox' : 'radio'}`}
+            />
+          ))}
+        </div>
+      )}
+      
+      {/* Available addresses section */}
+      {unselectedAddresses.length > 0 && (
+        <div className="space-y-2">
+          {selectedAddresses.length > 0 && (
+            <div className="text-xs font-medium text-pb-gray uppercase tracking-wide">
+              {searchTerm ? 'Search Results' : 'Available'}
+            </div>
+          )}
+          {unselectedAddresses.map(address => (
+            <AddressItem
+              key={address.id}
+              address={address}
+              isSelected={false}
+              onSelect={() => onSelect(address.id)}
+              onEdit={() => onEdit(address)}
+              allowMultiple={allowMultiple}
+              inputName={`address-${allowMultiple ? 'checkbox' : 'radio'}`}
+            />
+          ))}
+        </div>
+      )}
+    </fieldset>
   );
 };

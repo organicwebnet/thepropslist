@@ -47,10 +47,6 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   
-  // Debug modal state changes
-  useEffect(() => {
-    console.log('EntitySelect: showAddModal state changed to:', showAddModal);
-  }, [showAddModal]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [newAddress, setNewAddress] = useState<Address>({ ...defaultAddress, type });
@@ -59,117 +55,49 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
 
   // Filter out empty strings and invalid IDs from selectedIds
   const cleanSelectedIds = selectedIds.filter(id => id && id.trim() !== '' && typeof id === 'string');
-  
-  console.log('EntitySelect: Selection state', {
-    rawSelectedIds: selectedIds,
-    cleanSelectedIds,
-    selectedIdsType: typeof selectedIds,
-    selectedIdsLength: selectedIds?.length,
-    cleanSelectedIdsLength: cleanSelectedIds.length
-  });
 
   useEffect(() => {
-    console.log('EntitySelect: Loading addresses for type:', type);
-    console.log('EntitySelect: Firebase service available:', !!firebaseService);
     setLoading(true);
     
     // Load addresses with proper type filtering
     firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
         .then((docs: any[]) => {
-          console.log('EntitySelect: Loaded addresses from database:', {
-            type,
-            count: docs.length,
-            docs: docs.map(doc => ({ 
-              id: doc.id, 
-              name: doc.data?.name, 
-              type: doc.data?.type,
-              idLength: doc.id?.length,
-              idType: typeof doc.id,
-              hasId: !!doc.id
-            }))
-          });
-          
           // Filter out any docs with invalid IDs
           const validDocs = docs.filter(doc => doc.id && doc.id.trim() !== '');
-          console.log('EntitySelect: Valid docs after filtering:', validDocs.length);
           
           const mappedAddresses = validDocs.map(doc => {
             // Ensure document ID takes precedence over any id field in the data
             const address = { ...doc.data, id: doc.id };
-            console.log('EntitySelect: Mapping address', {
-              docId: doc.id,
-              docData: doc.data,
-              finalAddress: address,
-              finalId: address.id
-            });
             return address;
           });
           setAddresses(mappedAddresses);
           setLoading(false);
         })
       .catch((error) => {
-        console.error('EntitySelect: Error loading addresses:', error);
-        console.error('EntitySelect: Error details:', error.message, error.code);
+        console.error('Error loading addresses:', error);
         setLoading(false);
       });
   }, [type, firebaseService]);
 
   const handleSelect = (id: string) => {
-    console.log('EntitySelect: handleSelect called', { 
-      id, 
-      selectedIds, 
-      cleanSelectedIds,
-      selectedIdsLength: selectedIds.length,
-      cleanSelectedIdsLength: cleanSelectedIds.length,
-      selectedIdsString: JSON.stringify(selectedIds),
-      cleanSelectedIdsString: JSON.stringify(cleanSelectedIds),
-      allowMultiple,
-      addressesCount: addresses.length,
-      allAddressIds: addresses.map(a => a.id),
-      currentAddress: addresses.find(a => a.id === id)
-    });
-    
     // Validate the ID
     if (!id || id.trim() === '') {
-      console.error('EntitySelect: Invalid ID provided to handleSelect', { id });
       return;
     }
     
     if (allowMultiple) {
       if (cleanSelectedIds.includes(id)) {
         const newIds = cleanSelectedIds.filter(i => i !== id);
-        console.log('EntitySelect: Removing venue (multiple mode)', { 
-          id, 
-          oldIds: cleanSelectedIds, 
-          newIds,
-          newIdsLength: newIds.length 
-        });
         onChange(newIds);
       } else {
         const newIds = [...cleanSelectedIds, id];
-        console.log('EntitySelect: Adding venue (multiple mode)', { 
-          id, 
-          oldIds: cleanSelectedIds, 
-          newIds,
-          newIdsLength: newIds.length 
-        });
         onChange(newIds);
       }
     } else {
       // Single selection mode - allow deselection
       if (cleanSelectedIds.includes(id)) {
-        console.log('EntitySelect: Deselecting single venue', { 
-          id, 
-          oldIds: cleanSelectedIds,
-          newIds: []
-        });
         onChange([]);
       } else {
-        console.log('EntitySelect: Setting single venue', { 
-          id, 
-          oldIds: cleanSelectedIds,
-          newIds: [id]
-        });
         onChange([id]);
       }
     }
@@ -178,7 +106,6 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   const handleAddAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation(); // Prevent form submission from bubbling up to parent form
-    console.log('EntitySelect: handleAddAddress called', { newAddress, type });
     
     // Validate required fields
     if (!newAddress.name?.trim()) {
@@ -205,8 +132,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
     setSaving(true);
     setError(null);
     try {
-      console.log('EntitySelect: Adding address to database...');
-      const result = await firebaseService.addDocument('addresses', {
+      await firebaseService.addDocument('addresses', {
         ...newAddress,
         name: newAddress.name.trim(),
         street1: newAddress.street1.trim(),
@@ -217,27 +143,24 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
         companyName: newAddress.companyName?.trim() || '',
         nickname: newAddress.nickname?.trim() || '',
       });
-      console.log('EntitySelect: Address added successfully', { result });
       
       setShowAddModal(false);
       setNewAddress({ ...defaultAddress, type });
       setSaving(false);
       
       // Refresh the addresses list after adding a new one
-      console.log('EntitySelect: Refreshing addresses list...');
       setLoading(true);
       firebaseService.getDocuments('addresses', { where: [['type', '==', type]] })
         .then((docs: any[]) => {
-          console.log('EntitySelect: Addresses refreshed', { count: docs.length, type });
           setAddresses(docs.map(doc => ({ id: doc.id, ...doc.data })));
           setLoading(false);
         })
         .catch((err) => {
-          console.error('EntitySelect: Error refreshing addresses', err);
+          console.error('Error refreshing addresses', err);
           setLoading(false);
         });
     } catch (err: any) {
-      console.error('EntitySelect: Error adding address', err);
+      console.error('Error adding address', err);
       setError(err.message || 'Failed to add address. Please try again.');
       setSaving(false);
     }
@@ -250,16 +173,7 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
   };
 
   const handleEditAddress = (address: Address) => {
-    console.log('EntitySelect: handleEditAddress called', {
-      address,
-      addressId: address.id,
-      addressIdType: typeof address.id,
-      addressIdLength: address.id?.length,
-      hasValidId: !!(address.id && address.id.trim() !== '')
-    });
-    
     if (!address.id || address.id.trim() === '') {
-      console.error('EntitySelect: Cannot edit address with invalid ID', { address });
       setError('Cannot edit address: Invalid address ID');
       return;
     }
@@ -273,13 +187,6 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
     e.stopPropagation();
     
     if (!editingAddress) return;
-    
-    console.log('EntitySelect: Updating address', {
-      editingAddress,
-      id: editingAddress.id,
-      idType: typeof editingAddress.id,
-      idLength: editingAddress.id?.length
-    });
     
     // Validate document ID
     if (!editingAddress.id || editingAddress.id.trim() === '') {
@@ -337,11 +244,11 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
           setLoading(false);
         })
         .catch((err) => {
-          console.error('EntitySelect: Error refreshing addresses after edit', err);
+          console.error('Error refreshing addresses after edit', err);
           setLoading(false);
         });
     } catch (err: any) {
-      console.error('EntitySelect: Error updating address', err);
+      console.error('Error updating address', err);
       setError(err.message || 'Failed to update address. Please try again.');
       setSaving(false);
     }
@@ -371,25 +278,20 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
           className="flex-1 rounded bg-pb-darker border border-pb-primary/30 p-2 text-white"
         />
         <button type="button" onClick={() => {
-          console.log('EntitySelect: Add New button clicked, caching form state...');
           try {
             // Cache form state before opening modal
             if (onBeforeAddNew) {
-              console.log('EntitySelect: Calling onBeforeAddNew callback');
               onBeforeAddNew();
             }
-            console.log('EntitySelect: Setting showAddModal to true');
             setShowAddModal(true);
-            console.log('EntitySelect: Modal should now be open');
           } catch (error) {
-            console.error('EntitySelect: Error in Add New button click:', error);
+            console.error('Error in Add New button click:', error);
           }
         }} className="flex items-center gap-1 text-pb-primary hover:text-pb-accent px-3 py-2 rounded bg-pb-primary/10">
           <Plus className="w-4 h-4" /> Add New
         </button>
         {cleanSelectedIds.length > 0 && (
           <button type="button" onClick={() => {
-            console.log('EntitySelect: Clear all selected');
             onChange([]);
           }} className="flex items-center gap-1 text-red-400 hover:text-red-300 px-3 py-2 rounded bg-red-500/10">
             <X className="w-4 h-4" /> Clear All
@@ -406,73 +308,58 @@ const EntitySelect: React.FC<EntitySelectProps> = ({ label, type, selectedIds, o
             <div className="text-xs text-pb-gray mb-2">
               Click anywhere on a {label.toLowerCase()} to select it:
             </div>
-            <div className="text-xs text-pb-accent mb-2 p-2 bg-pb-darker rounded">
-              Debug: {addresses.length} addresses loaded, {cleanSelectedIds.length} selected, allowMultiple={String(allowMultiple)}
-              <br />Selected IDs: {JSON.stringify(cleanSelectedIds)}
-              <br />All IDs: {JSON.stringify(addresses.map(a => a.id))}
-            </div>
-            {filteredAddresses.filter(address => address.id && address.id.trim() !== '').map(address => (
-          <div 
-            key={address.id} 
-            className={`flex items-center gap-3 p-3 rounded transition cursor-pointer ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('EntitySelect: Venue row clicked', { 
-                addressId: address.id, 
-                addressName: address.name,
-                addressIdType: typeof address.id,
-                addressIdLength: address.id?.length,
-                hasValidId: !!(address.id && address.id.trim() !== ''),
-                currentSelectedIds: cleanSelectedIds,
-                allowMultiple
-              });
-              handleSelect(address.id);
-            }}
-          >
-            <div className="flex items-center gap-3 flex-1">
-              <input
-                type="checkbox"
-                checked={cleanSelectedIds.includes(address.id)}
-                onChange={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('EntitySelect: Checkbox clicked', { 
-                    addressId: address.id, 
-                    addressName: address.name, 
-                    checked: e.target.checked,
-                    addressIdType: typeof address.id,
-                    addressIdLength: address.id?.length,
-                    hasValidId: !!(address.id && address.id.trim() !== ''),
-                    currentSelectedIds: cleanSelectedIds,
-                    allowMultiple
-                  });
-                  handleSelect(address.id);
-                }}
-                className="w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 rounded focus:ring-pb-primary focus:ring-2 accent-pb-primary"
-                aria-label={`Select ${address.name}`}
-              />
-              <div className="flex-1">
-                <div className="font-medium">{address.name}</div>
-                <div className="text-xs text-pb-gray">{address.street1}, {address.city}</div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('EntitySelect: Edit button clicked for address', { addressId: address.id, addressName: address.name });
-                handleEditAddress(address);
-              }}
-              className="text-pb-gray hover:text-pb-primary text-sm px-3 py-1 rounded hover:bg-pb-primary/10 transition-colors"
-              title="Edit address"
-              disabled={!address.id || address.id.trim() === ''}
-            >
-              Edit
-            </button>
-          </div>
-            ))}
+            <fieldset className="space-y-2">
+              <legend className="sr-only">Select {label.toLowerCase()}</legend>
+              {filteredAddresses.filter(address => address.id && address.id.trim() !== '').map(address => {
+                const inputId = `address-${allowMultiple ? 'checkbox' : 'radio'}-${address.id}`;
+                const inputName = allowMultiple ? `address-${type}` : `address-${type}-single`;
+                
+                return (
+                  <div 
+                    key={address.id} 
+                    className={`flex items-center gap-3 p-3 rounded transition ${cleanSelectedIds.includes(address.id) ? 'bg-pb-primary/20 text-pb-primary' : 'hover:bg-pb-primary/10'}`}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <input
+                        type={allowMultiple ? "checkbox" : "radio"}
+                        id={inputId}
+                        name={inputName}
+                        value={address.id}
+                        checked={cleanSelectedIds.includes(address.id)}
+                        onChange={() => {
+                          handleSelect(address.id);
+                        }}
+                        className={`w-4 h-4 text-pb-primary bg-pb-darker border-pb-primary/30 focus:ring-pb-primary focus:ring-2 ${
+                          allowMultiple 
+                            ? 'rounded accent-pb-primary' 
+                            : 'rounded-full border-pb-primary/30'
+                        }`}
+                      />
+                      <label 
+                        htmlFor={inputId}
+                        className="flex-1 min-w-0 cursor-pointer"
+                      >
+                        <div className="font-medium">{address.name}</div>
+                        <div className="text-xs text-pb-gray">{address.street1}, {address.city}</div>
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleEditAddress(address);
+                      }}
+                      className="text-pb-gray hover:text-pb-primary text-sm px-3 py-1 rounded hover:bg-pb-primary/10 transition-colors"
+                      title="Edit address"
+                      disabled={!address.id || address.id.trim() === ''}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                );
+              })}
+            </fieldset>
           </>
         )}
       </div>

@@ -4,11 +4,12 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import type { Show } from '../types/Show';
-import { Pencil, UserPlus, AlertTriangle, MoreVertical } from 'lucide-react';
+import { Pencil, UserPlus, MoreVertical } from 'lucide-react';
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { buildInviteEmailDocTo } from '../services/EmailService';
 import { showNeedsAttention, getMissingShowDetails } from '../utils/showUtils';
 import ShowActionsModal from '../components/ShowActionsModal';
+import { ROLE_OPTIONS, JOB_ROLES } from '../constants/roleOptions';
 
 const ShowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,30 +23,14 @@ const ShowDetailPage: React.FC = () => {
   const [rehearsalAddresses, setRehearsalAddresses] = useState<any[]>([]);
   const [storageAddresses, setStorageAddresses] = useState<any[]>([]);
 
-  // Job roles (for collaborator job function, not permissions)
-  const JOB_ROLES = [
-    { value: 'propmaker', label: 'Prop Maker' },
-    { value: 'senior-propmaker', label: 'Senior Prop Maker' },
-    { value: 'props-carpenter', label: 'Props Carpenter' },
-    { value: 'show-carpenter', label: 'Show Carpenter' },
-    { value: 'painter', label: 'Painter' },
-    { value: 'buyer', label: 'Buyer' },
-    { value: 'props-supervisor', label: 'Props Supervisor' },
-    { value: 'art-director', label: 'Art Director' },
-    { value: 'set-dresser', label: 'Set Dresser' },
-    { value: 'stage-manager', label: 'Stage Manager' },
-    { value: 'assistant-stage-manager', label: 'Assistant Stage Manager' },
-    { value: 'designer', label: 'Designer' },
-    { value: 'assistant-designer', label: 'Assistant Designer' },
-    { value: 'crew', label: 'Crew' },
-  ] as const;
+  // Use shared role options for consistency
 
   // Invite modal state
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteJobRole, setInviteJobRole] = useState<string>('propmaker');
-  const [inviteRole, setInviteRole] = useState<'viewer' | 'editor' | 'props_supervisor' | 'god'>('viewer');
+  const [inviteRole, setInviteRole] = useState<string>('propmaker');
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [showActionsOpen, setShowActionsOpen] = useState(false);
@@ -59,7 +44,11 @@ const ShowDetailPage: React.FC = () => {
       `shows/${id}`,
       (doc) => {
         if (doc && doc.data) {
-          setShow({ ...doc.data, id: doc.id });
+          const showData = { ...doc.data, id: doc.id };
+          console.log('ShowDetailPage: Loaded show data:', showData);
+          console.log('ShowDetailPage: Logo data:', showData.logoImage);
+          console.log('ShowDetailPage: Acts data:', showData.acts);
+          setShow(showData);
           setError(null);
         } else {
           setShow(null);
@@ -113,205 +102,460 @@ const ShowDetailPage: React.FC = () => {
   const myRole = myRoleFromTeam || myRoleFromCollab || 'viewer';
   const canInvite = (myRole === 'god' || myRole === 'props_supervisor') || (user?.uid && user.uid === show.userId);
 
-  // Helper for rendering lists
-  const renderList = (
-    items: any[] | undefined,
-    label: string,
-    getItem: (item: any, idx: number) => React.ReactNode
-  ) => (
-    Array.isArray(items) && items.length > 0 && (
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-white mb-1">{label}</h2>
-        <ul className="list-disc list-inside text-pb-gray">
-          {items.map((item, idx) => getItem(item, idx))}
-        </ul>
-      </div>
-    )
-  );
 
   return ( 
     <DashboardLayout>
       <div className="flex-1 flex flex-col min-h-screen">
-        <div className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8 relative">
-          {/* Action Buttons */}
-          <div className="absolute top-6 right-6 flex items-center gap-2">
-            <button
-              onClick={() => id && navigate(`/shows/${id}/edit`)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-              aria-label="Edit Show"
-            >
-              <Pencil className="w-4 h-4" />
-              <span className="hidden sm:inline">Edit</span>
-            </button>
-            
-            <button
-              onClick={() => setShowActionsOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-darker hover:bg-pb-primary/20 text-pb-gray hover:text-white border border-pb-primary/30 transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-              aria-label="Show Actions"
-            >
-              <MoreVertical className="w-4 h-4" />
-              <span className="hidden sm:inline">Actions</span>
-            </button>
-          </div>
-          <div className="flex flex-col md:flex-row md:items-center md:gap-8 mb-6">
-            {show.logoImage?.url ? (
-              <img
-                src={show.logoImage.url}
-                alt={show.name ? `${show.name} Logo` : 'Show Logo'}
-                className="w-32 h-32 object-cover rounded-lg mb-4 md:mb-0 bg-pb-darker border border-pb-primary/30"
-                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-              />
-            ) : (
-              <div className="w-32 h-32 flex items-center justify-center rounded-lg mb-4 md:mb-0 bg-pb-darker border border-pb-primary/30 text-pb-gray text-xs">
-                No Logo
-              </div>
-            )}
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-white">{show.name}</h1>
-                {showNeedsAttention(show) && (
-                  <div className="flex items-center gap-1" title="Add more details like production info, venues, acts, or team members to get the most out of this show">
-                    <AlertTriangle className="w-5 h-5 text-pb-warning" />
-                    <span className="text-sm text-pb-warning font-medium">Needs attention</span>
-                  </div>
-                )}
-              </div>
-              {show.status && (
-                <span className="inline-block px-3 py-1 rounded-full bg-pb-primary/20 text-pb-primary text-xs font-semibold mb-2">{show.status}</span>
+        <div className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8">
+          {/* Header Section - Title and Actions */}
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+            {/* Show Info */}
+            <div className="flex flex-col md:flex-row md:items-center gap-6">
+              {show.logoImage?.url ? (
+                <img
+                  src={show.logoImage.url}
+                  alt={show.name ? `${show.name} Logo` : 'Show Logo'}
+                  className="w-24 h-24 object-cover rounded-xl bg-pb-darker border border-pb-primary/30 flex-shrink-0"
+                  onError={e => { 
+                    console.error('Logo image failed to load:', show.logoImage);
+                    (e.currentTarget as HTMLImageElement).style.display = 'none'; 
+                  }}
+                />
+              ) : (
+                <div className="w-24 h-24 flex items-center justify-center rounded-xl bg-pb-darker border border-pb-primary/30 text-pb-gray text-xs flex-shrink-0">
+                  No Logo
+                </div>
               )}
-              {show.description && <p className="text-pb-gray mb-2">{show.description}</p>}
-              <div className="flex flex-wrap gap-4 text-sm text-pb-primary/80 mb-2">
-                {show.startDate && (
-                  <span>Start: {show.startDate.toDate ? show.startDate.toDate().toLocaleDateString() : String(show.startDate)}</span>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <h1 className="text-3xl font-bold text-white">{show.name}</h1>
+                  {showNeedsAttention(show) && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1" title={`Missing: ${getMissingShowDetails(show).join(', ')}`}>
+                        <svg className="w-5 h-5 text-pb-warning" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-sm text-pb-warning font-medium">Needs attention</span>
+                      </div>
+                      <button
+                        onClick={() => id && window.location.assign(`/shows/${id}/edit`)}
+                        className="px-3 py-1.5 rounded-md bg-pb-warning text-black text-sm hover:opacity-90 flex items-center gap-2"
+                        title={`Missing: ${getMissingShowDetails(show).join(', ')}`}
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Complete details ({getMissingShowDetails(show).length})
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {show.status && (
+                  <span className="inline-block px-3 py-1 rounded-full bg-pb-primary/20 text-pb-primary text-sm font-semibold mb-3">{show.status}</span>
                 )}
-                {show.endDate && (
-                  <span>End: {show.endDate.toDate ? show.endDate.toDate().toLocaleDateString() : String(show.endDate)}</span>
-                )}
-                {show.isTouringShow && <span className="text-pb-accent">Touring Show</span>}
+                {show.description && <p className="text-pb-gray/90 mb-3 leading-relaxed">{show.description}</p>}
               </div>
             </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => id && navigate(`/shows/${id}/edit`)}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-medium shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                aria-label="Edit Show"
+              >
+                <Pencil className="w-4 h-4" />
+                Edit Show
+              </button>
+              
+              <button
+                onClick={() => setShowActionsOpen(true)}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-pb-darker/80 hover:bg-pb-primary/20 text-pb-gray hover:text-white border border-pb-primary/30 transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                aria-label="Show Actions"
+              >
+                <MoreVertical className="w-4 h-4" />
+                Actions
+              </button>
+            </div>
           </div>
-          
-          {/* Attention Banner for shows that need more details */}
-          {showNeedsAttention(show) && (
-            <div className="mb-6 p-4 bg-pb-warning/10 border border-pb-warning/30 rounded-lg">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-pb-warning mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="text-pb-warning font-semibold mb-1">This show needs more details</h3>
-                  <p className="text-pb-gray text-sm mb-2">
-                    Add more information to get the most out of your show. Consider adding:
-                  </p>
-                  <ul className="text-pb-gray text-sm mb-3 list-disc list-inside">
-                    {getMissingShowDetails(show).map((detail, index) => (
-                      <li key={index} className="capitalize">{detail}</li>
-                    ))}
-                  </ul>
+
+          {/* Team Management Section */}
+          {canInvite && (
+            <div className="mb-8 p-6 bg-pb-darker/40 rounded-xl border border-pb-primary/20">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-white mb-2">Team Management</h2>
+                  <p className="text-pb-gray/80 text-sm">Invite team members and manage permissions for this show</p>
+                </div>
+                <div className="flex gap-3">
                   <button
-                    onClick={() => id && window.location.assign(`/shows/${id}/edit`)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-pb-warning text-white rounded-lg hover:bg-pb-warning/80 transition-colors text-sm font-medium"
+                    onClick={() => {
+                      if (!user) {
+                        alert('Please sign in to send invites.');
+                        window.location.assign('/login');
+                        return;
+                      }
+                      setInviteOpen(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-primary/80 text-white hover:bg-pb-primary transition-colors font-medium"
                   >
-                    <Pencil className="w-4 h-4" />
-                    Add Details
+                    <UserPlus className="w-4 h-4" />
+                    Invite Team
+                  </button>
+                  <button
+                    onClick={() => window.location.assign(`/shows/${show.id}/team`)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-accent/80 text-white hover:bg-pb-accent transition-colors font-medium"
+                  >
+                    Manage Team
                   </button>
                 </div>
               </div>
             </div>
           )}
-          
-          {canInvite && (
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={() => {
-                  if (!user) {
-                    alert('Please sign in to send invites.');
-                    window.location.assign('/login');
-                    return;
-                  }
-                  setInviteOpen(true);
-                }}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
-              >
-                <UserPlus className="w-4 h-4" /> Invite team
-              </button>
-              <button
-                onClick={() => window.location.assign(`/shows/${show.id}/team`)}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded bg-pb-primary/20 text-pb-primary hover:bg-pb-primary/30"
-              >
-                Manage team
-              </button>
+
+          {/* Missing Information System */}
+          {showNeedsAttention(show) && (
+            <div className="mb-8">
+              <div className="bg-pb-warning/5 border border-pb-warning/20 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <svg className="w-6 h-6 text-pb-warning mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-pb-warning font-semibold text-lg">Missing information ({getMissingShowDetails(show).length})</h3>
+                      <button
+                        onClick={() => id && window.location.assign(`/shows/${id}/edit`)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-pb-warning text-white rounded-lg hover:bg-pb-warning/80 transition-colors font-medium"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Complete Details
+                      </button>
+                    </div>
+                    <p className="text-pb-gray/90 text-sm mb-4">
+                      Add more information to get the most out of your show and help your team work more effectively:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {getMissingShowDetails(show).map((detail, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-pb-warning/10 border border-pb-warning/20 rounded-lg">
+                          <div className="w-2 h-2 bg-pb-warning rounded-full flex-shrink-0"></div>
+                          <div>
+                            <div className="text-pb-warning font-medium text-sm capitalize">{detail}</div>
+                            <div className="text-pb-gray/70 text-xs">
+                              {detail === 'production information' && 'Add company, stage manager, and props supervisor details'}
+                              {detail === 'venues' && 'Add venue locations where the show will be performed'}
+                              {detail === 'acts and scenes' && 'Structure your show with acts and scenes for better organization'}
+                              {detail === 'team members' && 'Invite team members and assign roles for collaboration'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
-            <div>
-              <h2 className="text-lg font-semibold text-white mb-1">Production</h2>
-              <div className="text-pb-gray text-sm mb-1">Company: {show.productionCompany}</div>
-              <div className="text-pb-gray text-sm mb-1">Stage Manager: {show.stageManager} {show.stageManagerEmail && (<span className="ml-2 text-xs">({show.stageManagerEmail})</span>)}</div>
-              <div className="text-pb-gray text-sm mb-1">Props Supervisor: {show.propsSupervisor} {show.propsSupervisorEmail && (<span className="ml-2 text-xs">({show.propsSupervisorEmail})</span>)}</div>
-              <div className="text-pb-gray text-sm mb-1">Contact: {show.productionContactName} {show.productionContactEmail && (<span className="ml-2 text-xs">({show.productionContactEmail})</span>)}</div>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white mb-1">Meta</h2>
-              <div className="text-pb-gray text-sm mb-1">Created: {show.createdAt ? (show.createdAt.toDate ? show.createdAt.toDate().toLocaleDateString() : String(show.createdAt)) : '-'}</div>
-              <div className="text-pb-gray text-sm mb-1">Updated: {show.updatedAt ? (show.updatedAt.toDate ? show.updatedAt.toDate().toLocaleDateString() : String(show.updatedAt)) : '-'}</div>
-              <div className="text-pb-gray text-sm mb-1">Owner/User ID: {show.userId}</div>
+          {/* Production Information */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold text-white mb-6">Production Information</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-pb-primary mb-3">Company & Contacts</h3>
+                  <div className="space-y-3">
+                    {show.productionCompany && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-pb-gray/80 text-sm font-medium w-20">Company:</span>
+                        <span className="text-white">{show.productionCompany}</span>
+                      </div>
+                    )}
+                    {show.stageManager && (
+                      <div className="flex items-start gap-3">
+                        <span className="text-pb-gray/80 text-sm font-medium w-20">Stage Manager:</span>
+                        <div>
+                          <span className="text-white">{show.stageManager}</span>
+                          {show.stageManagerEmail && (
+                            <div className="text-pb-gray/70 text-xs mt-1">
+                              <a 
+                                href={`mailto:${show.stageManagerEmail}`}
+                                className="text-pb-primary hover:text-pb-accent transition-colors underline"
+                              >
+                                {show.stageManagerEmail}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {show.propsSupervisor && (
+                      <div className="flex items-start gap-3">
+                        <span className="text-pb-gray/80 text-sm font-medium w-20">Props Supervisor:</span>
+                        <div>
+                          <span className="text-white">{show.propsSupervisor}</span>
+                          {show.propsSupervisorEmail && (
+                            <div className="text-pb-gray/70 text-xs mt-1">
+                              <a 
+                                href={`mailto:${show.propsSupervisorEmail}`}
+                                className="text-pb-primary hover:text-pb-accent transition-colors underline"
+                              >
+                                {show.propsSupervisorEmail}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {show.productionContactName && (
+                      <div className="flex items-start gap-3">
+                        <span className="text-pb-gray/80 text-sm font-medium w-20">Contact:</span>
+                        <div>
+                          <span className="text-white">{show.productionContactName}</span>
+                          {show.productionContactEmail && (
+                            <div className="text-pb-gray/70 text-xs mt-1">
+                              <a 
+                                href={`mailto:${show.productionContactEmail}`}
+                                className="text-pb-primary hover:text-pb-accent transition-colors underline"
+                              >
+                                {show.productionContactEmail}
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-pb-primary mb-3">Show Details</h3>
+                  <div className="space-y-3">
+                    {show.startDate && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-pb-gray/80 text-sm font-medium w-20">Start Date:</span>
+                        <span className="text-white">
+                          {(() => {
+                            try {
+                              if (show.startDate && typeof show.startDate.toDate === 'function') {
+                                return show.startDate.toDate().toLocaleDateString();
+                              } else if (show.startDate instanceof Date) {
+                                return show.startDate.toLocaleDateString();
+                              } else if (typeof show.startDate === 'string') {
+                                return new Date(show.startDate).toLocaleDateString();
+                              } else {
+                                return 'Unknown';
+                              }
+                            } catch (e) {
+                              return 'Unknown';
+                            }
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                    {show.endDate && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-pb-gray/80 text-sm font-medium w-20">End Date:</span>
+                        <span className="text-white">
+                          {(() => {
+                            try {
+                              if (show.endDate && typeof show.endDate.toDate === 'function') {
+                                return show.endDate.toDate().toLocaleDateString();
+                              } else if (show.endDate instanceof Date) {
+                                return show.endDate.toLocaleDateString();
+                              } else if (typeof show.endDate === 'string') {
+                                return new Date(show.endDate).toLocaleDateString();
+                              } else {
+                                return 'Unknown';
+                              }
+                            } catch (e) {
+                              return 'Unknown';
+                            }
+                          })()}
+                        </span>
+                      </div>
+                    )}
+                    {show.isTouringShow && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-pb-gray/80 text-sm font-medium w-20">Show Type:</span>
+                        <span className="text-pb-accent font-medium">Touring Show</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Venue Information */}
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Venue(s)</h2>
-            <div className="space-y-4">
-              {venueAddresses.length === 0 ? <p className="text-[var(--text-primary)]">Not specified</p> : venueAddresses.map(addr => (
-                <div key={addr.id} className="p-3 bg-[var(--bg-secondary)] rounded-lg">
-                  <p className="font-medium text-[var(--text-primary)]">{addr.name}</p>
-                  <p className="text-sm text-[var(--text-secondary)]">{[addr.street1, addr.street2, addr.city, addr.region, addr.postalCode, addr.country].filter(Boolean).join(', ')}</p>
+          {/* Locations Section */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold text-white mb-6">Locations</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Venues */}
+              <div className="bg-pb-darker/40 rounded-xl p-6 border border-pb-primary/20">
+                <h3 className="text-lg font-semibold text-pb-primary mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  Venues
+                </h3>
+                <div className="space-y-3">
+                  {venueAddresses.length === 0 ? (
+                    <p className="text-pb-gray/70 text-sm">No venues specified</p>
+                  ) : venueAddresses.map(addr => (
+                    <div key={addr.id} className="p-3 bg-pb-darker/60 rounded-lg border border-white/10">
+                      <p className="font-medium text-white text-sm">{addr.name}</p>
+                      <p className="text-xs text-pb-gray/80 mt-1">{[addr.street1, addr.street2, addr.city, addr.region, addr.postalCode, addr.country].filter(Boolean).join(', ')}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              {/* Rehearsal Spaces */}
+              <div className="bg-pb-darker/40 rounded-xl p-6 border border-pb-primary/20">
+                <h3 className="text-lg font-semibold text-pb-primary mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  Rehearsal Spaces
+                </h3>
+                <div className="space-y-3">
+                  {rehearsalAddresses.length === 0 ? (
+                    <p className="text-pb-gray/70 text-sm">No rehearsal spaces specified</p>
+                  ) : rehearsalAddresses.map(addr => (
+                    <div key={addr.id} className="p-3 bg-pb-darker/60 rounded-lg border border-white/10">
+                      <p className="font-medium text-white text-sm">{addr.name}</p>
+                      <p className="text-xs text-pb-gray/80 mt-1">{[addr.street1, addr.street2, addr.city, addr.region, addr.postalCode, addr.country].filter(Boolean).join(', ')}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Storage Spaces */}
+              <div className="bg-pb-darker/40 rounded-xl p-6 border border-pb-primary/20">
+                <h3 className="text-lg font-semibold text-pb-primary mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M9 1v6l3-3 3 3V1" />
+                  </svg>
+                  Storage Spaces
+                </h3>
+                <div className="space-y-3">
+                  {storageAddresses.length === 0 ? (
+                    <p className="text-pb-gray/70 text-sm">No storage spaces specified</p>
+                  ) : storageAddresses.map(addr => (
+                    <div key={addr.id} className="p-3 bg-pb-darker/60 rounded-lg border border-white/10">
+                      <p className="font-medium text-white text-sm">{addr.name}</p>
+                      <p className="text-xs text-pb-gray/80 mt-1">{[addr.street1, addr.street2, addr.city, addr.region, addr.postalCode, addr.country].filter(Boolean).join(', ')}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-          {/* Rehearsal Spaces */}
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Rehearsal Space(s)</h2>
-            <div className="space-y-4">
-              {rehearsalAddresses.length === 0 ? <p className="text-[var(--text-primary)]">Not specified</p> : rehearsalAddresses.map(addr => (
-                <div key={addr.id} className="p-3 bg-[var(--bg-secondary)] rounded-lg">
-                  <p className="font-medium text-[var(--text-primary)]">{addr.name}</p>
-                  <p className="text-sm text-[var(--text-secondary)]">{[addr.street1, addr.street2, addr.city, addr.region, addr.postalCode, addr.country].filter(Boolean).join(', ')}</p>
+          {/* Additional Information */}
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold text-white mb-6">Additional Information</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {show.acts && show.acts.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-pb-primary mb-3">Acts & Scenes</h3>
+                    <div className="space-y-4">
+                      {show.acts.map((act: any, actIdx: number) => (
+                        <div key={actIdx} className="p-4 bg-pb-darker/40 rounded-lg border border-white/10">
+                          <div className="text-white font-medium text-lg mb-3">
+                            {typeof act === 'object' && act.name ? act.name : `Act ${actIdx + 1}`}
+                          </div>
+                          {act.scenes && Array.isArray(act.scenes) && act.scenes.length > 0 && (
+                            <div className="ml-4 space-y-2">
+                              <div className="text-pb-gray/80 text-sm font-medium mb-2">Scenes:</div>
+                              {act.scenes.map((scene: string, sceneIdx: number) => (
+                                <div key={sceneIdx} className="flex items-center gap-2">
+                                  <div className="w-2 h-2 bg-pb-primary rounded-full flex-shrink-0"></div>
+                                  <span className="text-white/90 text-sm">
+                                    {scene || `Scene ${sceneIdx + 1}`}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {show.contacts && show.contacts.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-pb-primary mb-3">Contacts</h3>
+                    <div className="space-y-2">
+                      {show.contacts.map((contact: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-pb-darker/40 rounded-lg border border-white/10">
+                          <span className="text-white">{typeof contact === 'object' && contact.name ? contact.name : String(contact)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-6">
+                {show.collaborators && show.collaborators.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-pb-primary mb-3">Collaborators</h3>
+                    <div className="space-y-2">
+                      {show.collaborators.map((collab: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-pb-darker/40 rounded-lg border border-white/10">
+                          <span className="text-white">{typeof collab === 'object' ? (collab.name || collab.email || 'Unknown') : String(collab)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-lg font-semibold text-pb-primary mb-3">Team Members</h3>
+                  {show.team && Array.isArray(show.team) && show.team.length > 0 ? (
+                    <div className="space-y-2">
+                      {show.team.map((member: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-pb-darker/40 rounded-lg border border-white/10">
+                          <span className="text-white">{member.uid} ({member.role})</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 bg-pb-darker/20 rounded-lg border border-pb-primary/20 text-center">
+                      <div className="text-pb-gray/70 mb-3">
+                        <UserPlus className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No team members yet</p>
+                      </div>
+                      <button
+                        onClick={() => setInviteOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-pb-primary text-white rounded-lg hover:bg-pb-primary/80 transition-colors font-medium text-sm"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                        Invite Team Members
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-          {/* Storage Spaces */}
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Storage Space(s)</h2>
-            <div className="space-y-4">
-              {storageAddresses.length === 0 ? <p className="text-[var(--text-primary)]">Not specified</p> : storageAddresses.map(addr => (
-                <div key={addr.id} className="p-3 bg-[var(--bg-secondary)] rounded-lg">
-                  <p className="font-medium text-[var(--text-primary)]">{addr.name}</p>
-                  <p className="text-sm text-[var(--text-secondary)]">{[addr.street1, addr.street2, addr.city, addr.region, addr.postalCode, addr.country].filter(Boolean).join(', ')}</p>
-                </div>
-              ))}
-            </div>
+
+          {/* Navigation */}
+          <div className="flex justify-between items-center pt-6 border-t border-pb-primary/20">
+            <Link to="/shows" className="inline-flex items-center gap-2 text-pb-primary hover:text-pb-accent transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Shows
+            </Link>
           </div>
-          {renderList(show.venues, 'Venues', (venue, idx) => <li key={idx}>{typeof venue === 'object' && venue.name ? venue.name : String(venue)}</li>)}
-          {renderList(show.contacts, 'Contacts', (contact, idx) => <li key={idx}>{typeof contact === 'object' && contact.name ? contact.name : String(contact)}</li>)}
-          {renderList(show.collaborators, 'Collaborators', (collab, idx) => <li key={idx}>{typeof collab === 'object' ? (collab.name || collab.email || 'Unknown') : String(collab)}</li>)}
-          {renderList(show.acts, 'Acts', (act, idx) => <li key={idx}>{typeof act === 'object' && act.name ? act.name : String(act)}</li>)}
-          {renderList(show.rehearsalAddresses, 'Rehearsal Addresses', (addr, idx) => <li key={idx}>{typeof addr === 'object' && addr.address ? addr.address : String(addr)}</li>)}
-          {renderList(show.storageAddresses, 'Storage Addresses', (addr, idx) => <li key={idx}>{typeof addr === 'object' && addr.address ? addr.address : String(addr)}</li>)}
-          {show.team && Array.isArray(show.team) && show.team.length > 0 && (
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-white mb-1">Team</h2>
-              <ul className="list-disc list-inside text-pb-gray">
-                {show.team.map((member: any, idx: number) => (
-                  <li key={idx}>{member.uid} ({member.role})</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <Link to="/shows" className="inline-block mt-4 text-pb-primary underline">← Back to Shows</Link>
         </div>
 
         {/* Invite teammate modal */}
@@ -322,7 +566,13 @@ const ShowDetailPage: React.FC = () => {
                 <h3 className="text-white text-lg font-semibold">Invite teammate</h3>
                 <button
                   onClick={() => {
-                    if (!inviteSubmitting) setInviteOpen(false);
+                    if (!inviteSubmitting) {
+                      setInviteOpen(false);
+                      setInviteName('');
+                      setInviteEmail('');
+                      setInviteJobRole('propmaker');
+                      setInviteRole('propmaker');
+                    }
                   }}
                   className="text-pb-gray hover:text-white"
                 >
@@ -346,7 +596,7 @@ const ShowDetailPage: React.FC = () => {
                       return;
                     }
                   } catch (authCheckErr) {
-                    console.warn('Email check failed', authCheckErr);
+                    // Email check failed, continue with invite creation
                   }
                   setInviteSubmitting(true);
                   const token = crypto.randomUUID();
@@ -378,7 +628,7 @@ const ShowDetailPage: React.FC = () => {
                       await firebaseService.addDocument('emails', emailDoc);
                       mailQueued = true;
                     } catch (mailErr) {
-                      console.warn('Failed to enqueue MailerSend email; invite link still created', mailErr);
+                      // Failed to enqueue email, but invite link still created
                     }
                     // User feedback
                     if (mailQueued) {
@@ -391,9 +641,8 @@ const ShowDetailPage: React.FC = () => {
                     setInviteName('');
                     setInviteEmail('');
                     setInviteJobRole('propmaker');
-                    setInviteRole('viewer');
+                    setInviteRole('propmaker');
                   } catch (err: any) {
-                    console.error(err);
                     setInviteError(err?.message || 'Failed to create invite');
                   } finally {
                     setInviteSubmitting(false);
@@ -444,16 +693,23 @@ const ShowDetailPage: React.FC = () => {
                     onChange={(e) => setInviteRole(e.target.value as any)}
                     className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
                   >
-                    <option value="viewer">Viewer</option>
-                    <option value="editor">Editor</option>
-                    <option value="props_supervisor">Props Supervisor</option>
-                    <option value="god">Admin</option>
+                    {ROLE_OPTIONS.map(role => (
+                      <option key={role.value} value={role.value}>{role.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex items-center justify-end gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={() => !inviteSubmitting && setInviteOpen(false)}
+                    onClick={() => {
+                      if (!inviteSubmitting) {
+                        setInviteOpen(false);
+                        setInviteName('');
+                        setInviteEmail('');
+                        setInviteJobRole('propmaker');
+                        setInviteRole('propmaker');
+                      }
+                    }}
                     className="px-4 py-2 rounded border border-pb-primary/30 text-pb-gray hover:text-white"
                   >
                     Cancel

@@ -8,9 +8,9 @@ export type { Show, Act, Scene, Venue, Contact, ShowCollaborator, ShowFormData }
 // Re-export the type needed by PropForm using 'export type'
 export type { PropLifecycleStatus };
 
-export type PropSource = 'bought' | 'made' | 'rented' | 'borrowed' | 'owned' | 'created';
+export type PropSource = 'bought' | 'made' | 'rented' | 'borrowed' | 'owned' | 'created' | 'hired';
 export type WeightUnit = 'kg' | 'lb' | 'g' | 'oz';
-export type DimensionUnit = 'cm' | 'in' | 'm' | 'ft';
+export type DimensionUnit = 'mm' | 'cm' | 'in' | 'm' | 'ft';
 
 export interface PropImage {
   id: string;
@@ -25,6 +25,16 @@ export interface DigitalAsset {
   title?: string;
   url: string;
   type: 'image' | 'video' | 'document' | 'other';
+}
+
+export interface PropComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail?: string;
+  text: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export const propCategories = [
@@ -80,6 +90,9 @@ export interface PropFormData {
   preShowSetupDuration?: number;
   hasOwnShippingCrate?: boolean;
   shippingCrateDetails?: string;
+  caseLength?: number;
+  caseWidth?: number;
+  caseHeight?: number;
   transportNotes?: string;
   requiresSpecialTransport?: boolean;
   travelWeight?: number;
@@ -188,6 +201,9 @@ export interface Prop {
   setupTime?: number;
   hasOwnShippingCrate?: boolean;
   shippingCrateDetails?: string;
+  caseLength?: number;
+  caseWidth?: number;
+  caseHeight?: number;
   requiresSpecialTransport?: boolean;
   transportMethod?: string;
   transportNotes?: string;
@@ -200,6 +216,7 @@ export interface Prop {
   digitalAssets?: DigitalAsset[];
   videos?: DigitalAsset[];
   materials?: string[];
+  comments?: PropComment[];
   statusHistory?: PropStatusUpdate[];
   maintenanceHistory?: MaintenanceRecord[];
   nextMaintenanceDue?: string;

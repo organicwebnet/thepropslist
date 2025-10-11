@@ -8,7 +8,7 @@
     "lint": "eslint src --ext ts,tsx",
     "test": "jest --config jest.config.cjs",
     "test:watch": "jest --config jest.config.cjs --watch",
-    "test:coverage": "jest --config jest.config.cjs --coverage",
+    "test:coverage:main": "jest --config jest.config.cjs --coverage",
     "android": "expo run:android",
     "android:fast": "npx react-native run-android",
     "ios": "expo run:ios",
@@ -19,7 +19,10 @@
     "start": "expo start --dev-client",
     "start:clear": "expo start --clear --dev-client",
     "start:fast": "npx react-native start",
-    "eject": "expo eject"
+    "eject": "expo eject",
+    "test:google-drive": "node scripts/test-google-drive.js",
+    "test:unit": "npx jest --config=src/lib/__tests__/jest.config.js",
+    "test:coverage": "npx jest --coverage --config=src/lib/__tests__/jest.config.js"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -168,6 +171,7 @@
     "path-browserify": "^1.0.1",
     "postcss": "^8.5.3",
     "process": "^0.11.10",
+    "puppeteer": "^24.23.0",
     "react-native-css-transformer": "^2.0.0",
     "react-native-svg-transformer": "^1.5.0",
     "sharp": "^0.34.4",
