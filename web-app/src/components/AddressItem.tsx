@@ -6,13 +6,6 @@ interface AddressItemProps {
   isSelected: boolean;
   onSelect: () => void;
   onEdit: () => void;
-}
-
-interface AddressItemProps {
-  address: Address;
-  isSelected: boolean;
-  onSelect: () => void;
-  onEdit: () => void;
   allowMultiple?: boolean;
   inputName?: string;
 }
