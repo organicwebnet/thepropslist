@@ -464,13 +464,21 @@ const PropsPdfExportPage: React.FC = () => {
       setIframeUrl(null);
       return;
     }
-    const wrapped = `<html><head><meta charset='UTF-8'>${pageCss}</head><body>${html}</body></html>`;
-    const blob = new Blob([wrapped], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    setIframeUrl(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
+    try {
+      const wrapped = `<html><head><meta charset='UTF-8'>${pageCss}</head><body>${html}</body></html>`;
+      console.log('Generated HTML for PDF preview:', wrapped.substring(0, 200) + '...');
+      const blob = new Blob([wrapped], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      console.log('Created blob URL for PDF preview:', url);
+      console.log('Blob size:', blob.size, 'bytes');
+      setIframeUrl(url);
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    } catch (error) {
+      console.error('Error creating blob URL for PDF preview:', error);
+      setIframeUrl(null);
+    }
   }, [showPreview, pageHtmls, currentPage, pageCss]);
 
   const pageW = pdfOptions.orientation === 'landscape' ? 1123 : 794;
@@ -740,9 +748,22 @@ const PropsPdfExportPage: React.FC = () => {
                             display: 'block',
                           }}
                           scrolling="no"
+                          sandbox="allow-same-origin allow-scripts"
+                          loading="lazy"
+                          onError={(e) => {
+                            console.error('Iframe failed to load PDF preview:', e);
+                          }}
+                          onLoad={() => {
+                            console.log('Iframe successfully loaded PDF preview');
+                          }}
                         />
                       ) : (
-                        <div className="text-white text-lg">PDF page could not be loaded.</div>
+                        <div className="text-white text-lg p-4 text-center">
+                          <div className="mb-2">PDF page could not be loaded.</div>
+                          <div className="text-sm text-gray-400">
+                            This might be due to browser security settings. Try refreshing the page or using a different browser.
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
