@@ -19,350 +19,16 @@ service cloud.firestore {
     */
     // --- End legacy rules ---
 
-    match /tasks/{taskId}/comments/{commentId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
-    }
-    // Notifications: user may read own notifications; writes by self or system-admin
-    match /notifications/{notificationId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if isSystemAdmin() || (request.auth != null && request.resource.data.userId == request.auth.uid);
-      allow update, delete: if isSystemAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
-    }
-    match /shows/{showId}/notes/{noteId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
-    }
-    match /userProfiles/{userId} {
-      // Secure access: allow reading own profile, system admin can read all, or god users can read all for admin functions
-      allow read: if isSystemAdmin() || 
-        (request.auth != null && request.auth.uid == userId) ||
-        (request.auth != null && 
-          get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god");
-      // Only allow writing to own profile
-      allow write: if isSystemAdmin() || (request.auth != null && request.auth.uid == userId);
-    }
-    match /users/{userId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == userId);
-    }
-    match /packingBoxes/{boxId} {
-      // Create uses request.resource; others use resource
-      allow create: if request.auth != null && (
-        isSystemAdmin() || (
-          exists(/databases/$(database)/documents/shows/$(request.resource.data.showId)) && (
-            get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.ownerId == request.auth.uid ||
-            get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] != null
-          )
-        )
-      );
-
-      // Public read allowed only when explicitly marked as publicReadable
-      allow read: if resource.data.publicReadable == true || (
-        request.auth != null && (
-          isSystemAdmin() || (
-            exists(/databases/$(database)/documents/shows/$(resource.data.showId)) && (
-              get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
-              get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null
-            )
-          )
-        )
-      );
-
-      allow update, delete: if request.auth != null && (
-        isSystemAdmin() || (
-          exists(/databases/$(database)/documents/shows/$(resource.data.showId)) && (
-            get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
-            get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null
-          )
-        )
-      );
-    }
-    match /packLists/{packListId} {
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
-      allow read: if request.auth != null && (
-        request.auth.uid == resource.data.ownerId ||
-        isTeamMember(resource.data.showId)
-      );
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
-    }
-    match /packs/{packId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
-    }
-    match /locations/{locationId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null &&
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid);
-    }
-    match /labels/{labelId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null &&
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid);
-    }
-    match /todo_boards/{boardId} {
-      // User must be in sharedWith to read/update/delete.
-      allow read, update, delete: if isSystemAdmin() || (
-        request.auth != null &&
-        resource.data.sharedWith != null &&
-        request.auth.uid in resource.data.sharedWith
-      );
-      // On create, creator must be owner and be in sharedWith.
-      allow create: if isSystemAdmin() || (
-        request.auth != null &&
-        request.resource.data.ownerId == request.auth.uid &&
-        request.resource.data.sharedWith != null &&
-        request.auth.uid in request.resource.data.sharedWith
-      );
-    }
-    match /todo_boards/{boardId}/lists/{listId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
-    }
-    match /todo_boards/{boardId}/lists/{listId}/cards/{cardId} {
-      allow read: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
-      allow update, delete: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
-      allow create: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
-    }
-    match /todo_boards/{boardId}/members/{memberId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && isBoardMember(boardId));
-    }
-    match /propsTab/{docId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
-    }
-    match /props_native/{docId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
-    }
-    match /props_shared_details/{docId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
-    }
-    match /shows/{showId} {
-      // Secure access: only show owners, team members, and god users can read
-      // Support both old (userId, createdBy) and new (ownerId) field names
-      allow read: if request.auth != null && (
-        resource.data.ownerId == request.auth.uid ||
-        resource.data.userId == request.auth.uid ||
-        resource.data.createdBy == request.auth.uid ||
-        resource.data.team[request.auth.uid] != null ||
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
-      );
-      // Only show owners and elevated team members can modify
-      allow update, delete: if request.auth != null && (
-        resource.data.ownerId == request.auth.uid ||
-        resource.data.userId == request.auth.uid ||
-        resource.data.createdBy == request.auth.uid ||
-        resource.data.team[request.auth.uid] == "god" ||
-        resource.data.team[request.auth.uid] == "props_supervisor"
-      );
-      // Any authenticated user can create shows (they become the owner)
-      allow create: if request.auth != null;
-
-      // Team subcollection (if you use it)
-      match /team/{teamMemberId} {
-        allow read: if isSystemAdmin() || (request.auth != null && get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] != null);
-        allow write: if isSystemAdmin() || (request.auth != null && (
-          get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] == "god" ||
-          get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] == "props_supervisor"
-        ));
-      }
-    }
+    // ===== PERMISSION FUNCTIONS =====
     
-    // Deletion logs collection - allow authenticated users to create logs
-    match /deletion_logs/{logId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if false; // Logs should not be modified after creation
-    }
-    match /invitations/{inviteId} {
-      function isShowOwner(showId) {
-        return get(/databases/$(database)/documents/shows/$(showId)).data.userId == request.auth.uid ||
-               get(/databases/$(database)/documents/shows/$(showId)).data.ownerId == request.auth.uid;
-      }
-
-      // Create invite allowed to show owner or elevated roles
-      allow create: if isSystemAdmin() || (request.auth != null && (
-        isShowOwner(request.resource.data.showId) ||
-        hasTeamRole(request.resource.data.showId, 'god') ||
-        hasTeamRole(request.resource.data.showId, 'props_supervisor') ||
-        hasTeamRole(request.resource.data.showId, 'art_director')
-      ));
-
-      // Allow public read of pending invites so invite links open without auth
-      // Backward-compat: some legacy invites may not have a status field
-      allow read: if (resource.data.status == "pending" || resource.data.status == null) || isSystemAdmin() || (request.auth != null && (
-        isShowOwner(resource.data.showId) ||
-        hasTeamRole(resource.data.showId, 'god') ||
-        hasTeamRole(resource.data.showId, 'props_supervisor') ||
-        (request.auth.token.email == resource.data.email)
-      ));
-
-      allow update, delete: if isSystemAdmin() || (request.auth != null && (
-        isShowOwner(resource.data.showId) ||
-        hasTeamRole(resource.data.showId, 'god') ||
-        hasTeamRole(resource.data.showId, 'props_supervisor')
-      ));
+    // Check if user is a god user (highest level access)
+    function isGod() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god";
     }
 
-    // Private prop costings visible only to owner/god/props_supervisor
-    match /shows/{showId}/props_private/{propId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && (
-        get(/databases/$(database)/documents/shows/$(showId)).data.ownerId == request.auth.uid ||
-        hasTeamRole(showId, 'god') ||
-        hasTeamRole(showId, 'props_supervisor') ||
-        hasTeamRole(showId, 'art_director')
-      ));
-    }
-
-    // Change/Purchase/Maintenance requests (public metadata)
-    match /requests/{requestId} {
-      allow read: if request.auth != null && (
-        isSystemAdmin() ||
-        (get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null)
-      );
-
-      // Create by editor+ (god, props_supervisor, editor)
-      allow create: if request.auth != null && (
-        hasTeamRole(request.resource.data.showId, 'god') ||
-        hasTeamRole(request.resource.data.showId, 'props_supervisor') ||
-        hasTeamRole(request.resource.data.showId, 'editor')
-      );
-
-      // Update/approve/reject by props_supervisor+ (includes art_director)
-      allow update, delete: if request.auth != null && (
-        hasTeamRole(resource.data.showId, 'god') ||
-        hasTeamRole(resource.data.showId, 'props_supervisor') ||
-        hasTeamRole(resource.data.showId, 'art_director')
-      );
-    }
-
-    // Private cost breakdown for requests
-    match /requests_private/{requestId} {
-      allow read, write: if request.auth != null && (
-        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'god') ||
-        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'props_supervisor') ||
-        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'art_director')
-      );
-    }
-
-    // Feedback collection (bug reports / feature requests)
-    match /feedback/{id} {
-      // Allow creates from authenticated users
-      allow create: if request.auth != null;
-      // Reads by admins; allow user to read their own submissions if desired
-      allow read: if isSystemAdmin();
-      // No public updates/deletes
-    }
-    // Allow enqueuing emails for MailerSend/Trigger Email extensions
-    match /emails/{emailId} {
-      allow create: if true;  // Allow anyone to create emails (for signup verification)
-      allow read, update, delete: if false;
-    }
-    
-    // Alternative rule for emails collection (more permissive)
-    match /emails/{document=**} {
-      allow create: if true;
-      allow read, update, delete: if false;
-    }
-    
-    // Allow verification code storage for signup process
-    match /pending_signups/{email} {
-      allow create: if true;  // Allow anyone to create verification codes
-      allow read, update: if true;  // Allow reading and updating verification codes
-      allow delete: if true;  // Allow cleanup of expired codes
-    }
-    
-    // Allow password reset code storage (same permissions as signup codes)
-    match /pending_password_resets/{email} {
-      allow create: if true;  // Allow anyone to create password reset codes
-      allow read, update: if true;  // Allow reading and updating password reset codes
-      allow delete: if true;  // Allow cleanup of expired codes
-    }
-    match /tasks/{taskId} {
-      allow read, write: if isSystemAdmin() || (request.auth != null && (
-          get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null ||
-          resource.data.createdBy == request.auth.uid ||
-          request.auth.uid in resource.data.assignedTo
-      ));
-      allow update, delete: if isSystemAdmin() || (request.auth != null && (
-        resource.data.assignedTo == request.auth.uid ||
-        resource.data.createdBy == request.auth.uid ||
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] == "god" ||
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] == "props_supervisor"
-      ));
-    }
-    match /props/{propId} {
-      // Secure access: only show team members and god users can read props
-      allow read: if request.auth != null && (
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
-        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null ||
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
-      );
-      
-      // Only show team members and god users can create props
-      allow create: if request.auth != null && (
-        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.ownerId == request.auth.uid ||
-        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] != null ||
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
-      );
-      
-      // Update/delete permissions require proper team membership or admin role
-      allow update, delete: if isSystemAdmin() ||
-        (request.auth != null &&
-          (
-            hasTeamRole(resource.data.showId, 'god') ||
-            hasTeamRole(resource.data.showId, 'props_supervisor') ||
-            get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
-          )
-        );
-    }
-
-    match /shopping_items/{shoppingId} {
-      allow read: if isSystemAdmin() || (request.auth != null);
-      allow create: if isSystemAdmin() || (request.auth != null && request.auth.token.email == request.resource.data.requestedBy);
-      allow update: if isSystemAdmin() || (request.auth != null); // Allow any authenticated user to add options
-      allow delete: if isSystemAdmin() || (request.auth != null && request.auth.token.email == resource.data.requestedBy);
-    }
-
-    // Makers collection - allow authenticated users to read and create
-    match /makers/{makerId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if isSystemAdmin();
-    }
-
-    // Hire companies collection - allow authenticated users to read and create
-    match /hire_companies/{companyId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if isSystemAdmin();
-    }
-
-    // Acts collection - allow authenticated users to read and create
-    match /acts/{actId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if isSystemAdmin();
-    }
-
-    // Scenes collection - allow authenticated users to read and create
-    match /scenes/{sceneId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if isSystemAdmin();
-    }
-
-    // Addresses collection - allow authenticated users to read and create
-    match /addresses/{addressId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
-    }
-
-    // --- Collaborative Team & Role-Based Access Rules (ACTIVE) ---
-    // These rules assume each show document has a 'team' map: { [userId]: role }
-    // Remove or comment out any function definitions and .where() usage (not supported in Firestore rules)
-
-    function isBoardMember(boardId) {
-      return exists(/databases/$(database)/documents/todo_boards/$(boardId)) && (
-        get(/databases/$(database)/documents/todo_boards/$(boardId)).data.ownerId == request.auth.uid || 
-        request.auth.uid in get(/databases/$(database)/documents/todo_boards/$(boardId)).data.sharedWith
-      );
-    }
-
-    // Check for system-admin role without using unsupported map.get()
+    // Check for system-admin role (legacy admin system)
     function isSystemAdmin() {
       return request.auth != null &&
         exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
@@ -370,21 +36,393 @@ service cloud.firestore {
         (get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.groups['system-admin'] == true);
     }
 
+    // Check if user has admin privileges (god, system-admin, or admin role)
+    function isAdmin() {
+      return isGod() || isSystemAdmin() || (
+        request.auth != null &&
+        exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role in ["admin", "props_supervisor"]
+      );
+    }
+
     // Function to check if a user is a member of the show's team
     function isTeamMember(showId) {
-      // A user is a team member if their UID exists as a key in the show's 'team' map.
-      return get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] != null;
+      // God users have access to everything, otherwise check team membership
+      return isGod() || get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] != null;
     }
 
     // Function to check if a user has a specific role in the show's team
     function hasTeamRole(showId, role) {
-      return get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] == role;
+      // God users have all roles, otherwise check specific role
+      return isGod() || get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] == role;
     }
 
+    // Check if user is a board member
+    function isBoardMember(boardId) {
+      // God users have access to all boards, otherwise check board membership
+      return isGod() || (exists(/databases/$(database)/documents/todo_boards/$(boardId)) && (
+        get(/databases/$(database)/documents/todo_boards/$(boardId)).data.ownerId == request.auth.uid || 
+        request.auth.uid in get(/databases/$(database)/documents/todo_boards/$(boardId)).data.sharedWith
+      ));
+    }
+
+    // ===== COLLECTION RULES =====
+
+    // Tasks and comments
+    match /tasks/{taskId}/comments/{commentId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
+    }
+
+    // Notifications: user may read own notifications; writes by self or admin
+    match /notifications/{notificationId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin() || (request.auth != null && request.resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+    }
+
+    // Show notes
+    match /shows/{showId}/notes/{noteId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
+    }
+
+    // User profiles - god users can read all, others can only read their own
+    match /userProfiles/{userId} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      allow write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+    }
+
+    // Packing boxes
+    match /packingBoxes/{boxId} {
+      allow create: if isAdmin() || (request.auth != null && (
+        exists(/databases/$(database)/documents/shows/$(request.resource.data.showId)) && (
+          get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.ownerId == request.auth.uid ||
+          get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] != null
+        )
+      ));
+
+      allow read: if isAdmin() || (resource.data.publicReadable == true || (
+        request.auth != null && (
+          exists(/databases/$(database)/documents/shows/$(resource.data.showId)) && (
+            get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
+            get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null
+          )
+        )
+      ));
+
+      allow update, delete: if isAdmin() || (request.auth != null && (
+        exists(/databases/$(database)/documents/shows/$(resource.data.showId)) && (
+          get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
+          get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null
+        )
+      ));
+    }
+
+    // Pack lists
+    match /packLists/{packListId} {
+      allow create: if isAdmin() || (request.auth != null && request.auth.uid == request.resource.data.ownerId);
+      allow read: if isAdmin() || (request.auth != null && (
+        request.auth.uid == resource.data.ownerId ||
+        isTeamMember(resource.data.showId)
+      ));
+      allow update, delete: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
+    }
+
+    // Packs
+    match /packs/{packId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.ownerId);
+    }
+
+    // Locations
+    match /locations/{locationId} {
+      allow read, write: if isAdmin() || (request.auth != null &&
+        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid);
+    }
+
+    // Labels
+    match /labels/{labelId} {
+      allow read, write: if isAdmin() || (request.auth != null &&
+        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid);
+    }
+
+    // TODO BOARDS - Fixed for god user access
+    match /todo_boards/{boardId} {
+      // God users have full access to all boards
+      allow read, update, delete: if isAdmin() || (
+        request.auth != null &&
+        resource.data.sharedWith != null &&
+        request.auth.uid in resource.data.sharedWith
+      );
+      
+      // On create, creator must be owner and be in sharedWith
+      allow create: if isAdmin() || (
+        request.auth != null &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.sharedWith != null &&
+        request.auth.uid in request.resource.data.sharedWith
+      );
+    }
+
+    // Board lists
+    match /todo_boards/{boardId}/lists/{listId} {
+      allow read, write: if isAdmin() || (request.auth != null && isBoardMember(boardId));
+    }
+
+    // Board cards
+    match /todo_boards/{boardId}/lists/{listId}/cards/{cardId} {
+      allow read: if isAdmin() || (request.auth != null && isBoardMember(boardId));
+      allow update, delete: if isAdmin() || (request.auth != null && isBoardMember(boardId));
+      allow create: if isAdmin() || (request.auth != null && isBoardMember(boardId));
+    }
+
+    // Board members
+    match /todo_boards/{boardId}/members/{memberId} {
+      allow read, write: if isAdmin() || (request.auth != null && isBoardMember(boardId));
+    }
+
+    // Props tabs
+    match /propsTab/{docId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
+    }
+
+    // Native props
+    match /props_native/{docId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
+    }
+
+    // Shared props details
+    match /props_shared_details/{docId} {
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == resource.data.userId);
+    }
+
+    // SHOWS - Fixed for god user access
+    match /shows/{showId} {
+      // God users have full access to all shows
+      allow read: if isAdmin() || (request.auth != null && (
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid ||
+        resource.data.team[request.auth.uid] != null
+      ));
+      
+      // Only show owners and elevated team members can modify
+      allow update, delete: if isAdmin() || (request.auth != null && (
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid ||
+        resource.data.team[request.auth.uid] == "god" ||
+        resource.data.team[request.auth.uid] == "props_supervisor"
+      ));
+      
+      // Any authenticated user can create shows (they become the owner)
+      allow create: if request.auth != null;
+
+      // Team subcollection
+      match /team/{teamMemberId} {
+        allow read: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] != null);
+        allow write: if isAdmin() || (request.auth != null && (
+          get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] == "god" ||
+          get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] == "props_supervisor"
+        ));
+      }
+    }
+    
+    // Deletion logs
+    match /deletion_logs/{logId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false; // Logs should not be modified after creation
+    }
+
+    // Invitations
+    match /invitations/{inviteId} {
+      function isShowOwner(showId) {
+        return get(/databases/$(database)/documents/shows/$(showId)).data.userId == request.auth.uid ||
+               get(/databases/$(database)/documents/shows/$(showId)).data.ownerId == request.auth.uid;
+      }
+
+      // Create invite allowed to show owner or admin roles only
+      allow create: if isAdmin() || (request.auth != null && (
+        isShowOwner(request.resource.data.showId) ||
+        hasTeamRole(request.resource.data.showId, 'god') ||
+        hasTeamRole(request.resource.data.showId, 'props_supervisor') ||
+        hasTeamRole(request.resource.data.showId, 'art_director')
+      ));
+
+      // Allow public read of pending invites so invite links open without auth
+      allow read: if (resource.data.status == "pending" || resource.data.status == null) || isAdmin() || (request.auth != null && (
+        isShowOwner(resource.data.showId) ||
+        hasTeamRole(resource.data.showId, 'god') ||
+        hasTeamRole(resource.data.showId, 'props_supervisor') ||
+        (request.auth.token.email == resource.data.email)
+      ));
+
+      allow update, delete: if isAdmin() || (request.auth != null && (
+        isShowOwner(resource.data.showId) ||
+        hasTeamRole(resource.data.showId, 'god') ||
+        hasTeamRole(resource.data.showId, 'props_supervisor')
+      ));
+    }
+
+    // Private prop costings
+    match /shows/{showId}/props_private/{propId} {
+      allow read, write: if isAdmin() || (request.auth != null && (
+        get(/databases/$(database)/documents/shows/$(showId)).data.ownerId == request.auth.uid ||
+        hasTeamRole(showId, 'god') ||
+        hasTeamRole(showId, 'props_supervisor') ||
+        hasTeamRole(showId, 'art_director')
+      ));
+    }
+
+    // Change/Purchase/Maintenance requests
+    match /requests/{requestId} {
+      allow read: if isAdmin() || (request.auth != null && (
+        (get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null)
+      ));
+
+      // Create by editor+ (god, props_supervisor, editor)
+      allow create: if isAdmin() || (request.auth != null && (
+        hasTeamRole(request.resource.data.showId, 'god') ||
+        hasTeamRole(request.resource.data.showId, 'props_supervisor') ||
+        hasTeamRole(request.resource.data.showId, 'editor')
+      ));
+
+      // Update/approve/reject by props_supervisor+ (includes art_director)
+      allow update, delete: if isAdmin() || (request.auth != null && (
+        hasTeamRole(resource.data.showId, 'god') ||
+        hasTeamRole(resource.data.showId, 'props_supervisor') ||
+        hasTeamRole(resource.data.showId, 'art_director')
+      ));
+    }
+
+    // Private cost breakdown for requests
+    match /requests_private/{requestId} {
+      allow read, write: if isAdmin() || (request.auth != null && (
+        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'god') ||
+        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'props_supervisor') ||
+        hasTeamRole(get(/databases/$(database)/documents/requests/$(requestId)).data.showId, 'art_director')
+      ));
+    }
+
+    // Feedback collection
+    match /feedback/{id} {
+      allow create: if request.auth != null;
+      allow read: if isAdmin();
+    }
+
+    // Email collections
+    match /emails/{emailId} {
+      allow create: if true;  // Allow anyone to create emails (for signup verification)
+      allow read, update, delete: if false;
+    }
+    
+    match /emails/{document=**} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+    
+    // Verification codes
+    match /pending_signups/{email} {
+      allow create: if true;
+      allow read, update: if true;
+      allow delete: if true;
+    }
+    
+    match /pending_password_resets/{email} {
+      allow create: if true;
+      allow read, update: if true;
+      allow delete: if true;
+    }
+
+    // TASKS - Fixed for god user access
+    match /tasks/{taskId} {
+      allow read, write: if isAdmin() || (request.auth != null && (
+          get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null ||
+          resource.data.createdBy == request.auth.uid ||
+          request.auth.uid in resource.data.assignedTo
+      ));
+      allow update, delete: if isAdmin() || (request.auth != null && (
+        resource.data.assignedTo == request.auth.uid ||
+        resource.data.createdBy == request.auth.uid ||
+        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] == "god" ||
+        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] == "props_supervisor"
+      ));
+    }
+
+    // PROPS - Fixed for god user access (this was the main issue!)
+    match /props/{propId} {
+      // God users have full access to all props
+      allow read: if isAdmin() || (request.auth != null && (
+        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
+        get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.team[request.auth.uid] != null
+      ));
+      
+      // God users can create props for any show
+      allow create: if isAdmin() || (request.auth != null && (
+        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.ownerId == request.auth.uid ||
+        get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] != null
+      ));
+      
+      // Update/delete permissions require proper team membership or admin role
+      allow update, delete: if isAdmin() ||
+        (request.auth != null &&
+          (
+            hasTeamRole(resource.data.showId, 'god') ||
+            hasTeamRole(resource.data.showId, 'props_supervisor')
+          )
+        );
+    }
+
+    // Shopping items
+    match /shopping_items/{shoppingId} {
+      allow read: if isAdmin() || (request.auth != null);
+      allow create: if isAdmin() || (request.auth != null && request.auth.token.email == request.resource.data.requestedBy);
+      allow update: if isAdmin() || (request.auth != null);
+      allow delete: if isAdmin() || (request.auth != null && request.auth.token.email == resource.data.requestedBy);
+    }
+
+    // Makers collection
+    match /makers/{makerId} {
+      allow read: if isAdmin() || (request.auth != null);
+      allow create: if isAdmin() || (request.auth != null);
+      allow update, delete: if isAdmin();
+    }
+
+    // Hire companies collection
+    match /hire_companies/{companyId} {
+      allow read: if isAdmin() || (request.auth != null);
+      allow create: if isAdmin() || (request.auth != null);
+      allow update, delete: if isAdmin();
+    }
+
+    // Acts collection
+    match /acts/{actId} {
+      allow read: if isAdmin() || (request.auth != null);
+      allow create: if isAdmin() || (request.auth != null);
+      allow update, delete: if isAdmin();
+    }
+
+    // Scenes collection
+    match /scenes/{sceneId} {
+      allow read: if isAdmin() || (request.auth != null);
+      allow create: if isAdmin() || (request.auth != null);
+      allow update, delete: if isAdmin();
+    }
+
+    // Addresses collection
+    match /addresses/{addressId} {
+      allow read: if isAdmin() || (request.auth != null);
+      allow create: if isAdmin() || (request.auth != null);
+      allow update, delete: if isAdmin() || (request.auth != null);
+    }
 
     // THIS RULE MUST BE LAST to act as a catch-all deny.
     match /{document=**} {
       allow read, write: if false;
     }
   }
-} 
+}

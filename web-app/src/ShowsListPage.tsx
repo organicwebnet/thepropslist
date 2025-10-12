@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from './PropsBibleHomepage';
-// import { useWebAuth } from './contexts/WebAuthContext'; // Not used in current implementation
 import { useFirebase, FirebaseContextType } from './contexts/FirebaseContext';
 import type { Show } from './types/Show';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +8,7 @@ import { useShowSelection } from './contexts/ShowSelectionContext';
 import { useSubscription } from './hooks/useSubscription';
 import { useLimitChecker } from './hooks/useLimitChecker';
 import { useWebAuth } from './contexts/WebAuthContext';
+import { usePermissions } from './hooks/usePermissions';
 import UpgradeModal from './components/UpgradeModal';
 import { showNeedsAttention } from './utils/showUtils';
 import ArchivedShowsModal from './components/ArchivedShowsModal';
@@ -24,30 +24,54 @@ const ShowsListPage: React.FC = () => {
   const { currentShowId, setCurrentShowId } = useShowSelection();
   const { limits, effectiveLimits } = useSubscription();
   const { checkShowLimit } = useLimitChecker();
+  const { isExempt, shouldShowSubscriptionNotifications, effectiveLimits: permissionLimits } = usePermissions();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [archivedShowsOpen, setArchivedShowsOpen] = useState(false);
-  const [limitWarning, setLimitWarning] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  // Clear notifications for exempt users
+  const clearNotificationsForExemptUser = useCallback(() => {
+    if (isExempt) {
+      setNotification(null);
+    }
+  }, [isExempt]);
 
   // Check limits on page load and when shows change
   useEffect(() => {
     const checkLimits = async () => {
       if (!user?.uid) return;
       
+      // Skip subscription checks for exempt users
+      if (isExempt) {
+        clearNotificationsForExemptUser();
+        return;
+      }
+      
       try {
         const limitCheck = await checkShowLimit(user.uid);
         if (!limitCheck.withinLimit) {
-          setLimitWarning(limitCheck.message || 'Show limit reached');
+          setNotification(limitCheck.message || 'Show limit reached');
         } else {
-          setLimitWarning(null);
+          setNotification(null);
         }
       } catch (error) {
-        console.error('Error checking show limits:', error);
         // Don't show error to user, just log it
+        console.error('Error checking show limits:', error);
       }
     };
 
     checkLimits();
-  }, [user?.uid, shows.length, checkShowLimit]);
+  }, [user?.uid, isExempt, shows.length, checkShowLimit, clearNotificationsForExemptUser]);
+
+  // Auto-dismiss notifications after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -83,7 +107,6 @@ const ShowsListPage: React.FC = () => {
       const collaborativeShowsUnsubscribe = firebaseService.listenToCollection<Show>(
         'shows',
         (collaborativeData) => {
-          console.log('ShowsListPage: Received collaborative shows data:', collaborativeData);
           const collaborativeShows = collaborativeData.map(doc => ({ ...doc.data, id: doc.id }));
           
           // Combine and deduplicate shows
@@ -94,19 +117,20 @@ const ShowsListPage: React.FC = () => {
             }
           });
           
-          console.log('ShowsListPage: Combined show list:', allShows);
           setShows(allShows);
           setLoading(false);
           
           // If user has no shows, redirect to add show form
           if (allShows.length === 0 && user?.uid) {
-            console.log('ShowsListPage: No shows found, redirecting to /shows/new');
             navigate('/shows/new');
           }
         },
         (err: Error) => {
           console.error("Error fetching collaborative shows:", err);
-          setError(`Failed to load collaborative shows: ${err.message}. Please check your network connection and Firebase permissions.`);
+          // Only show error notifications for non-exempt users
+          if (shouldShowSubscriptionNotifications) {
+            setNotification(`Failed to load collaborative shows: ${err.message}`);
+          }
           setLoading(false);
         },
         {
@@ -121,13 +145,15 @@ const ShowsListPage: React.FC = () => {
     const createdByShowsUnsubscribe = firebaseService.listenToCollection<Show>(
       'shows',
       (ownedData) => {
-        console.log('ShowsListPage: Received createdBy shows data:', ownedData);
         createdByShows = ownedData.map(doc => ({ ...doc.data, id: doc.id }));
         updateCombinedShows();
       },
       (err: Error) => {
         console.error("Error fetching createdBy shows:", err);
-        setError(`Failed to load createdBy shows: ${err.message}. Please check your network connection and Firebase permissions.`);
+        // Only show error notifications for non-exempt users
+        if (shouldShowSubscriptionNotifications) {
+          setNotification(`Failed to load shows: ${err.message}`);
+        }
         setLoading(false);
       },
       {
@@ -139,13 +165,15 @@ const ShowsListPage: React.FC = () => {
     const userIdShowsUnsubscribe = firebaseService.listenToCollection<Show>(
       'shows',
       (ownedData) => {
-        console.log('ShowsListPage: Received userId shows data:', ownedData);
         userIdShows = ownedData.map(doc => ({ ...doc.data, id: doc.id }));
         updateCombinedShows();
       },
       (err: Error) => {
         console.error("Error fetching userId shows:", err);
-        setError(`Failed to load userId shows: ${err.message}. Please check your network connection and Firebase permissions.`);
+        // Only show error notifications for non-exempt users
+        if (shouldShowSubscriptionNotifications) {
+          setNotification(`Failed to load shows: ${err.message}`);
+        }
         setLoading(false);
       },
       {
@@ -164,43 +192,13 @@ const ShowsListPage: React.FC = () => {
   //   alert('Add Show (not implemented)');
   // };
 
-  // Debug logging
-  console.log('ShowsListPage render:', { 
-    loading, 
-    error, 
-    showsCount: shows.length, 
-    isInitialized, 
-    firebaseInitError: !!firebaseInitError,
-    user: !!user 
-  });
 
   return (
     <DashboardLayout>
-      {/* Temporary debug info */}
-      <div className="mb-4 p-2 bg-yellow-500/20 text-yellow-200 text-xs">
-        Debug: Loading={loading.toString()}, Error={error || 'none'}, Shows={shows.length}, Init={isInitialized.toString()}
-      </div>
-
-      {/* Limit Warning Banner */}
-      {limitWarning && (
-        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <div className="text-red-200 font-semibold mb-1">Subscription Limit Reached</div>
-              <div className="text-red-100 text-sm mb-3">{limitWarning}</div>
-              <button 
-                onClick={() => setUpgradeOpen(true)}
-                className="inline-block px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-sm"
-              >
-                Upgrade Plan
-              </button>
-            </div>
-          </div>
+      {/* Subtle notification - only show for non-exempt users */}
+      {notification && shouldShowSubscriptionNotifications && (
+        <div className="fixed top-4 right-4 z-50 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          {notification}
         </div>
       )}
 
@@ -208,12 +206,14 @@ const ShowsListPage: React.FC = () => {
         <div className="flex w-full justify-between items-center mb-6">
           <h2 className="text-2xl font-bold self-start">Shows List</h2>
             <div className="flex items-center gap-3">
-            <AvailabilityCounter
-              currentCount={shows.length}
-              limit={effectiveLimits.shows}
-              type="shows"
-              className="text-sm"
-            />
+            {shouldShowSubscriptionNotifications && (
+              <AvailabilityCounter
+                currentCount={shows.length}
+                limit={permissionLimits.shows}
+                type="shows"
+                className="text-sm"
+              />
+            )}
             
             <button
               onClick={() => setArchivedShowsOpen(true)}
@@ -231,19 +231,22 @@ const ShowsListPage: React.FC = () => {
                   return;
                 }
                 
-                const limitCheck = await checkShowLimit(user.uid);
-                if (!limitCheck.withinLimit) {
-                  setUpgradeOpen(true);
-                  return;
+                // Skip limit checks for exempt users
+                if (!isExempt) {
+                  const limitCheck = await checkShowLimit(user.uid);
+                  if (!limitCheck.withinLimit) {
+                    setUpgradeOpen(true);
+                    return;
+                  }
                 }
                 
                 navigate('/shows/new');
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${shows.length >= effectiveLimits.shows ? 'bg-pb-primary/20 text-pb-gray cursor-not-allowed' : 'bg-pb-primary hover:bg-pb-accent text-white'} shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50`}
-              title={shows.length >= effectiveLimits.shows ? 'Upgrade to create more shows' : 'Create a new show'}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${!isExempt && shows.length >= permissionLimits.shows ? 'bg-pb-primary/20 text-pb-gray cursor-not-allowed' : 'bg-pb-primary hover:bg-pb-accent text-white'} shadow transition focus:outline-none focus:ring-2 focus:ring-pb-primary/50`}
+              title={!isExempt && shows.length >= permissionLimits.shows ? 'Upgrade to create more shows' : 'Create a new show'}
               aria-label="Add New Show"
             >
-              {shows.length >= effectiveLimits.shows ? <Gem className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {!isExempt && shows.length >= permissionLimits.shows ? <Gem className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               <span className="hidden sm:inline">Add Show</span>
             </button>
           </div>
@@ -255,8 +258,8 @@ const ShowsListPage: React.FC = () => {
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-64">
-            <svg className="h-10 w-10 text-red-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
-            <div className="text-red-500 font-semibold">{error}</div>
+            <svg className="h-10 w-10 text-pb-gray mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
+            <div className="text-pb-gray">Unable to load shows. Please try again later.</div>
           </div>
         ) : shows.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap, HelpCircle } from 'lucide-react';
+import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap, HelpCircle, Users } from 'lucide-react';
 import NotificationBell from './components/NotificationBell';
 import { useWebAuth } from './contexts/WebAuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -82,6 +82,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { icon: HelpCircle, text: 'Help', subtext: 'Documentation and support', link: '/help' },
   ] as Array<{ icon: any; text: string; subtext: string; link?: string }>;
   if (userProfile?.role === 'god') {
+    navItems.push({ icon: Users, text: 'User Management', subtext: 'Manage all users and roles', link: '/admin/users' });
     navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers' });
     navItems.push({ icon: FileText, text: 'Admin Debug', subtext: 'Debug admin functionality', link: '/admin/debug' });
   }

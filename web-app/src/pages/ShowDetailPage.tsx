@@ -3,19 +3,22 @@ import DashboardLayout from '../PropsBibleHomepage';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
+import { usePermissions } from '../hooks/usePermissions';
 import type { Show } from '../types/Show';
 import { Pencil, UserPlus, MoreVertical } from 'lucide-react';
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
-import { buildInviteEmailDocTo } from '../services/EmailService';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { showNeedsAttention, getMissingShowDetails } from '../utils/showUtils';
 import ShowActionsModal from '../components/ShowActionsModal';
-import { ROLE_OPTIONS, JOB_ROLES } from '../constants/roleOptions';
+import { ShowUserControls } from '../components/ShowUserControls';
+import { JOB_ROLES } from '../constants/roleOptions';
 
 const ShowDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { service: firebaseService } = useFirebase();
   const { user } = useWebAuth();
+  const { canInviteTeamMembers } = usePermissions();
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,9 +33,9 @@ const ShowDetailPage: React.FC = () => {
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteJobRole, setInviteJobRole] = useState<string>('propmaker');
-  const [inviteRole, setInviteRole] = useState<string>('propmaker');
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [showActionsOpen, setShowActionsOpen] = useState(false);
 
 
@@ -48,6 +51,9 @@ const ShowDetailPage: React.FC = () => {
           console.log('ShowDetailPage: Loaded show data:', showData);
           console.log('ShowDetailPage: Logo data:', showData.logoImage);
           console.log('ShowDetailPage: Acts data:', showData.acts);
+          console.log('ShowDetailPage: Team data:', showData.team);
+          console.log('ShowDetailPage: Team type:', typeof showData.team);
+          console.log('ShowDetailPage: Team is array:', Array.isArray(showData.team));
           setShow(showData);
           setError(null);
         } else {
@@ -64,6 +70,16 @@ const ShowDetailPage: React.FC = () => {
     );
     return () => unsubscribe && unsubscribe();
   }, [id, firebaseService]);
+
+  // Auto-dismiss success notification after 2 seconds
+  useEffect(() => {
+    if (inviteSuccess) {
+      const timer = setTimeout(() => {
+        setInviteSuccess(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [inviteSuccess]);
 
   useEffect(() => {
     if (show && show.venueIds?.length) {
@@ -185,23 +201,28 @@ const ShowDetailPage: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold text-white mb-2">Team Management</h2>
-                  <p className="text-pb-gray/80 text-sm">Invite team members and manage permissions for this show</p>
+                  <p id="invite-description" className="text-pb-gray/80 text-sm">Invite team members and manage permissions for this show</p>
                 </div>
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      if (!user) {
-                        alert('Please sign in to send invites.');
-                        window.location.assign('/login');
-                        return;
-                      }
-                      setInviteOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-primary/80 text-white hover:bg-pb-primary transition-colors font-medium"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                    Invite Team
-                  </button>
+                  {/* Only show invite button for admin users */}
+                  {canInviteTeamMembers && (
+                    <button
+                      onClick={() => {
+                        if (!user) {
+                          alert('Please sign in to send invites.');
+                          window.location.assign('/login');
+                          return;
+                        }
+                        setInviteOpen(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-primary/80 text-white hover:bg-pb-primary transition-colors font-medium"
+                      aria-label="Invite team members to this show"
+                      aria-describedby="invite-description"
+                    >
+                      <UserPlus className="w-4 h-4" aria-hidden="true" />
+                      Invite Team
+                    </button>
+                  )}
                   <button
                     onClick={() => window.location.assign(`/shows/${show.id}/team`)}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-pb-accent/80 text-white hover:bg-pb-accent transition-colors font-medium"
@@ -457,20 +478,21 @@ const ShowDetailPage: React.FC = () => {
           {/* Additional Information */}
           <div className="mb-8">
             <h2 className="text-2xl font-semibold text-white mb-6">Additional Information</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Left Column */}
-              <div className="space-y-6">
-                {show.acts && show.acts.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-pb-primary mb-3">Acts & Scenes</h3>
-                    <div className="space-y-4">
-                      {show.acts.map((act: any, actIdx: number) => (
+            
+            {/* Acts & Scenes - Full Width Section */}
+            {show.acts && show.acts.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-pb-primary mb-4">Acts & Scenes</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {show.acts.map((act: any, actIdx: number) => {
+                    try {
+                      return (
                         <div key={actIdx} className="p-4 bg-pb-darker/40 rounded-lg border border-white/10">
                           <div className="text-white font-medium text-lg mb-3">
                             {typeof act === 'object' && act.name ? act.name : `Act ${actIdx + 1}`}
                           </div>
                           {act.scenes && Array.isArray(act.scenes) && act.scenes.length > 0 && (
-                            <div className="ml-4 space-y-2">
+                            <div className="space-y-2">
                               <div className="text-pb-gray/80 text-sm font-medium mb-2">Scenes:</div>
                               {act.scenes.map((scene: string, sceneIdx: number) => (
                                 <div key={sceneIdx} className="flex items-center gap-2">
@@ -483,23 +505,29 @@ const ShowDetailPage: React.FC = () => {
                             </div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      );
+                    } catch (error) {
+                      console.error('Error rendering act:', error, act);
+                      return null;
+                    }
+                  })}
+                </div>
+              </div>
+            )}
 
-                {show.contacts && show.contacts.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-pb-primary mb-3">Contacts</h3>
-                    <div className="space-y-2">
-                      {show.contacts.map((contact: any, idx: number) => (
-                        <div key={idx} className="p-3 bg-pb-darker/40 rounded-lg border border-white/10">
-                          <span className="text-white">{typeof contact === 'object' && contact.name ? contact.name : String(contact)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {/* Team and Collaboration Info - Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Team Members */}
+                <ShowUserControls
+                  showId={id!}
+                  showOwnerId={show?.userId || ''}
+                  showTeam={show?.team || {}}
+                  onTeamUpdate={(updatedTeam) => {
+                    setShow(prev => prev ? { ...prev, team: updatedTeam as any } : null);
+                  }}
+                />
               </div>
 
               {/* Right Column */}
@@ -517,32 +545,19 @@ const ShowDetailPage: React.FC = () => {
                   </div>
                 )}
 
-                <div>
-                  <h3 className="text-lg font-semibold text-pb-primary mb-3">Team Members</h3>
-                  {show.team && Array.isArray(show.team) && show.team.length > 0 ? (
+                {/* Contacts moved to right column */}
+                {show.contacts && show.contacts.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-pb-primary mb-3">Contacts</h3>
                     <div className="space-y-2">
-                      {show.team.map((member: any, idx: number) => (
+                      {show.contacts.map((contact: any, idx: number) => (
                         <div key={idx} className="p-3 bg-pb-darker/40 rounded-lg border border-white/10">
-                          <span className="text-white">{member.uid} ({member.role})</span>
+                          <span className="text-white">{typeof contact === 'object' && contact.name ? contact.name : String(contact)}</span>
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <div className="p-6 bg-pb-darker/20 rounded-lg border border-pb-primary/20 text-center">
-                      <div className="text-pb-gray/70 mb-3">
-                        <UserPlus className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No team members yet</p>
-                      </div>
-                      <button
-                        onClick={() => setInviteOpen(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-pb-primary text-white rounded-lg hover:bg-pb-primary/80 transition-colors font-medium text-sm"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        Invite Team Members
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -558,12 +573,24 @@ const ShowDetailPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Success notification */}
+        {inviteSuccess && (
+          <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+            {inviteSuccess}
+          </div>
+        )}
+
         {/* Invite teammate modal */}
         {inviteOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invite-modal-title"
+          >
             <div className="w-full max-w-md rounded-lg bg-[#12121a] border border-pb-primary/20 shadow-xl">
               <div className="px-5 py-4 border-b border-pb-primary/20 flex items-center justify-between">
-                <h3 className="text-white text-lg font-semibold">Invite teammate</h3>
+                <h3 id="invite-modal-title" className="text-white text-lg font-semibold">Invite teammate</h3>
                 <button
                   onClick={() => {
                     if (!inviteSubmitting) {
@@ -571,7 +598,7 @@ const ShowDetailPage: React.FC = () => {
                       setInviteName('');
                       setInviteEmail('');
                       setInviteJobRole('propmaker');
-                      setInviteRole('propmaker');
+                      setInviteError(null);
                     }
                   }}
                   className="text-pb-gray hover:text-white"
@@ -583,9 +610,26 @@ const ShowDetailPage: React.FC = () => {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   setInviteError(null);
+                  
                   if (!show?.id) return;
+                  
+                  // Input validation
+                  const errors: string[] = [];
+                  
                   if (!inviteEmail || !inviteEmail.includes('@')) {
-                    setInviteError('Please enter a valid email');
+                    errors.push('Please enter a valid email address');
+                  }
+                  
+                  if (!inviteName || inviteName.trim().length < 2) {
+                    errors.push('Please enter a name (at least 2 characters)');
+                  }
+                  
+                  if (!inviteJobRole) {
+                    errors.push('Please select a role');
+                  }
+                  
+                  if (errors.length > 0) {
+                    setInviteError(errors.join('. '));
                     return;
                   }
                   // Prevent inviting an email that already has an Auth account
@@ -599,51 +643,43 @@ const ShowDetailPage: React.FC = () => {
                     // Email check failed, continue with invite creation
                   }
                   setInviteSubmitting(true);
-                  const token = crypto.randomUUID();
                   try {
-                    const inviteUrl = `${window.location.origin}/join/${token}`;
-                    await firebaseService.setDocument('invitations', token, {
+                    // Use Cloud Function for proper invitation creation
+                    const createInvitation = httpsCallable(getFunctions(), 'createTeamInvitation');
+                    
+                    await createInvitation({
                       showId: show.id,
-                      role: inviteRole,
-                      jobRole: inviteJobRole,
-                      inviterId: user?.uid || show.userId,
-                      status: 'pending',
-                      createdAt: new Date().toISOString(),
-                      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
                       email: inviteEmail,
                       name: inviteName || null,
+                      role: inviteJobRole,
+                      jobRole: inviteJobRole,
                     });
-
-                    // Enqueue email for MailerSend extension (web-app only path)
-                    let mailQueued = false;
-                    try {
-                      const emailDoc = buildInviteEmailDocTo(inviteEmail, {
-                        showName: show.name,
-                        inviteUrl,
-                        inviteeName: inviteName || null,
-                        role: inviteRole,
-                        jobRoleLabel: JOB_ROLES.find(r=>r.value===inviteJobRole)?.label || inviteJobRole,
-                      });
-                      // MailerSend extension is configured to watch 'emails' collection
-                      await firebaseService.addDocument('emails', emailDoc);
-                      mailQueued = true;
-                    } catch (mailErr) {
-                      // Failed to enqueue email, but invite link still created
-                    }
-                    // User feedback
-                    if (mailQueued) {
-                      alert('Invite created and email queued. Watch your inbox.');
-                    } else {
-                      alert('Invite link created, but email could not be queued. You can copy and share the link manually.');
-                    }
+                    
+                    // Success - invitation created and email queued
+                    setInviteSuccess('Invite sent successfully!');
 
                     setInviteOpen(false);
                     setInviteName('');
                     setInviteEmail('');
                     setInviteJobRole('propmaker');
-                    setInviteRole('propmaker');
+                    setInviteError(null);
                   } catch (err: any) {
-                    setInviteError(err?.message || 'Failed to create invite');
+                    // User-friendly error messages
+                    let errorMessage = 'Something went wrong. Please try again later.';
+                    
+                    if (err.code === 'permission-denied') {
+                      errorMessage = 'You don\'t have permission to invite team members. Please contact your administrator.';
+                    } else if (err.code === 'invalid-argument') {
+                      errorMessage = 'Please check your email address and try again.';
+                    } else if (err.code === 'not-found') {
+                      errorMessage = 'Show not found. Please refresh the page and try again.';
+                    } else if (err.code === 'unauthenticated') {
+                      errorMessage = 'Please sign in to send invitations.';
+                    } else if (err.message) {
+                      errorMessage = err.message;
+                    }
+                    
+                    setInviteError(errorMessage);
                   } finally {
                     setInviteSubmitting(false);
                   }
@@ -653,50 +689,48 @@ const ShowDetailPage: React.FC = () => {
                 {inviteError && (
                   <div className="p-2 rounded border border-red-500/30 text-red-300 bg-red-500/10 text-sm">{inviteError}</div>
                 )}
+                
                 <div>
-                  <label className="block text-sm text-pb-gray mb-1">Name</label>
+                  <label htmlFor="invite-name" className="block text-sm text-pb-gray mb-1">Name</label>
                   <input
+                    id="invite-name"
                     value={inviteName}
                     onChange={(e) => setInviteName(e.target.value)}
                     type="text"
                     className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
                     placeholder="e.g. Alex Props"
+                    aria-describedby="name-help"
                   />
+                  <div id="name-help" className="text-xs text-pb-gray/70 mt-1">Enter the person's full name</div>
                 </div>
                 <div>
-                  <label className="block text-sm text-pb-gray mb-1">Email</label>
+                  <label htmlFor="invite-email" className="block text-sm text-pb-gray mb-1">Email</label>
                   <input
+                    id="invite-email"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     type="email"
                     required
                     className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
                     placeholder="invitee@example.com"
+                    aria-describedby="email-help"
                   />
+                  <div id="email-help" className="text-xs text-pb-gray/70 mt-1">We'll send the invitation to this email address</div>
                 </div>
                 <div>
-                  <label className="block text-sm text-pb-gray mb-1">Job role</label>
+                  <label htmlFor="invite-role" className="block text-sm text-pb-gray mb-1">Job role</label>
                   <select
+                    id="invite-role"
                     value={inviteJobRole}
                     onChange={(e) => setInviteJobRole(e.target.value)}
                     className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
+                    aria-describedby="role-help"
                   >
                     {JOB_ROLES.map(r => (
                       <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-pb-gray mb-1">Role</label>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as any)}
-                    className="w-full rounded bg-[#0e0e15] border border-pb-primary/20 px-3 py-2 text-white"
-                  >
-                    {ROLE_OPTIONS.map(role => (
-                      <option key={role.value} value={role.value}>{role.label}</option>
-                    ))}
-                  </select>
+                  <div id="role-help" className="text-xs text-pb-gray/70 mt-1">Select the role for this team member</div>
                 </div>
                 <div className="flex items-center justify-end gap-3 pt-2">
                   <button
@@ -707,7 +741,7 @@ const ShowDetailPage: React.FC = () => {
                         setInviteName('');
                         setInviteEmail('');
                         setInviteJobRole('propmaker');
-                        setInviteRole('propmaker');
+                        setInviteError(null);
                       }
                     }}
                     className="px-4 py-2 rounded border border-pb-primary/30 text-pb-gray hover:text-white"

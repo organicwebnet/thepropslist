@@ -118,7 +118,8 @@ const PropsListPage: React.FC = () => {
     }
 
     // If no show is selected and not in god mode, show the welcome screen
-    if (!currentShowId && !viewAllProps) {
+    // God users can view all props even without a show selected
+    if (!currentShowId && !viewAllProps && userProfile?.role !== 'god') {
       setProps([]);
       setLoading(false);
       setError(null); // Clear any previous errors since this is expected behavior
@@ -129,7 +130,7 @@ const PropsListPage: React.FC = () => {
     setError(null);
 
     // Only attempt to listen to props if we have a show selected or are in god mode
-    if (!currentShowId && !viewAllProps) {
+    if (!currentShowId && !viewAllProps && userProfile?.role !== 'god') {
       setLoading(false);
       return;
     }
@@ -139,7 +140,7 @@ const PropsListPage: React.FC = () => {
       (data: FirebaseDocument<Prop>[]) => {
         const propList = data
           .map(doc => ({ ...doc.data, id: doc.id }))
-          .filter(prop => viewAllProps || prop.showId === currentShowId);
+          .filter(prop => viewAllProps || prop.showId === currentShowId || (userProfile?.role === 'god' && !currentShowId));
         setProps(propList);
         setLoading(false);
       },
@@ -158,8 +159,10 @@ const PropsListPage: React.FC = () => {
         
         if (err.message.includes("permission-denied") || err.message.includes("Missing or insufficient permissions")) {
           // Check if this is likely due to no shows existing
-          if (!currentShowId && !viewAllProps) {
+          if (!currentShowId && !viewAllProps && userProfile?.role !== 'god') {
             errorMessage = "No show selected. Please create a show first to start managing your props.";
+          } else if (userProfile?.role === 'god') {
+            errorMessage = "Permission error detected for god user. This may indicate a Firestore rules issue.";
           } else {
             errorMessage = "You don't have permission to view props for this show. Try selecting a different show or contact the show administrator to get access.";
           }
@@ -179,7 +182,7 @@ const PropsListPage: React.FC = () => {
     );
 
     return () => unsubscribe();
-  }, [firebaseService, isInitialized, firebaseInitError, currentShowId, viewAllProps]);
+  }, [firebaseService, isInitialized, firebaseInitError, currentShowId, viewAllProps, userProfile?.role]);
 
   // Removed unused handler
 

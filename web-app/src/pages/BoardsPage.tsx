@@ -54,7 +54,12 @@ const BoardsPage: React.FC = () => {
         console.log("[BoardsPage] currentShowId:", currentShowId);
         mappedBoards.forEach(b => console.log(`[BoardsPage] Board: ${b.title}, showId: ${b.showId}`));
         console.log("[BoardsPage] Mapped boards before filtering:", mappedBoards);
-        const filteredBoards = mappedBoards.filter(b => !currentShowId || b.showId === currentShowId);
+        const filteredBoards = mappedBoards.filter(b => {
+          // If no show is selected, show all boards the user has access to
+          if (!currentShowId) return true;
+          // If a show is selected, show boards for that show OR boards without a showId (legacy boards)
+          return b.showId === currentShowId || !b.showId;
+        });
         console.log("[BoardsPage] Filtered boards:", filteredBoards);
         setBoards(filteredBoards);
       },
@@ -90,9 +95,11 @@ const BoardsPage: React.FC = () => {
   //   setError(null);
   //   try {
   //     // Create a new board in Firestore
-  //     await service.addDocument("boards", {
+  //     await service.addDocument("todo_boards", {
   //       title: boardName,
   //       listIds: [],
+  //       ownerId: user?.uid,
+  //       sharedWith: [user?.uid],
   //       createdAt: new Date(),
   //     });
   //     setBoardName("");
@@ -198,7 +205,12 @@ function BoardsPageContent() {
         console.log("[BoardsPage] currentShowId:", currentShowId);
         mappedBoards.forEach(b => console.log(`[BoardsPage] Board: ${b.title}, showId: ${b.showId}`));
         console.log("[BoardsPage] Mapped boards before filtering:", mappedBoards);
-        const filteredBoards = mappedBoards.filter(b => !currentShowId || b.showId === currentShowId);
+        const filteredBoards = mappedBoards.filter(b => {
+          // If no show is selected, show all boards the user has access to
+          if (!currentShowId) return true;
+          // If a show is selected, show boards for that show OR boards without a showId (legacy boards)
+          return b.showId === currentShowId || !b.showId;
+        });
         console.log("[BoardsPage] Filtered boards:", filteredBoards);
         setBoards(filteredBoards);
       },
@@ -260,10 +272,13 @@ function BoardsPageContent() {
       }
 
       // Create a new board in Firestore
-      await service.addDocument("boards", {
+      await service.addDocument("todo_boards", {
         title: boardName,
         listIds: [],
+        ownerId: user.uid,
+        sharedWith: [user.uid], // User is automatically added to sharedWith
         createdAt: new Date(),
+        showId: currentShowId || null, // Associate with current show if selected
       });
       setBoardName("");
       setShowForm(false);

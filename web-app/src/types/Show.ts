@@ -10,7 +10,7 @@ export interface Show {
   createdAt: any;
   updatedAt: any;
   collaborators: any[];
-  team?: { uid: string; role: 'editor' | 'viewer' }[];
+  team?: { uid: string; role: 'editor' | 'viewer' }[] | Record<string, 'editor' | 'viewer' | 'god' | 'admin' | 'props_supervisor' | 'props_carpenter'>;
   stageManager: string;
   stageManagerEmail: string;
   stageManagerPhone?: string;

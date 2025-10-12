@@ -1,6 +1,14 @@
+/**
+ * useLimitChecker Hook
+ * 
+ * Limit checking that integrates with the 3-tier permission system:
+ * 1. Role-based access control (RBAC) - Exempt users bypass all limits
+ * 2. Subscription-based access control - From Stripe metadata
+ * 3. Permission-based access control - Granular permission checks
+ */
+
 import { useSubscription } from './useSubscription';
 import { useFirebase } from '../contexts/FirebaseContext';
-// import { useState, useEffect } from 'react'; // Not used in current implementation
 
 export interface LimitCheckResult {
   withinLimit: boolean;
@@ -18,13 +26,14 @@ export function useLimitChecker() {
   const { limits, perShowLimits } = useSubscription();
   const { service: firebaseService } = useFirebase();
 
+
   /**
    * Check if user can create more shows
    */
   const checkShowLimit = async (userId: string): Promise<LimitCheckResult> => {
     try {
       const shows = await firebaseService.getDocuments('shows', {
-        where: [['userId', '==', userId]]
+        where: [['ownerId', '==', userId]]
       });
       
       const currentCount = shows.length;
@@ -57,7 +66,7 @@ export function useLimitChecker() {
   const checkBoardLimit = async (userId: string): Promise<LimitCheckResult> => {
     try {
       const boards = await firebaseService.getDocuments('todo_boards', {
-        where: [['userId', '==', userId]]
+        where: [['ownerId', '==', userId]]
       });
       
       const currentCount = boards.length;
@@ -102,7 +111,7 @@ export function useLimitChecker() {
         limit,
         isPerShow: true,
         message: currentCount >= limit 
-          ? `This show has reached its board limit of ${limit}. Upgrade to create more boards per show.`
+          ? `This show has reached its board limit of ${limit}. Upgrade to create more boards.`
           : undefined
       };
     } catch (error) {
@@ -118,12 +127,78 @@ export function useLimitChecker() {
   };
 
   /**
+   * Check if user can create more packing boxes (per-plan limit)
+   */
+  const checkPackingBoxLimit = async (userId: string): Promise<LimitCheckResult> => {
+    try {
+      const packingBoxes = await firebaseService.getDocuments('packingBoxes', {
+        where: [['ownerId', '==', userId]]
+      });
+      
+      const currentCount = packingBoxes.length;
+      const limit = limits.packingBoxes;
+      
+      return {
+        withinLimit: currentCount < limit,
+        currentCount,
+        limit,
+        isPerShow: false,
+        message: currentCount >= limit 
+          ? `You have reached your plan's packing box limit of ${limit}. Upgrade to create more packing boxes.`
+          : undefined
+      };
+    } catch (error) {
+      console.error('Error checking packing box limit:', error);
+      return {
+        withinLimit: false,
+        currentCount: 0,
+        limit: limits.packingBoxes,
+        isPerShow: false,
+        message: 'Error checking packing box limit'
+      };
+    }
+  };
+
+  /**
+   * Check if user can create more packing boxes for a specific show (per-show limit)
+   */
+  const checkPackingBoxLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
+    try {
+      const packingBoxes = await firebaseService.getDocuments('packingBoxes', {
+        where: [['showId', '==', showId]]
+      });
+      
+      const currentCount = packingBoxes.length;
+      const limit = perShowLimits.packingBoxes;
+      
+      return {
+        withinLimit: currentCount < limit,
+        currentCount,
+        limit,
+        isPerShow: true,
+        message: currentCount >= limit 
+          ? `This show has reached its packing box limit of ${limit}. Upgrade to create more packing boxes.`
+          : undefined
+      };
+    } catch (error) {
+      console.error('Error checking packing box limit for show:', error);
+      return {
+        withinLimit: false,
+        currentCount: 0,
+        limit: perShowLimits.packingBoxes,
+        isPerShow: true,
+        message: 'Error checking packing box limit for show'
+      };
+    }
+  };
+
+  /**
    * Check if user can create more props (per-plan limit)
    */
-  const checkPropsLimit = async (userId: string): Promise<LimitCheckResult> => {
+  const checkPropLimit = async (userId: string): Promise<LimitCheckResult> => {
     try {
       const props = await firebaseService.getDocuments('props', {
-        where: [['userId', '==', userId]]
+        where: [['ownerId', '==', userId]]
       });
       
       const currentCount = props.length;
@@ -139,13 +214,13 @@ export function useLimitChecker() {
           : undefined
       };
     } catch (error) {
-      console.error('Error checking props limit:', error);
+      console.error('Error checking prop limit:', error);
       return {
         withinLimit: false,
         currentCount: 0,
         limit: limits.props,
         isPerShow: false,
-        message: 'Error checking props limit'
+        message: 'Error checking prop limit'
       };
     }
   };
@@ -153,7 +228,7 @@ export function useLimitChecker() {
   /**
    * Check if user can create more props for a specific show (per-show limit)
    */
-  const checkPropsLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
+  const checkPropLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
     try {
       const props = await firebaseService.getDocuments('props', {
         where: [['showId', '==', showId]]
@@ -168,31 +243,28 @@ export function useLimitChecker() {
         limit,
         isPerShow: true,
         message: currentCount >= limit 
-          ? `This show has reached its props limit of ${limit}. Upgrade to create more props per show.`
+          ? `This show has reached its props limit of ${limit}. Upgrade to create more props.`
           : undefined
       };
     } catch (error) {
-      console.error('Error checking props limit for show:', error);
+      console.error('Error checking prop limit for show:', error);
       return {
         withinLimit: false,
         currentCount: 0,
         limit: perShowLimits.props,
         isPerShow: true,
-        message: 'Error checking props limit for show'
+        message: 'Error checking prop limit for show'
       };
     }
   };
 
   /**
-   * Check if user can add more collaborators to a show
+   * Check if user can add more collaborators to a show (per-show limit)
    */
-  const checkCollaboratorsLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
+  const checkCollaboratorLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
     try {
-      const collaborators = await firebaseService.getDocuments('collaborators', {
-        where: [['showId', '==', showId]]
-      });
-      
-      const currentCount = collaborators.length;
+      const showDoc = await firebaseService.getDocument('shows', showId);
+      const currentCount = Object.keys(showDoc?.data?.team || {}).length;
       const limit = perShowLimits.collaborators;
       
       return {
@@ -201,109 +273,31 @@ export function useLimitChecker() {
         limit,
         isPerShow: true,
         message: currentCount >= limit 
-          ? `This show has reached its collaborators limit of ${limit}. Upgrade to add more collaborators per show.`
+          ? `This show has reached its collaborator limit of ${limit}. Upgrade to add more collaborators.`
           : undefined
       };
     } catch (error) {
-      console.error('Error checking collaborators limit for show:', error);
+      console.error('Error checking collaborator limit for show:', error);
       return {
         withinLimit: false,
         currentCount: 0,
         limit: perShowLimits.collaborators,
         isPerShow: true,
-        message: 'Error checking collaborators limit for show'
+        message: 'Error checking collaborator limit for show'
       };
     }
   };
 
   /**
-   * Check if user can create more packing boxes (per-plan limit)
+   * Check if user can archive more shows (per-plan limit)
    */
-  const checkPackingBoxesLimit = async (userId: string): Promise<LimitCheckResult> => {
+  const checkArchivedShowLimit = async (userId: string): Promise<LimitCheckResult> => {
     try {
-      const packingLists = await firebaseService.getDocuments('packing_lists', {
-        where: [['userId', '==', userId]]
+      const archivedShows = await firebaseService.getDocuments('shows', {
+        where: [['createdBy', '==', userId], ['status', '==', 'archived']]
       });
       
-      let totalBoxes = 0;
-      for (const list of packingLists) {
-        const boxes = await firebaseService.getDocuments(`packing_lists/${list.id}/boxes`);
-        totalBoxes += boxes.length;
-      }
-      
-      const currentCount = totalBoxes;
-      const limit = limits.packingBoxes;
-      
-      return {
-        withinLimit: currentCount < limit,
-        currentCount,
-        limit,
-        isPerShow: false,
-        message: currentCount >= limit 
-          ? `You have reached your plan's packing boxes limit of ${limit}. Upgrade to create more packing boxes.`
-          : undefined
-      };
-    } catch (error) {
-      console.error('Error checking packing boxes limit:', error);
-      return {
-        withinLimit: false,
-        currentCount: 0,
-        limit: limits.packingBoxes,
-        isPerShow: false,
-        message: 'Error checking packing boxes limit'
-      };
-    }
-  };
-
-  /**
-   * Check if user can create more packing boxes for a specific show (per-show limit)
-   */
-  const checkPackingBoxesLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
-    try {
-      const packingLists = await firebaseService.getDocuments('packing_lists', {
-        where: [['showId', '==', showId]]
-      });
-      
-      let totalBoxes = 0;
-      for (const list of packingLists) {
-        const boxes = await firebaseService.getDocuments(`packing_lists/${list.id}/boxes`);
-        totalBoxes += boxes.length;
-      }
-      
-      const currentCount = totalBoxes;
-      const limit = perShowLimits.packingBoxes;
-      
-      return {
-        withinLimit: currentCount < limit,
-        currentCount,
-        limit,
-        isPerShow: true,
-        message: currentCount >= limit 
-          ? `This show has reached its packing boxes limit of ${limit}. Upgrade to create more packing boxes per show.`
-          : undefined
-      };
-    } catch (error) {
-      console.error('Error checking packing boxes limit for show:', error);
-      return {
-        withinLimit: false,
-        currentCount: 0,
-        limit: perShowLimits.packingBoxes,
-        isPerShow: true,
-        message: 'Error checking packing boxes limit for show'
-      };
-    }
-  };
-
-  /**
-   * Check if user can archive more shows
-   */
-  const checkArchivedShowsLimit = async (userId: string): Promise<LimitCheckResult> => {
-    try {
-      const archives = await firebaseService.getDocuments('show_archives', {
-        where: [['archivedBy', '==', userId]]
-      });
-      
-      const currentCount = archives.length;
+      const currentCount = archivedShows.length;
       const limit = limits.archivedShows;
       
       return {
@@ -316,13 +310,13 @@ export function useLimitChecker() {
           : undefined
       };
     } catch (error) {
-      console.error('Error checking archived shows limit:', error);
+      console.error('Error checking archived show limit:', error);
       return {
         withinLimit: false,
         currentCount: 0,
         limit: limits.archivedShows,
         isPerShow: false,
-        message: 'Error checking archived shows limit'
+        message: 'Error checking archived show limit'
       };
     }
   };
@@ -331,13 +325,11 @@ export function useLimitChecker() {
     checkShowLimit,
     checkBoardLimit,
     checkBoardLimitForShow,
-    checkPropsLimit,
-    checkPropsLimitForShow,
-    checkCollaboratorsLimitForShow,
-    checkPackingBoxesLimit,
-    checkPackingBoxesLimitForShow,
-    checkArchivedShowsLimit,
-    limits,
-    perShowLimits,
+    checkPackingBoxLimit,
+    checkPackingBoxLimitForShow,
+    checkPropLimit,
+    checkPropLimitForShow,
+    checkCollaboratorLimitForShow,
+    checkArchivedShowLimit,
   };
 }

@@ -7,6 +7,96 @@ import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
 import Stripe from "stripe";
+
+// Initialize Firebase Admin if not already initialized
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
+// Cloud Function to create team invitations with proper admin privileges
+export const createTeamInvitation = onCall(async (request) => {
+  if (!request.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+
+  const { showId, email, name, role, jobRole } = request.data;
+  
+  if (!showId || !email || !role) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing required fields: showId, email, role');
+  }
+
+  try {
+    const db = admin.firestore();
+    const uid = request.auth.uid;
+
+    // Check if user has permission to create invitations
+    const userProfile = await db.doc(`userProfiles/${uid}`).get();
+    const userData = userProfile.exists ? userProfile.data() : {};
+    const userRole = userData?.role;
+
+    // Check if user is show owner
+    const showDoc = await db.doc(`shows/${showId}`).get();
+    if (!showDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Show not found');
+    }
+    
+    const showData = showDoc.data();
+    const isShowOwner = showData?.userId === uid || showData?.ownerId === uid;
+    
+    // Check if user has admin role or is show owner
+    const hasAdminRole = ['god', 'admin', 'props_supervisor', 'editor'].includes(userRole);
+    const hasTeamRole = showData?.team?.[uid] && ['god', 'props_supervisor', 'art_director'].includes(showData.team[uid]);
+
+    if (!hasAdminRole && !isShowOwner && !hasTeamRole) {
+      throw new functions.https.HttpsError('permission-denied', 'Insufficient permissions to create invitations');
+    }
+
+    // Create invitation with admin privileges
+    const invitationData = {
+      showId,
+      email,
+      name: name || null,
+      role,
+      jobRole: jobRole || role,
+      inviterId: uid,
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 14 days
+    };
+
+    const invitationRef = await db.collection('invitations').add(invitationData);
+    
+    // Create email document for MailerSend
+    const inviteUrl = `https://app.thepropslist.uk/join/${invitationRef.id}`;
+    const emailData = {
+      to: email,
+      template: 'team-invitation',
+      data: {
+        showName: showData?.name || 'this show',
+        inviteUrl,
+        inviteeName: name || null,
+        role,
+        jobRoleLabel: jobRole || role,
+      },
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection('emails').add(emailData);
+
+    return {
+      success: true,
+      invitationId: invitationRef.id,
+      inviteUrl,
+    };
+
+  } catch (error) {
+    logger.error('Error creating team invitation:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError('internal', 'Failed to create invitation');
+  }
+});
 // Inline pricing configuration to avoid import issues
 const DEFAULT_PRICING_CONFIG = {
   currency: 'USD',

@@ -5,6 +5,7 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import type { Show } from '../types/Show';
 import { buildInviteEmailDocTo, buildReminderEmailDoc } from '../services/EmailService';
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useLimitChecker } from '../hooks/useLimitChecker';
 import { ROLE_OPTIONS, JOB_ROLES } from '../constants/roleOptions';
 
@@ -46,8 +47,11 @@ const TeamPage: React.FC = () => {
     const checkLimits = async () => {
       if (!id || !user?.uid) return;
       
+      console.log('TeamPage: Checking limits for user:', user.uid, 'show:', id);
+      
       try {
         const limitCheck = await checkCollaboratorsLimitForShow(id);
+        console.log('TeamPage: Limit check result:', limitCheck);
         if (!limitCheck.withinLimit) {
           setLimitWarning(limitCheck.message || 'Collaborators limit reached');
         } else {
@@ -122,35 +126,41 @@ const TeamPage: React.FC = () => {
       } catch (authCheckErr) {
         console.warn('Email check failed', authCheckErr);
       }
-      const inviteData: Invitation = {
+      // Use Cloud Function for proper invitation creation
+      const createInvitation = httpsCallable(getFunctions(), 'createTeamInvitation');
+      
+      const result = await createInvitation({
         showId: id,
-        role: inviteRole,
-        jobRole: inviteJobRole,
-        inviterId: user?.uid,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
         email: inviteEmail,
         name: inviteName || null,
-      };
-      const docId = await service.addDocument('invitations', inviteData);
-      const inviteUrl = `${window.location.origin}/join/${docId}`;
-      const emailDoc = buildInviteEmailDocTo(inviteEmail, {
-        showName: show?.name || 'this show',
-        inviteUrl,
-        inviteeName: inviteName || null,
-        role: inviteRole,
-        jobRoleLabel: JOB_ROLES.find(r => r.value === inviteJobRole)?.label || inviteJobRole,
+        role: inviteJobRole,
+        jobRole: inviteJobRole,
       });
-      await service.addDocument('emails', emailDoc);
+      
+      // Success - invitation created and email queued
       setInviteOpen(false);
       setInviteName('');
       setInviteEmail('');
       setInviteJobRole('propmaker');
       setInviteRole('propmaker');
-      alert('Invite email queued.');
-    } catch (e: any) {
-      setError(e.message || 'Failed to send invite.');
+      alert('Invite sent successfully!');
+    } catch (err: any) {
+      // User-friendly error messages
+      let errorMessage = 'Something went wrong. Please try again later.';
+      
+      if (err.code === 'permission-denied') {
+        errorMessage = 'You don\'t have permission to invite team members. Please contact your administrator.';
+      } else if (err.code === 'invalid-argument') {
+        errorMessage = 'Please check your email address and try again.';
+      } else if (err.code === 'not-found') {
+        errorMessage = 'Show not found. Please refresh the page and try again.';
+      } else if (err.code === 'unauthenticated') {
+        errorMessage = 'Please sign in to send invitations.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }

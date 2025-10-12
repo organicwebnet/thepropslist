@@ -110,9 +110,11 @@ service cloud.firestore {
         // Or the user owns the show
         request.auth.uid == get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.ownerId ||
         request.auth.uid == get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.userId ||
-        // Or the user is an admin on the show
+        // Or the user is an admin on the show (team role)
         hasTeamRole(request.resource.data.showId, 'god') ||
-        hasTeamRole(request.resource.data.showId, 'props_supervisor')
+        hasTeamRole(request.resource.data.showId, 'props_supervisor') ||
+        // Or the user has god role in their profile
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
       ));
 
       // Read public so recipients can open the link without being on the team yet
@@ -122,7 +124,9 @@ service cloud.firestore {
       allow update, delete: if isSystemAdmin() || (request.auth != null && (
         request.auth.uid == resource.data.inviterId ||
         hasTeamRole(resource.data.showId, 'god') ||
-        hasTeamRole(resource.data.showId, 'props_supervisor')
+        hasTeamRole(resource.data.showId, 'props_supervisor') ||
+        // Or the user has god role in their profile
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == "god"
       ));
     }
     match /tasks/{taskId} {

@@ -1,9 +1,23 @@
+/**
+ * useSubscription Hook
+ * 
+ * Subscription management that integrates with the 3-tier permission system:
+ * 1. Role-based access control (RBAC)
+ * 2. Subscription-based access control (from Stripe metadata)
+ * 3. Permission-based access control
+ */
+
 import { useEffect, useMemo, useState } from 'react';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { doc as fsDoc, getDoc as fsGetDoc, Firestore } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { UserAddOn, calculateAddOnLimits } from '../types/AddOns';
+import { 
+  PermissionService, 
+  type SubscriptionLimits,
+  UNLIMITED_LIMITS
+} from '../core/permissions';
 
 export type PlanKey = 'free' | 'starter' | 'standard' | 'pro' | 'unknown';
 
@@ -11,47 +25,35 @@ export interface SubscriptionInfo {
   plan: PlanKey;
   status: string;
   currentPeriodEnd?: number;
-  limits: {
-    shows: number;
-    boards: number;
-    packingBoxes: number;
-    collaboratorsPerShow: number;
-    props: number;
-    archivedShows: number;
-  };
+  limits: SubscriptionLimits;
   perShowLimits: {
     boards: number;
     packingBoxes: number;
     collaborators: number;
     props: number;
   };
-  effectiveLimits: {
-    shows: number;
-    boards: number;
-    packingBoxes: number;
-    collaboratorsPerShow: number;
-    props: number;
-    archivedShows: number;
-  };
+  effectiveLimits: SubscriptionLimits;
   userAddOns: UserAddOn[];
   canPurchaseAddOns: boolean;
 }
 
-const DEFAULT_LIMITS: SubscriptionInfo['limits'] = {
+const DEFAULT_LIMITS: SubscriptionLimits = {
   shows: 1,
   boards: 2,
   packingBoxes: 20,
   collaboratorsPerShow: 3,
   props: 10,
   archivedShows: 0,
+  boardsPerShow: 2,
+  packingBoxesPerShow: 20,
+  propsPerShow: 10,
+  canCreateShows: true,
+  canInviteCollaborators: true,
+  canUseAdvancedFeatures: false,
+  canExportData: false,
+  canAccessAPI: false
 };
 
-const DEFAULT_PER_SHOW_LIMITS: SubscriptionInfo['perShowLimits'] = {
-  boards: 2,
-  packingBoxes: 20,
-  collaborators: 3,
-  props: 10,
-};
 
 function mapPlan(input?: any): PlanKey {
   const k = String(input || '').toLowerCase();
@@ -67,7 +69,7 @@ function mapPlan(input?: any): PlanKey {
  * Supports both per-plan and per-show limits
  * Format: "20" = per-plan, "20per_show" = per-show
  */
-function parseStripeLimits(metadata: any) {
+function parseStripeLimits(metadata: any): SubscriptionLimits {
   const parseLimit = (value: string | undefined, defaultValue: number = 0) => {
     if (!value) return defaultValue;
     const num = parseInt(value);
@@ -85,36 +87,33 @@ function parseStripeLimits(metadata: any) {
 
   return {
     // Per-plan limits (total across all shows)
-    limits: {
-      shows: parseLimit(metadata.shows, 1),
-      boards: parseLimit(metadata.boards, 2),
-      packingBoxes: parseLimit(metadata.packing_boxes, 20),
-      collaboratorsPerShow: parseLimit(metadata.collaborators, 3),
-      props: parseLimit(metadata.props, 10),
-      archivedShows: parseLimit(metadata.archived_shows, 0),
-    },
+    shows: parseLimit(metadata.shows, 1),
+    boards: parseLimit(metadata.boards, 2),
+    packingBoxes: parseLimit(metadata.packing_boxes, 20),
+    collaboratorsPerShow: parseLimit(metadata.collaborators, 3),
+    props: parseLimit(metadata.props, 10),
+    archivedShows: parseLimit(metadata.archived_shows, 0),
+    
     // Per-show limits (per individual show)
-    perShowLimits: {
-      boards: parsePerShowLimit(metadata.boards_per_show, 2),
-      packingBoxes: parsePerShowLimit(metadata.packing_boxes_per_show, 20),
-      collaborators: parsePerShowLimit(metadata.collaborators_per_show, 3),
-      props: parsePerShowLimit(metadata.props_per_show, 10),
-    }
+    boardsPerShow: parsePerShowLimit(metadata.boards_per_show, 2),
+    packingBoxesPerShow: parsePerShowLimit(metadata.packing_boxes_per_show, 20),
+    propsPerShow: parsePerShowLimit(metadata.props_per_show, 10),
+    
+    // Feature flags
+    canCreateShows: metadata.can_create_shows !== 'false',
+    canInviteCollaborators: metadata.can_invite_collaborators !== 'false',
+    canUseAdvancedFeatures: metadata.can_use_advanced_features === 'true',
+    canExportData: metadata.can_export_data === 'true',
+    canAccessAPI: metadata.can_access_api === 'true'
   };
 }
 
 export function useSubscription(): SubscriptionInfo {
-  const { user } = useWebAuth();
+  const { user, userProfile } = useWebAuth();
   const [plan, setPlan] = useState<PlanKey>('free');
   const [status, setStatus] = useState<string>('unknown');
   const [currentPeriodEnd, setCurrentPeriodEnd] = useState<number | undefined>(undefined);
-  const [stripeLimits, setStripeLimits] = useState<{
-    limits: SubscriptionInfo['limits'];
-    perShowLimits: SubscriptionInfo['perShowLimits'];
-  }>({
-    limits: DEFAULT_LIMITS,
-    perShowLimits: DEFAULT_PER_SHOW_LIMITS,
-  });
+  const [stripeLimits, setStripeLimits] = useState<SubscriptionLimits>(DEFAULT_LIMITS);
   const [userAddOns, setUserAddOns] = useState<UserAddOn[]>([]);
 
   useEffect(() => {
@@ -126,50 +125,28 @@ export function useSubscription(): SubscriptionInfo {
           setPlan('free'); 
           setStatus('unknown'); 
           setCurrentPeriodEnd(undefined);
-          setStripeLimits({
-            limits: DEFAULT_LIMITS,
-            perShowLimits: DEFAULT_PER_SHOW_LIMITS,
-          });
+          setStripeLimits(DEFAULT_LIMITS);
           setUserAddOns([]);
         }
         return;
       }
       
+      // Check if user is exempt from subscription limits using the permission system
+      if (PermissionService.isExemptFromLimits(userProfile)) {
+        if (!isMounted) return;
+        setPlan('pro');
+        setStatus('exempt');
+        setCurrentPeriodEnd(undefined);
+        setStripeLimits(UNLIMITED_LIMITS);
+        setUserAddOns([]);
+        return;
+      }
+
       try {
         // Get user profile
         const ref = fsDoc(db as Firestore, 'userProfiles', user.uid);
         const snap = await fsGetDoc(ref);
         const d = snap.exists() ? (snap.data() as any) : {};
-        
-        // Exempt elevated roles
-        const isGod = String(d?.role || '').toLowerCase() === 'god';
-        const isSystemAdmin = !!(d?.groups && d.groups['system-admin'] === true);
-        
-        if (isGod || isSystemAdmin) {
-          if (!isMounted) return;
-          setPlan('pro');
-          setStatus('exempt');
-          setCurrentPeriodEnd(undefined);
-          // God/Admin gets unlimited limits
-          setStripeLimits({
-            limits: {
-              shows: 999999,
-              boards: 999999,
-              packingBoxes: 999999,
-              collaboratorsPerShow: 999999,
-              props: 999999,
-              archivedShows: 999999,
-            },
-            perShowLimits: {
-              boards: 999999,
-              packingBoxes: 999999,
-              collaborators: 999999,
-              props: 999999,
-            }
-          });
-          setUserAddOns([]);
-          return;
-        }
         
         const userPlan = mapPlan(d.plan || d.subscriptionPlan);
         if (!isMounted) return;
@@ -221,10 +198,7 @@ export function useSubscription(): SubscriptionInfo {
           setPlan('unknown'); 
           setStatus('unknown'); 
           setCurrentPeriodEnd(undefined);
-          setStripeLimits({
-            limits: DEFAULT_LIMITS,
-            perShowLimits: DEFAULT_PER_SHOW_LIMITS,
-          });
+          setStripeLimits(DEFAULT_LIMITS);
           setUserAddOns([]);
         }
       }
@@ -232,20 +206,24 @@ export function useSubscription(): SubscriptionInfo {
     
     load();
     return () => { isMounted = false; };
-  }, [user]);
+  }, [user, userProfile]); // Depend on userProfile for exemption checks
 
   // Calculate effective limits including add-ons
   const effectiveLimits = useMemo(() => {
-    const addOnLimits = calculateAddOnLimits(stripeLimits.limits, userAddOns);
+    // If user is exempt, their effective limits are already set to unlimited
+    if (PermissionService.isExemptFromLimits(userProfile)) {
+      return UNLIMITED_LIMITS;
+    }
+    
+    const addOnLimits = calculateAddOnLimits(stripeLimits, userAddOns);
     return {
+      ...stripeLimits,
       shows: addOnLimits.shows,
-      boards: stripeLimits.limits.boards, // Add-ons don't affect boards
       packingBoxes: addOnLimits.packingBoxes,
-      collaboratorsPerShow: stripeLimits.limits.collaboratorsPerShow, // Add-ons don't affect collaborators
       props: addOnLimits.props,
       archivedShows: addOnLimits.archivedShows,
     };
-  }, [stripeLimits.limits, userAddOns]);
+  }, [stripeLimits, userAddOns, userProfile]);
   
   // Determine if user can purchase add-ons
   const canPurchaseAddOns = useMemo(() => {
@@ -256,12 +234,15 @@ export function useSubscription(): SubscriptionInfo {
     plan, 
     status, 
     currentPeriodEnd, 
-    limits: stripeLimits.limits,
-    perShowLimits: stripeLimits.perShowLimits,
+    limits: stripeLimits,
+    perShowLimits: {
+      boards: stripeLimits.boardsPerShow,
+      packingBoxes: stripeLimits.packingBoxesPerShow,
+      collaborators: stripeLimits.collaboratorsPerShow,
+      props: stripeLimits.propsPerShow
+    },
     effectiveLimits,
     userAddOns,
     canPurchaseAddOns,
   };
 }
-
-
