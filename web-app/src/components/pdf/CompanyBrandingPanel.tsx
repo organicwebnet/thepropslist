@@ -32,6 +32,58 @@ const CompanyBrandingPanel: React.FC<CompanyBrandingPanelProps> = ({
   });
 
   const [logoPreview, setLogoPreview] = useState<string | null>(branding.companyLogo);
+  const [contrastWarnings, setContrastWarnings] = useState<Record<string, string>>({});
+
+  // Contrast checking functions
+  const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  const getLuminance = (r: number, g: number, b: number): number => {
+    const [rs, gs, bs] = [r, g, b].map(c => {
+      c = c / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  };
+
+  const getContrastRatio = (color1: string, color2: string): number => {
+    const rgb1 = hexToRgb(color1);
+    const rgb2 = hexToRgb(color2);
+    
+    if (!rgb1 || !rgb2) return 1;
+    
+    const lum1 = getLuminance(rgb1.r, rgb1.g, rgb1.b);
+    const lum2 = getLuminance(rgb2.r, rgb2.g, rgb2.b);
+    
+    const brightest = Math.max(lum1, lum2);
+    const darkest = Math.min(lum1, lum2);
+    
+    return (brightest + 0.05) / (darkest + 0.05);
+  };
+
+  const checkColorContrast = (color: string, colorType: string): string | null => {
+    const whiteContrast = getContrastRatio(color, '#ffffff');
+    const blackContrast = getContrastRatio(color, '#000000');
+    
+    // WCAG AA requires 4.5:1 for normal text, 3:1 for large text
+    const minContrast = 4.5;
+    
+    if (whiteContrast < minContrast && blackContrast < minContrast) {
+      return `⚠️ ${colorType} colour has poor contrast on both light and dark backgrounds. Consider choosing a darker or lighter colour for better readability.`;
+    } else if (whiteContrast < minContrast) {
+      return `⚠️ ${colorType} colour may be hard to read on light backgrounds. Consider using a darker colour.`;
+    } else if (blackContrast < minContrast) {
+      return `⚠️ ${colorType} colour may be hard to read on dark backgrounds. Consider using a lighter colour.`;
+    }
+    
+    return null;
+  };
 
   const fontOptions = [
     { value: 'Inter', label: 'Inter' },
@@ -70,7 +122,15 @@ const CompanyBrandingPanel: React.FC<CompanyBrandingPanelProps> = ({
 
   const handleColorChange = (colorType: keyof Pick<CompanyBranding, 'primaryColor' | 'secondaryColor' | 'accentColor'>) => 
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setBranding(prev => ({ ...prev, [colorType]: event.target.value }));
+      const newColor = event.target.value;
+      setBranding(prev => ({ ...prev, [colorType]: newColor }));
+      
+      // Check contrast and update warnings
+      const warning = checkColorContrast(newColor, colorType.charAt(0).toUpperCase() + colorType.slice(1));
+      setContrastWarnings(prev => ({
+        ...prev,
+        [colorType]: warning || ''
+      }));
     };
 
   const handleTextChange = (field: keyof Pick<CompanyBranding, 'companyName' | 'fontFamily'>) => 
@@ -85,6 +145,22 @@ const CompanyBrandingPanel: React.FC<CompanyBrandingPanelProps> = ({
   useEffect(() => {
     onBrandingChange(branding);
   }, [branding, onBrandingChange]);
+
+  // Check initial colors for contrast issues
+  useEffect(() => {
+    const warnings: Record<string, string> = {};
+    
+    const primaryWarning = checkColorContrast(branding.primaryColor, 'Primary');
+    if (primaryWarning) warnings.primaryColor = primaryWarning;
+    
+    const secondaryWarning = checkColorContrast(branding.secondaryColor, 'Secondary');
+    if (secondaryWarning) warnings.secondaryColor = secondaryWarning;
+    
+    const accentWarning = checkColorContrast(branding.accentColor, 'Accent');
+    if (accentWarning) warnings.accentColor = accentWarning;
+    
+    setContrastWarnings(warnings);
+  }, []);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -209,6 +285,29 @@ const CompanyBrandingPanel: React.FC<CompanyBrandingPanelProps> = ({
               </div>
             </div>
           </div>
+          
+          {/* Contrast Warnings */}
+          {(contrastWarnings.primaryColor || contrastWarnings.secondaryColor || contrastWarnings.accentColor) && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <div className="flex items-start space-x-2">
+                <div className="text-amber-600 text-sm">⚠️</div>
+                <div className="text-sm text-amber-800">
+                  <div className="font-medium mb-1">Accessibility Warning:</div>
+                  <ul className="space-y-1">
+                    {contrastWarnings.primaryColor && (
+                      <li>• {contrastWarnings.primaryColor}</li>
+                    )}
+                    {contrastWarnings.secondaryColor && (
+                      <li>• {contrastWarnings.secondaryColor}</li>
+                    )}
+                    {contrastWarnings.accentColor && (
+                      <li>• {contrastWarnings.accentColor}</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Typography */}
