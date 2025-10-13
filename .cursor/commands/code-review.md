@@ -4,6 +4,7 @@ quality of code is more important than completeingthat task quickly so please ta
 - is there any redundat code or files in the codebase?
 - is the code well written?
 - Think through how data flows in the app. Explain new patterns if they exist and why.
+- have you added an infinat loop into the code?
 
 - Is the code readable and consistent with best practice and coding conventions?
 - Are functions/classes appropriately sized and named?
@@ -14,6 +15,8 @@ quality of code is more important than completeingthat task quickly so please ta
 - what effect dose the code have on the rest on the codebase?it it working with the current code base.
 - is the front end optimised? 
 - is the css in a style sheets that is reuse across the project? 
+- do we have any white on white or black on black issues.
+- check there is enought contrast between the font colour and he background, including form emelents.
 -is the styles thar are no longer used?
 - when writing html keep it samantic and valid.
 - use proper html form structures.

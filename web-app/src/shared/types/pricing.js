@@ -29,14 +29,14 @@ export const DEFAULT_PLAN_FEATURES = {
  * Default pricing configuration - used as fallback when Stripe is unavailable
  */
 export const DEFAULT_PRICING_CONFIG = {
-    currency: 'USD',
+    currency: 'GBP',
     billingInterval: 'monthly',
     plans: [
         {
             id: 'free',
             name: 'Free',
             description: 'Perfect for small productions',
-            price: { monthly: 0, yearly: 0, currency: 'USD' },
+            price: { monthly: 0, yearly: 0, currency: 'GBP' },
             features: DEFAULT_PLAN_FEATURES.free,
             limits: {
                 shows: 1, boards: 2, packingBoxes: 20,
@@ -50,7 +50,7 @@ export const DEFAULT_PRICING_CONFIG = {
             id: 'starter',
             name: 'Starter',
             description: 'Great for growing productions',
-            price: { monthly: 9, yearly: 90, currency: 'USD' },
+            price: { monthly: 9, yearly: 90, currency: 'GBP' },
             features: DEFAULT_PLAN_FEATURES.starter,
             limits: {
                 shows: 3, boards: 5, packingBoxes: 200,
@@ -64,7 +64,7 @@ export const DEFAULT_PRICING_CONFIG = {
             id: 'standard',
             name: 'Standard',
             description: 'Perfect for professional productions',
-            price: { monthly: 19, yearly: 190, currency: 'USD' },
+            price: { monthly: 19, yearly: 190, currency: 'GBP' },
             features: DEFAULT_PLAN_FEATURES.standard,
             limits: {
                 shows: 10, boards: 20, packingBoxes: 1000,
@@ -78,7 +78,7 @@ export const DEFAULT_PRICING_CONFIG = {
             id: 'pro',
             name: 'Pro',
             description: 'For large-scale productions',
-            price: { monthly: 39, yearly: 390, currency: 'USD' },
+            price: { monthly: 39, yearly: 390, currency: 'GBP' },
             features: DEFAULT_PLAN_FEATURES.pro,
             limits: {
                 shows: 100, boards: 200, packingBoxes: 10000,

@@ -23,6 +23,8 @@ import { FieldMappingService, type UserPermissions } from '../../services/pdf/Fi
 import { FieldConfigurationService, type FieldConfiguration } from '../../services/pdf/FieldConfigurationService';
 import type { Prop } from '../../types/props';
 import CompanyBrandingPanel from './CompanyBrandingPanel';
+import BrandingPresetManager from './BrandingPresetManager';
+import { BrandingPresetService, type BrandingPreset, type BrandingPresetOptions } from '../../services/pdf/BrandingPresetService';
 
 interface CompanyBranding {
   companyName: string;
@@ -66,6 +68,7 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
   // Services
   const fieldMappingService = FieldMappingService.getInstance();
   const configurationService = FieldConfigurationService.getInstance();
+  const brandingPresetService = BrandingPresetService.getInstance();
 
   // State
   const [activeTab, setActiveTab] = useState<'quick' | 'custom' | 'branding'>('quick');
@@ -75,7 +78,9 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
   const [selectedDisplayType, setSelectedDisplayType] = useState<string | null>('luxury-catalogue');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'act_scene' | 'alphabetical'>('act_scene');
-  const [layout, setLayout] = useState<'portrait' | 'landscape'>('portrait');
+  const [layout, setLayout] = useState<'portrait' | 'landscape' | 'product-catalog'>('portrait');
+  const [showBrandingPresets, setShowBrandingPresets] = useState(false);
+  const [selectedBrandingPreset, setSelectedBrandingPreset] = useState<BrandingPreset | null>(null);
 
   // Get accessible data (memoized to prevent infinite loops)
   const accessibleFields = useMemo(() => 
@@ -117,6 +122,14 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
       icon: <Package className="w-5 h-5" />,
       layout: 'landscape' as const,
       color: 'bg-amber-600'
+    },
+    {
+      id: 'product-catalog',
+      name: 'Product Catalog',
+      description: 'Professional product catalog layout with QR codes linking to prop details',
+      icon: <Tag className="w-5 h-5" />,
+      layout: 'product-catalog' as const,
+      color: 'bg-emerald-600'
     }
   ];
 
@@ -295,6 +308,26 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
     (configuration as any).sortBy = sortBy;
     (configuration as any).layout = layout;
     onExport(configuration);
+  };
+
+  // Branding preset handlers
+  const handlePresetSelect = (preset: BrandingPreset) => {
+    setSelectedBrandingPreset(preset);
+    if (onBrandingChange) {
+      onBrandingChange({
+        ...preset.branding,
+        companyLogo: preset.branding.companyLogo || null
+      });
+    }
+  };
+
+  const handleBrandingChange = (branding: BrandingPresetOptions) => {
+    if (onBrandingChange) {
+      onBrandingChange({
+        ...branding,
+        companyLogo: branding.companyLogo || null
+      });
+    }
   };
 
   return (
@@ -574,6 +607,38 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
             <div className="text-center mb-8">
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Company Branding</h3>
               <p className="text-gray-600">Customize your PDF with your company branding</p>
+            </div>
+            
+            {/* Branding Preset Manager */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-medium text-gray-900">Branding Presets</h4>
+                <button
+                  onClick={() => setShowBrandingPresets(!showBrandingPresets)}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                >
+                  <Palette className="w-4 h-4" />
+                  {showBrandingPresets ? 'Hide Presets' : 'Show Presets'}
+                </button>
+              </div>
+              
+              {showBrandingPresets && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <BrandingPresetManager
+                    currentBranding={{
+                      companyName: initialBranding?.companyName || '',
+                      companyLogo: initialBranding?.companyLogo || null,
+                      primaryColor: initialBranding?.primaryColor || '#0ea5e9',
+                      secondaryColor: initialBranding?.secondaryColor || '#3b82f6',
+                      accentColor: initialBranding?.accentColor || '#22c55e',
+                      fontFamily: initialBranding?.fontFamily || 'Inter',
+                      fontSize: initialBranding?.fontSize || 'medium'
+                    }}
+                    onBrandingChange={handleBrandingChange}
+                    onPresetSelect={handlePresetSelect}
+                  />
+                </div>
+              )}
             </div>
             
             <CompanyBrandingPanel

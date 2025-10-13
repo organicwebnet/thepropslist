@@ -23,6 +23,7 @@ const AddPropPage = lazy(() => import('./pages/AddPropPage'));
 const ImportPropsPage = lazy(() => import('./pages/ImportPropsPage'));
 const PropsPdfExportPage = lazy(() => import('./pages/PropsPdfExportPage'));
 const TestPdfExport = lazy(() => import('./pages/TestPdfExport'));
+const DebugPdfExport = lazy(() => import('./pages/DebugPdfExport'));
 
 const ShowsListPage = lazy(() => import('./ShowsListPage'));
 const ShowsRedirect = lazy(() => import('./components/ShowsRedirect'));
@@ -37,6 +38,7 @@ const PackingListPage = lazy(() => import('./pages/PackingListPage'));
 const PackingListDetailPage = lazy(() => import('./pages/PackingListDetailPage'));
 const ContainerDetailPage = lazy(() => import('./pages/ContainerDetailPage'));
 const PublicContainerPage = lazy(() => import('./pages/PublicContainerPage'));
+const PublicPropViewPage = lazy(() => import('./pages/PublicPropViewPage'));
 
 const BrandingStudioPage = lazy(() => import('./pages/BrandingStudioPage'));
 const ShoppingListPage = lazy(() => import('./pages/ShoppingListPage'));
@@ -71,6 +73,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/props/pdf-export" element={<ProtectedRoute><PropsPdfExportPage /></ProtectedRoute>} />
           <Route path="/test-pdf-export" element={<ProtectedRoute><TestPdfExport /></ProtectedRoute>} />
+          <Route path="/debug-pdf-export" element={<ProtectedRoute><DebugPdfExport /></ProtectedRoute>} />
           <Route path="/branding" element={<ProtectedRoute><BrandingStudioPage /></ProtectedRoute>} />
           <Route path="/props/import" element={<ProtectedRoute><ImportPropsPage /></ProtectedRoute>} />
           <Route path="/props/:id/edit" element={<ProtectedRoute><EditPropPage /></ProtectedRoute>} />
@@ -95,6 +98,8 @@ function App() {
           <Route path="/packing-lists/:packListId/containers/:containerId" element={<ProtectedRoute><ContainerDetailPage /></ProtectedRoute>} />
           {/* Public container viewer: scan or link goes here */}
           <Route path="/c/:containerId" element={<PublicContainerPage />} />
+          {/* Public prop viewer: QR code or direct link goes here */}
+          <Route path="/view/prop/:id" element={<PublicPropViewPage />} />
           <Route path="/shopping" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />

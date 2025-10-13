@@ -305,12 +305,12 @@ const AdminPricingPage: React.FC = () => {
               <div className="mb-4">
                 <div className="flex items-center space-x-4">
                   <div>
-                    <span className="text-2xl font-bold text-white">${plan.price.monthly}</span>
+                    <span className="text-2xl font-bold text-white">£{plan.price.monthly}</span>
                     <span className="text-pb-gray">/month</span>
                   </div>
                   {plan.price.yearly > 0 && (
                     <div>
-                      <span className="text-2xl font-bold text-white">${plan.price.yearly}</span>
+                      <span className="text-2xl font-bold text-white">£{plan.price.yearly}</span>
                       <span className="text-pb-gray">/year</span>
                     </div>
                   )}

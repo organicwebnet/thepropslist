@@ -187,7 +187,7 @@ const ContainerDetailPage: React.FC = () => {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto p-8">
         <div className="flex items-center gap-4 mb-6">
-          <button className="btn btn-secondary" onClick={() => navigate(-1)}>&larr; Back</button>
+          <button className="btn btn-secondary" onClick={() => navigate(`/packing-lists/${packListId}`)}>&larr; Back</button>
           <h1 className="text-2xl font-bold">Container: {container.name}</h1>
           {container.type && <span className="text-sm text-gray-400">({container.type})</span>}
           <span className="flex-1" />

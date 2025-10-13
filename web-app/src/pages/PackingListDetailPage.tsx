@@ -217,7 +217,7 @@ const PackingListDetailPage: React.FC = () => {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto p-8">
         <div className="flex items-center gap-4 mb-6">
-          <button className="btn btn-secondary" onClick={() => navigate(-1)}>&larr; Back</button>
+          <button className="btn btn-secondary" onClick={() => navigate('/packing-lists')}>&larr; Back</button>
           <h1 className="text-2xl font-bold">Packing List: {packList.name}</h1>
         </div>
         {/* Bulk actions bar */}

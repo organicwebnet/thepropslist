@@ -1024,14 +1024,14 @@ const ProfilePage: React.FC = () => {
                           <h4 id={`plan-${planData.id}-title`} className="text-xl font-semibold text-white">{planData.name}</h4>
                           <p id={`plan-${planData.id}-description`} className="text-sm text-pb-gray mb-2">{planData.description}</p>
                           <div className="mt-2">
-                            <span className="text-3xl font-bold text-white">${planData.price.monthly}</span>
+                            <span className="text-3xl font-bold text-white">£{planData.price.monthly}</span>
                             <span className="text-pb-gray">/month</span>
                           </div>
                           {planData.price.yearly > 0 && planData.price.monthly > 0 && (() => {
                             const { savings, discountPercent } = calculateDiscount(planData.price.monthly, planData.price.yearly);
                             return (
                               <div className="text-sm text-pb-gray">
-                                or ${planData.price.yearly}/year 
+                                or £{planData.price.yearly}/year 
                                 {savings > 0 && (
                                   <span className="text-green-400 font-medium">
                                     {' '}(save ${savings} - {discountPercent}% off)
@@ -1066,11 +1066,11 @@ const ProfilePage: React.FC = () => {
                                   ? 'bg-pb-primary text-white hover:bg-pb-secondary'
                                   : 'border border-pb-primary text-pb-primary hover:bg-pb-primary hover:text-white'
                               }`}
-                              aria-label={`Subscribe to ${planData.name} plan monthly for $${planData.price.monthly} per month`}
+                              aria-label={`Subscribe to ${planData.name} plan monthly for £${planData.price.monthly} per month`}
                             >
                               {checkoutLoading ? 'Loading...' : planData.id === plan 
                                 ? 'Current Plan' 
-                                : `Monthly - $${planData.price.monthly}`
+                                : `Monthly - £${planData.price.monthly}`
                               }
                             </button>
                           )}
@@ -1087,15 +1087,15 @@ const ProfilePage: React.FC = () => {
                                   ? 'bg-pb-gray/30 text-pb-gray cursor-not-allowed'
                                   : 'border border-green-500 text-green-400 hover:bg-green-500 hover:text-white'
                               }`}
-                              aria-label={`Subscribe to ${planData.name} plan yearly for $${planData.price.yearly} per year`}
+                              aria-label={`Subscribe to ${planData.name} plan yearly for £${planData.price.yearly} per year`}
                             >
                               {checkoutLoading ? 'Loading...' : planData.id === plan 
                                 ? 'Current Plan' 
                                 : (() => {
                                     const { savings, discountPercent } = calculateDiscount(planData.price.monthly, planData.price.yearly);
                                     return savings > 0 
-                                      ? `Yearly - $${planData.price.yearly} (Save $${savings} - ${discountPercent}% off)`
-                                      : `Yearly - $${planData.price.yearly}`;
+                                      ? `Yearly - £${planData.price.yearly} (Save £${savings} - ${discountPercent}% off)`
+                                      : `Yearly - £${planData.price.yearly}`;
                                   })()
                               }
                             </button>

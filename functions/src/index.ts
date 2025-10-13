@@ -1525,7 +1525,7 @@ export const getPricingConfig = onCall({
     });
 
     return {
-      currency: 'USD',
+      currency: 'GBP',
       billingInterval: 'monthly',
       plans
     } as any;

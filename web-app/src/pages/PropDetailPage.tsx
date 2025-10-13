@@ -481,7 +481,7 @@ const PropDetailPage: React.FC = () => {
     <DashboardLayout>
       <div className="flex flex-col min-h-screen w-full max-w-none p-6">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-pb-primary hover:text-pb-accent">
+          <button onClick={() => navigate('/props')} className="flex items-center gap-2 text-pb-primary hover:text-pb-accent">
             <ArrowLeft className="w-5 h-5" /> Back
           </button>
         </div>

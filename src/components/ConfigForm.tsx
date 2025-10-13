@@ -98,7 +98,7 @@ const getInitialConfig = (): ConfigFormData => {
     FIREBASE_APP_ID: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
     GOOGLE_SHEETS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_SHEETS_API_KEY || '',
     GOOGLE_DOCS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_DOCS_API_KEY || '',
-    CURRENCY: process.env.EXPO_PUBLIC_CURRENCY || 'USD',
+    CURRENCY: process.env.EXPO_PUBLIC_CURRENCY || 'GBP',
     SHOW_NAME: process.env.EXPO_PUBLIC_SHOW_NAME || '',
     SHOW_ACTS: parseInt(process.env.EXPO_PUBLIC_SHOW_ACTS || '1', 10),
     SHOW_SCENES: parseInt(process.env.EXPO_PUBLIC_SHOW_SCENES || '1', 10)

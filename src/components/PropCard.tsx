@@ -109,7 +109,7 @@ export const PropCard: React.FC<PropCardProps> = ({
             {prop.description || 'No description provided'}
           </Text>
           {prop.price && (
-            <Text style={styles.price}>${prop.price.toFixed(2)} each</Text>
+            <Text style={styles.price}>£{prop.price.toFixed(2)} each</Text>
           )}
           {(prop.length || prop.width || prop.height) && (
             <Text style={styles.dimensions}>

@@ -6,7 +6,10 @@ import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import SubFootnote from '../components/SubFootnote';
 import SimpleExportPanel from '../components/pdf/SimpleExportPanel';
+import BrandingPresetManager from '../components/pdf/BrandingPresetManager';
 import { SimplePdfService, type SimplePdfOptions } from '../services/pdf/SimplePdfService';
+import { ProductCatalogPdfService, type ProductCatalogPdfOptions } from '../services/pdf/ProductCatalogPdfService';
+import { BrandingPresetService, type BrandingPreset, type BrandingPresetOptions } from '../services/pdf/BrandingPresetService';
 import { type UserPermissions } from '../services/pdf/FieldMappingService';
 import { type FieldConfiguration } from '../services/pdf/FieldConfigurationService';
 import { type ShowData } from '../services/pdf/EnterprisePdfService';
@@ -14,6 +17,8 @@ import { type ShowData } from '../services/pdf/EnterprisePdfService';
 
 // Services
 const simplePdfService = SimplePdfService.getInstance();
+const productCatalogPdfService = ProductCatalogPdfService.getInstance();
+const brandingPresetService = BrandingPresetService.getInstance();
 
 // Simple PDF options
 const defaultPdfOptions = {
@@ -35,15 +40,10 @@ const PropsPdfExportPage: React.FC = () => {
   const [showData, setShowData] = useState<ShowData | null>(null);
   const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
   
-  // Company branding state
-  const [companyBranding, setCompanyBranding] = useState({
-    companyName: '',
-    companyLogo: null as string | null,
-    primaryColor: '#0ea5e9',
-    secondaryColor: '#3b82f6',
-    accentColor: '#22c55e',
-    fontFamily: 'Inter',
-    fontSize: 'medium' as 'small' | 'medium' | 'large'
+  // Company branding state - initialize with default preset
+  const [companyBranding, setCompanyBranding] = useState<BrandingPresetOptions>(() => {
+    const defaultPreset = brandingPresetService.getDefaultPreset();
+    return defaultPreset.branding;
   });
   
   // Preview state
@@ -62,6 +62,13 @@ const PropsPdfExportPage: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  
+  // New workflow state
+  const [selectedLayout, setSelectedLayout] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<'layout' | 'branding' | 'fields' | 'preview'>('layout');
+  const [selectedBrandingPreset, setSelectedBrandingPreset] = useState<BrandingPreset | null>(null);
 
   // Services
   const { service } = useFirebase();
@@ -169,6 +176,42 @@ const PropsPdfExportPage: React.FC = () => {
     setCurrentConfiguration(configuration);
   };
 
+  // New workflow handlers
+  const handleLayoutSelect = (layoutId: string) => {
+    setSelectedLayout(layoutId);
+    setCurrentStep('branding');
+  };
+
+  const handleBrandingChange = (branding: BrandingPresetOptions) => {
+    setCompanyBranding(branding);
+  };
+
+  const handlePresetSelect = (preset: BrandingPreset) => {
+    setSelectedBrandingPreset(preset);
+    setCompanyBranding(preset.branding);
+  };
+
+  const handleBrandingComplete = () => {
+    setCurrentStep('fields');
+  };
+
+  const handleFieldsComplete = () => {
+    setCurrentStep('preview');
+  };
+
+  const handleBackToLayout = () => {
+    setCurrentStep('layout');
+    setSelectedLayout(null);
+  };
+
+  const handleBackToBranding = () => {
+    setCurrentStep('branding');
+  };
+
+  const handleBackToFields = () => {
+    setCurrentStep('fields');
+  };
+
   const handlePreview = async (configuration: FieldConfiguration) => {
     console.log('Starting preview generation...');
     console.log('Current show ID:', currentShowId);
@@ -195,71 +238,138 @@ const PropsPdfExportPage: React.FC = () => {
     setGenerationError(null);
 
     try {
-      const options: SimplePdfOptions = {
-        selectedFields: configuration.fieldSelections,
-        title: showTitle || 'Props List',
-        showData: {
-          name: showData.name || 'Unknown Show',
-          venue: showData.venue,
-          description: showData.description,
-        },
-        sortBy: (configuration as any).sortBy || 'act_scene',
-        layout: (configuration as any).layout || 'portrait',
-        branding: {
-          primaryColor: companyBranding.primaryColor,
-          secondaryColor: companyBranding.secondaryColor,
-          accentColor: companyBranding.accentColor,
-          fontFamily: companyBranding.fontFamily,
-          fontSize: companyBranding.fontSize,
-        },
-        logoUrl: companyBranding.companyLogo || showData.logoImage?.url || undefined,
-      };
+      const layout = (configuration as any).layout || 'portrait';
+      
+      // Check if this is a product catalog layout
+      if (layout === 'product-catalog') {
+        const options: ProductCatalogPdfOptions = {
+          selectedFields: configuration.fieldSelections,
+          title: showTitle || 'Product Catalog',
+          showData: {
+            name: showData.name || 'Unknown Show',
+            venue: showData.venue,
+            description: showData.description,
+          },
+          businessName: companyBranding.companyName || showData.name || 'BUSINESS NAME',
+          branding: {
+            primaryColor: companyBranding.primaryColor,
+            secondaryColor: companyBranding.secondaryColor,
+            accentColor: companyBranding.accentColor,
+            fontFamily: companyBranding.fontFamily,
+            fontSize: companyBranding.fontSize,
+          },
+          logoUrl: companyBranding.companyLogo || showData.logoImage?.url || undefined,
+          baseUrl: window.location.origin, // Use current domain for QR codes
+        };
 
-      console.log('PDF options:', options);
-      console.log('Show data:', showData);
-      console.log('Logo URL:', showData.logoImage?.url);
-      console.log('Company branding logo:', companyBranding.companyLogo);
-      console.log('Final logo URL being used:', options.logoUrl);
-      console.log('Props being passed to PDF:', props);
-      console.log('Props count:', props.length);
-      console.log('Selected fields:', Object.keys(options.selectedFields).filter(k => options.selectedFields[k]));
-      console.log('All field selections:', options.selectedFields);
+        console.log('Product Catalog PDF options:', options);
+        console.log('Props being passed to Product Catalog PDF:', props);
+        console.log('Props count:', props.length);
+        console.log('Selected fields:', Object.keys(options.selectedFields).filter(k => options.selectedFields[k]));
 
-      const result = await simplePdfService.generatePropsListPdf(
-        props,
-        showData,
-        userPermissions,
-        options
-      );
+        const result = await productCatalogPdfService.generateProductCatalogPdf(
+          props,
+          showData,
+          userPermissions,
+          options
+        );
 
-      console.log('PDF generation result:', result);
+        console.log('Product Catalog PDF generation result:', result);
 
-      if (result.success) {
-        console.log('HTML generated, length:', result.html.length);
-        setFullHtml(result.html);
-        setPageCss(result.css);
-        
-        // Parse pages from HTML for preview
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(result.html, 'text/html');
-        const pageElements = doc.querySelectorAll('.page');
-        const pages = Array.from(pageElements).map(page => page.outerHTML);
-        console.log('Parsed pages:', pages.length);
-        console.log('First page HTML:', pages[0]?.substring(0, 200));
-        setPageHtmls(pages);
-        setCurrentPage(0);
-        setShowPreview(true);
-        
-        // Create preview URL
-        const blob = new Blob([result.html], { type: 'text/html' });
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
-        setPreviewUrl(URL.createObjectURL(blob));
-
-        console.log('PDF preview generated successfully');
+        if (result.success) {
+          console.log('Product Catalog HTML generated, length:', result.html.length);
+          setFullHtml(result.html);
+          setPageCss(result.css);
+          
+          // Parse pages from HTML for preview (same as other layouts)
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(result.html, 'text/html');
+          const pageElements = doc.querySelectorAll('.page');
+          const pages = Array.from(pageElements).map(page => page.outerHTML);
+          console.log('Product Catalog parsed pages:', pages.length);
+          
+          setPageHtmls(pages);
+          setCurrentPage(0);
+          setTotalPages(pages.length);
+          setShowPreview(true);
+          
+          // Create preview URL
+          const blob = new Blob([result.html], { type: 'text/html' });
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(URL.createObjectURL(blob));
+          
+          console.log('Product Catalog PDF preview generated successfully');
+        } else {
+          setGenerationError(result.error || 'Product Catalog PDF generation failed');
+        }
       } else {
-        const error = result.error || 'PDF generation failed';
-        console.error('PDF generation failed:', error);
-        setGenerationError(error);
+        // Use the existing SimplePdfService for other layouts
+        const options: SimplePdfOptions = {
+          selectedFields: configuration.fieldSelections,
+          title: showTitle || 'Props List',
+          showData: {
+            name: showData.name || 'Unknown Show',
+            venue: showData.venue,
+            description: showData.description,
+          },
+          sortBy: (configuration as any).sortBy || 'act_scene',
+          layout: layout,
+          branding: {
+            primaryColor: companyBranding.primaryColor,
+            secondaryColor: companyBranding.secondaryColor,
+            accentColor: companyBranding.accentColor,
+            fontFamily: companyBranding.fontFamily,
+            fontSize: companyBranding.fontSize,
+          },
+          logoUrl: companyBranding.companyLogo || showData.logoImage?.url || undefined,
+        };
+
+        console.log('PDF options:', options);
+        console.log('Show data:', showData);
+        console.log('Logo URL:', showData.logoImage?.url);
+        console.log('Company branding logo:', companyBranding.companyLogo);
+        console.log('Final logo URL being used:', options.logoUrl);
+        console.log('Props being passed to PDF:', props);
+        console.log('Props count:', props.length);
+        console.log('Selected fields:', Object.keys(options.selectedFields).filter(k => options.selectedFields[k]));
+        console.log('All field selections:', options.selectedFields);
+
+        const result = await simplePdfService.generatePropsListPdf(
+          props,
+          showData,
+          userPermissions,
+          options
+        );
+
+        console.log('PDF generation result:', result);
+
+        if (result.success) {
+          console.log('HTML generated, length:', result.html.length);
+          setFullHtml(result.html);
+          setPageCss(result.css);
+          
+          // Parse pages from HTML for preview
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(result.html, 'text/html');
+          const pageElements = doc.querySelectorAll('.page');
+          const pages = Array.from(pageElements).map(page => page.outerHTML);
+          console.log('Parsed pages:', pages.length);
+          console.log('First page HTML:', pages[0]?.substring(0, 200));
+          setPageHtmls(pages);
+          setCurrentPage(0);
+          setShowPreview(true);
+          
+          // Create preview URL
+          const blob = new Blob([result.html], { type: 'text/html' });
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(URL.createObjectURL(blob));
+
+          console.log('PDF preview generated successfully');
+        } else {
+          const error = result.error || 'PDF generation failed';
+          console.error('PDF generation failed:', error);
+          setGenerationError(error);
+        }
       }
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -284,32 +394,99 @@ const PropsPdfExportPage: React.FC = () => {
     setGenerationError(null);
 
     try {
-      const options: SimplePdfOptions = {
-        selectedFields: configuration.fieldSelections,
-        title: showTitle,
-        showData: {
-          name: showData.name,
-          venue: showData.venue,
-          description: showData.description,
-        },
-        sortBy: (configuration as any).sortBy || 'act_scene',
-        layout: (configuration as any).layout || 'portrait',
-        branding: {
-          primaryColor: companyBranding.primaryColor,
-          secondaryColor: companyBranding.secondaryColor,
-          accentColor: companyBranding.accentColor,
-          fontFamily: companyBranding.fontFamily,
-          fontSize: companyBranding.fontSize,
-        },
-        logoUrl: companyBranding.companyLogo || showData.logoImage?.url || undefined,
-      };
+      const layout = (configuration as any).layout || 'portrait';
+      
+      // Check if this is a product catalog layout
+      if (layout === 'product-catalog') {
+        const options: ProductCatalogPdfOptions = {
+          selectedFields: configuration.fieldSelections,
+          title: showTitle || 'Product Catalog',
+          showData: {
+            name: showData.name,
+            venue: showData.venue,
+            description: showData.description,
+          },
+          businessName: companyBranding.companyName || showData.name || 'BUSINESS NAME',
+          branding: {
+            primaryColor: companyBranding.primaryColor,
+            secondaryColor: companyBranding.secondaryColor,
+            accentColor: companyBranding.accentColor,
+            fontFamily: companyBranding.fontFamily,
+            fontSize: companyBranding.fontSize,
+          },
+          logoUrl: companyBranding.companyLogo || showData.logoImage?.url || undefined,
+          baseUrl: window.location.origin, // Use current domain for QR codes
+        };
 
-      const result = await simplePdfService.generatePropsListPdf(
-        props,
-        showData,
-        userPermissions,
-        options
-      );
+        const result = await productCatalogPdfService.generateProductCatalogPdf(
+          props,
+          showData,
+          userPermissions,
+          options
+        );
+
+        if (result.success) {
+          // Generate actual PDF using html2pdf
+          const { default: html2pdf } = await import('html2pdf.js');
+          
+          const element = document.createElement('div');
+          element.innerHTML = result.html;
+          element.style.cssText = result.css;
+          
+          const opt = {
+            margin: [0.3, 0.3, 0.3, 0.3],
+            filename: `${showTitle || 'product-catalog'}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+              scale: 2, 
+              useCORS: true,
+              letterRendering: true,
+              allowTaint: true,
+              scrollX: 0,
+              scrollY: 0
+            },
+            jsPDF: { 
+              unit: 'in', 
+              format: 'a4', 
+              orientation: 'portrait',
+              compress: true
+            },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+          };
+
+          await html2pdf().set(opt).from(element).save();
+          console.log('Product Catalog PDF exported successfully');
+        } else {
+          setGenerationError(result.error || 'Product Catalog PDF generation failed');
+        }
+      } else {
+        // Use the existing SimplePdfService for other layouts
+        const options: SimplePdfOptions = {
+          selectedFields: configuration.fieldSelections,
+          title: showTitle,
+          showData: {
+            name: showData.name,
+            venue: showData.venue,
+            description: showData.description,
+          },
+          sortBy: (configuration as any).sortBy || 'act_scene',
+          layout: layout,
+          branding: {
+            primaryColor: companyBranding.primaryColor,
+            secondaryColor: companyBranding.secondaryColor,
+            accentColor: companyBranding.accentColor,
+            fontFamily: companyBranding.fontFamily,
+            fontSize: companyBranding.fontSize,
+          },
+          logoUrl: companyBranding.companyLogo || showData.logoImage?.url || undefined,
+        };
+
+        const result = await simplePdfService.generatePropsListPdf(
+          props,
+          showData,
+          userPermissions,
+          options
+        );
 
       if (result.success) {
         // Generate actual PDF using html2pdf
@@ -344,6 +521,7 @@ const PropsPdfExportPage: React.FC = () => {
         console.log('PDF exported successfully');
       } else {
         setGenerationError(result.error || 'PDF generation failed');
+      }
       }
     } catch (error) {
       console.error('PDF generation error:', error);
