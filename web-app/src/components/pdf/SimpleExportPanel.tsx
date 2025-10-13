@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Download, 
   FileText, 
@@ -77,9 +77,15 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
   const [sortBy, setSortBy] = useState<'act_scene' | 'alphabetical'>('act_scene');
   const [layout, setLayout] = useState<'portrait' | 'landscape'>('portrait');
 
-  // Get accessible data
-  const accessibleFields = fieldMappingService.getFieldsForUser(userPermissions);
-  const accessibleCategories = fieldMappingService.getFieldCategoriesForUser(userPermissions);
+  // Get accessible data (memoized to prevent infinite loops)
+  const accessibleFields = useMemo(() => 
+    fieldMappingService.getFieldsForUser(userPermissions), 
+    [userPermissions.role, userPermissions.permissions, userPermissions.showId]
+  );
+  const accessibleCategories = useMemo(() => 
+    fieldMappingService.getFieldCategoriesForUser(userPermissions), 
+    [userPermissions.role, userPermissions.permissions, userPermissions.showId]
+  );
 
   // Calculate statistics
   const getTotalProps = () => {
@@ -151,7 +157,7 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
     );
 
     onConfigurationChange(configuration);
-  }, [fieldSelections, userPermissions]);
+  }, [fieldSelections, userPermissions.role, onConfigurationChange]);
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => {
