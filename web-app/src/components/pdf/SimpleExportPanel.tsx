@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Download, 
   FileText, 
@@ -143,11 +143,24 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
     
     console.log('Initial field selections:', initialSelections);
     setFieldSelections(initialSelections);
+    
+    // Call onConfigurationChange with initial selections
+    setTimeout(() => {
+      const configuration = configurationService.createConfiguration(
+        'Custom Export',
+        'User-defined field selection',
+        initialSelections,
+        {},
+        userPermissions.role,
+        {}
+      );
+      onConfigurationChange(configuration);
+    }, 0);
   }, [accessibleFields]);
 
-  // Update configuration when selections change
-  useEffect(() => {
-    const configuration = configurationService.createConfiguration(
+  // Create configuration function
+  const createConfiguration = () => {
+    return configurationService.createConfiguration(
       'Custom Export',
       'User-defined field selection',
       fieldSelections,
@@ -155,9 +168,7 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
       userPermissions.role,
       {}
     );
-
-    onConfigurationChange(configuration);
-  }, [fieldSelections, userPermissions.role, onConfigurationChange]);
+  };
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories(prev => {
@@ -172,10 +183,25 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
   };
 
   const toggleField = (fieldKey: string) => {
-    setFieldSelections(prev => ({
-      ...prev,
-      [fieldKey]: !prev[fieldKey],
-    }));
+    setFieldSelections(prev => {
+      const newSelections = {
+        ...prev,
+        [fieldKey]: !prev[fieldKey],
+      };
+      // Call onConfigurationChange with new selections
+      setTimeout(() => {
+        const configuration = configurationService.createConfiguration(
+          'Custom Export',
+          'User-defined field selection',
+          newSelections,
+          {},
+          userPermissions.role,
+          {}
+        );
+        onConfigurationChange(configuration);
+      }, 0);
+      return newSelections;
+    });
   };
 
   const applyDisplayType = (displayType: typeof displayTypes[0]) => {
@@ -191,10 +217,34 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
       }
     });
     setFieldSelections(allSelections);
+    // Call onConfigurationChange
+    setTimeout(() => {
+      const configuration = configurationService.createConfiguration(
+        'Custom Export',
+        'User-defined field selection',
+        allSelections,
+        {},
+        userPermissions.role,
+        {}
+      );
+      onConfigurationChange(configuration);
+    }, 0);
   };
 
   const clearAllFields = () => {
     setFieldSelections({});
+    // Call onConfigurationChange
+    setTimeout(() => {
+      const configuration = configurationService.createConfiguration(
+        'Custom Export',
+        'User-defined field selection',
+        {},
+        {},
+        userPermissions.role,
+        {}
+      );
+      onConfigurationChange(configuration);
+    }, 0);
   };
 
   const getSelectedFieldCount = (): number => {
