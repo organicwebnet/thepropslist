@@ -111,9 +111,9 @@ const CompanyBrandingPanel: React.FC<CompanyBrandingPanelProps> = ({
               />
               <label
                 htmlFor="logo-upload"
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-gray-900 bg-white"
               >
-                <Upload className="w-4 h-4" />
+                <Upload className="w-4 h-4 text-gray-600" />
                 <span>Upload Logo</span>
               </label>
             </div>
