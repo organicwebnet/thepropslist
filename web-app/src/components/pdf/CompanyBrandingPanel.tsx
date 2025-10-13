@@ -35,11 +35,24 @@ const CompanyBrandingPanel: React.FC<CompanyBrandingPanelProps> = ({
 
   const fontOptions = [
     { value: 'Inter', label: 'Inter' },
-    { value: 'Helvetica', label: 'Helvetica' },
-    { value: 'Arial', label: 'Arial' },
-    { value: 'Times New Roman', label: 'Times New Roman' },
-    { value: 'Georgia', label: 'Georgia' },
-    { value: 'Roboto', label: 'Roboto' }
+    { value: 'Roboto', label: 'Roboto' },
+    { value: 'Open Sans', label: 'Open Sans' },
+    { value: 'Lato', label: 'Lato' },
+    { value: 'Montserrat', label: 'Montserrat' },
+    { value: 'Source Sans Pro', label: 'Source Sans Pro' },
+    { value: 'Poppins', label: 'Poppins' },
+    { value: 'Nunito', label: 'Nunito' },
+    { value: 'Raleway', label: 'Raleway' },
+    { value: 'Ubuntu', label: 'Ubuntu' },
+    { value: 'Playfair Display', label: 'Playfair Display' },
+    { value: 'Merriweather', label: 'Merriweather' },
+    { value: 'PT Sans', label: 'PT Sans' },
+    { value: 'Work Sans', label: 'Work Sans' },
+    { value: 'Fira Sans', label: 'Fira Sans' },
+    { value: 'Helvetica', label: 'Helvetica (System)' },
+    { value: 'Arial', label: 'Arial (System)' },
+    { value: 'Times New Roman', label: 'Times New Roman (System)' },
+    { value: 'Georgia', label: 'Georgia (System)' }
   ];
 
   const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
