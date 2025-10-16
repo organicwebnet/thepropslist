@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, Palette, Eye } from 'lucide-react';
+import { Upload, Palette, Eye, Save, Download, Trash2 } from 'lucide-react';
+import { BrandingStorageService } from '../../services/pdf/BrandingStorageService';
 
 interface CompanyBranding {
   companyName: string;
@@ -20,6 +21,7 @@ const CompanyBrandingPanel: React.FC<CompanyBrandingPanelProps> = ({
   onBrandingChange,
   initialBranding = {}
 }) => {
+  const brandingStorageService = BrandingStorageService.getInstance();
   const [branding, setBranding] = useState<CompanyBranding>({
     companyName: '',
     companyLogo: null,
@@ -382,6 +384,62 @@ const CompanyBrandingPanel: React.FC<CompanyBrandingPanelProps> = ({
                 Accent color for highlights
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Branding Settings Management */}
+        <div className="border-t border-gray-200 pt-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Branding Settings</h3>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => {
+                brandingStorageService.saveBrandingSettings(branding);
+                alert('Branding settings saved successfully!');
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Save className="w-4 h-4" />
+              Save Settings
+            </button>
+            
+            <button
+              onClick={() => {
+                const saved = brandingStorageService.loadBrandingSettings();
+                if (saved) {
+                  setBranding(saved);
+                  setLogoPreview(saved.companyLogo);
+                  alert('Branding settings loaded successfully!');
+                } else {
+                  alert('No saved branding settings found.');
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Load Settings
+            </button>
+            
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to clear all saved branding settings? This action cannot be undone.')) {
+                  brandingStorageService.clearBrandingSettings();
+                  alert('Branding settings cleared successfully!');
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear Settings
+            </button>
+          </div>
+          
+          <div className="mt-3 text-sm text-gray-600">
+            <p>• <strong>Save Settings:</strong> Store your current branding configuration</p>
+            <p>• <strong>Load Settings:</strong> Restore previously saved branding</p>
+            <p>• <strong>Clear Settings:</strong> Remove all saved branding data</p>
+            <p className="mt-2 text-xs text-gray-500">
+              Settings are automatically saved when you make changes (auto-save enabled)
+            </p>
           </div>
         </div>
       </div>
