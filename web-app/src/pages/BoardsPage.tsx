@@ -8,132 +8,13 @@ import Board from "../components/TaskBoard/Board";
 import { useShowSelection } from "../contexts/ShowSelectionContext";
 import type { Show } from "../types/Show";
 import { useWebAuth } from '../contexts/WebAuthContext';
-import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
-import { ShowSelectionProvider } from "../contexts/ShowSelectionContext";
-import Login from "../pages/Login";
-import ForgotPassword from "../pages/ForgotPassword";
-import ResetPassword from "../pages/ResetPassword";
-import Signup from "../pages/Signup";
-import EditPropPage from "../pages/EditPropPage";
-import PropDetailPage from "../pages/PropDetailPage";
-import PropsListPage from '../PropsListPage';
-import DashboardHome from '../DashboardHome';
-import ShowsListPage from '../ShowsListPage';
-import AddShowPage from "../pages/AddShowPage";
-import EditShowPage from "../pages/EditShowPage";
-import ShowDetailPage from "../pages/ShowDetailPage";
-import JoinInvitePage from "../pages/JoinInvitePage";
-import PropsBibleHomepage from '../PropsBibleHomepage';
+import { useSearchParams } from "react-router-dom";
 import { useSubscription } from '../hooks/useSubscription';
 import { useLimitChecker } from '../hooks/useLimitChecker';
 import UpgradeModal from '../components/UpgradeModal';
 
 const BoardsPage: React.FC = () => {
-  const { service } = useFirebase();
-  const { currentShowId } = useShowSelection();
-  const { user } = useWebAuth();
-  const [_boards, setBoards] = useState<BoardData[]>([]);
-  const [_loading, _setLoading] = useState(false);
-  const [_error, setError] = useState<string | null>(null);
-  const [_boardName, _setBoardName] = useState('');
-  const [_showForm, _setShowForm] = useState(false);
-  const [_showTitle, setShowTitle] = useState('');
-
-  useEffect(() => {
-    // Listen to boards collection, filter by showId if selected
-    const unsub = service.listenToCollection<BoardData>(
-      "todo_boards",
-      docs => {
-        console.log("[BoardsPage] Raw docs from Firestore:", docs);
-        const mappedBoards = docs.map(d => ({
-          ...d.data,
-          id: d.id,
-          title: d.data.title || d.data.name || "Untitled Board",
-          listIds: d.data.listIds || [],
-        }));
-        console.log("[BoardsPage] currentShowId:", currentShowId);
-        mappedBoards.forEach(b => console.log(`[BoardsPage] Board: ${b.title}, showId: ${b.showId}`));
-        console.log("[BoardsPage] Mapped boards before filtering:", mappedBoards);
-        const filteredBoards = mappedBoards.filter(b => {
-          // If no show is selected, show all boards the user has access to
-          if (!currentShowId) return true;
-          // If a show is selected, show boards for that show OR boards without a showId (legacy boards)
-          return b.showId === currentShowId || !b.showId;
-        });
-        console.log("[BoardsPage] Filtered boards:", filteredBoards);
-        setBoards(filteredBoards);
-      },
-      err => setError(err.message || "Failed to load boards")
-    );
-    return () => unsub();
-  }, [service, currentShowId]);
-
-  useEffect(() => {
-    if (!currentShowId) {
-      setShowTitle("");
-      return;
-    }
-    const unsub = service.listenToDocument<Show>(
-      `shows/${currentShowId}`,
-      doc => setShowTitle(doc.data?.name || ""),
-      () => setShowTitle("")
-    );
-    return () => { if (unsub) unsub(); };
-  }, [service, currentShowId]);
-
-  useEffect(() => {
-    service.getDocuments("todo_boards").then(docs => {
-      console.log("[BoardsPage] Manual fetch docs:", docs);
-    }).catch(err => {
-      console.error("[BoardsPage] Manual fetch error:", err);
-    });
-  }, [service]);
-
-  // const handleCreateBoard = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   setLoading(true);
-  //   setError(null);
-  //   try {
-  //     // Create a new board in Firestore
-  //     await service.addDocument("todo_boards", {
-  //       title: boardName,
-  //       listIds: [],
-  //       ownerId: user?.uid,
-  //       sharedWith: [user?.uid],
-  //       createdAt: new Date(),
-  //     });
-  //     setBoardName("");
-  //     setShowForm(false);
-  //   } catch (err: any) {
-  //     setError(err.message || "Failed to create board");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  return (
-    <ShowSelectionProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
-          <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" replace />} />
-          <Route path="/forgot-password" element={!user ? <ForgotPassword /> : <Navigate to="/" replace />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/props/:id/edit" element={user ? <EditPropPage /> : <Navigate to="/login" replace />} />
-          <Route path="/props/:id" element={user ? <PropDetailPage /> : <Navigate to="/login" replace />} />
-          <Route path="/props" element={user ? <PropsListPage /> : <Navigate to="/login" replace />} />
-          <Route path="/" element={user ? <DashboardHome /> : <Navigate to="/login" replace />} />
-          <Route path="/shows" element={<ShowsListPage />} />
-          <Route path="/shows/new" element={<AddShowPage />} />
-          <Route path="/shows/:id/edit" element={<EditShowPage />} />
-          <Route path="/shows/:id" element={<ShowDetailPage />} />
-          <Route path="/boards" element={user ? <BoardsPageContent /> : <Navigate to="/login" replace />} />
-          <Route path="/join/:token" element={<JoinInvitePage />} />
-          <Route path="/*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </ShowSelectionProvider>
-  );
+  return <BoardsPageContent />;
 };
 
 function BoardsPageContent() {
