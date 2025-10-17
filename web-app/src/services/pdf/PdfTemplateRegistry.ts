@@ -30,6 +30,7 @@ export interface PdfTemplateOptions {
   includeQRCodes?: boolean;
   applyBrandingToOnline?: boolean;
   onlineFieldSelections?: Record<string, boolean>;
+  qrMessage?: string;
 }
 
 export interface PdfTemplateResult {

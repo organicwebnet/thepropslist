@@ -228,13 +228,11 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
   };
 
   const toggleField = (fieldKey: string) => {
-    console.log('toggleField called for:', fieldKey);
     setFieldSelections(prev => {
       const newSelections = {
         ...prev,
         [fieldKey]: !prev[fieldKey],
       };
-      console.log('toggleField new selections:', newSelections);
       // Call onConfigurationChange with new selections
       setTimeout(() => {
         const configuration = configurationService.createConfiguration(
@@ -245,11 +243,9 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
           userPermissions.role,
           {}
         );
-        console.log('toggleField calling onConfigurationChange');
         onConfigurationChange(configuration);
         
         // Auto-preview after field selection change
-        console.log('toggleField calling triggerAutoPreview');
         triggerAutoPreview();
       }, 0);
       return newSelections;
@@ -368,9 +364,12 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
   };
 
   const getSelectedFieldCount = (): number => {
-    const count = Object.values(fieldSelections).filter(Boolean).length;
-    console.log('getSelectedFieldCount:', count, 'fieldSelections:', fieldSelections);
-    return count;
+    return Object.values(fieldSelections).filter(Boolean).length;
+  };
+
+  const validateFieldSelections = (selections: Record<string, boolean>): boolean => {
+    const selectedCount = Object.values(selections).filter(Boolean).length;
+    return selectedCount > 0; // At least one field must be selected
   };
 
   const getSelectedOnlineFieldCount = (): number => {
@@ -409,21 +408,11 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
 
   // Auto-preview when configuration changes
   const triggerAutoPreview = useCallback(() => {
-    console.log('triggerAutoPreview called with:', {
-      fieldSelections: !!fieldSelections,
-      sortBy,
-      layout,
-      userPermissionsRole: userPermissions?.role,
-      fieldSelectionsCount: Object.keys(fieldSelections || {}).length
-    });
-    
     // Ensure all dependencies are stable before triggering
     if (!fieldSelections || !sortBy || !layout || !userPermissions.role) {
-      console.log('triggerAutoPreview blocked - missing dependencies');
       return; // Prevent triggering with incomplete state
     }
 
-    console.log('triggerAutoPreview proceeding with configuration creation');
     const configuration = configurationService.createConfiguration(
       'Custom Export',
       'User-defined field selection',
@@ -439,17 +428,10 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
     (configuration as any).applyBrandingToOnline = applyBrandingToOnline;
     (configuration as any).onlineFieldSelections = onlineFieldSelections;
     
-    console.log('triggerAutoPreview calling onPreview with configuration:', configuration);
     onPreview(configuration);
   }, [fieldSelections, sortBy, layout, includeQRCodes, applyBrandingToOnline, onlineFieldSelections, userPermissions.role, onPreview]);
 
   const handlePreview = () => {
-    console.log('handlePreview button clicked!');
-    console.log('Current fieldSelections:', fieldSelections);
-    console.log('Current sortBy:', sortBy);
-    console.log('Current layout:', layout);
-    console.log('User permissions role:', userPermissions?.role);
-    
     const configuration = configurationService.createConfiguration(
       'Custom Export',
       'User-defined field selection',
@@ -465,7 +447,6 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
     (configuration as any).applyBrandingToOnline = applyBrandingToOnline;
     (configuration as any).onlineFieldSelections = onlineFieldSelections;
     
-    console.log('handlePreview calling onPreview with configuration:', configuration);
     onPreview(configuration);
   };
 
@@ -1053,7 +1034,7 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
           <div className="flex space-x-3">
             <button
               onClick={handlePreview}
-              disabled={isPreviewLoading || getSelectedFieldCount() === 0}
+              disabled={isPreviewLoading || !validateFieldSelections(fieldSelections)}
               className="px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center space-x-2"
             >
               {isPreviewLoading ? (
@@ -1071,7 +1052,7 @@ const SimpleExportPanel: React.FC<SimpleExportPanelProps> = ({
             
             <button
               onClick={handleExport}
-              disabled={isLoading || getSelectedFieldCount() === 0}
+              disabled={isLoading || !validateFieldSelections(fieldSelections)}
               className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center space-x-2"
             >
               {isLoading ? (

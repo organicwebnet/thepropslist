@@ -145,7 +145,7 @@ export class LandscapeTemplate implements PdfTemplate {
       try {
         const qrUrl = `${options.baseUrl}/view/prop/${prop.id}`;
         const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
-          width: 80, 
+          width: 140, 
           margin: 1,
           color: { dark: '#000000', light: '#FFFFFF' }
         });
@@ -170,7 +170,7 @@ export class LandscapeTemplate implements PdfTemplate {
             ${qrCodeHtml ? `
               <div class="qr-section">
                 ${qrCodeHtml}
-                <div class="qr-text">Scan here for more information about this prop</div>
+                <div class="qr-text">${options.qrMessage || 'Scan here for more information about this prop'}</div>
               </div>
             ` : ''}
           </div>
@@ -494,8 +494,8 @@ export class LandscapeTemplate implements PdfTemplate {
       }
 
       .qr-code {
-        width: 50px;
-        height: 50px;
+        width: 70px;
+        height: 70px;
         border: 1px solid ${primaryColor};
         border-radius: 4px;
         background: #ffffff;
