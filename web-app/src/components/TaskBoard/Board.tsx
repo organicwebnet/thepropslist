@@ -287,8 +287,8 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
       self.findIndex(l => l.title?.toLowerCase() === list.title?.toLowerCase()) === index
   );
 
-  // If listIds is missing or not an array, show empty state
-  if (!Array.isArray(board.listIds) || board.listIds.length === 0) {
+  // If there are no lists at all, show empty state
+  if (lists.length === 0) {
     return (
       <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
         <div className="flex-1 flex flex-col min-h-0">
@@ -352,7 +352,11 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
               setActiveDragType(null);
             }}
           >
-            <SortableContext items={Array.isArray(board.listIds) ? board.listIds.map(id => `list-${id}`) : []} strategy={horizontalListSortingStrategy}>
+            <SortableContext items={
+              Array.isArray(board.listIds) && board.listIds.length > 0 
+                ? board.listIds.map(id => `list-${id}`) 
+                : uniqueLists.map(list => `list-${list.id}`)
+            } strategy={horizontalListSortingStrategy}>
           <div
             ref={listsRowRef}
             className="flex items-start gap-6 h-full cursor-grab w-max pr-10 overscroll-contain p-0 m-0"
@@ -379,7 +383,20 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
                     />
                   );
                 })
-              : null}
+              : uniqueLists.map(list => (
+                  <ListColumn
+                    key={list.id}
+                    list={list}
+                    cards={cards[list.id] || []}
+                    onAddCard={addCard}
+                    onUpdateCard={updateCard}
+                    onDeleteCard={deleteCard}
+                    dndId={`list-${list.id}`}
+                    onDeleteList={deleteList}
+                    cardIdPrefix="card-"
+                    selectedCardId={selectedCardId || null}
+                  />
+                ))}
             {/* Add List button at the end of the lists (hidden, replaced by FAB) */}
           </div>
             </SortableContext>
