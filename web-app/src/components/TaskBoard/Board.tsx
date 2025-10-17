@@ -320,7 +320,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
   }
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-transparent overflow-x-auto overflow-y-hidden p-0">
+    <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden p-0">
       <div className="flex-1 flex flex-col min-h-0">
         {/* Board Title as sticky header */}
         {!hideHeader && (
@@ -329,7 +329,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
           </div>
         )}
         {/* Lists Row Scrollable Area */}
-        <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden overscroll-contain p-0">
+        <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden overscroll-contain p-0" style={{ scrollbarWidth: 'thin' }}>
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -359,7 +359,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
             } strategy={horizontalListSortingStrategy}>
           <div
             ref={listsRowRef}
-            className="flex items-start gap-6 h-full cursor-grab w-max pr-10 overscroll-contain p-0 m-0"
+            className="flex items-start gap-6 h-full cursor-grab w-max pr-20 pl-6 overscroll-contain p-0 m-0"
             style={{ WebkitOverflowScrolling: 'touch' }}
             role="region"
             aria-label="Task board lists"
