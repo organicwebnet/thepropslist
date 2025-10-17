@@ -82,7 +82,6 @@ function App() {
           <Route path="/props/add" element={<ProtectedRoute><AddPropPage /></ProtectedRoute>} />
           <Route path="/props/:id" element={<ProtectedRoute><PropDetailPage /></ProtectedRoute>} />
           <Route path="/props" element={<ProtectedRoute><PropsListPage /></ProtectedRoute>} />
-          <Route path="/" element={user ? <DashboardHome /> : <Navigate to="/login" replace />} />
           <Route path="/shows" element={<ProtectedRoute><ShowsRedirect /></ProtectedRoute>} />
           <Route path="/shows/list" element={<ProtectedRoute><ShowsListPage /></ProtectedRoute>} />
           <Route path="/shows/new" element={<AddShowPage />} />
@@ -101,14 +100,15 @@ function App() {
           {/* Public container viewer: scan or link goes here */}
           <Route path="/c/:containerId" element={<PublicContainerPage />} />
           {/* Public prop viewer: QR code or direct link goes here */}
-          <Route path="/view/prop/:id" element={<PublicPropViewPage />} />
-          <Route path="/shopping" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
+          <Route path="/view/prop/:propId" element={<PublicPropViewPage />} />
+          <Route path="/shopping-list" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
           {/* Mock preview routes for screenshots */}
           <Route path="/mock/prop-detail" element={user ? <PropDetailMockPage /> : <Navigate to="/login" replace />} />
           <Route path="/mock/prop-detail/:id" element={user ? <PropDetailMockPage /> : <Navigate to="/login" replace />} />
+          <Route path="/" element={user ? <DashboardHome /> : <Navigate to="/login" replace />} />
           <Route path="/*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} />
         </Routes>
         </Suspense>
