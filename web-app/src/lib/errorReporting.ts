@@ -31,8 +31,8 @@ class ErrorReportingService {
 
   private initialize() {
     // Check if error reporting should be enabled
-    this.isEnabled = process.env.NODE_ENV === 'production' || 
-                    process.env.REACT_APP_ERROR_REPORTING_ENABLED === 'true';
+    this.isEnabled = import.meta.env.PROD || 
+                    import.meta.env.VITE_ERROR_REPORTING_ENABLED === 'true';
   }
 
   setUserId(userId: string) {
@@ -63,7 +63,7 @@ class ErrorReportingService {
     // Examples: Sentry, Bugsnag, Rollbar, etc.
     
     // For now, log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('Error Report:', errorReport);
     }
 

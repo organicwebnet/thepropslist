@@ -22,7 +22,7 @@ export class AddressSelectionErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to monitoring service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (import.meta.env.PROD) {
       // TODO: Send to error monitoring service (e.g., Sentry)
       console.error('Address selection error:', error, errorInfo);
     } else {

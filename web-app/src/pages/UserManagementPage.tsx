@@ -26,6 +26,7 @@ import { SystemRole } from '../core/permissions';
 import { usePermissions } from '../hooks/usePermissions';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
+import DashboardLayout from '../PropsBibleHomepage';
 
 interface UserProfile {
   uid: string;
@@ -106,13 +107,15 @@ const UserManagementPage: React.FC = () => {
   // Check if current user is god
   if (!isGod()) {
     return (
-      <div className="min-h-screen bg-pb-dark flex items-center justify-center">
-        <div className="text-center">
-          <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-          <p className="text-pb-gray/70">Only god users can access the user management dashboard.</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+            <p className="text-pb-gray/70">Only god users can access the user management dashboard.</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -213,17 +216,19 @@ const UserManagementPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-pb-dark flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary mx-auto mb-4"></div>
-          <p className="text-pb-gray/70">Loading users...</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary mx-auto mb-4"></div>
+            <p className="text-pb-gray/70">Loading users...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-pb-dark p-6">
+    <DashboardLayout>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -456,7 +461,7 @@ const UserManagementPage: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

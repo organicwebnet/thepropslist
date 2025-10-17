@@ -37,8 +37,8 @@ class AnalyticsService {
 
   private initialize() {
     // Check if analytics should be enabled
-    this.isEnabled = process.env.NODE_ENV === 'production' || 
-                    process.env.REACT_APP_ANALYTICS_ENABLED === 'true';
+    this.isEnabled = import.meta.env.PROD || 
+                    import.meta.env.VITE_ANALYTICS_ENABLED === 'true';
   }
 
   setUserId(userId: string) {
@@ -74,7 +74,7 @@ class AnalyticsService {
     // Examples: Google Analytics, Mixpanel, Amplitude, etc.
     
     // For now, log to console in development
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.log('Analytics Event:', event);
     }
 
