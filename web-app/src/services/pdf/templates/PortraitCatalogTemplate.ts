@@ -162,14 +162,15 @@ export class PortraitCatalogTemplate implements PdfTemplate {
 
     return `
       <div class="prop-card">
-        <div class="prop-image-section">
-          ${primaryImage ? `
-            <img src="${primaryImage.url}" alt="${this.escapeHtml(prop.name)}" class="prop-image" />
-          ` : `
-            <div class="no-image">No Image</div>
-          `}
-          ${qrCodeHtml}
-        </div>
+        ${selectedFields.images ? `
+          <div class="prop-image-section">
+            ${primaryImage ? `
+              <img src="${primaryImage.url}" alt="${this.escapeHtml(prop.name)}" class="prop-image" />
+            ` : `
+              <div class="no-image">No Image</div>
+            `}
+          </div>
+        ` : ''}
         <div class="prop-content-section">
           <h3 class="prop-name">${this.escapeHtml(prop.name)}</h3>
           ${prop.description ? `<div class="prop-description">${this.escapeHtml(prop.description)}</div>` : ''}
@@ -177,6 +178,14 @@ export class PortraitCatalogTemplate implements PdfTemplate {
             ${fieldsHtml}
           </div>
         </div>
+        ${qrCodeHtml ? `
+          <div class="prop-footer">
+            <div class="qr-section">
+              ${qrCodeHtml}
+              <div class="qr-text">Scan here for more information about this prop</div>
+            </div>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -468,13 +477,37 @@ export class PortraitCatalogTemplate implements PdfTemplate {
         font-weight: 500;
       }
 
+      .prop-footer {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .qr-section {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
       .qr-code {
-        width: 60px;
-        height: 60px;
+        width: 50px;
+        height: 50px;
         border: 1px solid ${primaryColor};
         border-radius: 4px;
         background: #ffffff;
-        margin-top: 4px;
+      }
+
+      .qr-text {
+        font-size: 10px;
+        color: #6b7280;
+        text-align: center;
+        font-style: italic;
+        max-width: 120px;
+        line-height: 1.2;
       }
 
       .prop-content-section {

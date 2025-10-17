@@ -160,14 +160,21 @@ export class LandscapeTemplate implements PdfTemplate {
 
     return `
       <div class="prop-card">
-        <div class="prop-image-section">
-          ${primaryImage ? `
-            <img src="${primaryImage.url}" alt="${this.escapeHtml(prop.name)}" class="prop-image" />
-          ` : `
-            <div class="no-image">No Image</div>
-          `}
-          ${qrCodeHtml}
-        </div>
+        ${selectedFields.images ? `
+          <div class="prop-image-section">
+            ${primaryImage ? `
+              <img src="${primaryImage.url}" alt="${this.escapeHtml(prop.name)}" class="prop-image" />
+            ` : `
+              <div class="no-image">No Image</div>
+            `}
+            ${qrCodeHtml ? `
+              <div class="qr-section">
+                ${qrCodeHtml}
+                <div class="qr-text">Scan here for more information about this prop</div>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
         <div class="prop-content-section">
           <h3 class="prop-name">${this.escapeHtml(prop.name)}</h3>
           ${prop.description ? `<div class="prop-description">${this.escapeHtml(prop.description)}</div>` : ''}
@@ -468,12 +475,39 @@ export class LandscapeTemplate implements PdfTemplate {
         font-weight: 500;
       }
 
+      .prop-footer {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .qr-section {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+        margin-top: 8px;
+      }
+
       .qr-code {
-        width: 80px;
-        height: 80px;
-        border: 2px solid ${primaryColor};
-        border-radius: 6px;
+        width: 50px;
+        height: 50px;
+        border: 1px solid ${primaryColor};
+        border-radius: 4px;
         background: #ffffff;
+      }
+
+      .qr-text {
+        font-size: 10px;
+        color: #6b7280;
+        text-align: left;
+        font-style: italic;
+        max-width: 100px;
+        line-height: 1.2;
       }
 
       .prop-content-section {
