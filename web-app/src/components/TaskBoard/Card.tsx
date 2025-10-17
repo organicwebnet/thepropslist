@@ -105,7 +105,8 @@ function parseMentions(text: string) {
   const bracket = /\[@([^\]]+)\]\((prop|container|user):([^)]*)\)/g;
   let m;
   while ((m = bracket.exec(text)) !== null) {
-    items.push({ type: m[2] as any, id: m[3], label: m[1] });
+    const mentionType = m[2] as 'prop' | 'container' | 'user';
+    items.push({ type: mentionType, id: m[3], label: m[1] });
   }
   // Optional explicit user syntax beginning with @@username
   const explicitUser = /(^|\s)@@([A-Za-z0-9_.-]+)/g;
@@ -142,8 +143,8 @@ const CardDetailModal: React.FC<{
   const [dueDate, setDueDate] = useState(card.dueDate || "");
   const [attachments, setAttachments] = useState<{ id: string; url: string; name?: string }[]>(
     Array.isArray(card.attachments)
-      ? (card.attachments as any[]).map((a: any) =>
-          typeof a === 'string' ? { id: uuidv4(), url: a } : a
+      ? card.attachments.map((a: unknown) =>
+          typeof a === 'string' ? { id: uuidv4(), url: a } : a as { id: string; url: string; name?: string }
         )
       : []
   );
@@ -268,8 +269,8 @@ const CardDetailModal: React.FC<{
     if (completed !== card.completed) logActivity('Completed changed', { from: card.completed, to: completed });
     if (JSON.stringify(labels) !== JSON.stringify(card.labels)) logActivity('Labels changed', {});
     if (JSON.stringify(checklists) !== JSON.stringify(card.checklist)) logActivity('Checklist changed', {});
-    const attachmentUrls = (attachments || []).map((a: any) => typeof a === 'string' ? a : a.url);
-    onUpdateCard(card.id, { title, description, color: cardColor, assignedTo: members, completed, status, activityLog, dueDate, labels, checklist: checklists, images, attachments: attachmentUrls as any });
+    const attachmentUrls = (attachments || []).map((a: { id: string; url: string; name?: string }) => a.url);
+    onUpdateCard(card.id, { title, description, color: cardColor, assignedTo: members, completed, status, activityLog, dueDate, labels, checklist: checklists, images, attachments: attachmentUrls });
     onClose();
   };
 
@@ -346,13 +347,13 @@ const CardDetailModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div
-        className="relative rounded-2xl shadow-2xl flex flex-col md:flex-row overflow-y-auto max-h-[98vh] min-h-[560px] md:min-h-[700px] border border-gray-300 w-[95vw] max-w-[1100px]"
+        className="relative rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[98vh] min-h-[560px] lg:min-h-[700px] border border-white/10 w-[95vw] max-w-[1100px]"
         style={{ background: cardColor, transition: 'background 0.3s' }}
       >
         {/* Close (X) button top right of modal */}
         <button className="absolute top-4 right-4 text-white text-2xl z-50" onClick={onClose} aria-label="Close">×</button>
         {/* Left column */}
-        <div className="flex-1 min-w-[340px] max-w-[520px] p-6 flex flex-col gap-3 rounded-l-2xl overflow-y-auto" style={{ maxHeight: '90vh' }}>
+        <div className="flex-1 min-w-0 lg:min-w-[340px] lg:max-w-[520px] p-4 sm:p-6 flex flex-col gap-3 rounded-l-2xl overflow-y-auto flex-shrink-0" style={{ maxHeight: '90vh' }}>
           {/* Hero image at top (full width, cropped height) */}
           {(images && images.length > 0) && (() => {
             const mainIdx = Math.max(0, images.findIndex(i => i.isMain));
@@ -721,12 +722,13 @@ const CardDetailModal: React.FC<{
           )}
         </div>
         {/* Right column: Comments and Activity */}
-        <div className="w-[340px] flex flex-col p-8 gap-6 bg-pb-darker/90 rounded-r-2xl border-l border-gray-200">
+        <div className="w-full lg:w-[340px] flex flex-col p-4 sm:p-6 gap-4 bg-pb-darker/90 rounded-r-2xl border-l-0 lg:border-l border-white/10 flex-shrink-0">
           <div className="font-semibold text-white text-lg mb-2">Comments and activity</div>
+          
           {/* Add comment area */}
-          <div className="flex gap-2 items-center mb-4">
+          <div className="flex gap-2 items-start mb-4">
             <input
-              className="flex-1 rounded border border-pb-primary/40 px-2 py-1 text-[#222]"
+              className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-white bg-white/5 placeholder:text-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
               value={newComment}
               onChange={e => setNewComment(e.target.value)}
               placeholder="Write a comment..."
@@ -746,7 +748,7 @@ const CardDetailModal: React.FC<{
               }}
             />
             <button
-              className="bg-pb-primary hover:bg-pb-success text-white font-semibold py-1 px-3 rounded"
+              className="bg-pb-primary hover:bg-pb-secondary text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!newComment.trim()}
               onClick={() => {
                 if (newComment.trim()) {
@@ -762,29 +764,64 @@ const CardDetailModal: React.FC<{
                   setNewComment("");
                 }
               }}
-            >Add</button>
+            >
+              Add
+            </button>
           </div>
-          {/* Comments list */}
-          <div className="flex flex-col gap-2 mb-6">
-            {combinedLog.map((item, i) => (
-              <div key={item.id || i} className="flex items-start gap-2">
-                <div className="w-8 h-8 rounded-full bg-pb-primary flex items-center justify-center text-white font-bold text-sm">{item.userId?.[0] || 'U'}</div>
-                <div>
-                  <div className="text-white font-semibold text-sm">{usersList.find(u => u.id === item.userId)?.name || (item.userId === (user?.uid || '')) ? (user?.displayName || user?.email || 'You') : item.userId}</div>
-                  {item.type === 'comment' ? (
-                    <div className="text-white text-xs opacity-70">{item.text}</div>
-                  ) : (
-                    <div className="text-pb-primary text-xs">{item.text}</div>
-                  )}
-                  <div className="text-pb-gray text-xs">{item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}</div>
-                </div>
+          
+          {/* Comments and activity list */}
+          <div className="flex-1 overflow-y-auto mb-4">
+            {combinedLog.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-2">💬</div>
+                <div className="text-pb-gray/70 text-sm">No comments or activity yet</div>
+                <div className="text-pb-gray/50 text-xs mt-1">Add a comment to get started</div>
               </div>
-            ))}
+            ) : (
+              <div className="flex flex-col gap-3">
+                {combinedLog.map((item, i) => (
+                  <div key={item.id || i} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
+                    <div className="w-8 h-8 rounded-full bg-pb-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {item.userId?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-white font-semibold text-sm">
+                          {usersList.find(u => u.id === item.userId)?.name || 
+                           (item.userId === (user?.uid || '')) ? 
+                           (user?.displayName || user?.email || 'You') : 
+                           item.userId}
+                        </div>
+                        {item.type === 'activity' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-pb-primary/20 text-pb-primary border border-pb-primary/30">
+                            Activity
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-sm mb-1 ${
+                        item.type === 'comment' ? 'text-white' : 'text-pb-primary'
+                      }`}>
+                        {item.text}
+                      </div>
+                      <div className="text-pb-gray/60 text-xs">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-        {/* Modal footer: Save/Delete/Close */}
-        <div className="absolute bottom-6 right-8 flex gap-2">
-          <button className="bg-pb-primary hover:bg-pb-success text-white font-semibold py-1 px-3 rounded shadow" onClick={handleSave}>Save</button>
+          
+          {/* Save button at bottom of comments section */}
+          <div className="flex justify-end pt-4 border-t border-white/10">
+            <button 
+              className="bg-pb-primary hover:bg-pb-secondary text-white font-semibold py-2 px-4 rounded-lg transition-colors" 
+              onClick={handleSave}
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
       {/* Fullscreen image viewer */}
@@ -855,15 +892,16 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially, o
         }}
         {...attributes}
         {...listeners}
-        className={`block rounded-md p-3 shadow hover:shadow-lg transition cursor-pointer no-underline ${(!card.color || card.color === '#374151') ? 'border border-white/10' : ''}`}
+        className={`block rounded-md p-3 shadow hover:shadow-lg transition cursor-pointer no-underline card ${(!card.color || card.color === '#374151') ? 'border border-white/10' : ''}`}
         onClick={handleOpen}
         tabIndex={0}
         role="button"
         aria-label={`Card: ${card.title}`}
+        data-dnd-kit="card"
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            handleOpen(e as any);
+            handleOpen(e as React.MouseEvent);
           }
         }}
       >
@@ -893,9 +931,9 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially, o
           </span>
           <div className="font-semibold" style={{ color: '#fff' }}>{card.title}</div>
         </div>
-    {card.description && (
+        {card.description && (
           <div className="text-xs mt-1" style={{ color: '#fff' }}>{renderDescriptionWithLinks(card.description)}</div>
-    )}
+        )}
         {/* Assignment indicator */}
         {Array.isArray(card.assignedTo) && card.assignedTo.length > 0 && (
           <div className="mt-2 text-[10px] inline-flex items-center gap-1 bg-pb-primary/60 text-white px-2 py-0.5 rounded-full">

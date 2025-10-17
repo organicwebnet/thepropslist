@@ -12,6 +12,8 @@ import { useSearchParams } from "react-router-dom";
 import { useSubscription } from '../hooks/useSubscription';
 import { useLimitChecker } from '../hooks/useLimitChecker';
 import UpgradeModal from '../components/UpgradeModal';
+import { logger } from '../utils/logger';
+import { validateBoardTitle } from '../utils/validation';
 
 const BoardsPage: React.FC = () => {
   return <BoardsPageContent />;
@@ -35,8 +37,7 @@ function BoardsPageContent() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
 
-  console.log("[BoardsPage] currentShowId:", currentShowId);
-  console.log("[BoardsPage] Current user:", user);
+  logger.taskBoard("BoardsPage loaded", { currentShowId, userId: user?.uid });
 
   // Check limits on page load and when boards change
   useEffect(() => {
@@ -63,7 +64,7 @@ function BoardsPageContent() {
         // Clear warning if within limits
         setLimitWarning(null);
       } catch (error) {
-        console.error('Error checking board limits:', error);
+        logger.taskBoardError('Error checking board limits', error);
         // Don't show error to user, just log it
       }
     };
@@ -76,26 +77,32 @@ function BoardsPageContent() {
     const unsub = service.listenToCollection<BoardData>(
       "todo_boards",
       docs => {
-        console.log("[BoardsPage] Raw docs from Firestore:", docs);
+        logger.taskBoard("Raw docs from Firestore", { count: docs.length });
         const mappedBoards = docs.map(d => ({
           ...d.data,
           id: d.id,
           title: d.data.title || d.data.name || "Untitled Board",
           listIds: d.data.listIds || [],
         }));
-        console.log("[BoardsPage] currentShowId:", currentShowId);
-        mappedBoards.forEach(b => console.log(`[BoardsPage] Board: ${b.title}, showId: ${b.showId}`));
-        console.log("[BoardsPage] Mapped boards before filtering:", mappedBoards);
+        
         const filteredBoards = mappedBoards.filter(b => {
           // If no show is selected, show all boards the user has access to
           if (!currentShowId) return true;
           // If a show is selected, show boards for that show OR boards without a showId (legacy boards)
           return b.showId === currentShowId || !b.showId;
         });
-        console.log("[BoardsPage] Filtered boards:", filteredBoards);
+        
+        logger.taskBoard("Filtered boards", { 
+          total: mappedBoards.length, 
+          filtered: filteredBoards.length, 
+          currentShowId 
+        });
         setBoards(filteredBoards);
       },
-      err => setError(err.message || "Failed to load boards")
+      err => {
+        logger.taskBoardError("Failed to load boards", err);
+        setError(err.message || "Failed to load boards");
+      }
     );
     return () => unsub();
   }, [service, currentShowId]);
@@ -113,13 +120,7 @@ function BoardsPageContent() {
     return () => { if (unsub) unsub(); };
   }, [service, currentShowId]);
 
-  useEffect(() => {
-    service.getDocuments("todo_boards").then(docs => {
-      console.log("[BoardsPage] Manual fetch docs:", docs);
-    }).catch(err => {
-      console.error("[BoardsPage] Manual fetch error:", err);
-    });
-  }, [service]);
+  // Remove redundant manual fetch - we already have real-time listeners
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +128,14 @@ function BoardsPageContent() {
     setError(null);
     
     try {
+      // Validate board title
+      const titleValidation = validateBoardTitle(boardName);
+      if (!titleValidation.isValid) {
+        setError(titleValidation.error || 'Invalid board title');
+        setLoading(false);
+        return;
+      }
+      
       // Check board limits before creating
       if (!user?.uid) {
         setError('You must be signed in to create boards.');
@@ -154,7 +163,7 @@ function BoardsPageContent() {
 
       // Create a new board in Firestore
       await service.addDocument("todo_boards", {
-        title: boardName,
+        title: titleValidation.sanitizedValue!,
         listIds: [],
         ownerId: user.uid,
         sharedWith: [user.uid], // User is automatically added to sharedWith
@@ -164,7 +173,9 @@ function BoardsPageContent() {
       setBoardName("");
       setShowForm(false);
     } catch (err: any) {
-      setError(err.message || "Failed to create board");
+      const errorMessage = err instanceof Error ? err.message : "Failed to create board";
+      setError(errorMessage);
+      logger.taskBoardError('Failed to create board', err);
     } finally {
       setLoading(false);
     }
@@ -244,24 +255,25 @@ function BoardsPageContent() {
                 >
                   ×
                 </button>
-                <form onSubmit={handleCreateBoard} className="flex items-center gap-2 max-w-md">
+                <form onSubmit={handleCreateBoard} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 max-w-md">
                   <input
-                    className="flex-1 px-3 py-2 rounded border border-pb-primary/40 bg-pb-darker text-white focus:outline-none"
+                    className="flex-1 px-3 py-2 rounded border border-pb-primary/40 bg-pb-darker text-white focus:outline-none focus:ring-2 focus:ring-pb-primary"
                     type="text"
                     placeholder="Board name"
                     value={boardName}
                     onChange={e => setBoardName(e.target.value)}
                     required
                     disabled={loading}
+                    aria-label="Board name"
                   />
                   <button
                     type="submit"
-                    className="bg-pb-success text-white px-4 py-2 rounded hover:bg-pb-primary transition"
+                    className="bg-pb-success text-white px-4 py-2 rounded hover:bg-pb-primary transition focus:outline-none focus:ring-2 focus:ring-pb-primary"
                     disabled={loading || !boardName.trim()}
                   >
                     {loading ? 'Creating...' : 'Create'}
                   </button>
-                  {error && <div className="text-red-400 text-xs mt-2">{error}</div>}
+                  {error && <div className="text-red-400 text-xs mt-2 col-span-full">{error}</div>}
                 </form>
               </div>
             )}

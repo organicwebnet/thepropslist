@@ -3,6 +3,7 @@ import './index.css';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useWebAuth } from './contexts/WebAuthContext';
 import { ShowSelectionProvider } from './contexts/ShowSelectionContext';
+import { MentionDataProvider } from './contexts/MentionDataContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Core components that are always needed
@@ -56,7 +57,8 @@ function App() {
   const { user } = useWebAuth();
   return (
     <ShowSelectionProvider>
-      <BrowserRouter>
+      <MentionDataProvider>
+        <BrowserRouter>
         <Suspense fallback={
           <div className="min-h-screen w-full bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 flex items-center justify-center">
             <div className="text-center">
@@ -110,7 +112,8 @@ function App() {
           <Route path="/*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} />
         </Routes>
         </Suspense>
-      </BrowserRouter>
+        </BrowserRouter>
+      </MentionDataProvider>
     </ShowSelectionProvider>
   );
 }
