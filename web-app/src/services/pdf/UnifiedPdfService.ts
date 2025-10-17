@@ -50,6 +50,8 @@ export class UnifiedPdfService {
       }
 
       console.log(`Generating PDF using template: ${template.name} (${template.id})`);
+      console.log(`Template layout: ${template.layout}`);
+      console.log(`Requested templateId: ${options.templateId}`);
       console.log(`Props count: ${props.length}, Show: ${showData.name || 'Unknown'}`);
       
       // Generate PDF using template

@@ -15,8 +15,12 @@ const FontContext = createContext<FontContextType | undefined>(undefined);
 // const FONT_STORAGE_KEY = 'appFontPreference'; // Temporarily unused
 
 export function FontProvider({ children }: { children: ReactNode }) {
-  // const [font, setFontState] = useState<FontChoice>('default'); // Temporarily unused
-  // const [isLoadingFont, setIsLoadingFont] = useState(true); // Temporarily unused
+  const [font, setFontState] = useState<FontChoice>('default');
+  const [isLoadingFont, setIsLoadingFont] = useState(false); // Set to false for web compatibility
+
+  const setFont = (newFont: FontChoice) => {
+    setFontState(newFont);
+  };
 
   // useEffect(() => { // Temporarily unused
   //   const loadFontPreference = async () => {
@@ -55,12 +59,8 @@ export function FontProvider({ children }: { children: ReactNode }) {
   //   }
   // };
 
-  // Temporarily use dummy static values and a no-op function
-  const dummySetFont = () => {
-    // No-op function
-  };
   return (
-    <FontContext.Provider value={{ font: 'default', setFont: dummySetFont, isLoadingFont: false }}>
+    <FontContext.Provider value={{ font, setFont, isLoadingFont }}>
       {children}
     </FontContext.Provider>
   );

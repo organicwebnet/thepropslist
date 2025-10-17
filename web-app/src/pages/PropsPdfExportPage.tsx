@@ -294,6 +294,9 @@ const PropsPdfExportPage: React.FC = () => {
       return;
     }
 
+    // Update current configuration to ensure preview uses correct layout
+    setCurrentConfiguration(configuration);
+
     setIsPreviewLoading(true);
     setGenerationError(null);
 
@@ -592,12 +595,12 @@ const PropsPdfExportPage: React.FC = () => {
                       
                       <div className="border border-gray-200 rounded-lg bg-white shadow-sm">
                         <div 
-                          className="bg-gray-100"
+                          className="bg-gray-100 p-4"
                           style={{
-                            // Simple container that fits the scaled content exactly
-                            width: `${scaledW + 40}px`, // Just enough padding
-                            height: `${scaledH + 40}px`,
-                            overflow: 'hidden', // No scrollbars
+                            // Flexible container that allows proper A4 scaling
+                            minWidth: `${scaledW + 40}px`,
+                            minHeight: `${scaledH + 40}px`,
+                            overflow: 'hidden', // Remove scrolling
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
@@ -614,9 +617,9 @@ const PropsPdfExportPage: React.FC = () => {
                               // Force exact A4 aspect ratio using CSS aspect-ratio property
                               aspectRatio: aspectRatio.toFixed(3), // 1.414 for landscape
                               // Scale for preview (fits landscape in portrait container)
-                              transform: `scale(${finalScale})`,
+                              transform: `scale(0.95)`,
                               transformOrigin: 'center center', // Center the scaling
-                              overflow: 'hidden',
+                              overflow: 'visible', // Allow content to be visible
                               color: '#000',
                               backgroundColor: '#fff',
                               position: 'relative',

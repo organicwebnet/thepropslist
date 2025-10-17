@@ -255,9 +255,9 @@ export class PortraitCatalogTemplate implements PdfTemplate {
       }
 
       .page {
-        width: 794px; /* A4 Portrait at 96 DPI */
-        height: 1123px;
-        padding: 76px 95px; /* 20mm and 25mm converted to px */
+        width: 210mm; /* A4 Portrait */
+        height: 297mm;
+        padding: 10mm 15mm; /* Reduced margins for more content space */
         margin: 0 auto;
         background: white;
         box-sizing: border-box;
@@ -427,112 +427,122 @@ export class PortraitCatalogTemplate implements PdfTemplate {
       .prop-card {
         display: flex;
         flex-direction: column;
-        gap: 20px;
-        padding: 20px;
+        gap: 2mm;
+        padding: 2mm;
         border: none;
         background: #ffffff;
-        min-height: 757px; /* 200mm converted to px */
+        min-height: 200mm; /* Proper A4 content height */
+        height: 100%;
+        box-sizing: border-box;
       }
 
       .prop-image-section {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 15px;
+        gap: 4px;
+        flex: 0 0 50%; /* Reduce to 50% to give more space to content */
       }
 
       .prop-image {
-        width: 100%;
-        max-width: 454px; /* 120mm converted to px */
-        height: 454px; /* 120mm converted to px */
-        object-fit: cover;
-        border-radius: 8px;
+        width: 50%;
+        max-width: 140mm;
+        object-fit: contain;
+        border-radius: 6px;
         border: 2px solid ${accentColor};
+        background: #f8f9fa;
       }
 
       .no-image {
-        width: 100%;
-        max-width: 454px; /* 120mm converted to px */
-        height: 454px; /* 120mm converted to px */
+        width: 50%;
+        max-width: 140mm;
+        height: 140mm;
         display: flex;
         align-items: center;
         justify-content: center;
         background: #f3f4f6;
         border: 3px dashed #d1d5db;
-        border-radius: 8px;
+        border-radius: 6px;
         color: #6b7280;
         font-size: 16px;
         font-weight: 500;
       }
 
       .qr-code {
-        width: 80px;
-        height: 80px;
-        border: 2px solid ${primaryColor};
-        border-radius: 8px;
+        width: 60px;
+        height: 60px;
+        border: 1px solid ${primaryColor};
+        border-radius: 4px;
         background: #ffffff;
+        margin-top: 4px;
       }
 
       .prop-content-section {
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 4px;
+        flex: 1; /* Take remaining space */
+        padding: 2mm 0;
       }
 
       .prop-name {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 700;
         color: ${primaryColor};
-        margin-bottom: 10px;
+        margin-bottom: 6px;
         text-transform: uppercase;
         letter-spacing: 1px;
         text-align: center;
         border-bottom: 2px solid ${accentColor};
-        padding-bottom: 8px;
+        padding-bottom: 4px;
       }
 
       .prop-description {
-        font-size: 16px;
+        font-size: 14px;
         color: #374151;
-        line-height: 1.6;
-        margin-bottom: 20px;
+        line-height: 1.5;
+        margin-bottom: 12px;
         font-style: italic;
         text-align: center;
-        padding: 15px;
+        padding: 5px;
         background: #f9fafb;
-        border-radius: 8px;
-        border-left: 4px solid ${accentColor};
+        border-radius: 6px;
+        border-left: 3px solid ${accentColor};
       }
 
       .prop-fields {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        margin-top: 10px;
+        grid-template-columns: 1fr 1fr 1fr; /* 3 columns for portrait */
+        gap: 6px;
+        margin-top: 8px;
       }
 
       .field-row {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        padding: 10px;
+        gap: 3px;
+        padding: 4px 6px;
         background: #f8fafc;
-        border-radius: 6px;
-        border-left: 3px solid ${accentColor};
+        border-radius: 4px;
+        border-left: 2px solid ${accentColor};
+        min-height: 35px;
+        justify-content: center;
       }
 
       .field-label {
         font-weight: 600;
         color: ${secondaryColor};
-        font-size: 12px;
+        font-size: 10px;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.2px;
+        line-height: 1.2;
       }
 
       .field-value {
         color: #000000;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 500;
+        line-height: 1.2;
       }
 
       .no-fields {
@@ -562,15 +572,19 @@ export class PortraitCatalogTemplate implements PdfTemplate {
         .page {
           width: 100%;
           height: auto;
-          min-height: 1123px; /* 297mm converted to px */
+          min-height: 297mm; /* Use mm units for consistency */
         }
         
         .prop-fields {
-          grid-template-columns: 1fr;
+          grid-template-columns: 1fr 1fr; /* 2 columns on mobile */
         }
         
         .prop-image, .no-image {
-          height: 300px;
+          height: 100mm; /* Smaller for mobile screens */
+        }
+        
+        .prop-image-section {
+          flex: 0 0 50%; /* Reduce image section on mobile */
         }
       }
     `;

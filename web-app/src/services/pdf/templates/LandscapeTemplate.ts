@@ -255,7 +255,7 @@ export class LandscapeTemplate implements PdfTemplate {
       .page {
         width: 297mm; /* A4 Landscape */
         height: 210mm;
-        padding: 15mm 20mm; /* Proper margins */
+        padding: 8mm 12mm; /* Reduced margins for more content space */
         margin: 0 auto;
         background: white;
         box-sizing: border-box;
@@ -425,8 +425,8 @@ export class LandscapeTemplate implements PdfTemplate {
 
       .prop-card {
         display: flex;
-        gap: 20px;
-        padding: 15px;
+        gap: 10px;
+        padding: 5px;
         border: none;
         background: #ffffff;
         height: 100%; /* Use full available height */
@@ -503,6 +503,10 @@ export class LandscapeTemplate implements PdfTemplate {
         line-height: 1.6;
         margin-bottom: 20px;
         font-style: italic;
+        padding: 5px;
+        background: #f9fafb;
+        border-radius: 8px;
+        border-left: 4px solid ${accentColor};
       }
 
       .prop-fields {
@@ -516,9 +520,9 @@ export class LandscapeTemplate implements PdfTemplate {
 
       .field-row {
         display: flex;
-        gap: 15px;
+        gap: 5px;
         align-items: flex-start;
-        padding: 8px 0;
+        padding: 1px 0;
         border-bottom: 1px solid #f3f4f6;
       }
 

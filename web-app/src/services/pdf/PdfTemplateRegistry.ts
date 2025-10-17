@@ -108,16 +108,18 @@ export class PdfTemplateRegistry {
     // Import and register default templates using dynamic imports
     try {
       // Use dynamic imports for ES6 modules
-      import('./templates/PortraitCatalogTemplate').then(({ PortraitCatalogTemplate }) => {
-        this.registerTemplate(new PortraitCatalogTemplate());
-      }).catch(error => {
-        console.error('Failed to load PortraitCatalogTemplate:', error);
-      });
-
       import('./templates/LandscapeTemplate').then(({ LandscapeTemplate }) => {
         this.registerTemplate(new LandscapeTemplate());
+        console.log('Registered LandscapeTemplate with ID:', new LandscapeTemplate().id);
       }).catch(error => {
         console.error('Failed to load LandscapeTemplate:', error);
+      });
+
+      import('./templates/PortraitCatalogTemplate').then(({ PortraitCatalogTemplate }) => {
+        this.registerTemplate(new PortraitCatalogTemplate());
+        console.log('Registered PortraitCatalogTemplate with ID:', new PortraitCatalogTemplate().id);
+      }).catch(error => {
+        console.error('Failed to load PortraitCatalogTemplate:', error);
       });
       
       console.log('PDF templates registration initiated');

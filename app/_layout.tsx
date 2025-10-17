@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
@@ -22,6 +23,26 @@ export default function RootLayout() {
     // Make status bar match app theme and hide white gaps on Pixel
     SystemUI.setBackgroundColorAsync('#18181b').catch(() => {});
   }, []);
+
+  // For web platform, render a simplified version without Firebase
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ flex: 1 }}>
+        <ThemeProvider>
+          <FontProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="auth" options={{ headerShown: false }} />
+            </Stack>
+            <StatusBar style="light" backgroundColor="#18181b" translucent={false} />
+          </FontProvider>
+        </ThemeProvider>
+      </View>
+    );
+  }
+
+  // For mobile platforms, use full Firebase setup
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <FirebaseProvider>
