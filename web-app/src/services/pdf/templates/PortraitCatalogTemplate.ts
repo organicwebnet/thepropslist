@@ -182,7 +182,6 @@ export class PortraitCatalogTemplate implements PdfTemplate {
           <div class="prop-footer">
             <div class="qr-section">
               ${qrCodeHtml}
-              <div class="qr-text">${options.qrMessage || 'Scan here for more information about this prop'}</div>
             </div>
           </div>
         ` : ''}
@@ -488,9 +487,10 @@ export class PortraitCatalogTemplate implements PdfTemplate {
 
       .qr-section {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        gap: 4px;
+        gap: 8px;
+        justify-content: center;
       }
 
       .qr-code {
@@ -501,14 +501,6 @@ export class PortraitCatalogTemplate implements PdfTemplate {
         background: #ffffff;
       }
 
-      .qr-text {
-        font-size: 10px;
-        color: #6b7280;
-        text-align: center;
-        font-style: italic;
-        max-width: 120px;
-        line-height: 1.2;
-      }
 
       .prop-content-section {
         display: flex;
