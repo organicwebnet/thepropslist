@@ -178,7 +178,7 @@ const PackingListDetailPage: React.FC = () => {
         ref={setNodeRef}
         {...attributes}
         {...listeners}
-        className={`bg-white/5 hover:bg-white/10 rounded-lg p-4 text-white shadow-sm cursor-grab transition-all duration-200 border border-white/10 hover:border-pb-primary/30 ${isDragging ? 'opacity-50 scale-95' : 'hover:scale-[1.02]'}`}
+        className={`bg-white/5 hover:bg-white/10 rounded-lg p-4 text-white shadow-sm cursor-grab transition-colors duration-200 border border-white/10 hover:border-pb-primary/30 ${isDragging ? 'opacity-50' : ''}`}
         style={{ userSelect: 'none' }}
       >
         <div className="font-semibold text-base text-white mb-1">{prop.name}</div>
@@ -469,7 +469,7 @@ const PackingListDetailPage: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   {containers.map((container) => (
-                    <div key={container.id} className="bg-white/5 rounded-lg border border-white/10 p-4">
+                    <div key={container.id} className="bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 hover:border-white/20 p-4 transition-colors duration-200">
                       <div className="flex items-center gap-3 mb-3">
                         <input
                           type="checkbox"

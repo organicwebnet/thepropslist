@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon, ArrowLeft, Box, Package, Search, Plus, AlertCircle, Printer, Trash2 } from 'lucide-react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { DigitalPackListService, PackList, PackingContainer } from '../../shared/services/inventory/packListService';
@@ -179,21 +179,93 @@ const ContainerDetailPage: React.FC = () => {
 
   // no top contents list for QR panel per spec
 
-  if (loading) return <DashboardLayout><div className="max-w-7xl mx-auto p-8 text-gray-400">Loading...</div></DashboardLayout>;
-  if (error) return <DashboardLayout><div className="max-w-7xl mx-auto p-8 text-red-500">{error}</div></DashboardLayout>;
-  if (!container) return <DashboardLayout><div className="max-w-7xl mx-auto p-8">Container not found.</div></DashboardLayout>;
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary mx-auto mb-4"></div>
+            <p className="text-pb-gray/70">Loading container details...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-white mb-2">Error Loading Container</h1>
+            <p className="text-pb-gray/70 mb-4">{error}</p>
+            <button
+              onClick={() => navigate(`/packing-lists/${packListId}`)}
+              className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg transition-colors"
+            >
+              Back to Packing List
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!container) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Box className="w-16 h-16 text-pb-gray/50 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-white mb-2">Container Not Found</h1>
+            <p className="text-pb-gray/70 mb-4">The requested container could not be found.</p>
+            <button
+              onClick={() => navigate(`/packing-lists/${packListId}`)}
+              className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg transition-colors"
+            >
+              Back to Packing List
+            </button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <button className="btn btn-secondary" onClick={() => navigate(`/packing-lists/${packListId}`)}>&larr; Back</button>
-          <h1 className="text-2xl font-bold">Container: {container.name}</h1>
-          {container.type && <span className="text-sm text-gray-400">({container.type})</span>}
-          <span className="flex-1" />
-          <button className="btn btn-primary" onClick={() => setLabelOpen(true)} title="Print label">Print Label</button>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <button
+              onClick={() => navigate(`/packing-lists/${packListId}`)}
+              className="p-2 hover:bg-pb-darker/40 rounded-lg transition-colors"
+              title="Back to Packing List"
+            >
+              <ArrowLeft className="w-5 h-5 text-pb-gray/70 hover:text-white" />
+            </button>
+            <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+              <Box className="w-5 h-5 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Container: {container.name}</h1>
+            {container.type && <span className="text-lg text-pb-gray/70">({container.type})</span>}
+          </div>
+          <p className="text-pb-gray/70">Manage container details, props, and generate shipping labels</p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 mb-6">
+          <button 
+            className="px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white font-medium transition-colors flex items-center gap-2"
+            onClick={() => setLabelOpen(true)} 
+            title="Print label"
+          >
+            <Printer className="w-4 h-4" />
+            Print Label
+          </button>
           <button
-            className="btn btn-error"
+            className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors flex items-center gap-2"
             onClick={async () => {
               if (!packListId || !containerId) return;
               const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
@@ -201,201 +273,274 @@ const ContainerDetailPage: React.FC = () => {
               navigate(`/packing-lists/${packListId}`);
             }}
           >
+            <Trash2 className="w-4 h-4" />
             Delete Container
           </button>
         </div>
         <SubFootnote features={["Custom packing labels", "Bulk print", "Shipping templates"]} />
 
-        <div className="bg-gray-900 rounded-xl shadow p-4 mb-6">
-          <h2 className="font-semibold mb-2 text-lg">Details</h2>
-          <div className="text-sm text-gray-300">
-            <div className="mb-4 p-3 rounded-lg bg-gray-800/60 border border-gray-700 flex items-center gap-3">
-              <div className="text-white font-semibold shrink-0">Placement</div>
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="text-gray-400">Placed on:</span>
+        <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <Package className="w-4 h-4 text-blue-400" />
+            </div>
+            <h2 className="text-lg font-semibold text-white">Container Details</h2>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Placement Section */}
+            <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-medium text-white">Placement</div>
+                <div className="flex gap-2">
+                  <button
+                    className="px-3 py-1.5 text-sm rounded-lg bg-pb-primary/20 text-pb-primary border border-pb-primary/30 hover:bg-pb-primary/30 transition-colors"
+                    onClick={() => setParentSelecting(true)}
+                  >
+                    {container.parentId ? 'Change' : 'Set parent'}
+                  </button>
+                  {container.parentId && (
+                    <button
+                      className="px-3 py-1.5 text-sm rounded-lg bg-gray-600/20 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={savingParent}
+                      onClick={async () => {
+                        if (!packListId || !container) return;
+                        setSavingParent(true);
+                        try {
+                          const pls = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                          await pls.updateContainer(packListId, container.id, { parentId: null });
+                          const refreshed = await pls.getPackList(packListId);
+                          setPackList(refreshed);
+                          const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+                          setContainer(updated);
+                        } finally {
+                          setSavingParent(false);
+                        }
+                      }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-pb-gray/70">Placed on:</span>
                 {container.parentId ? (
-                  <span className="px-2 py-1 rounded-lg bg-gray-900 border border-gray-700 text-white truncate max-w-[40ch]">
+                  <span className="px-3 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30">
                     {(() => {
                       const p = availableParents.find(p => p.id === container.parentId);
                       return p ? `${p.name}${p.type ? ` (${p.type})` : ''}` : `#${container.parentId}`;
                     })()}
                   </span>
                 ) : (
-                  <span className="px-2 py-1 rounded-lg bg-gray-900 border border-gray-800 text-gray-400">None</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className="px-3 py-2 rounded-lg bg-pb-primary text-white hover:bg-pb-accent transition"
-                  onClick={() => setParentSelecting(true)}
-                >
-                  {container.parentId ? 'Change' : 'Set parent'}
-                </button>
-                {container.parentId && (
-                  <button
-                    className="px-3 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={savingParent}
-                    onClick={async () => {
-                      if (!packListId || !container) return;
-                      setSavingParent(true);
-                      try {
-                        const pls = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                        await pls.updateContainer(packListId, container.id, { parentId: null });
-                        const refreshed = await pls.getPackList(packListId);
-                        setPackList(refreshed);
-                        const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
-                        setContainer(updated);
-                      } finally {
-                        setSavingParent(false);
-                      }
-                    }}
-                  >
-                    Remove
-                  </button>
+                  <span className="px-3 py-1 rounded-lg bg-gray-500/20 text-gray-400 border border-gray-500/30">None</span>
                 )}
               </div>
             </div>
-            {container.dimensions && (
-              <div>
-                Dimensions: {container.dimensions.depth}×{container.dimensions.width}
-                {typeof container.dimensions.height === 'number' && container.dimensions.height > 0 ? (
-                  <>×{container.dimensions.height}</>
-                ) : null} {container.dimensions.unit}
+            {/* Container Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {container.dimensions && (
+                <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                  <div className="text-sm font-medium text-white mb-1">Dimensions</div>
+                  <div className="text-sm text-pb-gray/70">
+                    {container.dimensions.depth}×{container.dimensions.width}
+                    {typeof container.dimensions.height === 'number' && container.dimensions.height > 0 ? (
+                      <>×{container.dimensions.height}</>
+                    ) : null} {container.dimensions.unit}
+                  </div>
+                </div>
+              )}
+              {container.currentWeight?.value !== undefined && (
+                <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                  <div className="text-sm font-medium text-white mb-1">Recorded Weight</div>
+                  <div className="text-sm text-pb-gray/70">{container.currentWeight.value} {container.currentWeight.unit}</div>
+                </div>
+              )}
+              {container.maxWeight?.value !== undefined && (
+                <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                  <div className="text-sm font-medium text-white mb-1">Max Capacity</div>
+                  <div className="text-sm text-pb-gray/70">{container.maxWeight.value} {container.maxWeight.unit}</div>
+                </div>
+              )}
+              {computeEstimatedContentsWeightKg() > 0 && (
+                <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                  <div className="text-sm font-medium text-white mb-1">Estimated Contents Weight</div>
+                  <div className="text-sm text-pb-gray/70">{computeEstimatedContentsWeightKg()} kg</div>
+                </div>
+              )}
+            </div>
+            
+            {container.description && (
+              <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+                <div className="text-sm font-medium text-white mb-1">Description</div>
+                <div className="text-sm text-pb-gray/70">{container.description}</div>
               </div>
             )}
-            {container.currentWeight?.value !== undefined && (
-              <div className="mt-1">Recorded Weight: {container.currentWeight.value} {container.currentWeight.unit}</div>
-            )}
-            {container.maxWeight?.value !== undefined && (
-              <div className="mt-1">Max Capacity: {container.maxWeight.value} {container.maxWeight.unit}</div>
-            )}
-            {computeEstimatedContentsWeightKg() > 0 && (
-              <div className="mt-1 text-gray-400">Estimated contents weight: {computeEstimatedContentsWeightKg()} kg</div>
-            )}
-            {container.description && (
-              <div className="mt-1 text-gray-400">{container.description}</div>
-            )}
-            <div className="mt-3 flex flex-wrap gap-3 items-center">
-              {computeSymbols().map((s) => (
-                <div key={s.key} className="flex items-center gap-2 bg-gray-800 rounded px-2 py-1">
-                  {s.url ? <img src={s.url} alt={s.label} title={s.label} className="w-6 h-6 object-contain" /> : null}
-                  <span className="text-xs text-gray-200">{s.label}</span>
-                </div>
-              ))}
+            
+            {/* Symbols */}
+            <div className="bg-white/5 rounded-lg border border-white/10 p-3">
+              <div className="text-sm font-medium text-white mb-2">Handling Symbols</div>
+              <div className="flex flex-wrap gap-2">
+                {computeSymbols().map((s) => (
+                  <div key={s.key} className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2 border border-white/20">
+                    {s.url ? <img src={s.url} alt={s.label} title={s.label} className="w-5 h-5 object-contain" /> : null}
+                    <span className="text-xs text-white font-medium">{s.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-900 rounded-xl shadow p-4">
-          <h2 className="font-semibold mb-2 text-lg">Props in this container</h2>
+        <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center">
+              <Package className="w-4 h-4 text-green-400" />
+            </div>
+            <h2 className="text-lg font-semibold text-white">Props in this container</h2>
+          </div>
           {container.props.length === 0 ? (
-            <div className="text-gray-400">No props in this container.</div>
+            <div className="text-center py-8">
+              <Package className="w-12 h-12 text-pb-gray/50 mx-auto mb-3" />
+              <p className="text-pb-gray/70">No props in this container</p>
+              <p className="text-pb-gray/50 text-sm">Add props using the section below</p>
+            </div>
           ) : (
-            <ul className="divide-y divide-gray-800">
+            <div className="space-y-3">
               {container.props.map((p) => {
                 const prop = findProp(p.propId);
                 const img = getPropImageUrl(prop);
                 return (
-                  <li key={p.propId} className="py-2 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {img ? (
-                        <img src={img} alt={prop?.name || 'Prop'} className="w-10 h-10 rounded object-cover" />
-                      ) : (
-                        <div className="w-10 h-10 rounded bg-gray-700 flex items-center justify-center text-xs text-gray-300">No Image</div>
-                      )}
-                      <div className="text-white">
-                        {prop ? (
-                          <Link to={`/props/${prop.id}`} className="text-indigo-300 hover:underline">{prop.name}</Link>
+                  <div key={p.propId} className="bg-white/5 rounded-lg border border-white/10 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {img ? (
+                          <img src={img} alt={prop?.name || 'Prop'} className="w-12 h-12 rounded-lg object-cover border border-white/20" />
                         ) : (
-                          <span>Unknown Prop</span>
+                          <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/20">
+                            <ImageIcon className="w-5 h-5 text-pb-gray/50" />
+                          </div>
                         )}
-                        <span className="text-xs text-gray-400 ml-2">Qty: {p.quantity}</span>
+                        <div>
+                          <div className="font-medium text-white">
+                            {prop ? (
+                              <Link to={`/props/${prop.id}`} className="text-pb-primary hover:text-pb-secondary transition-colors">{prop.name}</Link>
+                            ) : (
+                              <span>Unknown Prop</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-pb-gray/70">
+                            <span>Qty: {p.quantity}</span>
+                            {prop?.category && <span>• {prop.category}</span>}
+                          </div>
+                        </div>
                       </div>
+                      <button
+                        className={`px-3 py-1.5 text-sm rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${removing[p.propId] ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        onClick={async () => {
+                          if (!packListId) return;
+                          setRemoving((prev) => ({ ...prev, [p.propId]: true }));
+                          try {
+                            const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                            await serviceInst.removePropFromContainer(packListId, container.id, p.propId);
+                            // When removed, set prop status to on-hold
+                            try { await service.updateDocument('props', p.propId, { status: 'on-hold', lastStatusUpdate: new Date().toISOString() }); } catch (err) { /* ignore */ }
+                            const refreshed = await serviceInst.getPackList(packListId);
+                            const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+                            setContainer(updated);
+                          } finally {
+                            setRemoving((prev) => ({ ...prev, [p.propId]: false }));
+                          }
+                        }}
+                        disabled={!!removing[p.propId]}
+                      >
+                        {removing[p.propId] ? 'Removing...' : 'Remove'}
+                      </button>
                     </div>
-                    {prop?.category && (
-                      <span className="text-xs text-gray-500 mr-3">{prop.category}</span>
-                    )}
-                    <button
-                      className={`btn btn-sm btn-error ${removing[p.propId] ? 'btn-disabled' : ''}`}
-                      onClick={async () => {
-                        if (!packListId) return;
-                        setRemoving((prev) => ({ ...prev, [p.propId]: true }));
-                        try {
-                          const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                          await serviceInst.removePropFromContainer(packListId, container.id, p.propId);
-                          // When removed, set prop status to on-hold
-                          try { await service.updateDocument('props', p.propId, { status: 'on-hold', lastStatusUpdate: new Date().toISOString() }); } catch (err) { /* ignore */ }
-                          const refreshed = await serviceInst.getPackList(packListId);
-                          const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
-                          setContainer(updated);
-                        } finally {
-                          setRemoving((prev) => ({ ...prev, [p.propId]: false }));
-                        }
-                      }}
-                      disabled={!!removing[p.propId]}
-                    >
-                      {removing[p.propId] ? 'Removing...' : 'Remove'}
-                    </button>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </div>
           )}
         </div>
 
         {childContainers.length > 0 && (
-          <div className="bg-gray-900 rounded-xl shadow p-4 mt-6">
-            <h2 className="font-semibold mb-2 text-lg">Containers on this {container.type || 'pallet'}</h2>
-            <ul className="divide-y divide-gray-800">
+          <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-6 h-6 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                <Box className="w-4 h-4 text-orange-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">Containers on this {container.type || 'pallet'}</h2>
+            </div>
+            <div className="space-y-3">
               {childContainers.map((ch: any) => (
-                <li key={ch.id} className="py-2 flex items-center justify-between">
-                  <div className="text-white">
-                    {ch.name} {ch.type && <span className="text-xs text-gray-400">({ch.type})</span>}
+                <div key={ch.id} className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-white">{ch.name}</div>
+                      {ch.type && <div className="text-sm text-pb-gray/70">({ch.type})</div>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link 
+                        to={`/packing-lists/${packListId}/containers/${ch.id}`} 
+                        className="px-3 py-1.5 text-sm rounded-lg bg-pb-primary/20 text-pb-primary border border-pb-primary/30 hover:bg-pb-primary/30 transition-colors"
+                      >
+                        Open
+                      </Link>
+                      <button
+                        className="px-3 py-1.5 text-sm rounded-lg bg-gray-600/20 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={!!updatingChild[ch.id]}
+                        onClick={async () => {
+                          if (!packListId) return;
+                          setUpdatingChild(prev => ({ ...prev, [ch.id]: true }));
+                          try {
+                            const pls = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                            await pls.updateContainer(packListId, ch.id, { parentId: null } as any);
+                            const refreshed = await pls.getPackList(packListId);
+                            setPackList(refreshed);
+                          } finally {
+                            setUpdatingChild(prev => ({ ...prev, [ch.id]: false }));
+                          }
+                        }}
+                      >
+                        {updatingChild[ch.id] ? 'Removing...' : 'Remove from here'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Link to={`/packing-lists/${packListId}/containers/${ch.id}`} className="text-xs text-pb-primary underline">Open</Link>
-                    <button
-                      className="btn btn-sm bg-gray-700 text-white hover:bg-gray-600 disabled:opacity-60 disabled:cursor-not-allowed"
-                      disabled={!!updatingChild[ch.id]}
-                      onClick={async () => {
-                        if (!packListId) return;
-                        setUpdatingChild(prev => ({ ...prev, [ch.id]: true }));
-                        try {
-                          const pls = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                          await pls.updateContainer(packListId, ch.id, { parentId: null } as any);
-                          const refreshed = await pls.getPackList(packListId);
-                          setPackList(refreshed);
-                        } finally {
-                          setUpdatingChild(prev => ({ ...prev, [ch.id]: false }));
-                        }
-                      }}
-                    >
-                      Remove from here
-                    </button>
-                  </div>
-                </li>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
 
-        <div className="bg-gray-900 rounded-xl shadow p-4 mt-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">Add Props to this container</h2>
-            <button className="text-sm text-indigo-300 hover:text-indigo-200" onClick={() => setAddOpen(!addOpen)}>
+        <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <Plus className="w-4 h-4 text-blue-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">Add Props to this container</h2>
+            </div>
+            <button 
+              className="px-3 py-1.5 text-sm rounded-lg bg-pb-primary/20 text-pb-primary border border-pb-primary/30 hover:bg-pb-primary/30 transition-colors"
+              onClick={() => setAddOpen(!addOpen)}
+            >
               {addOpen ? 'Collapse' : 'Expand'}
             </button>
           </div>
           {addOpen && (
             <>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search props by name, category, or tag..."
-                className="input input-bordered bg-gray-800 text-white mb-3 w-full"
-              />
-              <ul className="divide-y divide-gray-800">
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pb-gray/50 w-4 h-4" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search props by name, category, or tag..."
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                />
+              </div>
+              <div className="space-y-3">
                 {propsList
                   .filter((p) => !container.props.some((cp) => cp.propId === p.id))
                   .filter((p) => {
@@ -410,51 +555,53 @@ const ContainerDetailPage: React.FC = () => {
                   .map((p) => {
                     const img = getPropImageUrl(p);
                     return (
-                      <li key={p.id} className="py-2 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {img ? (
-                            <img src={img} alt={p.name} className="w-8 h-8 rounded object-cover" />
-                          ) : (
-                            <div className="w-8 h-8 rounded bg-gray-700 flex items-center justify-center">
-                              <ImageIcon className="text-gray-400" size={14} />
+                      <div key={p.id} className="bg-white/5 rounded-lg border border-white/10 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {img ? (
+                              <img src={img} alt={p.name} className="w-10 h-10 rounded-lg object-cover border border-white/20" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center border border-white/20">
+                                <ImageIcon className="w-4 h-4 text-pb-gray/50" />
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-medium text-white">{p.name}</div>
+                              {p.category && <div className="text-sm text-pb-gray/70">{p.category}</div>}
                             </div>
-                          )}
-                          <div className="text-white">
-                            <span className="font-medium">{p.name}</span>
-                            {p.category && <span className="text-xs text-gray-400 ml-2">{p.category}</span>}
                           </div>
-                        </div>
-                        <button
-                          className={`btn btn-sm btn-primary ${adding[p.id] ? 'btn-disabled' : ''}`}
-                          onClick={async () => {
-                            if (!packListId) return;
-                            setAdding((prev) => ({ ...prev, [p.id]: true }));
-                            try {
-                              const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                              await serviceInst.addPropToContainer(packListId, container.id, p.id, 1);
-                              const inventoryService = new DigitalInventoryService(service, null as any, null as any);
-                              await inventoryService.updateLocation(p.id, { type: 'storage', name: container.name, details: `Container ${container.name}` });
-                              try { 
-                                await service.updateDocument('props', p.id, { status: 'in-container', lastStatusUpdate: new Date().toISOString() }); 
-                              } catch (error) {
-                                console.warn('Failed to update prop status:', error);
+                          <button
+                            className={`px-3 py-1.5 text-sm rounded-lg bg-pb-primary/20 text-pb-primary border border-pb-primary/30 hover:bg-pb-primary/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${adding[p.id] ? 'opacity-60 cursor-not-allowed' : ''}`}
+                            onClick={async () => {
+                              if (!packListId) return;
+                              setAdding((prev) => ({ ...prev, [p.id]: true }));
+                              try {
+                                const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                                await serviceInst.addPropToContainer(packListId, container.id, p.id, 1);
+                                const inventoryService = new DigitalInventoryService(service, null as any, null as any);
+                                await inventoryService.updateLocation(p.id, { type: 'storage', name: container.name, details: `Container ${container.name}` });
+                                try { 
+                                  await service.updateDocument('props', p.id, { status: 'in-container', lastStatusUpdate: new Date().toISOString() }); 
+                                } catch (error) {
+                                  console.warn('Failed to update prop status:', error);
+                                }
+                                const refreshed = await serviceInst.getPackList(packListId);
+                                const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+                                setContainer(updated);
+                                setPackList(refreshed);
+                              } finally {
+                                setAdding((prev) => ({ ...prev, [p.id]: false }));
                               }
-                              const refreshed = await serviceInst.getPackList(packListId);
-                              const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
-                              setContainer(updated);
-                              setPackList(refreshed);
-                            } finally {
-                              setAdding((prev) => ({ ...prev, [p.id]: false }));
-                            }
-                          }}
-                          disabled={!!adding[p.id]}
-                        >
-                          {adding[p.id] ? 'Adding...' : 'Add'}
-                        </button>
-                      </li>
+                            }}
+                            disabled={!!adding[p.id]}
+                          >
+                            {adding[p.id] ? 'Adding...' : 'Add'}
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
-              </ul>
+              </div>
             </>
           )}
         </div>
