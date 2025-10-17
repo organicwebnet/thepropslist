@@ -287,9 +287,8 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
       self.findIndex(l => l.title?.toLowerCase() === list.title?.toLowerCase()) === index
   );
 
-  // If listIds is missing or not an array, just show all unique lists
+  // If listIds is missing or not an array, show empty state
   if (!Array.isArray(board.listIds) || board.listIds.length === 0) {
-    if (uniqueLists.length === 0) return <div>No lists found for this board.</div>;
     return (
       <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden">
         <div className="flex-1 flex flex-col min-h-0">
@@ -299,101 +298,12 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
               <span className="text-2xl font-bold text-white pl-6">{board.title || board.name || "Board"}</span>
             </div>
           )}
-          {/* Lists Row Scrollable Area */}
-          <div className="flex-1 min-h-0 w-full overflow-x-auto overflow-y-hidden overscroll-contain">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={event => {
-                const id = String(event.active.id);
-                if (id.startsWith('list-')) setActiveDragType('list');
-                else if (id.startsWith('card-')) setActiveDragType('card');
-                else setActiveDragType(null);
-                setActiveDragId(id);
-              }}
-              onDragEnd={event => {
-                const id = String(event.active.id);
-                if (id.startsWith('list-')) handleListDragEnd(event);
-                else if (id.startsWith('card-')) handleCardDragEnd(event);
-                setActiveDragId(null);
-                setActiveDragType(null);
-              }}
-              onDragCancel={() => {
-                setActiveDragId(null);
-                setActiveDragType(null);
-              }}
-            >
-              <SortableContext items={Array.isArray(board.listIds) ? board.listIds.map(id => `list-${id}`) : []} strategy={horizontalListSortingStrategy}>
-            <div
-              ref={listsRowRef}
-              className="flex items-start gap-3 h-full cursor-grab w-max px-6 lg:px-10 overscroll-contain"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-              role="region"
-              aria-label="Task board lists"
-              tabIndex={0}
-            >
-                  {Array.isArray(board.listIds) && board.listIds.length > 0
-                    ? board.listIds.map(listId => {
-                        const list = lists.find(l => l.id === listId);
-                        if (!list) return null;
-                        return (
-                          <ListColumn
-                            key={list.id}
-                            list={list}
-                            cards={cards[list.id] || []}
-                            onAddCard={addCard}
-                            onUpdateCard={updateCard}
-                            onDeleteCard={deleteCard}
-                            dndId={`list-${list.id}`}
-                            onDeleteList={deleteList}
-                            cardIdPrefix="card-"
-                            selectedCardId={selectedCardId || null}
-                          />
-                        );
-                      })
-                    : uniqueLists.map(list => (
-                <ListColumn
-                  key={list.id}
-                  list={list}
-                  cards={cards[list.id] || []}
-                  onAddCard={addCard}
-                  onUpdateCard={updateCard}
-                  onDeleteCard={deleteCard}
-                          dndId={`list-${list.id}`}
-                          onDeleteList={deleteList}
-                          cardIdPrefix="card-"
-                          selectedCardId={selectedCardId || null}
-                />
-              ))}
-              {/* Add List button at the end of the lists (hidden, replaced by FAB) */}
+          {/* Empty state */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center text-pb-gray/70">
+              <div className="text-lg mb-2">No lists found for this board</div>
+              <div className="text-sm">Click the + button to add your first list</div>
             </div>
-              </SortableContext>
-              <DragOverlay>
-                {activeDragType === 'card' && activeDragId ? (() => {
-                  // Find the card data
-                  let card: CardData | undefined;
-                  for (const list of lists) {
-                    card = (cards[list.id] || []).find(c => `card-${c.id}` === activeDragId);
-                    if (card) break;
-                  }
-                  return card ? (
-                    <div className="block rounded-lg p-3 shadow-lg bg-pb-darker text-white min-w-[16rem] min-h-[4rem]">
-                      <div className="font-semibold">{card.title}</div>
-                      {card.description && <div className="text-xs opacity-70 mt-1">{card.description}</div>}
-                    </div>
-                  ) : null;
-                })() : null}
-                {activeDragType === 'list' && activeDragId ? (() => {
-                  // Find the list data
-                  const list = lists.find(l => `list-${l.id}` === activeDragId);
-                  return list ? (
-                    <div className="bg-pb-darker rounded-xl p-4 min-w-[20rem] w-80 shadow-lg border border-pb-primary/30">
-                      <div className="text-lg font-bold text-white tracking-wide text-left">{list.title}</div>
-                    </div>
-                  ) : null;
-                })() : null}
-              </DragOverlay>
-            </DndContext>
           </div>
         </div>
         {/* FAB to add a list */}
@@ -410,7 +320,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
   }
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden p-0">
+    <div className="relative w-full h-full flex flex-col bg-transparent overflow-x-auto overflow-y-hidden p-0">
       <div className="flex-1 flex flex-col min-h-0">
         {/* Board Title as sticky header */}
         {!hideHeader && (
@@ -469,19 +379,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
                     />
                   );
                 })
-              : uniqueLists.map(list => (
-                  <ListColumn
-                    key={list.id}
-                    list={list}
-                    cards={cards[list.id] || []}
-                    onAddCard={addCard}
-                    onUpdateCard={updateCard}
-                    onDeleteCard={deleteCard}
-                        dndId={`list-${list.id}`}
-                        onDeleteList={deleteList}
-                        cardIdPrefix="card-"
-                  />
-                ))}
+              : null}
             {/* Add List button at the end of the lists (hidden, replaced by FAB) */}
           </div>
             </SortableContext>
