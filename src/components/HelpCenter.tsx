@@ -5,12 +5,13 @@ interface HelpCenterProps {
   onClose: () => void;
 }
 
-type Section = 'main' | 'getting-started' | 'collaboration' | 'props' | 'shows' | 'documentation' | 'tips';
+type Section = 'main' | 'getting-started' | 'collaboration' | 'props' | 'shows' | 'documentation' | 'tips' | 'subscription';
 type SubSection = 
   | 'create-show' | 'add-props' | 'organize-props' | 'manage-acts'
   | 'share-show' | 'assign-roles' | 'track-changes' | 'coordinate'
   | 'add-prop-details' | 'track-locations' | 'categories' | 'reports'
-  | 'create-manage' | 'organize-acts' | 'track-requirements' | 'plan-transitions';
+  | 'create-manage' | 'organize-acts' | 'track-requirements' | 'plan-transitions'
+  | 'subscription-plans' | 'understanding-limits' | 'upgrade-process' | 'billing-management';
 
 export function HelpCenter({ onClose }: HelpCenterProps) {
   const [activeSection, setActiveSection] = useState<Section>('main');
@@ -146,6 +147,34 @@ export function HelpCenter({ onClose }: HelpCenterProps) {
               { id: 'organize-acts', text: 'Organize acts and scenes' },
               { id: 'track-requirements', text: 'Track prop requirements' },
               { id: 'plan-transitions', text: 'Plan prop transitions' }
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => setActiveSubSection(item.id as SubSection)}
+                className="w-full text-left p-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors flex items-center justify-between group"
+              >
+                <span>{item.text}</span>
+                <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Subscription Management */}
+      <section className="mb-8">
+        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Users className="h-5 w-5 text-[var(--highlight-color)]" />
+          Subscription Management
+        </h3>
+        <div className="space-y-4">
+          <p>Manage your plan and understand limits:</p>
+          <div className="space-y-2">
+            {[
+              { id: 'subscription-plans', text: 'Understanding subscription plans' },
+              { id: 'understanding-limits', text: 'How limits work' },
+              { id: 'upgrade-process', text: 'Upgrading your plan' },
+              { id: 'billing-management', text: 'Managing billing and payments' }
             ].map(item => (
               <button
                 key={item.id}
@@ -685,6 +714,231 @@ export function HelpCenter({ onClose }: HelpCenterProps) {
                 <p>Use the transition manager to add, edit, and manage transitions.</p>
               </li>
             </ol>
+          </div>
+        ));
+
+      case 'subscription-plans':
+        return renderSubSection('Understanding Subscription Plans', (
+          <div className="space-y-4">
+            <p>Pick the plan that fits your production needs:</p>
+            
+            <div 
+              className="grid grid-cols-1 md:grid-cols-2 gap-4" 
+              role="grid" 
+              aria-label="Subscription plans comparison"
+            >
+              <div 
+                className="p-4 bg-[var(--bg-secondary)] rounded-lg"
+                role="gridcell"
+                aria-labelledby="free-plan-heading"
+              >
+                <h4 id="free-plan-heading" className="font-semibold mb-2 text-[var(--highlight-color)]">Free Plan</h4>
+                <ul className="space-y-1 text-sm">
+                  <li>• 1 Show</li>
+                  <li>• 2 Task Boards</li>
+                  <li>• 20 Packing Boxes</li>
+                  <li>• 3 Collaborators per Show</li>
+                  <li>• 10 Props</li>
+                  <li>• Basic Support</li>
+                </ul>
+              </div>
+              
+              <div 
+                className="p-4 bg-[var(--bg-secondary)] rounded-lg"
+                role="gridcell"
+                aria-labelledby="starter-plan-heading"
+              >
+                <h4 id="starter-plan-heading" className="font-semibold mb-2 text-[var(--highlight-color)]">Starter Plan</h4>
+                <ul className="space-y-1 text-sm">
+                  <li>• 3 Shows</li>
+                  <li>• 5 Task Boards</li>
+                  <li>• 200 Packing Boxes</li>
+                  <li>• 5 Collaborators per Show</li>
+                  <li>• 50 Props</li>
+                  <li>• 2 Archived Shows</li>
+                  <li>• Email Support</li>
+                </ul>
+              </div>
+              
+              <div 
+                className="p-4 bg-[var(--bg-secondary)] rounded-lg"
+                role="gridcell"
+                aria-labelledby="standard-plan-heading"
+              >
+                <h4 id="standard-plan-heading" className="font-semibold mb-2 text-[var(--highlight-color)]">Standard Plan</h4>
+                <ul className="space-y-1 text-sm">
+                  <li>• 10 Shows</li>
+                  <li>• 20 Task Boards</li>
+                  <li>• 1000 Packing Boxes</li>
+                  <li>• 15 Collaborators per Show</li>
+                  <li>• 100 Props</li>
+                  <li>• 5 Archived Shows</li>
+                  <li>• Custom Branding</li>
+                  <li>• Priority Support</li>
+                </ul>
+              </div>
+              
+              <div 
+                className="p-4 bg-[var(--bg-secondary)] rounded-lg"
+                role="gridcell"
+                aria-labelledby="pro-plan-heading"
+              >
+                <h4 id="pro-plan-heading" className="font-semibold mb-2 text-[var(--highlight-color)]">Pro Plan</h4>
+                <ul className="space-y-1 text-sm">
+                  <li>• 100 Shows</li>
+                  <li>• 200 Task Boards</li>
+                  <li>• 10000 Packing Boxes</li>
+                  <li>• 100 Collaborators per Show</li>
+                  <li>• 1000 Props</li>
+                  <li>• 10 Archived Shows</li>
+                  <li>• Custom Branding</li>
+                  <li>• 24/7 Support</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-4 bg-[var(--highlight-color)]/10 rounded-lg">
+              <p className="text-sm">
+                <strong>Note:</strong> All plans include core features like prop management, team collaboration, and PDF export. Higher plans offer more resources and advanced features.
+              </p>
+            </div>
+          </div>
+        ));
+
+      case 'understanding-limits':
+        return renderSubSection('How Limits Work', (
+          <div className="space-y-4">
+            <p>How subscription limits affect your workflow:</p>
+            
+            <div className="space-y-4">
+              <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">What Are Limits?</h4>
+                <p>Limits control how many resources you can create on your current plan. This includes shows, props, task boards, and packing boxes.</p>
+              </div>
+              
+              <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">When Limits Apply</h4>
+                <ul className="list-disc list-inside space-y-1">
+                  <li>Creating new shows</li>
+                  <li>Adding props to your inventory</li>
+                  <li>Creating task boards</li>
+                  <li>Adding packing boxes</li>
+                  <li>Inviting team members</li>
+                </ul>
+              </div>
+              
+              <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">Limit Enforcement</h4>
+                <p>When you reach a limit, you'll see a warning message and an upgrade prompt. You won't be able to create new resources until you upgrade or remove existing ones.</p>
+              </div>
+              
+              <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">Checking Your Usage</h4>
+                <p>You can see your current usage in the profile page. This shows how many resources you've used compared to your plan limits.</p>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-4 bg-[var(--highlight-color)]/10 rounded-lg">
+              <p className="text-sm">
+                <strong>Tip:</strong> God users and active subscribers are exempt from limits and can create unlimited resources.
+              </p>
+            </div>
+          </div>
+        ));
+
+      case 'upgrade-process':
+        return renderSubSection('Upgrading Your Plan', (
+          <div className="space-y-4">
+            <p>Upgrade your subscription in these steps:</p>
+            
+            <ol className="space-y-4">
+              <li className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">1. Access Your Profile</h4>
+                <p>Click on your profile picture in the top right corner and select "Profile" from the dropdown menu.</p>
+              </li>
+              
+              <li className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">2. View Current Plan</h4>
+                <p>On the profile page, you'll see your current plan and usage statistics. Click "View Plans" to see upgrade options.</p>
+              </li>
+              
+              <li className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">3. Choose Your Plan</h4>
+                <p>Compare the available plans and select the one that best fits your needs. Consider your current usage and future requirements.</p>
+              </li>
+              
+              <li className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">4. Complete Payment</h4>
+                <p>Enter your payment information and complete the upgrade process. You'll be charged immediately for the new plan.</p>
+              </li>
+              
+              <li className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">5. Enjoy New Limits</h4>
+                <p>Once payment is complete, your new limits will be active immediately. You can start creating more resources right away.</p>
+              </li>
+            </ol>
+            
+            <div className="mt-4 p-4 bg-[var(--highlight-color)]/10 rounded-lg">
+              <p className="text-sm">
+                <strong>Note:</strong> Upgrades are prorated, so you'll only pay for the remaining time in your billing cycle. Downgrades take effect at the next billing cycle.
+              </p>
+            </div>
+            
+            <div className="mt-4 p-4 bg-[var(--bg-secondary)] rounded-lg">
+              <h4 className="font-semibold mb-2">Payment Issues</h4>
+              <p>If payment fails, you'll receive an email with instructions to update your payment method. Your account remains active for 7 days after payment failure.</p>
+            </div>
+            
+            <div className="mt-4 p-4 bg-[var(--bg-secondary)] rounded-lg">
+              <h4 className="font-semibold mb-2">Downgrading</h4>
+              <p>You can downgrade your plan at any time. The change takes effect at your next billing cycle. If you're over the new plan's limits, you'll need to remove excess resources first.</p>
+            </div>
+          </div>
+        ));
+
+      case 'billing-management':
+        return renderSubSection('Managing Billing and Payments', (
+          <div className="space-y-4">
+            <p>Handle your subscription billing and payments:</p>
+            
+            <div className="space-y-4">
+              <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">Viewing Billing Information</h4>
+                <p>Access your billing details through your profile page. You can see your current plan, next billing date, and payment history.</p>
+              </div>
+              
+              <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">Updating Payment Method</h4>
+                <p>Click "Manage Billing" to update your payment method, view invoices, or change your billing address.</p>
+              </div>
+              
+              <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">Billing Cycle</h4>
+                <p>Subscriptions are billed monthly or yearly. You can change your billing frequency when upgrading or renewing your plan.</p>
+              </div>
+              
+              <div className="p-4 bg-[var(--bg-secondary)] rounded-lg">
+                <h4 className="font-semibold mb-2">Cancellation</h4>
+                <p>You can cancel your subscription at any time. Cancellation takes effect at the end of your current billing period.</p>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-4 bg-[var(--bg-secondary)] rounded-lg">
+              <h4 className="font-semibold mb-2">Common Issues</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li><strong>Payment failed:</strong> Check your payment method and billing address</li>
+                <li><strong>Limits not updating:</strong> Refresh the page or log out and back in</li>
+                <li><strong>Upgrade not working:</strong> Clear your browser cache and try again</li>
+                <li><strong>Billing date wrong:</strong> Check your timezone settings</li>
+                <li><strong>Can't cancel:</strong> Contact support if the cancel button doesn't work</li>
+              </ul>
+            </div>
+            
+            <div className="mt-4 p-4 bg-[var(--highlight-color)]/10 rounded-lg">
+              <p className="text-sm">
+                <strong>Support:</strong> If you have billing questions or need assistance, contact our support team through the help center.
+              </p>
+            </div>
           </div>
         ));
 
