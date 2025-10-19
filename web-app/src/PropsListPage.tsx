@@ -10,6 +10,10 @@ import jsPDF from 'jspdf';
 import type { PdfGenerationOptions } from '../shared/types/pdf';
 import AvailabilityCounter from './components/AvailabilityCounter';
 import { useSubscription } from './hooks/useSubscription';
+import { PropCard } from './components/PropCard';
+import { PropsListSkeleton } from './components/LoadingSkeleton';
+import { PropsListLoading } from './components/LoadingStates';
+import { usePropListLoading } from './hooks/useImageLoading';
 
 const defaultPdfOptions: PdfGenerationOptions = {
   selectedFields: {
@@ -58,23 +62,20 @@ function generatePropsListHtml(props: Prop[], options: PdfGenerationOptions): st
   `;
 }
 
-// Utility function to check if a prop has missing details
-const hasMissingDetails = (prop: Prop): boolean => {
-  return (
-    (!prop?.location && !prop?.currentLocation) ||
-    (!prop?.status) ||
-    (prop?.status && !prop?.statusNotes) ||
-    (!prop?.act) ||
-    (!prop?.sceneName && !prop?.scene) ||
-    (!prop?.images || prop.images.length === 0) ||
-    (!prop?.assignment?.type && typeof prop?.location === 'string' && /box|container/i.test(prop.location))
-  );
-};
 
 const PropsListPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [props, setProps] = useState<Prop[]>([]);
+  
+  // Use the loading hook for better state management
+  const {
+    initialLoadComplete,
+    imageProgress,
+    handleDataLoaded,
+    handleImageLoad,
+    handleImageError
+  } = usePropListLoading(props);
   const { service: firebaseService, isInitialized, error: firebaseInitError } = useFirebase();
   const { currentShowId } = useShowSelection();
   const { userProfile, user } = useWebAuth();
@@ -143,6 +144,7 @@ const PropsListPage: React.FC = () => {
           .filter(prop => viewAllProps || prop.showId === currentShowId || (userProfile?.role === 'god' && !currentShowId));
         setProps(propList);
         setLoading(false);
+        handleDataLoaded();
       },
       (err: Error) => {
         console.error("Error fetching props:", err);
@@ -184,7 +186,6 @@ const PropsListPage: React.FC = () => {
     return () => unsubscribe();
   }, [firebaseService, isInitialized, firebaseInitError, currentShowId, viewAllProps, userProfile?.role]);
 
-  // Removed unused handler
 
   // Filtered props
   const filteredProps = props.filter((prop) => {
@@ -511,113 +512,14 @@ const PropsListPage: React.FC = () => {
             </div>
           </div>
         )}
-        {loading ? (
-          <div 
-            className="flex flex-col items-center justify-center h-64"
-            role="status"
-            aria-live="polite"
-            aria-label="Loading props"
-          >
-            <svg 
-              className="animate-spin h-10 w-10 text-pb-primary mb-2" 
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-            </svg>
-            <div className="text-pb-gray mt-2">Loading props...</div>
-          </div>
-        ) : error ? (
-          <div 
-            className="flex flex-col items-center justify-center h-64"
-            role="alert"
-            aria-live="assertive"
-          >
-            <svg 
-              className="h-10 w-10 text-red-500 mb-2" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
-            </svg>
-            <div className="text-red-500 font-semibold text-center mb-4">{error}</div>
-            <div className="flex gap-2">
-              {error.includes("No show selected") && (
-                <div className="flex flex-col gap-2">
-                  <Link
-                    to="/shows/new"
-                    className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-center"
-                  >
-                    Create Your First Show
-                  </Link>
-                  <Link
-                    to="/shows/list"
-                    className="px-4 py-2 bg-pb-darker/60 hover:bg-pb-darker/80 text-white rounded-lg font-semibold transition-colors text-center"
-                  >
-                    View Existing Shows
-                  </Link>
-                </div>
-              )}
-              {(error.includes("Network error") || error.includes("Failed to load props")) && (
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors"
-                >
-                  Retry
-                </button>
-              )}
-              {error.includes("You need to sign in") && (
-                <Link
-                  to="/login"
-                  className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors"
-                >
-                  Sign In
-                </Link>
-              )}
-              {error.includes("don't have permission") && (
-                <div className="flex flex-col gap-2">
-                  <Link
-                    to="/shows/list"
-                    className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-center"
-                  >
-                    Select Different Show
-                  </Link>
-                  <Link
-                    to="/shows/new"
-                    className="px-4 py-2 bg-pb-accent hover:bg-pb-accent/80 text-white rounded-lg font-semibold transition-colors text-center"
-                  >
-                    Create New Show
-                  </Link>
-                  <a
-                    href="mailto:support@thepropslist.uk?subject=Props Access Issue&body=Hi, I'm having trouble accessing props for a show. Please help me get the proper permissions."
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors text-center"
-                  >
-                    Contact Support
-                  </a>
-                </div>
-              )}
-              {error.includes("No show selected") && (
-                <div className="flex flex-col gap-2">
-                  <Link
-                    to="/shows/new"
-                    className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg font-semibold transition-colors text-center"
-                  >
-                    Create Your First Show
-                  </Link>
-                  <Link
-                    to="/shows/list"
-                    className="px-4 py-2 bg-pb-darker/60 hover:bg-pb-darker/80 text-white rounded-lg font-semibold transition-colors text-center"
-                  >
-                    View Existing Shows
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : filteredProps.length === 0 ? (
+        <PropsListLoading
+          loading={loading}
+          error={error}
+          propsCount={filteredProps.length}
+          imagesLoadedCount={imageProgress}
+          initialLoadComplete={initialLoadComplete}
+        />
+        {!loading && !error && filteredProps.length === 0 ? (
           <div 
             className="flex flex-col items-center justify-center h-64"
             role="status"
@@ -665,74 +567,32 @@ const PropsListPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
-            {filteredProps.map((prop) => {
-              const mainImage = prop.images?.find(img => img.isMain)?.url || prop.images?.[0]?.url || prop.imageUrl || '';
-              return (
-                <div
-                  key={prop.id}
-                  onClick={() => navigate(`/props/${prop.id}`)}
-                  className="bg-pb-darker/60 rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:bg-pb-darker/80 transition-all duration-200 border border-pb-primary/20 hover:border-pb-primary/40"
-                >
-                  {/* Prop Image */}
-                  <div className="w-full h-48 rounded-lg overflow-hidden bg-pb-gray mb-4 flex items-center justify-center">
-                    {mainImage ? (
-                      <img 
-                        src={mainImage} 
-                        alt={prop.name} 
-                        className="object-cover w-full h-full" 
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center w-full h-full text-pb-light/60">
-                        <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l9 6 9-6" />
-                        </svg>
-                      </div>
-                    )}
+          <div className="w-full max-w-6xl">
+            {/* Show skeleton loading for initial load or when images are still loading */}
+            {!initialLoadComplete ? (
+              <div className="animate-fade-in">
+                <PropsListSkeleton count={6} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                {filteredProps.map((prop, index) => (
+                  <div
+                    key={prop.id}
+                    className="animate-slide-up"
+                    style={{
+                      animationDelay: `${index * 100}ms`,
+                      animationFillMode: 'both'
+                    }}
+                  >
+                    <PropCard
+                      prop={prop}
+                      onImageLoad={() => handleImageLoad(prop.id)}
+                      onImageError={() => handleImageError(prop.id)}
+                    />
                   </div>
-                  
-                  {/* Prop Info */}
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-lg font-semibold text-white line-clamp-2 flex-1">{prop.name}</h3>
-                      {hasMissingDetails(prop) && (
-                        <div className="flex-shrink-0" title="This prop has missing details that need attention">
-                          <svg className="w-5 h-5 text-pb-warning" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {prop.description && (
-                      <p className="text-pb-gray text-sm line-clamp-3">{prop.description}</p>
-                    )}
-                    
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-2">
-                      {prop.tags && prop.tags.length > 0 && (
-                        <span className="px-2 py-1 bg-pb-primary/20 text-pb-primary text-xs rounded-full">
-                          {prop.tags[0]}
-                        </span>
-                      )}
-                      {prop.status && (
-                        <span className="px-2 py-1 bg-pb-accent/20 text-pb-accent text-xs rounded-full">
-                          {prop.status}
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Quantity */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-pb-gray text-sm">Qty: {prop.quantity || 1}</span>
-                      {prop.category && (
-                        <span className="text-pb-primary text-sm font-medium">{prop.category}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
         )}
         {(currentShowId || viewAllProps) && (

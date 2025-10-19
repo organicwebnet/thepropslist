@@ -1,110 +1,18 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useEffect } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { ImageCarousel } from '../components/ImageCarousel';
 import { Plus, Package, ShoppingBag, Briefcase } from 'lucide-react';
-// Removed unused useRef import
+import { useFirebase } from '../contexts/FirebaseContext';
+import { useShowSelection } from '../contexts/ShowSelectionContext';
+import { useWebAuth } from '../contexts/WebAuthContext';
+import { ShoppingService } from '../shared/services/shoppingService';
+import { ShoppingItem, ShoppingOption } from '../shared/types/shopping';
+import { FirebaseDocument } from '../shared/services/firebase/types';
 import type { Prop } from '../types/props';
 
-// Types for shopping items and options
-interface ShoppingOption {
-  images: string[];
-  price: number;
-  notes: string;
-  uploadedBy: string;
-  status: string;
-  shopName?: string;
-  productUrl?: string;
-  comment?: string;
-}
-interface ShoppingItem {
-  id: string;
-  type: 'prop' | 'material' | 'hired';
-  description: string;
-  requestedBy: string;
-  status: string;
-  lastUpdated: string;
-  options: ShoppingOption[];
-  quantity?: number;
-  budget?: number;
-  referenceImage?: string;
-  note?: string;
-  labels?: string[];
-}
+// Types are now imported from shared/types/shopping
 
-// Mock data for shopping items
-const mockShoppingItems: ShoppingItem[] = [
-  { id: '1', type: 'prop', description: 'Gold 1950s American lamp', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-01T10:00:00Z', quantity: 2, budget: 120, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=200&q=80', 'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80'], price: 55, notes: 'Online option', uploadedBy: 'shopper2', status: 'pending', shopName: 'eBay', productUrl: 'https://www.ebay.co.uk/itm/123456', comment: '' },
-    ] },
-  { id: '2', type: 'prop', description: 'Vintage suitcase', requestedBy: 'designer', status: 'approved', lastUpdated: '2024-06-02T09:15:00Z', quantity: 1, budget: 60, options: [
-      { images: ['https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=200&q=80'], price: 30, notes: 'Antique store', uploadedBy: 'shopper1', status: 'pending', shopName: 'Antique Alley' },
-    ] },
-  { id: '3', type: 'prop', description: 'Crystal decanter', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-03T08:30:00Z', quantity: 3, budget: 75, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 25, notes: 'Charity shop', uploadedBy: 'shopper2', status: 'pending', shopName: 'Oxfam' },
-    ] },
-  { id: '4', type: 'prop', description: 'Silver tray', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-04T07:45:00Z', quantity: 1, budget: 25, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 18, notes: 'eBay', uploadedBy: 'shopper1', status: 'pending', shopName: 'eBay', productUrl: 'https://www.ebay.co.uk/itm/654321' },
-    ] },
-  { id: '5', type: 'prop', description: 'Old rotary phone', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-05T06:10:00Z', quantity: 1, budget: 70, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 60, notes: 'Market', uploadedBy: 'shopper2', status: 'pending', shopName: 'Portobello Market' },
-    ] },
-  { id: '6', type: 'prop', description: 'Brass candlestick', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-06T05:20:00Z', quantity: 4, budget: 48, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 12, notes: 'Thrift store', uploadedBy: 'shopper1', status: 'pending', shopName: 'Barnardo’s' },
-    ] },
-  { id: '7', type: 'prop', description: 'Leather-bound book', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-07T04:35:00Z', quantity: 5, budget: 40, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 8, notes: 'Bookshop', uploadedBy: 'shopper2', status: 'pending', shopName: 'Waterstones' },
-    ] },
-  { id: '8', type: 'prop', description: 'Pocket watch', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-08T03:50:00Z', quantity: 2, budget: 50, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 22, notes: 'Antique fair', uploadedBy: 'shopper1', status: 'pending', shopName: 'Antique Fair' },
-    ] },
-  { id: '9', type: 'prop', description: 'Porcelain teapot', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-09T02:05:00Z', quantity: 1, budget: 20, options: [
-      { images: ['https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80'], price: 15, notes: 'Online', uploadedBy: 'shopper2', status: 'pending', shopName: 'Etsy', productUrl: 'https://www.etsy.com/listing/123456' },
-    ] },
-  { id: '10', type: 'prop', description: 'Wooden walking stick', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-10T01:25:00Z', quantity: 2, budget: 30, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 10, notes: 'Charity shop', uploadedBy: 'shopper1', status: 'pending', shopName: 'British Heart Foundation' },
-    ] },
-  // Materials
-  { id: '11', type: 'material', description: 'Red paint (for lamp)', requestedBy: 'maker', status: 'approved', lastUpdated: '2024-06-10T10:00:00Z', quantity: 3, budget: 36, options: [
-      { images: ['https://images.unsplash.com/photo-1501594907352-04cda38ebc29?auto=format&fit=crop&w=400&q=80'], price: 12, notes: 'B&Q', uploadedBy: 'shopper1', status: 'pending', shopName: 'B&Q', productUrl: 'https://www.diy.com/product/paint-red' },
-    ] },
-  { id: '12', type: 'material', description: 'Gold spray paint', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-09T09:10:00Z', quantity: 2, budget: 16, options: [
-      { images: ['https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80'], price: 8, notes: 'Homebase', uploadedBy: 'shopper2', status: 'pending', shopName: 'Homebase', productUrl: 'https://www.homebase.co.uk/gold-spray-paint' },
-    ] },
-  { id: '13', type: 'material', description: 'Wood glue', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-08T08:20:00Z', quantity: 1, budget: 5, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 5, notes: 'Screwfix', uploadedBy: 'shopper1', status: 'pending', shopName: 'Screwfix' },
-    ] },
-  { id: '14', type: 'material', description: 'Fabric (red velvet)', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-07T07:30:00Z', quantity: 5, budget: 100, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 20, notes: 'Fabric shop', uploadedBy: 'shopper2', status: 'pending', shopName: 'Fabric World' },
-    ] },
-  { id: '15', type: 'material', description: 'Brass polish', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-06T06:40:00Z', quantity: 2, budget: 8, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 4, notes: 'Supermarket', uploadedBy: 'shopper1', status: 'pending', shopName: 'Tesco' },
-    ] },
-  { id: '16', type: 'material', description: 'Black thread', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-05T05:50:00Z', quantity: 4, budget: 8, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 2, notes: 'Haberdashery', uploadedBy: 'shopper2', status: 'pending', shopName: 'John Lewis' },
-    ] },
-  { id: '17', type: 'material', description: 'Masking tape', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-04T04:55:00Z', quantity: 2, budget: 6, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 3, notes: 'DIY store', uploadedBy: 'shopper1', status: 'pending', shopName: 'Wickes' },
-    ] },
-  { id: '18', type: 'material', description: 'Sandpaper', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-03T03:15:00Z', quantity: 10, budget: 10, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 1, notes: 'DIY store', uploadedBy: 'shopper2', status: 'pending', shopName: 'Screwfix' },
-    ] },
-  { id: '19', type: 'material', description: 'Super glue', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-02T02:35:00Z', quantity: 3, budget: 6, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 2, notes: 'Supermarket', uploadedBy: 'shopper1', status: 'pending', shopName: 'Tesco' },
-    ] },
-  { id: '20', type: 'material', description: 'White paint', requestedBy: 'maker', status: 'pending', lastUpdated: '2024-06-01T01:45:00Z', quantity: 2, budget: 20, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 10, notes: 'B&Q', uploadedBy: 'shopper2', status: 'pending', shopName: 'B&Q' },
-    ] },
-  // Hired Props
-  { id: '21', type: 'hired', description: 'Antique gramophone (hired)', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-11T12:00:00Z', quantity: 1, budget: 80, options: [
-      { images: ['https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=400&q=80'], price: 80, notes: 'Hired from PropHire Ltd.', uploadedBy: 'shopper3', status: 'pending', shopName: 'PropHire Ltd.', productUrl: 'https://prophire.com/gramophone' },
-    ] },
-  { id: '22', type: 'hired', description: 'Victorian umbrella (hired)', requestedBy: 'designer', status: 'approved', lastUpdated: '2024-06-12T09:00:00Z', quantity: 2, budget: 50, options: [
-      { images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80'], price: 25, notes: 'Hired from Umbrella Hire Co.', uploadedBy: 'shopper2', status: 'approved', shopName: 'Umbrella Hire Co.', productUrl: 'https://umbrellahire.com/victorian' },
-    ] },
-  { id: '23', type: 'hired', description: 'Top hat (hired)', requestedBy: 'designer', status: 'pending', lastUpdated: '2024-06-13T15:30:00Z', quantity: 1, budget: 15, options: [
-      { images: ['https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80'], price: 15, notes: 'Hired from Hats4Stage', uploadedBy: 'shopper1', status: 'pending', shopName: 'Hats4Stage', productUrl: 'https://hats4stage.com/top-hat' },
-    ] },
-];
+// Mock data removed - now using real Firebase data
 
 const TABS = [
   { key: 'prop', label: 'Props' },
@@ -113,7 +21,14 @@ const TABS = [
 ];
 
 const ShoppingListPage: React.FC = () => {
-  const [items, setItems] = useState<ShoppingItem[]>(mockShoppingItems);
+  const { service } = useFirebase();
+  const { currentShowId } = useShowSelection();
+  const { user, loading: webAuthLoading } = useWebAuth();
+  
+  const [shoppingService, setShoppingService] = useState<ShoppingService | null>(null);
+  const [items, setItems] = useState<FirebaseDocument<ShoppingItem>[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'prop' | 'material' | 'hired'>('prop');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ShoppingItem | null>(null);
@@ -146,6 +61,37 @@ const ShoppingListPage: React.FC = () => {
   });
   const [labelFilter, setLabelFilter] = useState('');
   const [actionMessage, setActionMessage] = useState('');
+  
+  // Initialize shopping service when Firebase service is ready
+  useEffect(() => {
+    if (service) {
+      setShoppingService(new ShoppingService(service));
+    }
+  }, [service]);
+
+  // Load shopping items from Firebase
+  useEffect(() => {
+    if (!shoppingService || !user || webAuthLoading) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    const unsubscribe = shoppingService.listenToShoppingItems(
+      (itemDocs) => {
+        setItems(itemDocs);
+        setLoading(false);
+      },
+      (err) => {
+        console.error('Error loading shopping items:', err);
+        setError(err.message || 'Failed to load shopping items');
+        setLoading(false);
+      },
+      currentShowId || undefined
+    );
+
+    return unsubscribe;
+  }, [shoppingService, user, currentShowId, webAuthLoading]);
+
   // Clear action message after 2 seconds
   React.useEffect(() => {
     if (actionMessage) {
@@ -157,29 +103,24 @@ const ShoppingListPage: React.FC = () => {
   // Local state to store moved props
   const [, setMovedProps] = useState<Prop[]>([]);
 
-  // Effect: update item status to 'picked' if any option is 'buy'
-  React.useEffect(() => {
-    setItems(prevItems => prevItems.map(item => {
-      if ((item.type === 'prop' || item.type === 'hired') && item.options.some(opt => opt.status === 'buy')) {
-        if (item.status !== 'picked') {
-          return { ...item, status: 'picked' };
-        }
-      }
-      return item;
-    }));
-  }, [items]);
+  // Effect: update item status to 'picked' if any option is 'buy' - handled by Firebase real-time updates
 
   const filteredItems = items
-    .filter((item: ShoppingItem) => item.type === activeTab)
-    .filter((item: ShoppingItem) =>
-      item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    .filter((item: FirebaseDocument<ShoppingItem>) => item.data?.type === activeTab)
+    .filter((item: FirebaseDocument<ShoppingItem>) =>
+      item.data?.description.toLowerCase().includes(searchQuery.toLowerCase()) ?? false
     )
-    .sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+    .sort((a, b) => {
+      const aTime = new Date(a.data?.lastUpdated || 0).getTime();
+      const bTime = new Date(b.data?.lastUpdated || 0).getTime();
+      return bTime - aTime;
+    });
 
-  const handleItemClick = (item: ShoppingItem) => {
-    setSelectedItem(item);
+  const handleItemClick = (item: FirebaseDocument<ShoppingItem>) => {
+    if (!item.data) return;
+    setSelectedItem(item.data);
     setSelectedOptionIndex(0);
-    setCommentValue(item.options[0]?.comment || '');
+    setCommentValue(item.data.options[0]?.comment || '');
     setModalOpen(true);
   };
   const handleCloseModal = () => {
@@ -257,27 +198,19 @@ const ShoppingListPage: React.FC = () => {
       alert('At least one image is required.');
       return;
     }
-    setItems(prevItems => prevItems.map(item => {
-      if (item.id === addOptionItemId) {
-        return {
-          ...item,
-          options: [
-            ...item.options,
-            {
-              images: newOption.images,
-              price: parseFloat(newOption.price),
-              notes: newOption.notes,
-              uploadedBy: 'currentUser',
-              status: 'pending',
-              shopName: newOption.shopName,
-              productUrl: newOption.productUrl,
-              comment: '',
-            },
-          ],
-        };
-      }
-      return item;
-    }));
+    if (shoppingService && addOptionItemId) {
+      const optionData = {
+        images: newOption.images,
+        price: parseFloat(newOption.price),
+        notes: newOption.notes,
+        uploadedBy: 'currentUser',
+        status: 'pending' as const,
+        shopName: newOption.shopName,
+        productUrl: newOption.productUrl,
+        comment: '',
+      };
+      shoppingService.addOptionToItem(addOptionItemId, optionData);
+    }
     setAddOptionModalOpen(false);
     setAddOptionItemId(null);
     setNewOption({ shopName: '', price: '', notes: '', productUrl: '', images: [] });
@@ -296,9 +229,16 @@ const ShoppingListPage: React.FC = () => {
       alert('Description, Quantity, and Budget are required.');
       return;
     }
-    setItems(prevItems => prevItems.map(item =>
-      item.id === editItem.id ? { ...item, description: editItem.description, quantity: editItem.quantity, budget: editItem.budget, referenceImage: editItem.referenceImage, note: editItem.note, labels: editItem.labels } : item
-    ));
+    if (shoppingService && editItem) {
+      shoppingService.updateShoppingItem(editItem.id, {
+        description: editItem.description,
+        quantity: editItem.quantity,
+        budget: editItem.budget,
+        referenceImage: editItem.referenceImage,
+        note: editItem.note,
+        labels: editItem.labels,
+      });
+    }
     setEditItemModalOpen(false);
     setEditItem(null);
   };
@@ -309,13 +249,12 @@ const ShoppingListPage: React.FC = () => {
       alert('Description, Quantity, and Budget are required.');
       return;
     }
-    setItems(prevItems => [
-      {
-        id: (Date.now() + Math.random()).toString(),
+    if (shoppingService) {
+      const itemData = {
         type: newItem.type,
         description: newItem.description,
         requestedBy: 'currentUser',
-        status: 'pending',
+        status: 'pending' as const,
         lastUpdated: new Date().toISOString(),
         options: [],
         quantity: newItem.quantity,
@@ -323,9 +262,10 @@ const ShoppingListPage: React.FC = () => {
         referenceImage: newItem.referenceImage || undefined,
         note: newItem.note,
         labels: newItem.labels,
-      },
-      ...prevItems,
-    ]);
+        showId: currentShowId || undefined,
+      };
+      shoppingService.addShoppingItem(itemData);
+    }
     setAddItemModalOpen(false);
     setNewItem({ type: 'prop', description: '', quantity: 1, budget: 0, referenceImage: '', note: '', labels: [] });
   };
@@ -367,41 +307,51 @@ const ShoppingListPage: React.FC = () => {
             onChange={e => setLabelFilter(e.target.value)}
           >
             <option value="">All</option>
-            {Array.from(new Set(items.flatMap(item => item.labels || []))).map(label => (
+            {Array.from(new Set(items.flatMap(item => item.data?.labels || []))).map(label => (
               <option key={label} value={label}>{label}</option>
             ))}
           </select>
         </div>
         <div className="space-y-4">
-          {filteredItems
-            .filter(item => !labelFilter || (item.labels || []).includes(labelFilter))
+          {loading && (
+            <div className="text-center py-8">
+              <div className="text-pb-gray">Loading shopping items...</div>
+            </div>
+          )}
+          {error && (
+            <div className="text-center py-8">
+              <div className="text-red-400">Error: {error}</div>
+            </div>
+          )}
+          {!loading && !error && filteredItems
+            .filter(item => !labelFilter || (item.data?.labels || []).includes(labelFilter))
             .map(item => (
             <div key={item.id} className="bg-pb-darker/50 rounded-xl p-4 border border-pb-primary/20 cursor-pointer hover:bg-pb-primary/10">
               <div className="flex justify-between items-start">
                 <div className="flex-1" onClick={() => handleItemClick(item)}>
                   <div className="flex items-center">
                     {/* Reference image thumbnail with badge */}
-                    {(item.type === 'prop' || item.type === 'hired') && item.referenceImage && (
+                    {(item.data?.type === 'prop' || item.data?.type === 'hired') && item.data?.referenceImage && (
                       <div className="relative mr-3">
                         <img
-                          src={item.referenceImage}
+                          src={item.data.referenceImage}
                           alt="Reference"
                           className="inline-block w-12 h-12 object-cover rounded border border-pb-primary/40 cursor-pointer"
-                          onClick={e => { e.stopPropagation(); setReferenceImageUrl(item.referenceImage || null); setReferenceModalOpen(true); }}
+                          onClick={e => { e.stopPropagation(); setReferenceImageUrl(item.data?.referenceImage || null); setReferenceModalOpen(true); }}
                         />
                         <span className="absolute bottom-0 left-0 bg-pb-accent text-white text-[10px] px-1 py-0.5 rounded-tl rounded-br"></span>
                       </div>
                     )}
                     <div className="flex flex-col">
-                      <span className="font-semibold text-lg text-white underline cursor-pointer" onClick={e => { e.stopPropagation(); openEditItemModal(item); }}>{item.description}</span>
-                      {item.note && (
-                        <div className="mt-1 text-xs text-pb-gray italic max-w-xs">{item.note}</div>
+                      <span className="font-semibold text-lg text-white underline cursor-pointer" onClick={e => { e.stopPropagation(); openEditItemModal(item.data || null); }}>{item.data?.description}</span>
+                      {item.data?.note && (
+                        <div className="mt-1 text-xs text-pb-gray italic max-w-xs">{item.data.note}</div>
                       )}
                       <div className="mt-2 flex flex-wrap gap-2 items-center">
                         {/* Labels as badges */}
-                        {(item.labels && item.labels.length > 0) && (
+                        {(item.data?.labels && item.data.labels.length > 0) && (
                           <span className="flex flex-wrap gap-1">
-                            {item.labels.map((label, idx) => (
+                            {item.data.labels.map((label: string, idx: number) => (
                               <span
                                 key={idx}
                                 className="px-3 py-0.5 rounded bg-orange-500 text-white text-sm font-extrabold shadow-sm border border-orange-600 tracking-wide uppercase"
@@ -412,54 +362,59 @@ const ShoppingListPage: React.FC = () => {
                             ))}
                           </span>
                         )}
-                        {typeof item.quantity === 'number' && (
-                          <span className="px-2 py-1 rounded bg-pb-primary/90 text-xs font-bold text-white">Qty: {item.quantity}</span>
+                        {typeof item.data?.quantity === 'number' && (
+                          <span className="px-2 py-1 rounded bg-pb-primary/90 text-xs font-bold text-white">Qty: {item.data.quantity}</span>
                         )}
-                        {typeof item.budget === 'number' && (
-                          <span className="px-2 py-1 rounded bg-pb-accent/90 text-xs font-bold text-white">Budget: £{item.budget}</span>
+                        {typeof item.data?.budget === 'number' && (
+                          <span className="px-2 py-1 rounded bg-pb-accent/90 text-xs font-bold text-white">Budget: £{item.data.budget}</span>
                         )}
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-end min-w-[160px]">
-                  <span className="text-sm text-pb-gray">Status: {item.status}</span>
-                  <span className="text-xs text-pb-gray mt-1">Last updated: {new Date(item.lastUpdated).toLocaleString()}</span>
+                  <span className="text-sm text-pb-gray">Status: {item.data?.status}</span>
+                  <span className="text-xs text-pb-gray mt-1">Last updated: {new Date(item.data?.lastUpdated || 0).toLocaleString()}</span>
                 </div>
                 {/* Move to Props button for prop/hired */}
-                {(item.type === 'prop' || item.type === 'hired') && (
+                {(item.data?.type === 'prop' || item.data?.type === 'hired') && (
                   <div className="ml-4 flex flex-col items-end gap-2">
-                    {item.status === 'picked' && (
+                    {item.data?.status === 'picked' && (
                       <button
                         className="mb-2 px-3 py-1 rounded bg-green-600 text-white text-xs font-bold shadow hover:bg-green-700 transition-colors"
                         onClick={() => {
-                          setItems(prevItems => prevItems.map(it => it.id === item.id ? { ...it, status: 'bought' } : it));
+                          if (shoppingService && item.data) {
+                            shoppingService.updateShoppingItem(item.id, { status: 'bought' });
+                          }
                         }}
                       >
                         Confirm Bought
                       </button>
                     )}
-                    {item.status === 'bought' && (
+                    {item.data?.status === 'bought' && (
                       <button
                         className="px-3 py-1 rounded bg-orange-500 text-white text-xs font-bold shadow hover:bg-orange-600 transition-colors"
                         onClick={() => {
+                          if (!item.data) return;
                           // Convert to Prop object (minimal fields for demo)
                           const newProp: Prop = {
                             id: item.id,
                             userId: 'currentUser',
                             showId: 'demoShow',
-                            name: item.description,
-                            description: item.note,
+                            name: item.data.description,
+                            description: item.data.note,
                             category: 'Hand Prop', // fallback to 'Other' if not in allowed list
-                            price: item.options[0]?.price || 0,
-                            quantity: item.quantity || 1,
+                            price: item.data.options[0]?.price || 0,
+                            quantity: item.data.quantity || 1,
                             source: 'bought',
                             status: 'active',
                             createdAt: new Date().toISOString(),
                             updatedAt: new Date().toISOString(),
                           };
                           setMovedProps(prev => [...prev, newProp]);
-                          setItems(prevItems => prevItems.filter(it => it.id !== item.id));
+                          if (shoppingService) {
+                            shoppingService.deleteShoppingItem(item.id);
+                          }
                           // Optionally: show a toast or confirmation
                         }}
                       >
@@ -470,7 +425,7 @@ const ShoppingListPage: React.FC = () => {
                 )}
               </div>
               <div className="flex flex-wrap gap-4 mt-2">
-                {item.options.map((opt, i) => {
+                {item.data?.options.map((opt: ShoppingOption, i: number) => {
                   let cardClass = 'bg-white/10';
                   let textClass = 'text-white';
                   if (opt.status === 'buy') {
@@ -494,11 +449,11 @@ const ShoppingListPage: React.FC = () => {
                 })}
                 <button
                   className={`px-2 py-1 rounded text-white text-xs font-semibold shadow transition-colors
-                    ${item.type === 'prop' ? 'bg-pb-accent hover:bg-pb-secondary' : ''}
-                    ${item.type === 'material' ? 'bg-pb-yellow hover:bg-yellow-500' : ''}
-                    ${item.type === 'hired' ? 'bg-pb-primary hover:bg-pb-secondary' : ''}
+                    ${item.data?.type === 'prop' ? 'bg-pb-accent hover:bg-pb-secondary' : ''}
+                    ${item.data?.type === 'material' ? 'bg-pb-yellow hover:bg-yellow-500' : ''}
+                    ${item.data?.type === 'hired' ? 'bg-pb-primary hover:bg-pb-secondary' : ''}
                   `.replace(/\s+/g, ' ')}
-                  style={item.type === 'material' ? { backgroundColor: '#FFD600', color: '#222' } : {}}
+                  style={item.data?.type === 'material' ? { backgroundColor: '#FFD600', color: '#222' } : {}}
                   onClick={e => { e.stopPropagation(); openAddOptionModal(item.id); }}
                 >
                   Add Option
@@ -580,9 +535,9 @@ const ShoppingListPage: React.FC = () => {
                       status: 'rejected',
                     };
                     setSelectedItem({ ...selectedItem, options: updatedOptions });
-                    setItems(prevItems => prevItems.map(item =>
-                      item.id === selectedItem.id ? { ...item, options: updatedOptions } : item
-                    ));
+                    if (shoppingService && selectedItem) {
+                      shoppingService.updateOption(selectedItem.id, selectedOptionIndex, { status: 'rejected' });
+                    }
                     setActionMessage('Marked as rejected!');
                   }}
                 >Reject</button>
@@ -595,9 +550,9 @@ const ShoppingListPage: React.FC = () => {
                       status: 'maybe',
                     };
                     setSelectedItem({ ...selectedItem, options: updatedOptions });
-                    setItems(prevItems => prevItems.map(item =>
-                      item.id === selectedItem.id ? { ...item, options: updatedOptions } : item
-                    ));
+                    if (shoppingService && selectedItem) {
+                      shoppingService.updateOption(selectedItem.id, selectedOptionIndex, { status: 'maybe' });
+                    }
                     setActionMessage('Marked as maybe!');
                   }}
                 >Maybe</button>
@@ -610,9 +565,9 @@ const ShoppingListPage: React.FC = () => {
                       status: 'buy',
                     };
                     setSelectedItem({ ...selectedItem, options: updatedOptions });
-                    setItems(prevItems => prevItems.map(item =>
-                      item.id === selectedItem.id ? { ...item, options: updatedOptions } : item
-                    ));
+                    if (shoppingService && selectedItem) {
+                      shoppingService.updateOption(selectedItem.id, selectedOptionIndex, { status: 'buy' });
+                    }
                     setActionMessage('Marked as bought!');
                   }}
                 >Buy This</button>
