@@ -49,6 +49,7 @@ const HelpPage = lazy(() => import('./pages/HelpPage'));
 const PropDetailMockPage = lazy(() => import('./pages/PropDetailMockPage'));
 const SubscriberStatsPage = lazy(() => import('./pages/SubscriberStatsPage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
+const RoleManagementPage = lazy(() => import('./pages/RoleManagementPage'));
 const AdminDebugPage = lazy(() => import('./pages/AdminDebugPage'));
 // const SubscriptionTest = lazy(() => import('../../src/components/__tests__/SubscriptionTest'));
 const JoinInvitePage = lazy(() => import('./pages/JoinInvitePage'));
@@ -89,6 +90,7 @@ function App() {
           <Route path="/shows/:id" element={<ShowDetailPage />} />
           <Route path="/shows/:id/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
+          <Route path="/admin/roles" element={<ProtectedRoute><RoleManagementPage /></ProtectedRoute>} />
           <Route path="/admin/debug" element={<ProtectedRoute><AdminDebugPage /></ProtectedRoute>} />
           {/* <Route path="/test/subscription" element={<ProtectedRoute><SubscriptionTest /></ProtectedRoute>} /> */}
           <Route path="/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />
@@ -102,6 +104,7 @@ function App() {
           {/* Public prop viewer: QR code or direct link goes here */}
           <Route path="/view/prop/:propId" element={<PublicPropViewPage />} />
           <Route path="/shopping-list" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
+          <Route path="/shopping" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap, HelpCircle, Users } from 'lucide-react';
+import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap, HelpCircle, Users, Shield } from 'lucide-react';
 import NotificationBell from './components/NotificationBell';
 import { useWebAuth } from './contexts/WebAuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -83,6 +83,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   ] as Array<{ icon: any; text: string; subtext: string; link?: string }>;
   if (userProfile?.role === 'god') {
     navItems.push({ icon: Users, text: 'User Management', subtext: 'Manage all users and roles', link: '/admin/users' });
+    navItems.push({ icon: Shield, text: 'Role Management', subtext: 'Manage job roles and permissions', link: '/admin/roles' });
     navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers' });
     navItems.push({ icon: FileText, text: 'Admin Debug', subtext: 'Debug admin functionality', link: '/admin/debug' });
   }
@@ -181,15 +182,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           {/* Quick Actions */}
           <div>
             <div className={navCollapsed ? 'space-y-2' : 'space-y-2'}>
-              {navItems.map((item, index) => (
-                item.link ? (
+              {navItems.map((item, index) => {
+                const isActive = location.pathname === item.link || 
+                  (item.link === '/shopping' && location.pathname === '/shopping-list') ||
+                  (item.link === '/shopping-list' && location.pathname === '/shopping');
+                
+                return item.link ? (
                   <Link to={item.link} key={index} className="block" title={item.text} aria-label={item.text}>
                     <motion.div
                       variants={itemVariants}
                       initial="hidden"
                       animate="visible"
                       transition={{ delay: index * 0.1 }}
-                      className={`${navCollapsed ? 'justify-center' : ''} flex items-center space-x-3 p-3 rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 transition-colors cursor-pointer group`}
+                      className={`${navCollapsed ? 'justify-center' : ''} flex items-center space-x-3 p-3 rounded-lg transition-colors cursor-pointer group ${
+                        isActive 
+                          ? 'bg-pb-primary/30 border border-pb-primary/50' 
+                          : 'bg-pb-primary/10 hover:bg-pb-primary/20'
+                      }`}
                     >
                       <div className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors`}>
                         <item.icon className="w-4 h-4 text-pb-primary" />
@@ -223,8 +232,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                       </div>
                     )}
                   </motion.div>
-                )
-              ))}
+                );
+              })}
             </div>
           </div>
         </motion.aside>
