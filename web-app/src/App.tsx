@@ -5,6 +5,7 @@ import { useWebAuth } from './contexts/WebAuthContext';
 import { ShowSelectionProvider } from './contexts/ShowSelectionContext';
 import { MentionDataProvider } from './contexts/MentionDataContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import IssueLoggerWidget from './components/IssueLoggerWidget';
 
 // Core components that are always needed
 import PropsBibleHomepage from './PropsBibleHomepage';
@@ -50,9 +51,11 @@ const PropDetailMockPage = lazy(() => import('./pages/PropDetailMockPage'));
 const SubscriberStatsPage = lazy(() => import('./pages/SubscriberStatsPage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
 const RoleManagementPage = lazy(() => import('./pages/RoleManagementPage'));
+const PermissionSystemTestPage = lazy(() => import('./pages/PermissionSystemTestPage'));
 const AdminDebugPage = lazy(() => import('./pages/AdminDebugPage'));
 // const SubscriptionTest = lazy(() => import('../../src/components/__tests__/SubscriptionTest'));
 const JoinInvitePage = lazy(() => import('./pages/JoinInvitePage'));
+const IssueLoggerTest = lazy(() => import('./components/IssueLoggerTest'));
 
 function App() {
   const { user } = useWebAuth();
@@ -60,6 +63,9 @@ function App() {
     <ShowSelectionProvider>
       <MentionDataProvider>
         <BrowserRouter>
+        <IssueLoggerWidget 
+          enabled={import.meta.env.PROD || import.meta.env.VITE_ISSUE_LOGGER_ENABLED === 'true'}
+        />
         <Suspense fallback={
           <div className="min-h-screen w-full bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 flex items-center justify-center">
             <div className="text-center">
@@ -91,7 +97,9 @@ function App() {
           <Route path="/shows/:id/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
           <Route path="/admin/roles" element={<ProtectedRoute><RoleManagementPage /></ProtectedRoute>} />
+          <Route path="/admin/permission-tests" element={<ProtectedRoute><PermissionSystemTestPage /></ProtectedRoute>} />
           <Route path="/admin/debug" element={<ProtectedRoute><AdminDebugPage /></ProtectedRoute>} />
+          <Route path="/test/issue-logger" element={<ProtectedRoute><IssueLoggerTest /></ProtectedRoute>} />
           {/* <Route path="/test/subscription" element={<ProtectedRoute><SubscriptionTest /></ProtectedRoute>} /> */}
           <Route path="/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />
           <Route path="/join/:token" element={<JoinInvitePage />} />

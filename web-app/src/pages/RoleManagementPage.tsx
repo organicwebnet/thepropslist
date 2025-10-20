@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Settings, 
@@ -9,7 +9,8 @@ import {
   Edit, 
   Save, 
   X,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 import { 
   JOB_ROLES, 
@@ -17,22 +18,25 @@ import {
   SystemAction, 
   JobRole, 
   PermissionCategory,
-  getJobRole,
   getJobRolesByHierarchy,
-  getJobRolePermissions,
-  getJobRoleDisplayInfo,
-  validateRolePermissions
+  validateRolePermissions,
+  createCustomJobRole
 } from '../core/permissions/jobRoles';
 import { usePermissions } from '../hooks/usePermissions';
+import { useFirebase } from '../contexts/FirebaseContext';
+import DashboardLayout from '../PropsBibleHomepage';
 
 const RoleManagementPage: React.FC = () => {
   const { isGod } = usePermissions();
+  const { service: firebaseService } = useFirebase();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [showPermissionMatrix, setShowPermissionMatrix] = useState(false);
   const [showCreateRole, setShowCreateRole] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [roles, setRoles] = useState(JOB_ROLES);
+  const [isLoading, setIsLoading] = useState(false);
 
   // New role creation state
   const [newRole, setNewRole] = useState({
@@ -46,20 +50,59 @@ const RoleManagementPage: React.FC = () => {
   // Permission editing state
   const [editingPermissions, setEditingPermissions] = useState<SystemAction[]>([]);
 
+  // Load roles from database
+  const loadRoles = async () => {
+    try {
+      setIsLoading(true);
+      const rolesData = await firebaseService.getCollection('jobRoles');
+      if (rolesData && rolesData.length > 0) {
+        setRoles(rolesData as unknown as JobRole[]);
+      } else {
+        // If no roles in database, initialize with default roles
+        await initializeDefaultRoles();
+      }
+    } catch (error) {
+      console.error('Error loading roles:', error);
+      // Fallback to default roles
+      setRoles(JOB_ROLES);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initialize default roles in database
+  const initializeDefaultRoles = async () => {
+    try {
+      for (const role of JOB_ROLES) {
+        await firebaseService.setDocument('jobRoles', role.id, role);
+      }
+      setRoles(JOB_ROLES);
+    } catch (error) {
+      console.error('Error initializing default roles:', error);
+    }
+  };
+
+  // Load roles on component mount
+  useEffect(() => {
+    loadRoles();
+  }, []);
+
   // Redirect if not God
   if (!isGod) {
     return (
-      <div className="min-h-screen bg-pb-dark flex items-center justify-center">
-        <div className="text-center">
-          <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-          <p className="text-gray-400">Only God users can access role management.</p>
+      <DashboardLayout>
+        <div className="min-h-screen bg-pb-dark flex items-center justify-center">
+          <div className="text-center">
+            <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+            <p className="text-gray-400">Only God users can access role management.</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
-  const filteredRoles = JOB_ROLES.filter(role => {
+  const filteredRoles = roles.filter(role => {
     const matchesCategory = filterCategory === 'all' || role.category === filterCategory;
     const matchesSearch = role.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          role.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -67,14 +110,14 @@ const RoleManagementPage: React.FC = () => {
   });
 
   const handleEditRole = (roleId: string) => {
-    const role = getJobRole(roleId);
+    const role = roles.find(r => r.id === roleId);
     if (role && role.isCustomizable) {
       setEditingRole(roleId);
       setEditingPermissions([...role.permissions]);
     }
   };
 
-  const handleSaveRole = (roleId: string) => {
+  const handleSaveRole = async (roleId: string) => {
     const validation = validateRolePermissions(editingPermissions);
     if (!validation.isValid) {
       alert(`Cannot save role: ${validation.errors.join(', ')}`);
@@ -86,13 +129,45 @@ const RoleManagementPage: React.FC = () => {
       if (!proceed) return;
     }
 
-    // Here you would save to your backend/database
-    console.log('Saving role permissions:', roleId, editingPermissions);
-    setEditingRole(null);
-    setEditingPermissions([]);
+    try {
+      setIsLoading(true);
+      
+      // Find the current role
+      const currentRole = roles.find(role => role.id === roleId);
+      if (!currentRole) {
+        alert('Role not found');
+        return;
+      }
+
+      // Update the role with new permissions
+      const updatedRole = {
+        ...currentRole,
+        permissions: editingPermissions,
+        lastModified: new Date(),
+        version: (currentRole.version || 1) + 1
+      };
+
+      // Save to database
+      await firebaseService.updateDocument('jobRoles', roleId, updatedRole);
+      
+      // Update local state
+      setRoles(prev => prev.map(role => 
+        role.id === roleId ? updatedRole : role
+      ));
+
+      setEditingRole(null);
+      setEditingPermissions([]);
+      
+      alert('Role permissions saved successfully!');
+    } catch (error) {
+      console.error('Error saving role:', error);
+      alert('Failed to save role permissions');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleCreateRole = () => {
+  const handleCreateRole = async () => {
     if (!newRole.name || !newRole.displayName) {
       alert('Please fill in role name and display name');
       return;
@@ -104,16 +179,41 @@ const RoleManagementPage: React.FC = () => {
       return;
     }
 
-    // Here you would save to your backend/database
-    console.log('Creating new role:', newRole);
-    setShowCreateRole(false);
-    setNewRole({
-      name: '',
-      displayName: '',
-      description: '',
-      category: 'technical',
-      permissions: []
-    });
+    try {
+      setIsLoading(true);
+      
+      // Create the new role
+      const customRole = createCustomJobRole(
+        newRole.name,
+        newRole.displayName,
+        newRole.description,
+        newRole.category,
+        newRole.permissions,
+        'current-user-id' // TODO: Get actual user ID
+      );
+
+      // Save to database
+      await firebaseService.setDocument('jobRoles', customRole.id, customRole);
+      
+      // Update local state
+      setRoles(prev => [...prev, customRole]);
+
+      setShowCreateRole(false);
+      setNewRole({
+        name: '',
+        displayName: '',
+        description: '',
+        category: 'technical',
+        permissions: []
+      });
+      
+      alert('Custom role created successfully!');
+    } catch (error) {
+      console.error('Error creating role:', error);
+      alert('Failed to create custom role');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const togglePermission = (action: SystemAction, isNewRole: boolean = false) => {
@@ -167,13 +267,15 @@ const RoleManagementPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-pb-dark text-white">
-      <div className="container mx-auto px-4 py-8">
+    <DashboardLayout>
+      <div className="min-h-screen bg-pb-dark text-white">
+        <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Shield className="w-8 h-8 text-pb-primary" />
             <h1 className="text-3xl font-bold">Role Management</h1>
+            {isLoading && <RefreshCw className="w-6 h-6 text-pb-primary animate-spin" />}
           </div>
           <p className="text-gray-400 text-lg">
             Manage job roles and their fine-grained permissions. Each role is designed to focus on specific job responsibilities.
@@ -291,7 +393,7 @@ const RoleManagementPage: React.FC = () => {
         {/* Roles List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredRoles.map(role => (
-            <div key={role.id} className="bg-pb-card rounded-lg p-6 border border-pb-border">
+            <div key={role.id} className="bg-pb-darker/40 rounded-lg p-6 border border-pb-border">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <span className={`w-4 h-4 rounded-full ${role.color}`}></span>
@@ -345,7 +447,7 @@ const RoleManagementPage: React.FC = () => {
             <div className="bg-pb-darker border border-pb-border rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">
-                  {getJobRoleDisplayInfo(selectedRole)?.displayName} Details
+                  {roles.find(r => r.id === selectedRole)?.displayName} Details
                 </h2>
                 <button
                   onClick={() => setSelectedRole(null)}
@@ -357,13 +459,13 @@ const RoleManagementPage: React.FC = () => {
 
               <div className="space-y-6">
                 {PERMISSION_CATEGORIES.map(category => {
-                  const rolePermissions = getJobRolePermissions(selectedRole);
+                  const rolePermissions = roles.find(r => r.id === selectedRole)?.permissions || [];
                   const categoryPermissions = category.actions.filter(action => 
                     rolePermissions.includes(action)
                   );
 
                   return (
-                    <div key={category.id} className="bg-pb-card border border-pb-border rounded-lg p-4">
+                    <div key={category.id} className="bg-pb-darker/30 border border-pb-border rounded-lg p-4">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-lg">{category.icon}</span>
                         <h3 className="text-lg font-bold">{category.name}</h3>
@@ -408,7 +510,7 @@ const RoleManagementPage: React.FC = () => {
             <div className="bg-pb-darker border border-pb-border rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">
-                  Edit {getJobRoleDisplayInfo(editingRole)?.displayName} Permissions
+                  Edit {roles.find(r => r.id === editingRole)?.displayName} Permissions
                 </h2>
                 <button
                   onClick={() => setEditingRole(null)}
@@ -428,7 +530,7 @@ const RoleManagementPage: React.FC = () => {
                   );
 
                   return (
-                    <div key={category.id} className="bg-pb-card border border-pb-border rounded-lg p-4">
+                    <div key={category.id} className="bg-pb-darker/30 border border-pb-border rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{category.icon}</span>
@@ -475,10 +577,15 @@ const RoleManagementPage: React.FC = () => {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => handleSaveRole(editingRole)}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                  disabled={isLoading}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
                 >
-                  <Save className="w-4 h-4" />
-                  Save Changes
+                  {isLoading ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {isLoading ? 'Saving...' : 'Save Changes'}
                 </button>
                 <button
                   onClick={() => setEditingRole(null)}
@@ -569,7 +676,7 @@ const RoleManagementPage: React.FC = () => {
                       );
 
                       return (
-                        <div key={category.id} className="bg-pb-card border border-pb-border rounded-lg p-4">
+                        <div key={category.id} className="bg-pb-darker/30 border border-pb-border rounded-lg p-4">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                               <span className="text-lg">{category.icon}</span>
@@ -618,10 +725,15 @@ const RoleManagementPage: React.FC = () => {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleCreateRole}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                  disabled={isLoading}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
                 >
-                  <Plus className="w-4 h-4" />
-                  Create Role
+                  {isLoading ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  {isLoading ? 'Creating...' : 'Create Role'}
                 </button>
                 <button
                   onClick={() => setShowCreateRole(false)}
@@ -633,8 +745,9 @@ const RoleManagementPage: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -7,6 +7,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import UpgradeModal from '../components/UpgradeModal';
 import { cleanFirestoreData } from '../utils/firestore';
 import { useNavigate } from 'react-router-dom';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Plus, Trash2, UploadCloud, Users, UserPlus, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import EntitySelectRefactored from '../components/EntitySelectRefactored';
@@ -196,61 +197,25 @@ const AddShowPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'details' | 'team'>('details');
   const [formRestored, setFormRestored] = useState(false);
 
-  // Load current show count to check limits
+  // Load current show count to check limits (authoritative via backend)
   React.useEffect(() => {
     if (!user?.uid) return;
-    
-    let allShows: any[] = [];
-    
-    const updateCount = () => {
-      // Deduplicate and count
-      const uniqueShows = [...allShows];
-      const seen = new Set();
-      const deduplicated = uniqueShows.filter(show => {
-        if (seen.has(show.id)) return false;
-        seen.add(show.id);
-        return true;
-      });
-      setCurrentShowCount(deduplicated.length);
-    };
-    
-    // Listen to shows with createdBy field
-    const createdByUnsubscribe = firebaseService.listenToCollection(
-      'shows',
-      (docs) => {
-        const createdByShows = docs.filter(doc => doc.data.createdBy === user.uid);
-        // Update allShows array
-        allShows = allShows.filter(show => !createdByShows.find(s => s.id === show.id));
-        allShows.push(...createdByShows);
-        updateCount();
-      },
-      (err: Error) => {
-        console.error('Error loading createdBy show count:', err);
-      },
-      { where: [['createdBy', '==', user.uid]] }
-    );
-    
-    // Listen to shows with userId field
-    const userIdUnsubscribe = firebaseService.listenToCollection(
-      'shows',
-      (docs) => {
-        const userIdShows = docs.filter(doc => doc.data.userId === user.uid);
-        // Update allShows array
-        allShows = allShows.filter(show => !userIdShows.find(s => s.id === show.id));
-        allShows.push(...userIdShows);
-        updateCount();
-      },
-      (err: Error) => {
-        console.error('Error loading userId show count:', err);
-      },
-      { where: [['userId', '==', user.uid]] }
-    );
-    
-    return () => {
-      createdByUnsubscribe && createdByUnsubscribe();
-      userIdUnsubscribe && userIdUnsubscribe();
-    };
-  }, [user?.uid, firebaseService]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const fn = httpsCallable(getFunctions(), 'checkSubscriptionLimits');
+        const result: any = await fn({ userId: user.uid, resourceType: 'shows' });
+        if (!cancelled && result?.data) {
+          setCurrentShowCount(Number(result.data.currentCount || 0));
+        }
+      } catch (err) {
+        // Fallback: do not block UI if callable fails
+        console.warn('Failed to fetch server show count; falling back to 0.', err);
+        if (!cancelled) setCurrentShowCount(0);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.uid]);
 
   // Mock user lookup function
   const mockUserLookup = async (email: string) => {
@@ -396,11 +361,22 @@ const AddShowPage: React.FC = () => {
     setLoading(true);
     setError(null);
     
-    // Check subscription limits
-    if (currentShowCount >= limits.shows) {
-      setUpgradeOpen(true);
-      setLoading(false);
-      return;
+    // Check subscription limits (authoritative backend check)
+    try {
+      const fn = httpsCallable(getFunctions(), 'checkSubscriptionLimits');
+      const result: any = await fn({ userId: user!.uid, resourceType: 'shows' });
+      if (!result?.data?.withinLimit) {
+        setUpgradeOpen(true);
+        setLoading(false);
+        return;
+      }
+    } catch (limitErr) {
+      console.warn('Limit check failed; proceeding with client-side check.', limitErr);
+      if (currentShowCount >= limits.shows) {
+        setUpgradeOpen(true);
+        setLoading(false);
+        return;
+      }
     }
     
     try {
@@ -426,6 +402,19 @@ const AddShowPage: React.FC = () => {
       console.log('AddShowPage: Show data to be saved:', showData);
       const docId = await firebaseService.addDocument('shows', showData);
       console.log('AddShowPage: Show created with ID:', docId);
+
+      // Verify document still exists (in case server-side validation deleted it)
+      try {
+        const saved = await firebaseService.getDocument('shows', String(docId));
+        if (!saved) {
+          throw new Error('Show was not saved due to subscription limits.');
+        }
+      } catch (verifyErr: any) {
+        setUpgradeOpen(true);
+        setLoading(false);
+        setError(verifyErr?.message || 'Show was not saved due to subscription limits.');
+        return;
+      }
       setLoading(false);
       
       // Clear saved form state since show was successfully created

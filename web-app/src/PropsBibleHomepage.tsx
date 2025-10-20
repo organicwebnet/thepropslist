@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap, HelpCircle, Users, Shield } from 'lucide-react';
+import { Box, Calendar, FileText, Home, LogOut, Package, Theater, Zap, HelpCircle, Users, Shield, TestTube } from 'lucide-react';
 import NotificationBell from './components/NotificationBell';
 import { useWebAuth } from './contexts/WebAuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -84,6 +84,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   if (userProfile?.role === 'god') {
     navItems.push({ icon: Users, text: 'User Management', subtext: 'Manage all users and roles', link: '/admin/users' });
     navItems.push({ icon: Shield, text: 'Role Management', subtext: 'Manage job roles and permissions', link: '/admin/roles' });
+    navItems.push({ icon: TestTube, text: 'Permission Tests', subtext: 'Test permission system functionality', link: '/admin/permission-tests' });
     navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers' });
     navItems.push({ icon: FileText, text: 'Admin Debug', subtext: 'Debug admin functionality', link: '/admin/debug' });
   }
@@ -103,12 +104,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </div>
           </div>
           <Link
-            to="#"
-            onClick={(e) => { e.preventDefault(); alert('Mobile app coming soon'); }}
-            className="bg-pb-primary/20 text-pb-primary px-3 py-1 rounded-full text-xs font-medium hover:bg-pb-primary/30"
-            title="Open mobile app (coming soon)"
+            to="/beta/"
+            className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-medium hover:bg-red-500/30"
+            title="Learn about our beta release"
           >
-            Open App (Coming Soon)
+            Beta version
           </Link>
         </div>
         <div className="flex-1 flex flex-col items-center">

@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { errorReporting } from '../lib/errorReporting';
 
 interface Props {
   children: ReactNode;
@@ -36,15 +37,14 @@ class ErrorBoundary extends Component<Props, State> {
       this.props.onError(error, errorInfo);
     }
 
-    // Log to external service in production
-    if (import.meta.env.PROD) {
-      // You could send to Sentry, LogRocket, etc.
-      console.error('Production error:', {
-        error: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack
-      });
-    }
+    // Report error to Issue-Logger
+    errorReporting.reportError(error, {
+      componentStack: errorInfo.componentStack,
+      errorBoundary: 'ErrorBoundary',
+      timestamp: new Date().toISOString()
+    }, 'high').catch(err => {
+      console.error('Failed to report error to Issue-Logger:', err);
+    });
   }
 
   handleRetry = () => {

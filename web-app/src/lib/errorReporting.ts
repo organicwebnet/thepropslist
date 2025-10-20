@@ -59,37 +59,93 @@ class ErrorReportingService {
   }
 
   private async sendToErrorReportingProvider(errorReport: ErrorReport): Promise<void> {
-    // TODO: Implement actual error reporting provider integration
-    // Examples: Sentry, Bugsnag, Rollbar, etc.
-    
-    // For now, log to console in development
+    // Log to console in development
     if (import.meta.env.DEV) {
       console.error('Error Report:', errorReport);
     }
 
-    // Example implementation for Sentry:
-    // if (typeof Sentry !== 'undefined') {
-    //   Sentry.captureException(new Error(errorReport.message), {
-    //     tags: {
-    //       platform: errorReport.platform,
-    //       severity: errorReport.severity,
-    //     },
-    //     user: {
-    //       id: errorReport.userId,
-    //     },
-    //     extra: errorReport.context,
-    //   });
-    // }
+    // Send to Issue-Logger if available
+    await this.sendToIssueLogger(errorReport);
+  }
 
-    // Example implementation for Bugsnag:
-    // if (typeof Bugsnag !== 'undefined') {
-    //   Bugsnag.notify(new Error(errorReport.message), (event) => {
-    //     event.setUser(errorReport.userId);
-    //     event.addMetadata('context', errorReport.context);
-    //     event.addMetadata('platform', { platform: errorReport.platform });
-    //     event.addMetadata('severity', { level: errorReport.severity });
-    //   });
-    // }
+  private async sendToIssueLogger(errorReport: ErrorReport): Promise<void> {
+    try {
+      const issueLoggerApiUrl = import.meta.env.VITE_ISSUE_LOGGER_API_URL;
+      
+      if (!issueLoggerApiUrl) {
+        console.warn('Issue-Logger API URL not configured. Set VITE_ISSUE_LOGGER_API_URL environment variable.');
+        return;
+      }
+
+      // Create a comprehensive issue body with error details
+      const issueBody = this.formatErrorReportForIssueLogger(errorReport);
+      
+      const payload = {
+        title: `[${errorReport.severity.toUpperCase()}] ${errorReport.message}`,
+        body: issueBody,
+        labels: [
+          'bug',
+          `severity-${errorReport.severity}`,
+          `platform-${errorReport.platform}`,
+          'auto-reported'
+        ]
+      };
+
+      const response = await fetch(`${issueLoggerApiUrl}/api/issues`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Issue-Logger API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Error reported to Issue-Logger:', result);
+    } catch (error) {
+      console.error('Failed to send error to Issue-Logger:', error);
+      // Fallback to console logging
+      console.error('Original error report:', errorReport);
+    }
+  }
+
+  private formatErrorReportForIssueLogger(errorReport: ErrorReport): string {
+    const timestamp = errorReport.timestamp.toISOString();
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown';
+    const url = typeof window !== 'undefined' ? window.location.href : 'Unknown';
+    
+    let body = `## Error Details
+
+**Message:** ${errorReport.message}
+**Severity:** ${errorReport.severity}
+**Platform:** ${errorReport.platform}
+**Timestamp:** ${timestamp}
+**URL:** ${url}
+**User Agent:** ${userAgent}`;
+
+    if (errorReport.userId) {
+      body += `\n**User ID:** ${errorReport.userId}`;
+    }
+
+    if (errorReport.stack) {
+      body += `\n\n## Stack Trace\n\`\`\`\n${errorReport.stack}\n\`\`\``;
+    }
+
+    if (errorReport.context && Object.keys(errorReport.context).length > 0) {
+      body += `\n\n## Context\n\`\`\`json\n${JSON.stringify(errorReport.context, null, 2)}\n\`\`\``;
+    }
+
+    body += `\n\n## Browser Information
+- **Screen Resolution:** ${typeof screen !== 'undefined' ? `${screen.width}x${screen.height}` : 'Unknown'}
+- **Viewport:** ${typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'Unknown'}
+- **Device Pixel Ratio:** ${typeof window !== 'undefined' ? window.devicePixelRatio : 'Unknown'}
+- **Language:** ${typeof navigator !== 'undefined' ? navigator.language : 'Unknown'}
+- **Timezone:** ${typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'Unknown'}`;
+
+    return body;
   }
 
   // General error reporting methods

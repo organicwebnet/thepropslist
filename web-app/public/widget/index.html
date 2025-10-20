@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Issue Logger Widget Demo</title>
+    <link rel="stylesheet" href="./issueWidget.css" />
+    <style>
+      body { 
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial; 
+        padding: 40px; 
+        line-height: 1.6;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .demo-box { 
+        width: 300px; 
+        height: 200px; 
+        background: #f3f4f6; 
+        border: 2px dashed #9ca3af; 
+        display: grid; 
+        place-items: center; 
+        margin: 20px 0;
+        border-radius: 8px;
+      }
+      .code-block {
+        background: #1f2937;
+        color: #e5e7eb;
+        padding: 16px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        overflow-x: auto;
+        margin: 16px 0;
+      }
+      .step {
+        background: #f9fafb;
+        border-left: 4px solid #3b82f6;
+        padding: 16px;
+        margin: 16px 0;
+        border-radius: 0 8px 8px 0;
+      }
+      .warning {
+        background: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 16px;
+        margin: 16px 0;
+        border-radius: 0 8px 8px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Issue Logger Widget Demo</h1>
+    
+    <div class="step">
+      <h3>🚀 Quick Start</h3>
+      <p>1. Click the floating "Report issue" button to capture a region and file an issue</p>
+      <p>2. Click "Settings" to configure your GitHub repository details</p>
+      <p>3. Select an area, add details, and submit your issue!</p>
+    </div>
+
+    <div class="demo-box">
+      <p>Try capturing this area!</p>
+      <button onclick="alert('This is a demo button')">Click me</button>
+    </div>
+
+    <div class="warning">
+      <strong>⚠️ Setup Required:</strong> Make sure to configure your GitHub repository in Settings before submitting issues.
+    </div>
+
+    <h2>Integration Examples</h2>
+    
+    <h3>Option 1: Direct Script Include</h3>
+    <div class="code-block">
+&lt;script&gt;
+window.IssueLogger = {
+  apiBaseUrl: 'http://localhost:5057',
+  owner: 'your-org',
+  repo: 'your-repo'
+}
+&lt;/script&gt;
+&lt;script src="http://localhost:5057/issueWidget.js"&gt;&lt;/script&gt;
+    </div>
+
+    <h3>Option 2: Self-hosted</h3>
+    <div class="code-block">
+&lt;script src="/path/to/issueWidget.js"&gt;&lt;/script&gt;
+    </div>
+
+    <h3>Option 3: Using Embed Script</h3>
+    <div class="code-block">
+&lt;script src="http://localhost:5057/embed.js"&gt;&lt;/script&gt;
+    </div>
+
+    <h2>Features</h2>
+    <ul>
+      <li>📸 Screenshot capture with area selection</li>
+      <li>🎥 Screen recording (up to 15 seconds)</li>
+      <li>🏷️ Custom labels and descriptions</li>
+      <li>⚙️ Settings UI for repository configuration</li>
+      <li>🔗 Direct GitHub issue creation</li>
+    </ul>
+
+    <script>
+      window.IssueLogger = {
+        apiBaseUrl: 'http://localhost:5057',
+        owner: '',
+        repo: ''
+      }
+    </script>
+    <script src="./issueWidget.js"></script>
+  </body>
+  </html>
+
+
