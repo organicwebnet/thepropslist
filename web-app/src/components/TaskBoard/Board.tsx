@@ -5,7 +5,7 @@ import type { BoardData, ListData, CardData } from "../../types/taskManager";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { logger } from "../../utils/logger";
-import { validateListTitle, validateCardTitle, validateCardDescription } from "../../utils/validation";
+import { validateCardTitle, validateCardDescription } from "../../utils/validation";
 
 interface BoardProps {
   boardId: string;
@@ -36,7 +36,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
     // Listen to board document
     const unsubBoard = service.listenToDocument<BoardData>(
       `todo_boards/${boardId}`,
-      (doc) => setBoard(doc.data)
+      (doc) => setBoard({ ...doc.data, listIds: doc.data.listIds || [] })
     );
     
     // Listen to lists
@@ -87,7 +87,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
     return () => {
       unsubCards.forEach(unsub => unsub?.());
     };
-  }, [boardId, service, lists.map(l => l.id).join(',')]); // Use list IDs instead of length
+  }, [boardId, service, lists.length]); // Use list length to prevent infinite loops
 
   // Drag-to-scroll handlers (disabled to allow normal scrolling)
   useEffect(() => {
@@ -336,8 +336,8 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
       const newListId = await service.addDocument(`todo_boards/${boardId}/lists`, payload);
       
       // If we received the new id, append to board.listIds for ordering
-      if (newListId && board && Array.isArray(board.listIds)) {
-        const updated = [...board.listIds, newListId];
+      if (newListId && typeof newListId === 'string' && board && Array.isArray(board.listIds)) {
+        const updated: string[] = [...board.listIds.filter(id => typeof id === 'string'), newListId];
         setBoard({ ...board, listIds: updated });
         await service.updateDocument('todo_boards', boardId, { listIds: updated });
       }

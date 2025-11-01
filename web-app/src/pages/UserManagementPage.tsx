@@ -14,12 +14,6 @@ import {
   Shield, 
   Crown, 
   Search, 
-  Edit, 
-  Trash2, 
-  Save, 
-  X,
-  Eye,
-  EyeOff,
   Activity
 } from 'lucide-react';
 import { SystemRole } from '../core/permissions';
@@ -27,12 +21,17 @@ import { usePermissions } from '../hooks/usePermissions';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import DashboardLayout from '../PropsBibleHomepage';
+import { 
+  getJobRoleDisplayInfo,
+  getJobRolesByCategory 
+} from '../core/permissions/jobRoles';
 
 interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
   role: SystemRole | 'user' | 'admin' | 'viewer' | 'god' | 'editor' | 'props_supervisor' | 'art_director';
+  jobRole?: string; // Job role ID from JOB_ROLES
   groups?: { [key: string]: boolean };
   createdAt: Date;
   lastLogin: Date;
@@ -43,12 +42,6 @@ interface UserProfile {
 }
 
 const ROLE_OPTIONS: { value: SystemRole; label: string; description: string; color: string }[] = [
-  { 
-    value: SystemRole.GOD, 
-    label: 'God', 
-    description: 'Full system access, can manage all users and roles',
-    color: 'bg-red-500'
-  },
   { 
     value: SystemRole.ADMIN, 
     label: 'Administrator', 
@@ -186,6 +179,19 @@ const UserManagementPage: React.FC = () => {
   };
 
   const handleRoleChange = async (userUid: string, newRole: SystemRole) => {
+    // Prevent changing God role
+    const targetUser = users.find(u => u.uid === userUid);
+    if (targetUser?.role === SystemRole.GOD) {
+      alert('Cannot change God role - it is immutable');
+      return;
+    }
+
+    // Prevent assigning God role
+    if (newRole === SystemRole.GOD) {
+      alert('Cannot assign God role - it can only be set manually in the database');
+      return;
+    }
+
     try {
       await firebaseService.updateDocument('userProfiles', userUid, {
         role: newRole
@@ -203,6 +209,13 @@ const UserManagementPage: React.FC = () => {
   };
 
   const handleDeleteUser = async (userUid: string) => {
+    // Prevent deleting God user
+    const targetUser = users.find(u => u.uid === userUid);
+    if (targetUser?.role === SystemRole.GOD) {
+      alert('Cannot delete God user - it is protected');
+      return;
+    }
+
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
 
     try {
@@ -237,6 +250,153 @@ const UserManagementPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-white">User Management</h1>
           </div>
           <p className="text-pb-gray/70">Manage all users, roles, and permissions across the system</p>
+        </div>
+
+        {/* Role Management Info */}
+        <div className="bg-pb-primary/10 border border-pb-primary/20 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Shield className="w-6 h-6 text-pb-primary" />
+            <h2 className="text-lg font-semibold text-white">System Role Management</h2>
+          </div>
+          <p className="text-pb-gray/70 text-sm mb-3">
+            Click "Change Role" next to any user's role to modify their system permissions. Role changes take effect immediately. 
+            <span className="text-red-400 font-medium">Note: God role is immutable and cannot be changed.</span>
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            {/* God Role - Special Display */}
+            <div className="p-2 rounded text-xs bg-red-500/20 border border-red-500/30">
+              <div className="font-medium text-red-400">
+                God (Immutable)
+              </div>
+              <div className="text-pb-gray/60 text-xs mt-1">
+                System administrator - cannot be changed
+              </div>
+            </div>
+            {/* Other Roles */}
+            {ROLE_OPTIONS.map(option => (
+              <div key={option.value} className={`p-2 rounded text-xs ${option.color}/20 border ${option.color}/30`}>
+                <div className={`font-medium ${option.color.replace('bg-', 'text-')}`}>
+                  {option.label}
+                </div>
+                <div className="text-pb-gray/60 text-xs mt-1">
+                  {option.description}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Job Role Management Info */}
+        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <Crown className="w-6 h-6 text-green-400" />
+            <h2 className="text-lg font-semibold text-white">Job Role Management</h2>
+          </div>
+          <p className="text-pb-gray/70 text-sm mb-3">
+            Job roles define specific responsibilities and fine-grained permissions for each user. 
+            <span className="text-green-400 font-medium">Click any role below to edit its permissions.</span>
+          </p>
+          <div className="mb-4">
+            <button
+              onClick={() => window.open('/admin/roles', '_blank')}
+              className="px-4 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded-lg transition-colors border border-green-600/30 flex items-center gap-2"
+            >
+              <Crown className="w-4 h-4" />
+              Open Role Management Page
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {getJobRolesByCategory('management').map(role => (
+              <div 
+                key={role.id} 
+                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                onClick={() => window.open('/admin/roles', '_blank')}
+                title="Click to edit role permissions"
+              >
+                <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
+                  {role.displayName}
+                </div>
+                <div className="text-pb-gray/60 text-xs mt-1">
+                  {role.permissions.length} permissions
+                </div>
+                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click to edit →
+                </div>
+              </div>
+            ))}
+            {getJobRolesByCategory('creative').map(role => (
+              <div 
+                key={role.id} 
+                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                onClick={() => window.open('/admin/roles', '_blank')}
+                title="Click to edit role permissions"
+              >
+                <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
+                  {role.displayName}
+                </div>
+                <div className="text-pb-gray/60 text-xs mt-1">
+                  {role.permissions.length} permissions
+                </div>
+                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click to edit →
+                </div>
+              </div>
+            ))}
+            {getJobRolesByCategory('technical').map(role => (
+              <div 
+                key={role.id} 
+                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                onClick={() => window.open('/admin/roles', '_blank')}
+                title="Click to edit role permissions"
+              >
+                <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
+                  {role.displayName}
+                </div>
+                <div className="text-pb-gray/60 text-xs mt-1">
+                  {role.permissions.length} permissions
+                </div>
+                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click to edit →
+                </div>
+              </div>
+            ))}
+            {getJobRolesByCategory('support').map(role => (
+              <div 
+                key={role.id} 
+                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                onClick={() => window.open('/admin/roles', '_blank')}
+                title="Click to edit role permissions"
+              >
+                <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
+                  {role.displayName}
+                </div>
+                <div className="text-pb-gray/60 text-xs mt-1">
+                  {role.permissions.length} permissions
+                </div>
+                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click to edit →
+                </div>
+              </div>
+            ))}
+            {getJobRolesByCategory('crew').map(role => (
+              <div 
+                key={role.id} 
+                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                onClick={() => window.open('/admin/roles', '_blank')}
+                title="Click to edit role permissions"
+              >
+                <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
+                  {role.displayName}
+                </div>
+                <div className="text-pb-gray/60 text-xs mt-1">
+                  {role.permissions.length} permissions
+                </div>
+                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click to edit →
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -318,7 +478,8 @@ const UserManagementPage: React.FC = () => {
               <thead className="bg-pb-darker/60">
                 <tr>
                   <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">User</th>
-                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Role</th>
+                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">System Role</th>
+                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Job Role</th>
                   <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Status</th>
                   <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Last Login</th>
                   <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Actions</th>
@@ -348,35 +509,101 @@ const UserManagementPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      {editingUser === user.uid ? (
-                        <select
-                          value={newRole}
-                          onChange={(e) => setNewRole(e.target.value as SystemRole)}
-                          className="px-2 py-1 bg-pb-darker/60 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-pb-primary/50"
+                      <div className="flex items-center gap-2">
+                        {editingUser === user.uid ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={newRole}
+                              onChange={(e) => setNewRole(e.target.value as SystemRole)}
+                              className="px-3 py-1 bg-pb-darker/60 border border-white/10 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                            >
+                              {ROLE_OPTIONS.map(option => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => handleRoleChange(user.uid, newRole)}
+                              className="px-2 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded transition-colors"
+                              title="Save role change"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingUser(null)}
+                              className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded transition-colors"
+                              title="Cancel"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className={`px-3 py-1 rounded text-xs font-medium ${
+                              user.role === SystemRole.GOD ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                              user.role === SystemRole.ADMIN ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                              user.role === SystemRole.PROPS_SUPERVISOR ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                              user.role === SystemRole.EDITOR ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                              user.role === SystemRole.PROPS_CARPENTER ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                              'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                            }`}>
+                              {user.role === SystemRole.GOD ? 'God (Immutable)' :
+                               user.role === SystemRole.ADMIN ? 'Administrator' :
+                               user.role === SystemRole.PROPS_SUPERVISOR ? 'Props Supervisor' :
+                               user.role === SystemRole.EDITOR ? 'Editor' :
+                               user.role === SystemRole.PROPS_CARPENTER ? 'Props Carpenter' :
+                               'Viewer'}
+                            </span>
+                            {user.role !== SystemRole.GOD && (
+                              <button
+                                onClick={() => {
+                                  setEditingUser(user.uid);
+                                  setNewRole(user.role as SystemRole);
+                                }}
+                                className="px-2 py-1 bg-pb-primary/20 hover:bg-pb-primary/30 text-pb-primary text-xs rounded transition-colors border border-pb-primary/30"
+                                title="Change role"
+                              >
+                                Change Role
+                              </button>
+                            )}
+                            {user.role === SystemRole.GOD && (
+                              <span className="px-2 py-1 bg-gray-600/20 text-gray-400 text-xs rounded border border-gray-600/30">
+                                Cannot Change
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        {user.jobRole ? (
+                          <span className={`px-3 py-1 rounded text-xs font-medium ${
+                            getJobRoleDisplayInfo(user.jobRole)?.color || 'bg-gray-500'
+                          }/20 ${
+                            getJobRoleDisplayInfo(user.jobRole)?.color?.replace('bg-', 'text-') || 'text-gray-400'
+                          } border ${
+                            getJobRoleDisplayInfo(user.jobRole)?.color || 'bg-gray-500'
+                          }/30`}>
+                            {getJobRoleDisplayInfo(user.jobRole)?.displayName || user.jobRole}
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 rounded text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
+                            No Job Role
+                          </span>
+                        )}
+                        <button
+                          onClick={() => {
+                            // TODO: Implement job role assignment
+                            console.log('Assign job role for user:', user.uid);
+                          }}
+                          className="px-2 py-1 bg-green-600/20 hover:bg-green-600/30 text-green-400 text-xs rounded transition-colors border border-green-600/30"
+                          title="Assign job role"
                         >
-                          {ROLE_OPTIONS.map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          user.role === SystemRole.GOD ? 'bg-red-500/20 text-red-400' :
-                          user.role === SystemRole.ADMIN ? 'bg-purple-500/20 text-purple-400' :
-                          user.role === SystemRole.PROPS_SUPERVISOR ? 'bg-blue-500/20 text-blue-400' :
-                          user.role === SystemRole.EDITOR ? 'bg-green-500/20 text-green-400' :
-                          user.role === SystemRole.PROPS_CARPENTER ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-gray-500/20 text-gray-400'
-                        }`}>
-                          {user.role === SystemRole.GOD ? 'God' :
-                           user.role === SystemRole.ADMIN ? 'Administrator' :
-                           user.role === SystemRole.PROPS_SUPERVISOR ? 'Props Supervisor' :
-                           user.role === SystemRole.EDITOR ? 'Editor' :
-                           user.role === SystemRole.PROPS_CARPENTER ? 'Props Carpenter' :
-                           'Viewer'}
-                        </span>
-                      )}
+                          Assign
+                        </button>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
@@ -397,52 +624,26 @@ const UserManagementPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        {editingUser === user.uid ? (
-                          <>
-                            <button
-                              onClick={() => handleRoleChange(user.uid, newRole)}
-                              className="p-1 text-green-400 hover:text-green-300 transition-colors"
-                              title="Save changes"
-                            >
-                              <Save className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setEditingUser(null)}
-                              className="p-1 text-pb-gray/70 hover:text-pb-gray transition-colors"
-                              title="Cancel"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => {
-                                setEditingUser(user.uid);
-                                setNewRole(user.role as SystemRole);
-                              }}
-                              className="p-1 text-pb-primary hover:text-pb-primary/80 transition-colors"
-                              title="Edit role"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setShowUserDetails(showUserDetails === user.uid ? null : user.uid)}
-                              className="p-1 text-blue-400 hover:text-blue-300 transition-colors"
-                              title="View details"
-                            >
-                              {showUserDetails === user.uid ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                            {user.uid !== userProfile?.uid && (
-                              <button
-                                onClick={() => handleDeleteUser(user.uid)}
-                                className="p-1 text-red-400 hover:text-red-300 transition-colors"
-                                title="Delete user"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </>
+                        <button
+                          onClick={() => setShowUserDetails(showUserDetails === user.uid ? null : user.uid)}
+                          className="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-xs rounded transition-colors border border-blue-600/30"
+                          title="View user details"
+                        >
+                          {showUserDetails === user.uid ? 'Hide Details' : 'View Details'}
+                        </button>
+                        {user.uid !== userProfile?.uid && user.role !== SystemRole.GOD && (
+                          <button
+                            onClick={() => handleDeleteUser(user.uid)}
+                            className="px-2 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs rounded transition-colors border border-red-600/30"
+                            title="Delete user"
+                          >
+                            Delete User
+                          </button>
+                        )}
+                        {user.role === SystemRole.GOD && (
+                          <span className="px-2 py-1 bg-gray-600/20 text-gray-400 text-xs rounded border border-gray-600/30">
+                            Protected
+                          </span>
                         )}
                       </div>
                     </td>

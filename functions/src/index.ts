@@ -10,6 +10,7 @@ export * from './password-reset-simple';
 export * from './password-reset-fixed';
 export * from './pricing';
 export * from './subscriptionValidation';
+export * from './stripe';
 
 // Re-export for easier imports
 export {
@@ -36,3 +37,12 @@ export {
   decrementBoardCounts,
   decrementPropCounts
 } from './subscriptionValidation';
+
+export {
+  // Stripe functions
+  getPricingConfig,
+  createCheckoutSession,
+  createBillingPortalSession,
+  getSubscriptionStats,
+  stripeWebhook
+} from './stripe';

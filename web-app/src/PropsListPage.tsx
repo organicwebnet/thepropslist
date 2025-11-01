@@ -12,7 +12,7 @@ import AvailabilityCounter from './components/AvailabilityCounter';
 import { useSubscription } from './hooks/useSubscription';
 import { PropCard } from './components/PropCard';
 import { PropsListSkeleton } from './components/LoadingSkeleton';
-import { PropsListLoading } from './components/LoadingStates';
+// Simplified loader removed per design request
 import { usePropListLoading } from './hooks/useImageLoading';
 
 const defaultPdfOptions: PdfGenerationOptions = {
@@ -71,7 +71,6 @@ const PropsListPage: React.FC = () => {
   // Use the loading hook for better state management
   const {
     initialLoadComplete,
-    imageProgress,
     handleDataLoaded,
     handleImageLoad,
     handleImageError
@@ -512,28 +511,13 @@ const PropsListPage: React.FC = () => {
             </div>
           </div>
         )}
-        <PropsListLoading
-          loading={loading}
-          error={error}
-          propsCount={filteredProps.length}
-          imagesLoadedCount={imageProgress}
-          initialLoadComplete={initialLoadComplete}
-        />
+        {/* Loader intentionally removed */}
         {!loading && !error && filteredProps.length === 0 ? (
           <div 
             className="flex flex-col items-center justify-center h-64"
             role="status"
             aria-live="polite"
           >
-            <svg 
-              className="h-16 w-16 text-pb-gray mb-4" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M9 1v6l3-3 3 3V1" />
-            </svg>
             <div className="text-pb-gray text-lg font-semibold mb-2">No props found</div>
             <div className="text-pb-gray/80 text-center max-w-md mb-6">
               Get started by adding your first prop! You can either:

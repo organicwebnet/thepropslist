@@ -1,4 +1,5 @@
 import React, { Component, ReactNode } from 'react';
+import { errorReporting } from '../lib/errorReporting';
 
 interface Props {
   children: ReactNode;
@@ -21,13 +22,16 @@ export class AddressSelectionErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error to monitoring service in production
-    if (import.meta.env.PROD) {
-      // TODO: Send to error monitoring service (e.g., Sentry)
-      console.error('Address selection error:', error, errorInfo);
-    } else {
-      console.error('Address selection error:', error, errorInfo);
-    }
+    console.error('Address selection error:', error, errorInfo);
+    
+    // Report error to Issue-Logger
+    errorReporting.reportError(error, {
+      componentStack: errorInfo.componentStack,
+      errorBoundary: 'AddressSelectionErrorBoundary',
+      timestamp: new Date().toISOString()
+    }, 'medium').catch(err => {
+      console.error('Failed to report error to Issue-Logger:', err);
+    });
   }
 
   handleRetry = () => {

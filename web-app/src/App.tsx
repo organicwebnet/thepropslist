@@ -5,6 +5,7 @@ import { useWebAuth } from './contexts/WebAuthContext';
 import { ShowSelectionProvider } from './contexts/ShowSelectionContext';
 import { MentionDataProvider } from './contexts/MentionDataContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import IssueLoggerWidget from './components/IssueLoggerWidget';
 
 // Core components that are always needed
 import PropsBibleHomepage from './PropsBibleHomepage';
@@ -49,9 +50,13 @@ const HelpPage = lazy(() => import('./pages/HelpPage'));
 const PropDetailMockPage = lazy(() => import('./pages/PropDetailMockPage'));
 const SubscriberStatsPage = lazy(() => import('./pages/SubscriberStatsPage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
+const RoleManagementPage = lazy(() => import('./pages/RoleManagementPage'));
+const PermissionSystemTestPage = lazy(() => import('./pages/PermissionSystemTestPage'));
 const AdminDebugPage = lazy(() => import('./pages/AdminDebugPage'));
 // const SubscriptionTest = lazy(() => import('../../src/components/__tests__/SubscriptionTest'));
 const JoinInvitePage = lazy(() => import('./pages/JoinInvitePage'));
+const IssueLoggerTest = lazy(() => import('./components/IssueLoggerTest'));
+
 
 function App() {
   const { user } = useWebAuth();
@@ -59,6 +64,9 @@ function App() {
     <ShowSelectionProvider>
       <MentionDataProvider>
         <BrowserRouter>
+        <IssueLoggerWidget 
+          enabled={import.meta.env.PROD || import.meta.env.VITE_ISSUE_LOGGER_ENABLED === 'true'}
+        />
         <Suspense fallback={
           <div className="min-h-screen w-full bg-gradient-to-br from-pb-darker/80 to-pb-primary/30 flex items-center justify-center">
             <div className="text-center">
@@ -78,8 +86,8 @@ function App() {
           <Route path="/debug-pdf-export" element={<ProtectedRoute><DebugPdfExport /></ProtectedRoute>} />
           <Route path="/branding" element={<ProtectedRoute><BrandingStudioPage /></ProtectedRoute>} />
           <Route path="/props/import" element={<ProtectedRoute><ImportPropsPage /></ProtectedRoute>} />
-          <Route path="/props/:id/edit" element={<ProtectedRoute><EditPropPage /></ProtectedRoute>} />
           <Route path="/props/add" element={<ProtectedRoute><AddPropPage /></ProtectedRoute>} />
+          <Route path="/props/:id/edit" element={<ProtectedRoute><EditPropPage /></ProtectedRoute>} />
           <Route path="/props/:id" element={<ProtectedRoute><PropDetailPage /></ProtectedRoute>} />
           <Route path="/props" element={<ProtectedRoute><PropsListPage /></ProtectedRoute>} />
           <Route path="/shows" element={<ProtectedRoute><ShowsRedirect /></ProtectedRoute>} />
@@ -89,7 +97,10 @@ function App() {
           <Route path="/shows/:id" element={<ShowDetailPage />} />
           <Route path="/shows/:id/team" element={<ProtectedRoute><TeamPage /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
+          <Route path="/admin/roles" element={<ProtectedRoute><RoleManagementPage /></ProtectedRoute>} />
+          <Route path="/admin/permission-tests" element={<ProtectedRoute><PermissionSystemTestPage /></ProtectedRoute>} />
           <Route path="/admin/debug" element={<ProtectedRoute><AdminDebugPage /></ProtectedRoute>} />
+          <Route path="/test/issue-logger" element={<ProtectedRoute><IssueLoggerTest /></ProtectedRoute>} />
           {/* <Route path="/test/subscription" element={<ProtectedRoute><SubscriptionTest /></ProtectedRoute>} /> */}
           <Route path="/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />
           <Route path="/join/:token" element={<JoinInvitePage />} />
@@ -102,6 +113,7 @@ function App() {
           {/* Public prop viewer: QR code or direct link goes here */}
           <Route path="/view/prop/:propId" element={<PublicPropViewPage />} />
           <Route path="/shopping-list" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
+          <Route path="/shopping" element={<ProtectedRoute><ShoppingListPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
           <Route path="/help" element={<ProtectedRoute><HelpPage /></ProtectedRoute>} />
@@ -109,7 +121,8 @@ function App() {
           <Route path="/mock/prop-detail" element={user ? <PropDetailMockPage /> : <Navigate to="/login" replace />} />
           <Route path="/mock/prop-detail/:id" element={user ? <PropDetailMockPage /> : <Navigate to="/login" replace />} />
           <Route path="/" element={user ? <DashboardHome /> : <Navigate to="/login" replace />} />
-          <Route path="/*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} />
+          {/* Temporarily disabled catch-all route to fix prop navigation */}
+          {/* <Route path="*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} /> */}
         </Routes>
         </Suspense>
         </BrowserRouter>

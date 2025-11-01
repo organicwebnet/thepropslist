@@ -1,0 +1,403 @@
+.il-fab {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 2147483640;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.il-fab:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.35);
+}
+
+.il-fab:focus {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.il-fab:active {
+  transform: translateY(0);
+}
+
+/* FAB Menu */
+.il-fab-menu {
+  position: fixed;
+  bottom: 90px;
+  left: 20px;
+  background: #111827;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  padding: 8px;
+  z-index: 2147483639;
+  min-width: 280px;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.il-fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: left;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.il-fab-menu-item:hover {
+  background: #374151;
+}
+
+.il-fab-menu-item:focus {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
+.il-fab-icon {
+  font-size: 20px;
+  width: 24px;
+  text-align: center;
+}
+
+.il-fab-text {
+  flex: 1;
+}
+
+.il-fab-title {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.il-fab-desc {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+
+.il-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 2147483639;
+  cursor: crosshair;
+}
+
+.il-selection {
+  position: absolute;
+  border: 2px dashed #60a5fa;
+  background: rgba(59,130,246,0.15);
+}
+
+.il-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 340px;
+  max-width: calc(100vw - 40px);
+  z-index: 2147483641;
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.il-panel input, .il-panel textarea, .il-panel select, .il-panel button {
+  font: inherit;
+}
+
+.il-panel input, .il-panel textarea, .il-panel select {
+  width: 100%;
+  background: #111827;
+  color: #e5e7eb;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease;
+  min-height: 36px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.il-panel input:focus, .il-panel textarea:focus, .il-panel select:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.il-panel select {
+  cursor: pointer;
+}
+
+.il-panel select option {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+.il-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.il-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 36px;
+  font-weight: 500;
+}
+
+.il-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.il-btn:focus {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.il-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.il-btn.secondary {
+  background: #374151;
+}
+
+.il-btn.secondary:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.il-preview, .il-video-preview {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #374151;
+  background: #0b1220;
+}
+
+.il-video-preview {
+  min-height: 200px;
+  background: #000;
+}
+
+/* Recording controls countdown */
+.il-countdown {
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+  margin-top: 2px;
+  display: block;
+  line-height: 1;
+}
+
+/* Settings modal */
+.il-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 2147483642;
+}
+
+.il-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 420px;
+  max-width: calc(100vw - 40px);
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  padding: 20px;
+  z-index: 2147483643;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  box-sizing: border-box;
+}
+
+.il-field { 
+  margin-bottom: 12px; 
+  box-sizing: border-box;
+}
+.il-field label { 
+  display: block; 
+  font-size: 12px; 
+  color: #9ca3af; 
+  margin-bottom: 6px; 
+}
+.il-field input { 
+  width: 100%; 
+  background: #111827; 
+  color: #e5e7eb; 
+  border: 1px solid #374151; 
+  border-radius: 8px; 
+  padding: 10px 12px; 
+  box-sizing: border-box;
+  font-size: 14px;
+}
+.il-modal .il-actions { 
+  margin-top: 16px; 
+}
+
+/* Checkbox styling */
+.il-field input[type="checkbox"] {
+  width: auto !important;
+  margin: 0;
+  accent-color: #2563eb;
+}
+
+.il-field label[for] {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Status displays */
+.il-recording-status, .il-text-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #1f2937;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.il-recording-icon, .il-text-icon {
+  font-size: 24px;
+  width: 32px;
+  text-align: center;
+}
+
+.il-recording-text, .il-text-text {
+  flex: 1;
+}
+
+.il-recording-title, .il-text-title {
+  font-weight: 500;
+  font-size: 14px;
+  color: #e5e7eb;
+  margin-bottom: 2px;
+}
+
+.il-recording-desc, .il-text-desc {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .il-fab {
+    bottom: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  
+  .il-fab-menu {
+    bottom: 80px;
+    right: 16px;
+    min-width: 260px;
+  }
+  
+  .il-panel {
+    top: 16px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-width: none;
+  }
+  
+  .il-modal {
+    width: calc(100vw - 32px);
+    max-width: none;
+    left: 16px;
+    right: 16px;
+    transform: translateY(-50%);
+    padding: 16px;
+  }
+  
+  .il-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .il-actions .il-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .il-fab {
+    bottom: 12px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+  
+  .il-fab-menu {
+    bottom: 70px;
+    right: 12px;
+    min-width: 240px;
+  }
+  
+  .il-panel {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    padding: 12px;
+  }
+  
+  .il-modal {
+    left: 12px;
+    right: 12px;
+    width: calc(100vw - 24px);
+    padding: 16px;
+  }
+}
+
