@@ -1,0 +1,20 @@
+{
+  "name": "subscription-flow-test",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Test script for Stripe subscription flow",
+  "main": "test-subscription-flow.js",
+  "scripts": {
+    "test": "node test-subscription-flow.js",
+    "test:with-env": "node --env-file=.env test-subscription-flow.js"
+  },
+  "dependencies": {
+    "firebase": "^11.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["test", "stripe", "subscription", "firebase"],
+  "author": "The Props List Team",
+  "license": "MIT"
+}

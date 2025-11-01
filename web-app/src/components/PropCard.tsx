@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Prop } from '../types/props';
 import { PropImage } from './ProgressiveImage';
 import { Skeleton } from './LoadingSkeleton';
@@ -30,18 +30,12 @@ export const PropCard: React.FC<PropCardProps> = ({
   onImageError,
   showSkeleton = false 
 }) => {
-  const navigate = useNavigate();
-
   const handleImageLoad = () => {
     onImageLoad?.();
   };
 
   const handleImageError = () => {
     onImageError?.();
-  };
-
-  const handleCardClick = () => {
-    navigate(`/props/${prop.id}`);
   };
 
   if (showSkeleton) {
@@ -83,9 +77,9 @@ export const PropCard: React.FC<PropCardProps> = ({
   }
 
   return (
-    <div
-      onClick={handleCardClick}
-      className="bg-pb-darker/60 rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:bg-pb-darker/80 transition-all duration-200 border border-pb-primary/20 hover:border-pb-primary/40 group"
+    <Link
+      to={`/props/${prop.id}`}
+      className="block bg-pb-darker/60 rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:bg-pb-darker/80 transition-all duration-200 border border-pb-primary/20 hover:border-pb-primary/40 group no-underline"
     >
       {/* Prop Image */}
       <div className="w-full h-48 rounded-lg overflow-hidden bg-pb-gray mb-4">
@@ -147,7 +141,8 @@ export const PropCard: React.FC<PropCardProps> = ({
             </span>
           )}
         </div>
+        
       </div>
-    </div>
+    </Link>
   );
 };

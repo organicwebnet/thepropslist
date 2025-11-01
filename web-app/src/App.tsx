@@ -57,6 +57,7 @@ const AdminDebugPage = lazy(() => import('./pages/AdminDebugPage'));
 const JoinInvitePage = lazy(() => import('./pages/JoinInvitePage'));
 const IssueLoggerTest = lazy(() => import('./components/IssueLoggerTest'));
 
+
 function App() {
   const { user } = useWebAuth();
   return (
@@ -85,8 +86,8 @@ function App() {
           <Route path="/debug-pdf-export" element={<ProtectedRoute><DebugPdfExport /></ProtectedRoute>} />
           <Route path="/branding" element={<ProtectedRoute><BrandingStudioPage /></ProtectedRoute>} />
           <Route path="/props/import" element={<ProtectedRoute><ImportPropsPage /></ProtectedRoute>} />
-          <Route path="/props/:id/edit" element={<ProtectedRoute><EditPropPage /></ProtectedRoute>} />
           <Route path="/props/add" element={<ProtectedRoute><AddPropPage /></ProtectedRoute>} />
+          <Route path="/props/:id/edit" element={<ProtectedRoute><EditPropPage /></ProtectedRoute>} />
           <Route path="/props/:id" element={<ProtectedRoute><PropDetailPage /></ProtectedRoute>} />
           <Route path="/props" element={<ProtectedRoute><PropsListPage /></ProtectedRoute>} />
           <Route path="/shows" element={<ProtectedRoute><ShowsRedirect /></ProtectedRoute>} />
@@ -120,7 +121,8 @@ function App() {
           <Route path="/mock/prop-detail" element={user ? <PropDetailMockPage /> : <Navigate to="/login" replace />} />
           <Route path="/mock/prop-detail/:id" element={user ? <PropDetailMockPage /> : <Navigate to="/login" replace />} />
           <Route path="/" element={user ? <DashboardHome /> : <Navigate to="/login" replace />} />
-          <Route path="/*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} />
+          {/* Temporarily disabled catch-all route to fix prop navigation */}
+          {/* <Route path="*" element={user ? <PropsBibleHomepage>{<DashboardHome />}</PropsBibleHomepage> : <Navigate to="/login" replace />} /> */}
         </Routes>
         </Suspense>
         </BrowserRouter>

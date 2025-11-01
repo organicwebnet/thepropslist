@@ -1,7 +1,7 @@
 .il-fab {
   position: fixed;
   bottom: 20px;
-  right: 20px;
+  left: 20px;
   z-index: 2147483640;
   background: #2563eb;
   color: #fff;
@@ -38,7 +38,7 @@
 .il-fab-menu {
   position: fixed;
   bottom: 90px;
-  right: 20px;
+  left: 20px;
   background: #111827;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.35);

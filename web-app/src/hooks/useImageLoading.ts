@@ -84,7 +84,7 @@ export const usePropListLoading = (props: any[]) => {
   // Reset image loading when props change
   useEffect(() => {
     imageLoading.reset();
-  }, [props.length, imageLoading]);
+  }, [props.length]); // Remove imageLoading from dependencies to prevent infinite loop
 
   const handleDataLoaded = useCallback(() => {
     setDataLoading(false);
@@ -93,18 +93,18 @@ export const usePropListLoading = (props: any[]) => {
 
   const handleImageLoad = useCallback((propId: string) => {
     imageLoading.markLoaded(propId);
-  }, [imageLoading]);
+  }, []); // Remove imageLoading dependency to prevent infinite loops
 
   const handleImageError = useCallback((propId: string) => {
     imageLoading.markError(propId);
-  }, [imageLoading]);
+  }, []); // Remove imageLoading dependency to prevent infinite loops
 
   const getLoadingPhase = useCallback(() => {
     if (dataLoading) return 'data';
     if (props.length === 0) return 'complete';
     if (imageLoading.state.loaded.size < props.length) return 'images';
     return 'complete';
-  }, [dataLoading, props.length, imageLoading.state.loaded.size]);
+  }, [dataLoading, props.length]); // Remove imageLoading.state.loaded.size to prevent infinite loops
 
   return {
     dataLoading,
@@ -119,4 +119,6 @@ export const usePropListLoading = (props: any[]) => {
     hasImageError: imageLoading.hasError
   };
 };
+
+
 

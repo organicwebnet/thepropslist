@@ -10,6 +10,7 @@ type Props = {
 const ProtectedRoute: React.FC<Props> = ({ children }) => {
   const { user, loading } = useWebAuth();
   const location = useLocation();
+  
 
   if (loading) {
     // No blocking UI per request; render nothing until auth resolves
