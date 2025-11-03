@@ -1,6 +1,7 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { ImageCarousel } from '../components/ImageCarousel';
+import { ShoppingStatusButton, ShoppingOptionStatus } from '../components/ShoppingStatusButton';
 import { Plus, Package, ShoppingBag, Briefcase } from 'lucide-react';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useShowSelection } from '../contexts/ShowSelectionContext';
@@ -142,7 +143,9 @@ const ShoppingListPage: React.FC = () => {
       setTeamMembers(processedTeamMembers);
       return processedTeamMembers;
     } catch (error) {
-      console.error('Error loading team members:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error loading team members:', error);
+      }
       return [];
     }
   };
@@ -228,7 +231,9 @@ const ShoppingListPage: React.FC = () => {
       setResolvedUserNames(prev => ({ ...prev, [userId]: shortId }));
       return shortId;
     } catch (error) {
-      console.error('Failed to resolve user name:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to resolve user name:', error);
+      }
       const shortId = userId.substring(0, 8) + '...';
       setResolvedUserNames(prev => ({ ...prev, [userId]: shortId }));
       return shortId;
@@ -321,7 +326,9 @@ const ShoppingListPage: React.FC = () => {
         });
       },
       (err) => {
-        console.error('Error loading shopping items:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error loading shopping items:', err);
+        }
         setError(err.message || 'Failed to load shopping items');
         setLoading(false);
       },
@@ -347,22 +354,79 @@ const ShoppingListPage: React.FC = () => {
     }
   }, [validationErrors]);
 
-  // Enhanced form validation
+  // Helper function for status updates
+  const handleStatusUpdate = async (status: ShoppingOptionStatus, successMessage: string) => {
+    if (!selectedItem || !shoppingService || updatingStatus) return;
+    
+    setUpdatingStatus(status);
+    
+    const updatedOptions = [...selectedItem.options];
+    updatedOptions[selectedOptionIndex] = {
+      ...updatedOptions[selectedOptionIndex],
+      status,
+    };
+    
+    // Update local state immediately
+    setSelectedItem({ ...selectedItem, options: updatedOptions });
+    setItems(prevItems => prevItems.map(item =>
+      item.id === selectedItem.id ? { ...item, data: { ...item.data, options: updatedOptions } } : item
+    ));
+    
+    // Save to Firebase
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Updating option status to ${status} for item:`, selectedItem.id, 'option:', selectedOptionIndex);
+      }
+      await shoppingService.updateOption(selectedItem.id, selectedOptionIndex, { status });
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Successfully updated option status to ${status}`);
+      }
+      setActionMessage(successMessage);
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to update option status:', error);
+      }
+      setActionMessage(`❌ Failed to save status. Please try again.`);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  // Enhanced form validation with better edge case handling
   const validateForm = (item: typeof newItem): string[] => {
     const errors: string[] = [];
     
-    if (!item.description.trim()) {
+    // Description validation with sanitisation
+    const description = item.description?.trim() || '';
+    if (!description) {
       errors.push('Description is required');
+    } else if (description.length > 500) {
+      errors.push('Description must be less than 500 characters');
     }
+    
+    // Quantity validation
     if (!item.quantity || item.quantity < 1) {
       errors.push('Quantity must be at least 1');
+    } else if (item.quantity > 10000) {
+      errors.push('Quantity must be less than 10,000');
+    } else if (!Number.isInteger(item.quantity)) {
+      errors.push('Quantity must be a whole number');
     }
-    if (!item.budget || parseCurrency(item.budget) <= 0) {
+    
+    // Budget validation with better edge case handling
+    const budgetValue = item.budget ? parseCurrency(item.budget) : 0;
+    if (!item.budget || isNaN(budgetValue) || budgetValue <= 0) {
       errors.push('Budget must be greater than £0.00');
+    } else if (budgetValue > 1000000) {
+      errors.push('Budget must be less than £1,000,000');
     }
+    
+    // Reference image validation
     if (item.type === 'prop' && !item.referenceImage) {
       errors.push('Reference image is required for props');
     }
+    
+    // Materials validation
     if (item.type === 'material' && (!item.materials || item.materials.length === 0)) {
       errors.push('Materials list is required for material requests');
     }
@@ -422,7 +486,9 @@ const ShoppingListPage: React.FC = () => {
       setConvertToPropModalOpen(false);
       setItemToConvert(null);
     } catch (error) {
-      console.error('Error converting item to prop:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error converting item to prop:', error);
+      }
       setValidationErrors(['Failed to convert item to prop. Please try again.']);
     }
   };
@@ -644,8 +710,10 @@ const ShoppingListPage: React.FC = () => {
     setAddOptionItemId(null);
     setNewOption({ shopName: '', price: '', notes: '', productUrl: '', images: [] });
     } catch (error) {
-      console.error('Error adding shopping option:', error);
-      console.error('Error details:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error adding shopping option:', error);
+        console.error('Error details:', error);
+      }
       setValidationErrors([`Failed to add shopping option: ${error instanceof Error ? error.message : 'Unknown error'}`]);
     }
   };
@@ -720,7 +788,9 @@ const ShoppingListPage: React.FC = () => {
     setEditItemModalOpen(false);
     setEditItem(null);
     } catch (error) {
-      console.error('Error updating shopping item:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error updating shopping item:', error);
+      }
       setValidationErrors(['Failed to update item. Please try again.']);
     }
   };
@@ -801,7 +871,9 @@ const ShoppingListPage: React.FC = () => {
         materials: []
       });
     } catch (error) {
-      console.error('Error adding shopping item:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error adding shopping item:', error);
+      }
       setValidationErrors(['Failed to add shopping request. Please try again.']);
     }
   };
@@ -1051,121 +1123,35 @@ const ShoppingListPage: React.FC = () => {
                 </div>
                 
                 {/* Action Buttons - Top Right with more spacing from close button */}
-                <div className="flex gap-2 flex-wrap mr-8">
-                  <button
-                    className={`px-3 py-1 rounded-lg font-semibold shadow transition-all duration-200 text-sm ${
-                      updatingStatus === 'rejected' 
-                        ? 'bg-red-400 text-white cursor-not-allowed opacity-75' 
-                        : selectedItem.options[selectedOptionIndex].status === 'rejected' 
-                          ? 'bg-red-600 text-white ring-2 ring-red-400' 
-                          : 'bg-red-500 text-white hover:bg-red-600 hover:scale-105'
-                    }`}
-                    disabled={updatingStatus === 'rejected'}
-                    onClick={async () => {
-                      if (updatingStatus) return; // Prevent multiple clicks
-                      
-                      setUpdatingStatus('rejected');
-                      
-                      const updatedOptions = [...selectedItem.options];
-                      updatedOptions[selectedOptionIndex] = {
-                        ...updatedOptions[selectedOptionIndex],
-                        status: 'rejected',
-                      };
-                      
-                      // Update local state immediately
-                      setSelectedItem({ ...selectedItem, options: updatedOptions });
-                      setItems(prevItems => prevItems.map(item =>
-                        item.id === selectedItem.id ? { ...item, data: { ...item.data, options: updatedOptions } } : item
-                      ));
-                      
-                      // Save to Firebase
-                      if (shoppingService && selectedItem) {
-                        try {
-                          if (process.env.NODE_ENV === 'development') {
-                            console.log('Updating option status to rejected for item:', selectedItem.id, 'option:', selectedOptionIndex);
-                          }
-                          await shoppingService.updateOption(selectedItem.id, selectedOptionIndex, { status: 'rejected' });
-                          if (process.env.NODE_ENV === 'development') {
-                            console.log('Successfully updated option status to rejected');
-                          }
-                          setActionMessage('❌ Option rejected');
-                        } catch (error) {
-                          console.error('Failed to update option status:', error);
-                          setActionMessage('❌ Failed to save status. Please try again.');
-                        } finally {
-                          setUpdatingStatus(null);
-                        }
-                      } else {
-                        setUpdatingStatus(null);
-                      }
-                    }}
-                  >
-                    ❌ Reject
-                  </button>
-                  <button
-                    className={`px-3 py-1 rounded-lg font-semibold shadow transition-all duration-200 text-sm ${
-                      updatingStatus === 'maybe' 
-                        ? 'bg-yellow-400 text-white cursor-not-allowed opacity-75' 
-                        : selectedItem.options[selectedOptionIndex].status === 'maybe' 
-                          ? 'bg-yellow-600 text-white ring-2 ring-yellow-400' 
-                          : 'bg-yellow-500 text-white hover:bg-yellow-600 hover:scale-105'
-                    }`}
-                    disabled={updatingStatus === 'maybe'}
-                    onClick={async () => {
-                      if (updatingStatus) return; // Prevent multiple clicks
-                      
-                      setUpdatingStatus('maybe');
-                      
-                      const updatedOptions = [...selectedItem.options];
-                      updatedOptions[selectedOptionIndex] = {
-                        ...updatedOptions[selectedOptionIndex],
-                        status: 'maybe',
-                      };
-                      
-                      // Update local state immediately
-                      setSelectedItem({ ...selectedItem, options: updatedOptions });
-                      setItems(prevItems => prevItems.map(item =>
-                        item.id === selectedItem.id ? { ...item, data: { ...item.data, options: updatedOptions } } : item
-                      ));
-                      
-                      // Save to Firebase
-                      if (shoppingService && selectedItem) {
-                        try {
-                          if (process.env.NODE_ENV === 'development') {
-                            console.log('Updating option status to maybe for item:', selectedItem.id, 'option:', selectedOptionIndex);
-                          }
-                          await shoppingService.updateOption(selectedItem.id, selectedOptionIndex, { status: 'maybe' });
-                          if (process.env.NODE_ENV === 'development') {
-                            console.log('Successfully updated option status to maybe');
-                          }
-                          setActionMessage('🤔 Marked as maybe');
-                        } catch (error) {
-                          console.error('Failed to update option status:', error);
-                          setActionMessage('🤔 Failed to save status. Please try again.');
-                        } finally {
-                          setUpdatingStatus(null);
-                        }
-                      } else {
-                        setUpdatingStatus(null);
-                      }
-                    }}
-                  >
-                    🤔 Maybe
-                  </button>
-                  <button
-                    className={`px-3 py-1 rounded-lg font-semibold shadow transition-all duration-200 text-sm ${
-                      selectedItem.options[selectedOptionIndex].status === 'buy' 
-                        ? 'bg-green-600 text-white ring-2 ring-green-400' 
-                        : 'bg-green-500 text-white hover:bg-green-600 hover:scale-105'
-                    }`}
+                <div className="flex gap-2 flex-wrap mr-8" role="group" aria-label="Option status actions">
+                  <ShoppingStatusButton
+                    status="rejected"
+                    currentStatus={selectedItem.options[selectedOptionIndex].status}
+                    updatingStatus={updatingStatus}
+                    onClick={() => handleStatusUpdate('rejected', '❌ Option rejected')}
+                    label="Reject"
+                    icon="❌"
+                  />
+                  <ShoppingStatusButton
+                    status="maybe"
+                    currentStatus={selectedItem.options[selectedOptionIndex].status}
+                    updatingStatus={updatingStatus}
+                    onClick={() => handleStatusUpdate('maybe', '🤔 Marked as maybe')}
+                    label="Maybe"
+                    icon="🤔"
+                  />
+                  <ShoppingStatusButton
+                    status="buy"
+                    currentStatus={selectedItem.options[selectedOptionIndex].status}
+                    updatingStatus={updatingStatus}
                     onClick={() => {
                       // Open confirmation modal instead of directly marking as bought
                       setPurchaseToConfirm({ item: selectedItem, optionIndex: selectedOptionIndex });
                       setConfirmPurchaseModalOpen(true);
                     }}
-                  >
-                    ✅ Buy This
-                  </button>
+                    label="Buy This"
+                    icon="✅"
+                  />
                 </div>
               </div>
               {/* 2-Column Layout */}

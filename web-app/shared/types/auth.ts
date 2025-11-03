@@ -45,6 +45,12 @@ export interface UserProfile {
   // Saved Addresses
   savedSenderAddresses?: Address[];
   savedDeliveryAddresses?: Address[];
+
+  // Dashboard Widget Preferences
+  dashboardWidgets?: {
+    enabled: string[]; // Widget IDs that are visible
+    config?: Record<string, any>; // Per-widget settings
+  };
 }
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {

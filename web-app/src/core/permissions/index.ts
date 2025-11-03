@@ -1,23 +1,12 @@
 /**
  * Permission System Exports
  * 
- * This is the main entry point for the 3-tier permission system:
- * 1. Role-based access control (RBAC) - Granular control by god for all user types
- * 2. Subscription-based access control - From Stripe metadata
- * 3. Permission-based access control - Granular permissions for specific actions
+ * This file re-exports from the shared permissions module to maintain backward compatibility.
+ * All permission logic has been moved to src/shared/permissions/ for use by both web-app and Android app.
  */
 
-// Core types
-export * from './types';
-
-// Constants and configuration
-export * from './constants';
-
-// Utility functions
-export * from './utils';
-
-// Main service
-export * from './PermissionService';
+// Re-export everything from shared permissions
+export * from '../../../src/shared/permissions';
 
 // Re-export commonly used items for convenience
 export { 
@@ -30,6 +19,6 @@ export {
   type PermissionSummary,
   type SubscriptionLimits,
   type CurrentCounts
-} from './types';
+} from '../../../src/shared/permissions/types';
 
-export { PermissionService } from './PermissionService';
+export { PermissionService } from '../../../src/shared/permissions/PermissionService';

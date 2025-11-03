@@ -15,6 +15,8 @@ import { Prop } from '../../../shared/types/props';
 import { FirebaseDocument } from '../../../shared/services/firebase/types';
 import { Stack, useRouter } from 'expo-router';
 import { useShows } from '../../../contexts/ShowsContext';
+import { usePermissions } from '../../../hooks/usePermissions';
+import { useAuth } from '../../../contexts/AuthContext';
 import LinearGradient from 'react-native-linear-gradient';
 import { globalStyles } from '../../../styles/globalStyles';
 import { propCategories } from '../../../shared/types/props';
@@ -31,6 +33,8 @@ export function PropsListScreen() {
   const navigation = useNavigation<PropsListScreenNavigationProp>();
   const { service } = useFirebase();
   const { selectedShow } = useShows();
+  const { canViewAllProps } = usePermissions();
+  const { user } = useAuth();
   const [props, setProps] = useState<FirebaseDocument<Prop>[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,6 +82,15 @@ export function PropsListScreen() {
     }
     setIsLoading(true);
     
+    // Build query based on permissions
+    // If user can view all props, show all props for the show
+    // Otherwise, only show props owned by the user
+    // Note: Props use 'userId' field, not 'ownerId'
+    const whereClauses: any[] = [['showId', '==', selectedShow.id]];
+    if (!canViewAllProps && user?.uid) {
+      whereClauses.push(['userId', '==', user.uid]);
+    }
+    
     const unsubscribe = service.listenToCollection<Prop>(
       'props',
       (documents: FirebaseDocument<Prop>[]) => {
@@ -94,10 +107,10 @@ export function PropsListScreen() {
         setIsLoading(false);
         setRefreshing(false);
       },
-      { where: [['showId', '==', selectedShow.id]] }
+      { where: whereClauses }
     );
     return () => unsubscribe();
-  }, [service, selectedShow?.id, normalizeProp]);
+  }, [service, selectedShow?.id, canViewAllProps, user?.uid]);
 
   // Apply filters to props
   useEffect(() => {

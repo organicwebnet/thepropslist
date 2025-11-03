@@ -4,52 +4,47 @@ import { NotificationService } from './notificationService';
 import { NotificationTargetingService, TeamMember } from '../../utils/notificationTargeting';
 import { getNotificationTitle, getNotificationMessage } from '../../utils/notificationTemplates';
 import type { NotificationType } from '../types/notification';
-import { v4 as uuidv4 } from 'uuid';
+import { ShoppingServiceBase } from '../../../../src/shared/services/shoppingServiceBase';
 
-export class ShoppingService {
+/**
+ * Web ShoppingService - extends base service with notification capabilities
+ * Uses shared base implementation to reduce code duplication while adding web-specific features
+ */
+export class ShoppingService extends ShoppingServiceBase {
   private notificationService: NotificationService;
   private notificationTargeting: NotificationTargetingService | null = null;
 
   constructor(
-    private firebaseService: FirebaseService,
+    firebaseService: FirebaseService,
     teamMembers?: TeamMember[],
     currentUser?: { id: string; roles: string[] }
   ) {
+    super(firebaseService);
     this.notificationService = new NotificationService(firebaseService);
     if (teamMembers && currentUser) {
       this.notificationTargeting = new NotificationTargetingService(teamMembers, currentUser);
     }
   }
 
-  async getShoppingItems(showId?: string): Promise<FirebaseDocument<ShoppingItem>[]> {
-    const options = showId 
-      ? { where: [['showId', '==', showId] as [string, any, any]] }
-      : undefined;
-    
-    return this.firebaseService.getDocuments<ShoppingItem>('shopping_items', options);
-  }
+  // Override addShoppingItem to add notifications
 
   async addShoppingItem(item: Omit<ShoppingItem, 'id' | 'createdAt' | 'updatedAt' | 'lastUpdated'>): Promise<string> {
-    const now = new Date().toISOString();
-    const newItem: Omit<ShoppingItem, 'id'> = {
-      ...item,
-      createdAt: now,
-      updatedAt: now,
-      lastUpdated: now,
-      options: []
-    };
-
-    const doc = await this.firebaseService.addDocument<ShoppingItem>('shopping_items', newItem);
+    const docId = await super.addShoppingItem(item);
     
     // Send notification to supervisors (don't fail if notification fails)
     try {
-      await this.sendNotification('shopping_item_requested', { ...newItem, id: doc.id }, doc.id);
+      const newItem = await this.firebaseService.getDocument<ShoppingItem>('shopping_items', docId);
+      if (newItem?.data) {
+        await this.sendNotification('shopping_item_requested', { ...newItem.data, id: docId }, docId);
+      }
     } catch (notificationError) {
-      console.warn('Failed to send notification for new shopping item:', notificationError);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to send notification for new shopping item:', notificationError);
+      }
       // Don't throw - the item was added successfully
     }
     
-    return doc.id;
+    return docId;
   }
 
   async updateShoppingItem(itemId: string, updates: Partial<ShoppingItem>): Promise<void> {
@@ -58,20 +53,17 @@ export class ShoppingService {
       throw new Error('Shopping item not found');
     }
 
-    const updatedData = {
-      ...updates,
-      updatedAt: new Date().toISOString(),
-      lastUpdated: new Date().toISOString()
-    };
-
-    await this.firebaseService.updateDocument('shopping_items', itemId, updatedData);
+    // Call base implementation
+    await super.updateShoppingItem(itemId, updates);
 
     // Send notifications based on status change (don't fail if notification fails)
     if (updates.status) {
       try {
         await this.handleStatusChangeNotification(currentItem.data, updates.status, itemId);
       } catch (notificationError) {
-        console.warn('Failed to send status change notification:', notificationError);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Failed to send status change notification:', notificationError);
+        }
         // Don't throw - the item was updated successfully
       }
     }
@@ -82,14 +74,16 @@ export class ShoppingService {
       try {
         await this.sendNotification('shopping_budget_exceeded', updatedItem, itemId);
       } catch (notificationError) {
-        console.warn('Failed to send budget exceeded notification:', notificationError);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Failed to send budget exceeded notification:', notificationError);
+        }
         // Don't throw - the item was updated successfully
       }
     }
   }
 
   async addOptionToItem(itemId: string, option: Omit<ShoppingOption, 'createdAt' | 'updatedAt'>): Promise<void> {
-    // Get current item
+    // Get current item before calling super
     const currentItem = await this.firebaseService.getDocument<ShoppingItem>('shopping_items', itemId);
     if (!currentItem?.data) {
       throw new Error('Shopping item not found');
@@ -102,19 +96,16 @@ export class ShoppingService {
       updatedAt: now
     };
 
-    const updatedOptions = [...(currentItem.data.options || []), newOption];
-    
-    await this.updateShoppingItem(itemId, { 
-      options: updatedOptions,
-      // Update item status if this is the first option
-      status: currentItem.data.options.length === 0 ? 'approved' : currentItem.data.status
-    });
+    // Call base implementation
+    await super.addOptionToItem(itemId, option);
 
     // Send notification about new option (don't fail if notification fails)
     try {
       await this.sendNotification('shopping_option_added', currentItem.data, itemId, newOption);
     } catch (notificationError) {
-      console.warn('Failed to send notification for new option:', notificationError);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Failed to send notification for new option:', notificationError);
+      }
       // Don't throw - the option was added successfully
     }
   }
@@ -131,102 +122,28 @@ export class ShoppingService {
     }
 
     const previousStatus = options[optionIndex].status;
-    options[optionIndex] = {
-      ...options[optionIndex],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
 
-    // Check if any option is marked as 'buy' to update item status
-    const hasBuyOption = options.some(opt => opt.status === 'buy');
-    const itemStatus = hasBuyOption ? 'picked' : currentItem.data.status;
+    // Call base implementation
+    await super.updateOption(itemId, optionIndex, updates);
 
-    await this.updateShoppingItem(itemId, { 
-      options,
-      status: itemStatus
-    });
+    // Get updated item for notification
+    const updatedItem = await this.firebaseService.getDocument<ShoppingItem>('shopping_items', itemId);
+    const updatedOptions = updatedItem?.data?.options || [];
 
     // Send notifications for option status changes (don't fail if notification fails)
-    if (updates.status && updates.status !== previousStatus) {
+    if (updates.status && updates.status !== previousStatus && updatedOptions[optionIndex]) {
       const notificationType = this.getNotificationTypeForOptionStatus(updates.status);
       if (notificationType) {
         try {
-          await this.sendNotification(notificationType, currentItem.data, itemId, options[optionIndex], optionIndex);
+          await this.sendNotification(notificationType, updatedItem.data, itemId, updatedOptions[optionIndex], optionIndex);
         } catch (notificationError) {
-          console.warn('Failed to send notification for option status change:', notificationError);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Failed to send notification for option status change:', notificationError);
+          }
           // Don't throw - the option was updated successfully
         }
       }
     }
-  }
-
-  async addCommentToOption(
-    itemId: string, 
-    optionIndex: number, 
-    commentText: string, 
-    author: string, 
-    authorType: 'shopper' | 'supervisor' | 'system' = 'shopper'
-  ): Promise<void> {
-    const currentItem = await this.firebaseService.getDocument<ShoppingItem>('shopping_items', itemId);
-    if (!currentItem?.data) {
-      throw new Error('Shopping item not found');
-    }
-
-    const options = [...(currentItem.data.options || [])];
-    if (optionIndex >= options.length) {
-      throw new Error('Option not found');
-    }
-
-    const newComment: ShoppingOptionComment = {
-      id: uuidv4(),
-      text: commentText.trim(),
-      author: author,
-      timestamp: new Date().toISOString(),
-      type: authorType
-    };
-
-    // Add comment to the option
-    const existingComments = options[optionIndex].comments || [];
-    options[optionIndex] = {
-      ...options[optionIndex],
-      comments: [...existingComments, newComment],
-      updatedAt: new Date().toISOString()
-    };
-
-    await this.updateShoppingItem(itemId, { 
-      options,
-    });
-  }
-
-  async deleteShoppingItem(itemId: string): Promise<void> {
-    await this.firebaseService.deleteDocument('shopping_items', itemId);
-  }
-
-  async uploadOptionImages(images: string[]): Promise<string[]> {
-    const uploadPromises = images.map(async (imageUri, index) => {
-      const fileName = `shopping_option_${uuidv4()}_${index}.jpg`;
-      const storagePath = `shopping_images/${fileName}`;
-      return this.firebaseService.uploadFile(storagePath, imageUri);
-    });
-
-    return Promise.all(uploadPromises);
-  }
-
-  listenToShoppingItems(
-    onUpdate: (items: FirebaseDocument<ShoppingItem>[]) => void,
-    onError: (error: Error) => void,
-    showId?: string
-  ): () => void {
-    const options = showId 
-      ? { where: [['showId', '==', showId] as [string, any, any]] }
-      : undefined;
-
-    return this.firebaseService.listenToCollection<ShoppingItem>(
-      'shopping_items',
-      onUpdate,
-      onError,
-      options
-    );
   }
 
   // Notification helper methods
@@ -238,7 +155,9 @@ export class ShoppingService {
     optionIndex?: number
   ): Promise<void> {
     if (!this.notificationTargeting) {
-      console.warn('Notification targeting not configured, skipping notification');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Notification targeting not configured, skipping notification');
+      }
       return;
     }
 
@@ -270,7 +189,9 @@ export class ShoppingService {
         });
       }
     } catch (error) {
-      console.error('Failed to send notification:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to send notification:', error);
+      }
     }
   }
 
@@ -284,7 +205,9 @@ export class ShoppingService {
       try {
         await this.sendNotification(notificationType, item, itemId);
       } catch (error) {
-        console.warn('Failed to send status change notification:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Failed to send status change notification:', error);
+        }
         // Don't throw - the status was updated successfully
       }
     }

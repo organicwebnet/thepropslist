@@ -6,6 +6,8 @@ import { PropFormData } from '../../../src/shared/types/props';
 import { useFirebase } from '../../../src/platforms/mobile/contexts/FirebaseContext';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useShows } from '../../../src/contexts/ShowsContext';
+import { usePermissions } from '../../../src/hooks/usePermissions';
+import { Permission } from '../../../src/shared/permissions';
 import LinearGradient from 'react-native-linear-gradient';
 
 export default function CreatePropScreen() {
@@ -13,9 +15,33 @@ export default function CreatePropScreen() {
   const { service } = useFirebase();
   const { user } = useAuth();
   const { selectedShow } = useShows();
+  const { hasPermission, canPerformAction } = usePermissions();
 
-  // Redirect if no show is selected
+  // Validate user and userProfile are available
+  if (!user) {
+    return null; // Will redirect via auth guard
+  }
+
+  // Check permissions and redirect if no show is selected
+  // Use permission value instead of function to avoid dependency issues
+  const canCreateProps = hasPermission(Permission.CREATE_PROPS);
+
   useEffect(() => {
+    // Check if user can create props
+    if (!canCreateProps) {
+      Alert.alert(
+        "Permission Denied",
+        "You don't have permission to create props.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]
+      );
+      return;
+    }
+
     if (!selectedShow) {
       Alert.alert(
         "No Show Selected",
@@ -33,11 +59,28 @@ export default function CreatePropScreen() {
         ]
       );
     }
-  }, [selectedShow, router]);
+  }, [selectedShow, router, canCreateProps]);
 
   const handleSubmit = async (data: PropFormData): Promise<boolean> => {
     if (!service || !user) {
-      console.error('Service or user not available');
+      Alert.alert('Error', 'Service or user not available. Please try again.');
+      return false;
+    }
+
+    // Check permission before creating
+    try {
+      const permissionCheck = canPerformAction('create_prop');
+      if (!permissionCheck.allowed) {
+        Alert.alert(
+          'Permission Denied',
+          permissionCheck.reason || 'You cannot create more props due to subscription limits.',
+          [{ text: 'OK' }]
+        );
+        return false;
+      }
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      Alert.alert('Error', 'Unable to verify permissions. Please try again.');
       return false;
     }
 

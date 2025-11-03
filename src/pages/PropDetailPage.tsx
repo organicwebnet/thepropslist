@@ -25,6 +25,8 @@ import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import type { CardData } from '../shared/types/taskManager';
 import { useAuth } from '../contexts/AuthContext.tsx';
 import { useShows } from '../contexts/ShowsContext';
+import { usePermissions } from '../hooks/usePermissions';
+import { Permission } from '../shared/permissions';
 import { User } from 'firebase/auth';
 import { lightTheme, darkTheme } from '../styles/theme.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
@@ -37,6 +39,7 @@ export default function PropDetailPage() {
   const { service } = useFirebase();
   const { user } = useAuth();
   const { selectedShow } = useShows();
+  const { hasPermission } = usePermissions();
   const [prop, setProp] = useState<Prop | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -196,6 +199,21 @@ export default function PropDetailPage() {
 
   const handleEditSubmit = async (data: PropFormData) => {
     if (!prop) return;
+    
+    // Check permission before editing
+    try {
+      if (!hasPermission(Permission.EDIT_PROPS)) {
+        Alert.alert('Permission Denied', 'You do not have permission to edit props.');
+        setIsEditing(false);
+        return;
+      }
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      Alert.alert('Error', 'Unable to verify permissions. Please try again.');
+      setIsEditing(false);
+      return;
+    }
+    
     try {
       await service.updateDocument('props', prop.id, {
          ...data,
@@ -212,6 +230,19 @@ export default function PropDetailPage() {
 
   const handleDeleteProp = async () => {
     if (!prop) return;
+    
+    // Check permission before deleting
+    try {
+      if (!hasPermission(Permission.DELETE_PROPS)) {
+        Alert.alert('Permission Denied', 'You do not have permission to delete props.');
+        return;
+      }
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      Alert.alert('Error', 'Unable to verify permissions. Please try again.');
+      return;
+    }
+    
     Alert.alert(
       'Delete Prop',
       'Are you sure you want to delete this prop? This action cannot be undone.',
@@ -328,22 +359,26 @@ export default function PropDetailPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-white">{prop.name}</h1>
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => {
-                  setIsEditing(true);
-                }}
-                className="p-2 text-gray-400 hover:text-primary transition-colors"
-                title="Edit prop"
-              >
-                <Edit className="h-5 w-5" />
-              </button>
-              <button
-                onClick={handleDeleteProp}
-                className="p-2 text-gray-400 hover:text-red-400 transition-colors"
-                title="Delete prop"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
+              {hasPermission(Permission.EDIT_PROPS) && (
+                <button
+                  onClick={() => {
+                    setIsEditing(true);
+                  }}
+                  className="p-2 text-gray-400 hover:text-primary transition-colors"
+                  title="Edit prop"
+                >
+                  <Edit className="h-5 w-5" />
+                </button>
+              )}
+              {hasPermission(Permission.DELETE_PROPS) && (
+                <button
+                  onClick={handleDeleteProp}
+                  className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                  title="Delete prop"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -768,12 +803,16 @@ export default function PropDetailPage() {
           <View style={styles.headerMobile}>
             <Text style={styles.titleMobile}>{prop.name}</Text>
             <View style={styles.actionsMobile}>
-              <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <Feather name="edit" size={20} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleDeleteProp} style={{ marginLeft: 12 }}>
-                <Feather name="trash-2" size={20} color="#ff6b6b" />
-              </TouchableOpacity>
+              {hasPermission(Permission.EDIT_PROPS) && (
+                <TouchableOpacity onPress={() => setIsEditing(true)}>
+                  <Feather name="edit" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
+              {hasPermission(Permission.DELETE_PROPS) && (
+                <TouchableOpacity onPress={handleDeleteProp} style={{ marginLeft: 12 }}>
+                  <Feather name="trash-2" size={20} color="#ff6b6b" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 

@@ -2,10 +2,12 @@ import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { usePermissions } from '../../src/hooks/usePermissions';
 import { View, ActivityIndicator } from 'react-native';
 
 export default function TabLayout() {
   const { user, loading } = useAuth();
+  const { isAdmin, isGod } = usePermissions();
 
   // Don't render tabs if user is not authenticated or still loading
   if (loading) {
@@ -19,6 +21,12 @@ export default function TabLayout() {
   if (!user) {
     return <Redirect href="/auth" />;
   }
+
+  // Check if user has admin privileges (for future admin routes)
+  // Note: Admin routes will be added in Phase 3, for now these values are prepared
+  // This variable is calculated but not yet used - will be used when admin routes are implemented
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const hasAdminAccess = isAdmin() || isGod();
 
   return (
     <Tabs
@@ -186,6 +194,8 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      {/* Future admin routes - will be conditionally rendered based on hasAdminAccess */}
+      {/* Admin routes will be implemented in Phase 3 */}
     </Tabs>
   );
 } 

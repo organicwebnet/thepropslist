@@ -1,14 +1,7 @@
 // import React from 'react'; // Not needed with new JSX transform
 import DashboardLayout from './PropsBibleHomepage';
 import { motion } from 'framer-motion';
-import {
-  FileText,
-  Package2,
-  Clock,
-  CheckCircle,
-  Crown,
-  Star
-} from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import { useShowSelection } from './contexts/ShowSelectionContext';
 import { useFirebase } from './contexts/FirebaseContext';
 import { useEffect, useState } from 'react';
@@ -19,6 +12,15 @@ import { Link } from 'react-router-dom';
 import OnboardingFlow from './components/OnboardingFlow';
 import { useWebAuth } from './contexts/WebAuthContext';
 import SubscriptionResourcePanel from './components/SubscriptionResourcePanel';
+import { WidgetGrid } from './components/DashboardWidgets/WidgetGrid';
+import { MyTasksWidget } from './components/DashboardWidgets/MyTasksWidget';
+import { TaskboardQuickLinksWidget } from './components/DashboardWidgets/TaskboardQuickLinksWidget';
+import { BoardCreationPromptWidget } from './components/DashboardWidgets/BoardCreationPromptWidget';
+import { PropsWithoutTasksWidget } from './components/DashboardWidgets/PropsWithoutTasksWidget';
+import { TaskboardActivitySummaryWidget } from './components/DashboardWidgets/TaskboardActivitySummaryWidget';
+import { UpcomingDeadlinesWidget } from './components/DashboardWidgets/UpcomingDeadlinesWidget';
+import { WidgetSettingsModal } from './components/DashboardWidgets/WidgetSettingsModal';
+import { useWidgetPreferences } from './hooks/useWidgetPreferences';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -55,7 +57,10 @@ const DashboardHome: React.FC = () => {
   const { currentShowId } = useShowSelection();
   // const _navigate = useNavigate(); // Not used in current implementation
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const { userProfile } = useWebAuth();
+  const userRole = userProfile?.role || '';
+  const { isWidgetEnabled } = useWidgetPreferences(userRole);
 
   useEffect(() => {
     // Show onboarding if user hasn't completed it
@@ -146,78 +151,17 @@ const DashboardHome: React.FC = () => {
     return () => { if (unsubBoards) unsubBoards(); unsubCards.forEach(u => u && u()); };
   }, [service, currentShowId]);
 
-  // Calculate stats
+  // Calculate stats for show banner
   const totalProps = props.length;
-  const totalOutstandingTasks = cards.filter(card => !card.completed).length;
   const readyProps = props.filter(p => (p as any).status === 'with-stage-management').length;
   const showReadyPercent = totalProps > 0 ? Math.round((readyProps / totalProps) * 100) : 0;
-
-  // Recent props activity
-  function toDateSafe(input: any): Date | null {
-    if (!input) return null;
-    if (input instanceof Date) return input;
-    if (typeof input === 'number') return new Date(input);
-    if (typeof input === 'string' && input.trim() !== '') {
-      const parsed = new Date(input);
-      return isNaN(parsed.getTime()) ? null : parsed;
-    }
-    if (input && typeof input.toDate === 'function') {
-      try {
-        const d = input.toDate();
-        return d instanceof Date && !isNaN(d.getTime()) ? d : null;
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  const recentActivity = props
-    .map(p => {
-      const created = toDateSafe((p as any).createdAt);
-      const updated = toDateSafe((p as any).updatedAt);
-      const latest = updated && (!created || updated >= created) ? updated : created;
-      const type = updated && created ? (updated >= created ? 'updated' : 'added') : (updated ? 'updated' : 'added');
-      return latest ? { prop: p, type, date: latest } : null;
-    })
-    .filter((x): x is { prop: Prop; type: 'added' | 'updated'; date: Date } => Boolean(x))
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .slice(0, 4);
-
-  // Urgent tasks
-  const now = new Date();
-  const tasksWithDue = cards
-    .filter(card => card.dueDate && !card.completed)
-    .map(card => ({
-      ...card,
-      due: card.dueDate ? new Date(card.dueDate) : new Date()
-    }))
-    .sort((a, b) => a.due.getTime() - b.due.getTime())
-    .slice(0, 6);
-
-  // Cards assigned to or mentioning the current user
-  const assignedOrMentionedCards = cards.filter(card => {
-    if (!user) return false;
-    const assigned = Array.isArray(card.assignedTo) && card.assignedTo.includes((user as any).uid);
-    const mention = (userProfile && card.description && (
-      (userProfile.displayName && card.description.includes(userProfile.displayName)) ||
-      (userProfile.email && card.description.includes(userProfile.email))
-    ));
-    return assigned || Boolean(mention);
-  });
-
-  function getTaskColor(due: Date) {
-    if (due < now) return 'bg-red-600 text-white';
-    const diff = (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-    if (diff < 2) return 'bg-orange-500 text-white';
-    return 'bg-green-600 text-white';
-  }
 
   function isValidDateString(val: unknown): val is string {
     return typeof val === 'string' && (val as string).trim() !== '';
   }
 
   // Days until first performance
+  const now = new Date();
   let daysLeft: number | null = null;
   let perfDate: Date | null = null;
   const perfRaw = (show as any)?.firstPerformanceDate || (show as any)?.startDate;
@@ -322,7 +266,7 @@ const DashboardHome: React.FC = () => {
               </div>
               <div className="text-right">
                 <div className="text-3xl font-bold text-white">{daysLeft !== null ? `${daysLeft} days` : '--'}</div>
-                <div className="text-pb-light/80 text-sm">until first night</div>
+                <div className="text-pb-light/80 text-sm">until first performance</div>
               </div>
             </div>
             <div className="w-full bg-pb-light/20 rounded-full h-2">
@@ -336,112 +280,97 @@ const DashboardHome: React.FC = () => {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Statistics Cards */}
-          <motion.div variants={itemVariants} className="lg:col-span-2">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {[
-                { icon: Package2, label: 'Total Props', value: totalProps, color: 'bg-pb-blue' },
-                { icon: Clock, label: 'Pending Tasks', value: totalOutstandingTasks, color: 'bg-pb-orange' },
-                { icon: CheckCircle, label: 'Ready for Show', value: `${showReadyPercent}%`, color: 'bg-pb-success' },
-              ].map((stat, index) => (
-                <motion.div
-                  key={index}
-                  variants={cardVariants}
-                  whileHover="hover"
-                  className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-4 border border-pb-primary/20"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className={`w-10 h-10 ${stat.color}/20 rounded-xl flex items-center justify-center`}>
-                      <stat.icon className={`w-5 h-5 ${stat.color.replace('bg-', 'text-')}`} />
-                    </div>
-                  </div>
-                  <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
-                  <div className="text-sm text-pb-gray">{stat.label}</div>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Urgent Tasks Row */}
-            <motion.div variants={itemVariants}>
-              <div className="flex items-center space-x-2 mb-4">
-                <Clock className="w-5 h-5 text-pb-primary" />
-                <h3 className="text-lg font-semibold text-white">Urgent Tasks</h3>
-              </div>
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {tasksWithDue.length === 0 && <div className="text-pb-gray">No urgent tasks.</div>}
-                {tasksWithDue.map((task) => (
-                  <Link key={task.id} to={`/boards?cardId=${task.id}`} className="min-w-[220px]">
-                    <div className={`p-4 rounded-xl shadow ${getTaskColor((task as any).due)}`}>
-                      <div className="font-bold text-lg">{task.title}</div>
-                      <div className="text-xs mb-1">Due: {(task as any).due.toLocaleString()}</div>
-                      <div className="text-xs">{task.description}</div>
-                      </div>
-                  </Link>
-                ))}
-                    </div>
-                  </motion.div>
-            {user && assignedOrMentionedCards.length > 0 && (
-              <motion.div variants={itemVariants}>
-                <div className="flex items-center space-x-2 mb-4 mt-6">
-                  <Star className="w-5 h-5 text-pb-accent" />
-                  <h3 className="text-lg font-semibold text-white">Your Tasks</h3>
-                </div>
-                <div className="flex gap-3 overflow-x-auto pb-2">
-                  {assignedOrMentionedCards.map(card => (
-                    <Link key={card.id} to={`/boards?cardId=${card.id}`} className="min-w-[220px]">
-                      <div className="p-4 rounded-xl shadow bg-pb-primary/80 text-white">
-                        <div className="font-bold text-lg">{card.title}</div>
-                        {card.dueDate && <div className="text-xs mb-1">Due: {new Date(card.dueDate).toLocaleString()}</div>}
-                        <div className="text-xs line-clamp-2">{card.description}</div>
-                      </div>
-                    </Link>
-                ))}
-              </div>
-            </motion.div>
-            )}
-          </motion.div>
-
-          {/* Right Column - Recent Props Activity and Subscription Panel */}
-          <motion.div variants={itemVariants} className="lg:col-span-2 space-y-6">
-            {/* Recent Props Activity */}
-            <div className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-6 border border-pb-primary/20">
-              <div className="flex items-center space-x-2 mb-4">
-                <FileText className="w-5 h-5 text-pb-accent" />
-                <h3 className="text-lg font-semibold text-white">Recent Props Activity</h3>
-              </div>
-              <div className="space-y-4">
-                {recentActivity.length === 0 && <div className="text-pb-gray">No recent activity.</div>}
-                {recentActivity.map((activity, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-start space-x-3 p-3 rounded-lg bg-pb-primary/5 hover:bg-pb-primary/10 transition-colors"
-                  >
-                    <div className="w-8 h-8 bg-pb-accent/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Crown className="w-4 h-4 text-pb-accent" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white">{activity.prop.name}</p>
-                      <p className="text-xs text-pb-gray">{activity.type === 'added' ? 'Prop added' : 'Prop updated'}</p>
-                      <p className="text-xs text-pb-gray mt-1">{activity.date ? activity.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-            {/* Subscription Resource Panel */}
-            <SubscriptionResourcePanel />
-          </motion.div>
+        {/* Widget Settings Button */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowWidgetSettings(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-pb-primary/20 hover:bg-pb-primary/30 border border-pb-primary/30 rounded-lg text-white transition-colors"
+          >
+            <Settings2 className="w-4 h-4" />
+            <span>Widget Settings</span>
+          </button>
         </div>
+
+        {/* Widget Grid */}
+        <WidgetGrid>
+          {isWidgetEnabled('my-tasks') && (
+            <MyTasksWidget
+              showId={currentShowId}
+              cards={cards}
+              userId={user?.uid}
+              userDisplayName={userProfile?.displayName}
+              userEmail={userProfile?.email}
+            />
+          )}
+
+          {isWidgetEnabled('taskboard-quick-links') && (
+            <TaskboardQuickLinksWidget
+              showId={currentShowId}
+              cards={cards}
+            />
+          )}
+
+          {isWidgetEnabled('upcoming-deadlines') && (
+            <UpcomingDeadlinesWidget
+              showId={currentShowId}
+              cards={cards}
+            />
+          )}
+
+          {isWidgetEnabled('task-planning-assistant') && (
+            <PropsWithoutTasksWidget
+              showId={currentShowId}
+              props={props}
+              cards={cards}
+            />
+          )}
+
+          {isWidgetEnabled('taskboard-activity-summary') && (
+            <TaskboardActivitySummaryWidget
+              showId={currentShowId}
+              cards={cards}
+            />
+          )}
+
+          {isWidgetEnabled('board-creation-prompt') && (
+            <BoardCreationPromptWidget
+              showId={currentShowId}
+            />
+          )}
+
+          {/* Subscription Resource Panel - keep this */}
+          <SubscriptionResourcePanel />
+        </WidgetGrid>
+
+        {/* Empty State */}
+        {!isWidgetEnabled('my-tasks') &&
+          !isWidgetEnabled('taskboard-quick-links') &&
+          !isWidgetEnabled('upcoming-deadlines') &&
+          !isWidgetEnabled('task-planning-assistant') &&
+          !isWidgetEnabled('taskboard-activity-summary') &&
+          !isWidgetEnabled('board-creation-prompt') && (
+            <motion.div
+              variants={cardVariants}
+              className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-12 border border-pb-primary/20 text-center"
+            >
+              <p className="text-pb-gray mb-4">No widgets enabled</p>
+              <button
+                onClick={() => setShowWidgetSettings(true)}
+                className="px-6 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg transition-colors"
+              >
+                Configure Widgets
+              </button>
+            </motion.div>
+          )}
       </motion.div>
     </DashboardLayout>
     <OnboardingFlow
       isOpen={showOnboarding}
       onComplete={() => setShowOnboarding(false)}
+    />
+    <WidgetSettingsModal
+      isOpen={showWidgetSettings}
+      onClose={() => setShowWidgetSettings(false)}
     />
     </>
   );

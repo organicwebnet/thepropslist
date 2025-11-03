@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import ShowFormNative from '../../../src/components/ShowForm.native';
 import { useShows } from '../../../src/contexts/ShowsContext';
+import { usePermissions } from '../../../src/hooks/usePermissions';
+import { useAuth } from '../../../src/contexts/AuthContext';
+import { Permission } from '../../../src/shared/permissions';
 import type { Show } from '../../../src/shared/services/firebase/types'; // Using Show from firebase/types
 import { useTheme } from '../../../src/contexts/ThemeContext';
 import { lightTheme as appLightTheme, darkTheme as appDarkTheme } from '../../../src/styles/theme';
@@ -14,10 +17,53 @@ export default function CreateShowScreen() {
   const { theme: themeName } = useTheme();
   const currentThemeColors = themeName === 'light' ? appLightTheme.colors : appDarkTheme.colors;
   const styles = getStyles(currentThemeColors);
+  const { hasPermission, canPerformAction } = usePermissions();
+  const { user } = useAuth();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Validate user is available
+  if (!user) {
+    return null; // Will redirect via auth guard
+  }
+
+  // Check permissions on mount
+  // Use permission value instead of function to avoid dependency issues
+  const canCreateShows = hasPermission(Permission.CREATE_SHOWS);
+
+  useEffect(() => {
+    if (!canCreateShows) {
+      Alert.alert(
+        "Permission Denied",
+        "You don't have permission to create shows.",
+        [
+          {
+            text: "OK",
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    }
+  }, [canCreateShows, router]);
+
   const handleFormSubmit = async (formDataFromForm: Partial<Show> & { _logoImageUri?: string | null }) => {
+    // Check permission before creating
+    try {
+      const permissionCheck = canPerformAction('create_show');
+      if (!permissionCheck.allowed) {
+        Alert.alert(
+          'Permission Denied',
+          permissionCheck.reason || 'You cannot create more shows due to subscription limits.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      Alert.alert('Error', 'Unable to verify permissions. Please try again.');
+      return;
+    }
+
     setIsSubmitting(true);
     
     // Prepare data for addShow: remove fields managed by the context/backend
