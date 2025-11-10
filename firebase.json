@@ -63,12 +63,6 @@
         "**/.*",
         "**/node_modules/**"
       ],
-      "redirects": [
-        // Temporarily disabled to avoid domain conflicts
-        // { "source": "/app/**", "destination": "https://props-bible-app-1c1cb.web.app/:splat", "type": 301 },
-        // { "source": "/login", "destination": "https://props-bible-app-1c1cb.web.app/login", "type": 301 },
-        // { "source": "/signup", "destination": "https://props-bible-app-1c1cb.web.app", "type": 301 }
-      ],
       "rewrites": [
         { "source": "/contact/**", "destination": "/contact/index.html" },
         { "source": "/news/**", "destination": "/news/index.html" },

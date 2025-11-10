@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface ImageLoadingState {
   loaded: Set<string>;
@@ -84,27 +84,34 @@ export const usePropListLoading = (props: any[]) => {
   // Reset image loading when props change
   useEffect(() => {
     imageLoading.reset();
-  }, [props.length]); // Remove imageLoading from dependencies to prevent infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.length]); // Only reset when props count changes, not on every render
 
   const handleDataLoaded = useCallback(() => {
     setDataLoading(false);
     setInitialLoadComplete(true);
   }, []);
 
+  // Use ref to access latest imageLoading without causing dependency issues
+  const imageLoadingRef = useRef(imageLoading);
+  useEffect(() => {
+    imageLoadingRef.current = imageLoading;
+  }, [imageLoading]);
+
   const handleImageLoad = useCallback((propId: string) => {
-    imageLoading.markLoaded(propId);
-  }, []); // Remove imageLoading dependency to prevent infinite loops
+    imageLoadingRef.current.markLoaded(propId);
+  }, []); // Stable callback - uses ref to access latest imageLoading
 
   const handleImageError = useCallback((propId: string) => {
-    imageLoading.markError(propId);
-  }, []); // Remove imageLoading dependency to prevent infinite loops
+    imageLoadingRef.current.markError(propId);
+  }, []); // Stable callback - uses ref to access latest imageLoading
 
   const getLoadingPhase = useCallback(() => {
     if (dataLoading) return 'data';
     if (props.length === 0) return 'complete';
-    if (imageLoading.state.loaded.size < props.length) return 'images';
+    if (imageLoadingRef.current.state.loaded.size < props.length) return 'images';
     return 'complete';
-  }, [dataLoading, props.length]); // Remove imageLoading.state.loaded.size to prevent infinite loops
+  }, [dataLoading, props.length]); // Stable callback - uses ref to access latest state
 
   return {
     dataLoading,

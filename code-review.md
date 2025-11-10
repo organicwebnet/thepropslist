@@ -1,326 +1,552 @@
-# Code Review: Permission System Improvements
+# Code Review: Android App Fixes - Biometric Sign-In, Navigation, and Crash Prevention
+
+**Date:** 2025-01-27  
+**Reviewer:** AI Code Review  
+**Scope:** Changes to `app/auth.tsx` and `app/(tabs)/_layout.tsx`  
+**Quality Standard:** Production-ready code review
+
+---
 
 ## Executive Summary
 
-The permission system improvements have successfully extracted duplicate code and improved maintainability. However, several critical issues were identified that must be addressed before deployment:
+✅ **Overall Assessment:** The fixes address the reported issues, but there are **critical concerns** about potential infinite loops and edge cases that need attention.
 
-1. **Field name inconsistency** - `usePermissionsShared` uses `ownerId` for all collections, but props use `userId`
-2. **TypeScript type errors** - Multiple type compatibility issues in the adapter
-3. **Unused variable** - `hasAdminAccess` is declared but never used
-4. **Type safety** - Some `any` types remain where they could be more specific
+**Status:**
+- ✅ Duplicate biometric sign-in issue addressed
+- ✅ Navigation items after help fixed
+- ⚠️ **CRITICAL:** Potential infinite loop risk in `app/auth.tsx`
+- ⚠️ Edge cases need better handling
+- ✅ Code quality is generally good
 
 ---
 
-## Critical Issues (Must Fix)
+## 1. Did We Truly Fix the Issues?
 
-### 1. **Field Name Inconsistency in usePermissionsShared**
-**Location:** `src/shared/hooks/usePermissions.ts` Lines 87-96
-**Issue:** The hook queries all collections using `ownerId`, but:
-- Props use `userId` (confirmed in Prop interface and PropsListScreen)
-- Shows use `ownerId` (confirmed in schema documentation)
-- Boards may use either field
+### 1.1 ✅ Duplicate Biometric Sign-In - FIXED
+
+**Problem:** Two biometric prompts were showing:
+1. Automatic prompt in `app/auth.tsx` when user is not signed in
+2. Manual button in `AuthForm.tsx`
+
+**Solution:** Added `hasAttemptedAutoPrompt` ref to track if auto-prompt has been attempted. The auto-prompt now only runs once, and if the user cancels or it fails, they can use the button in `AuthForm`.
+
+**Verification:**
+- ✅ `hasAttemptedAutoPrompt.current` prevents duplicate auto-prompts
+- ✅ Button in `AuthForm` still works for manual biometric sign-in
+- ✅ User can cancel auto-prompt and use button instead
+
+**Location:** `app/auth.tsx:20, 70-71`
+
+### 1.2 ✅ Navigation Items After Help - FIXED
+
+**Problem:** `subscription.tsx` route in `(tabs)` directory was being auto-discovered by Expo Router and showing as a tab after "Help".
+
+**Solution:** Added `subscription` route to hidden routes list with `href: null`.
+
+**Verification:**
+- ✅ `subscription` route is now hidden from tab bar
+- ✅ All visible tabs end with "Help" as intended
+- ✅ Navigation order: Home → Props → Shows → Packing → Shopping → Profile → Help
+
+**Location:** `app/(tabs)/_layout.tsx:198-203`
+
+### 1.3 ⚠️ Android Crashes - PARTIALLY ADDRESSED
+
+**Problem:** App was crashing on Android.
+
+**Analysis:** 
+- ✅ `MainActivity.onCreate` already has proper `savedInstanceState` handling
+- ✅ `MainApplication.onCreate` already has error handling
+- ⚠️ Crashes might be from the infinite loop risk (see section 2.1)
+
+**Status:** Native code appears correct. Crashes may be caused by the React Native infinite loop issue below.
+
+---
+
+## 2. Critical Issues (Must Fix)
+
+### 2.1 ⚠️ **CRITICAL: Potential Infinite Loop in `app/auth.tsx`**
+
+**Location:** `app/auth.tsx:22-112`
+
+**Problem:**
+The `useEffect` has `firebaseService` in its dependency array. While `firebaseService` is memoized in `FirebaseContext`, there's a risk if the context value object is recreated. More critically, the effect can re-run multiple times when auth state changes, potentially causing issues.
 
 **Current Code:**
 ```typescript
-where: [['ownerId', '==', userId]]  // Used for all collections
+useEffect(() => {
+  // ... biometric check logic ...
+}, [user, status, isInitialized, firebaseService]);
 ```
 
-**Impact:** 
-- Props count will be incorrect (querying wrong field)
-- Shows and boards counts may be incorrect if they use `userId` instead
+**Analysis:**
+1. **Firebase Service Stability:** ✅ `firebaseService` is created with `useMemo` in `FirebaseContext` (line 31-34), so it's stable
+2. **Context Value Stability:** ⚠️ Context value is memoized with `[service, isInitialized, error]` dependencies. If `isInitialized` changes, context value object is recreated, but `service` reference should remain the same
+3. **Effect Re-runs:** When `user` or `status` changes, the effect re-runs. This is intentional, but we need to ensure it doesn't cause infinite loops
 
-**Fix Required:** 
-Query props with `userId`, but shows/boards with `ownerId` (or check both fields):
+**Potential Issues:**
+- If `firebaseService.signInWithEmailAndPassword()` triggers auth state change, which updates `user` and `status`, the effect will re-run
+- The effect checks `hasAttemptedAutoPrompt.current`, which should prevent re-prompting, but there's a race condition risk
+- If `isInitialized` changes from `false` to `true` while user is signed out, the effect will run and attempt biometric sign-in (this is correct behavior)
+
+**Fix Required:**
+```typescript
+// Option 1: Use ref for firebaseService to avoid dependency issues
+const firebaseServiceRef = useRef(firebaseService);
+useEffect(() => {
+  firebaseServiceRef.current = firebaseService;
+}, [firebaseService]);
+
+useEffect(() => {
+  // Use firebaseServiceRef.current instead of firebaseService
+  // ... rest of logic ...
+}, [user, status, isInitialized]); // Remove firebaseService from deps
+```
+
+**OR**
 
 ```typescript
-// For props - use userId
-firebaseService.getDocuments('props', {
-  where: [['userId', '==', userId]]
-}),
+// Option 2: Add guard to prevent re-runs during sign-in process
+const isSigningInRef = useRef(false);
 
-// For shows - check both ownerId and userId (legacy support)
-// For boards - check ownerId
+useEffect(() => {
+  // ... existing code ...
+  
+  if (!user && status === 'out') {
+    // ... existing checks ...
+    if (hasStoredCredentials && isBiometricEnabled && isInitialized && firebaseService && !hasAttemptedAutoPrompt.current && !isSigningInRef.current) {
+      isSigningInRef.current = true;
+      hasAttemptedAutoPrompt.current = true;
+      setAttemptingBiometricSignIn(true);
+      const result = await BiometricService.authenticateAndGetCredentials('Sign in to The Props List');
+      
+      if (result.success && result.credentials) {
+        try {
+          await firebaseService.signInWithEmailAndPassword(
+            result.credentials.email,
+            result.credentials.password
+          );
+          // ... rest of success handling ...
+        } catch (signInError: any) {
+          // ... error handling ...
+        } finally {
+          isSigningInRef.current = false;
+          setAttemptingBiometricSignIn(false);
+        }
+      } else {
+        isSigningInRef.current = false;
+        setAttemptingBiometricSignIn(false);
+        // ... rest of error handling ...
+      }
+    }
+  }
+}, [user, status, isInitialized, firebaseService]);
 ```
 
-### 2. **TypeScript Type Errors**
-**Locations:**
-- `src/shared/hooks/createFirebaseAdapter.ts` - Generic constraint issues
-- `src/hooks/usePermissions.ts` - Type incompatibility
-- `src/hooks/useSubscription.ts` - Missing exports
+**Impact:** 🔴 **CRITICAL** - Could cause app crashes, excessive re-renders, or infinite loops
 
-**Issues:**
-1. `MinimalFirebaseService.getDocuments<T>` constraint doesn't match `FirebaseDocument<T>` requirements
-2. `UserProfile` type mismatch between auth types and permission types
-3. `SubscriptionPlan` and `SubscriptionLimits` not exported from constants
-
-**Fix Required:** 
-- Fix generic constraints in `createFirebaseAdapter`
-- Export missing types from constants
-- Align UserProfile types
-
-### 3. **Unused Variable**
-**Location:** `app/(tabs)/_layout.tsx` Line 27
-**Issue:** `hasAdminAccess` is calculated but never used
-
-**Fix Required:** Either use it or remove it (prefer to keep it for future use with a comment explaining it's for Phase 3)
+**Recommendation:** Implement Option 2 (guard with `isSigningInRef`) as it's more defensive and prevents race conditions.
 
 ---
 
-## High Priority Issues
+### 2.2 ⚠️ Edge Case: Biometric Check After Sign-In
 
-### 4. **Type Safety - `any` Types**
-**Locations:**
-- `web-app/src/hooks/usePermissions.ts` Line 31: `as any` type assertion
-- `src/shared/hooks/createFirebaseAdapter.ts` Line 40: Generic `T = any`
+**Location:** `app/auth.tsx:32-60`
 
-**Issue:** Using `any` defeats TypeScript's type safety
+**Problem:**
+When user signs in via biometric, the effect re-runs because `user` and `status` change. The code uses `justCompletedBiometricSignIn.current` to skip the unlock check, but there's a timing issue:
 
-**Fix Required:** 
-- Use proper type constraints instead of `any`
-- Create a union type for FirebaseService compatibility
+1. User signs in via biometric → `justCompletedBiometricSignIn.current = true`
+2. Auth state updates → `user` changes, effect re-runs
+3. Effect checks `justCompletedBiometricSignIn.current` and skips unlock check ✅
+4. Flag is reset to `false`
+5. But what if auth state updates again before redirect?
 
-### 5. **Error Handling in createFirebaseAdapter**
-**Location:** `src/shared/hooks/createFirebaseAdapter.ts` Line 44
-**Issue:** No error handling if `getDocuments` fails
-
-**Fix Required:** Add try-catch to handle errors gracefully
-
----
-
-## Medium Priority Issues
-
-### 6. **Documentation**
-✅ Good: Comments are clear and helpful
-⚠️ Minor: Some edge cases could be documented better
-
-### 7. **UK English**
-✅ Good: Code uses UK English ("organised", "colour")
-⚠️ Check: Verify all user-facing strings use UK English
-
----
-
-## Code Quality Assessment
-
-### Positive Aspects
-
-1. ✅ **DRY Principle**: Successfully extracted adapter creation to shared utility
-2. ✅ **Memoisation**: Proper use of `useMemo` prevents infinite loops
-3. ✅ **Error Handling**: Added try-catch blocks in permission checks
-4. ✅ **Documentation**: Good inline comments explaining the architecture
-5. ✅ **Separation of Concerns**: Clean adapter pattern with platform-specific hooks
-
-### Areas for Improvement
-
-1. ⚠️ **Field Name Consistency**: Need to handle different field names per collection
-2. ⚠️ **Type Safety**: Some `any` types and type assertions remain
-3. ⚠️ **Unused Code**: `hasAdminAccess` variable declared but unused
-4. ⚠️ **Error Handling**: Missing error handling in adapter utility
-
----
-
-## Data Flow Analysis
-
-### Current Flow (After Improvements):
-```
-Component
-  ↓
-usePermissions() [Platform-specific, uses useMemo]
-  ↓
-createFirebaseAdapter() [Shared utility, memoised]
-  ↓
-usePermissionsShared() [Shared hook]
-  ↓
-FirebaseService.getDocuments() [Via adapter]
-  ↓
-PermissionService.canPerformAction()
+**Current Code:**
+```typescript
+if (justCompletedBiometricSignIn.current) {
+  justCompletedBiometricSignIn.current = false; // Reset flag
+  setBiometricOk(true);
+  setBiometricChecked(true);
+  return;
+}
 ```
 
-### Issues:
-1. **Field Name Mismatch**: Adapter queries wrong field for props
-2. **Type Safety**: Type assertions needed due to platform differences
+**Analysis:**
+- ✅ This should work, but the flag is reset immediately
+- ⚠️ If auth state updates multiple times (e.g., profile fetch triggers another update), the unlock check might run on the second update
+
+**Fix Required:**
+```typescript
+// Use a more robust check - only skip if we just completed sign-in AND user was not initially signed in
+if (justCompletedBiometricSignIn.current && !initialUserState.current?.user) {
+  justCompletedBiometricSignIn.current = false;
+  setBiometricOk(true);
+  setBiometricChecked(true);
+  return;
+}
+```
+
+**Impact:** 🟡 **MEDIUM** - Could cause unnecessary biometric prompts after sign-in
 
 ---
 
-## Recommendations
+### 2.3 ⚠️ Missing Import in `_layout.tsx`
 
-### Must Fix Before Production:
-1. Fix field name inconsistency (props use `userId`, not `ownerId`)
-2. Fix TypeScript type errors
-3. Remove or use `hasAdminAccess` variable
+**Location:** `app/(tabs)/_layout.tsx:6`
 
-### Should Fix Soon:
-4. Improve type safety (reduce `any` usage)
-5. Add error handling in adapter utility
+**Problem:**
+The file uses `View` and `ActivityIndicator` but doesn't import them.
+
+**Current Code:**
+```typescript
+import { View, ActivityIndicator } from 'react-native';
+```
+
+**Wait, actually it IS imported on line 6!** Let me check the file again...
+
+Actually, looking at the file I read, line 6 shows:
+```typescript
+import { View, ActivityIndicator } from 'react-native';
+```
+
+So this is already correct. ✅
+
+---
+
+## 3. Code Quality Assessment
+
+### 3.1 ✅ Code Readability
+
+**Strengths:**
+- ✅ Clear variable names (`hasAttemptedAutoPrompt`, `justCompletedBiometricSignIn`)
+- ✅ Good comments explaining the logic
+- ✅ Proper use of refs for values that shouldn't trigger re-renders
+
+**Areas for Improvement:**
+- ⚠️ The `useEffect` is quite long (90 lines). Consider breaking it into smaller functions
+- ⚠️ Some nested conditionals could be simplified
+
+### 3.2 ✅ Code Consistency
+
+**Strengths:**
+- ✅ Consistent use of TypeScript
+- ✅ Consistent error handling patterns
+- ✅ Consistent naming conventions
+
+**Areas for Improvement:**
+- ⚠️ Mixed use of `console.error` and `console.log` - should standardize on `console.error` for errors
+
+### 3.3 ✅ Function/Class Sizing
+
+**Assessment:**
+- ✅ Functions are appropriately sized
+- ⚠️ The main `useEffect` in `app/auth.tsx` is quite long (90 lines) - consider extracting helper functions
+
+**Recommendation:**
+```typescript
+// Extract helper functions
+const handleBiometricUnlock = async () => { /* ... */ };
+const handleBiometricSignIn = async () => { /* ... */ };
+
+useEffect(() => {
+  if (user && status === 'in') {
+    handleBiometricUnlock();
+  } else if (!user && status === 'out') {
+    handleBiometricSignIn();
+  }
+}, [user, status, isInitialized, firebaseService]);
+```
+
+### 3.4 ✅ Comments
+
+**Assessment:**
+- ✅ Comments are clear and necessary
+- ✅ Not excessive
+- ✅ Explain the "why" not just the "what"
+
+**Example of good comment:**
+```typescript
+// Track if we've already attempted auto-prompt to prevent duplicates
+const hasAttemptedAutoPrompt = useRef(false);
+```
+
+---
+
+## 4. Data Flow Analysis
+
+### 4.1 Biometric Sign-In Flow
+
+**Current Flow:**
+1. User opens app → `app/auth.tsx` mounts
+2. `useEffect` runs → checks if user is signed out
+3. If signed out AND has stored credentials → auto-prompts biometric
+4. User authenticates → credentials retrieved
+5. `firebaseService.signInWithEmailAndPassword()` called
+6. Auth state updates → `user` and `status` change
+7. Effect re-runs → checks `justCompletedBiometricSignIn.current`
+8. Skips unlock check → redirects to `/(tabs)`
+
+**Potential Issues:**
+- ⚠️ Step 6-7: Effect re-runs when auth state changes. This is expected, but we need to ensure it doesn't cause loops
+- ⚠️ If user cancels biometric, `hasAttemptedAutoPrompt.current` is set to `true`, so auto-prompt won't run again. User can still use button in `AuthForm` ✅
+
+**New Patterns:**
+- ✅ Using refs to track state that shouldn't trigger re-renders (`hasAttemptedAutoPrompt`, `justCompletedBiometricSignIn`)
+- ✅ Using `initialUserState` ref to distinguish between "already signed in" vs "just signed in"
+
+---
+
+## 5. Edge Cases
+
+### 5.1 ✅ User Cancels Biometric Auto-Prompt
+
+**Current Handling:**
+- ✅ `hasAttemptedAutoPrompt.current = true` prevents re-prompting
+- ✅ `setBiometricOk(true)` allows login form to show
+- ✅ User can use button in `AuthForm` for manual biometric sign-in
+
+**Status:** ✅ Handled correctly
+
+### 5.2 ✅ Biometric Sign-In Fails (Invalid Credentials)
+
+**Current Handling:**
+- ✅ Credentials are cleared: `await BiometricService.clearStoredCredentials()`
+- ✅ `setBiometricOk(false)` shows error state
+- ✅ User can sign in with email/password
+
+**Status:** ✅ Handled correctly
+
+### 5.3 ⚠️ Firebase Service Not Initialized
+
+**Current Handling:**
+- ✅ Check: `if (hasStoredCredentials && isBiometricEnabled && isInitialized && firebaseService && !hasAttemptedAutoPrompt.current)`
+- ✅ Effect waits for `isInitialized` to be `true`
+
+**Potential Issue:**
+- ⚠️ If `isInitialized` changes from `false` to `true` while user is signed out, effect will run. This is correct, but we should ensure it doesn't run multiple times if `isInitialized` toggles
+
+**Status:** ⚠️ Mostly handled, but could be more defensive
+
+### 5.4 ⚠️ Multiple Rapid Auth State Changes
+
+**Problem:**
+If auth state changes multiple times rapidly (e.g., during sign-in process), the effect will run multiple times.
+
+**Current Handling:**
+- ✅ `hasAttemptedAutoPrompt.current` prevents duplicate auto-prompts
+- ✅ `justCompletedBiometricSignIn.current` prevents unlock check after sign-in
+- ⚠️ But there's no guard against multiple rapid state changes
+
+**Recommendation:** Add `isSigningInRef` guard (see section 2.1)
+
+---
+
+## 6. Effects on Rest of Codebase
+
+### 6.1 ✅ No Breaking Changes
+
+**Assessment:**
+- ✅ Changes are isolated to `app/auth.tsx` and `app/(tabs)/_layout.tsx`
+- ✅ No API changes
+- ✅ No database schema changes
+- ✅ No changes to shared services
+
+**Impact:** ✅ **LOW** - Changes are self-contained
+
+### 6.2 ✅ Integration with Existing Code
+
+**BiometricService Integration:**
+- ✅ Uses existing `BiometricService` methods
+- ✅ No changes to service interface
+- ✅ Properly handles all error cases
+
+**AuthContext Integration:**
+- ✅ Uses existing `useAuth()` hook
+- ✅ Properly handles `user` and `status` states
+- ✅ No changes to auth context
+
+**FirebaseContext Integration:**
+- ✅ Uses existing `useFirebase()` hook
+- ✅ Properly checks `isInitialized`
+- ⚠️ Potential issue with `firebaseService` dependency (see section 2.1)
+
+---
+
+## 7. Front-End Optimisation
+
+### 7.1 ✅ React Native Optimisation
+
+**Assessment:**
+- ✅ Uses `useRef` to avoid unnecessary re-renders
+- ✅ Proper use of `useState` for UI state
+- ⚠️ Long `useEffect` could be optimised by extracting helper functions
+
+### 7.2 ✅ Loading States
+
+**Assessment:**
+- ✅ Shows loading indicator while checking biometric: `attemptingBiometricSignIn`
+- ✅ Shows loading indicator while initializing: `!biometricChecked`
+- ✅ Proper loading messages
+
+### 7.3 ✅ Error States
+
+**Assessment:**
+- ✅ Handles all error cases
+- ✅ Shows appropriate error messages
+- ✅ Clears invalid credentials
+
+---
+
+## 8. Security Considerations
+
+### 8.1 ✅ Credential Storage
+
+**Assessment:**
+- ✅ Uses `BiometricService` which uses `SecureStore` for credential storage
+- ✅ Credentials are cleared on invalid sign-in
+- ✅ Proper error handling
+
+### 8.2 ✅ Authentication Flow
+
+**Assessment:**
+- ✅ Properly validates Firebase service availability
+- ✅ Checks biometric capabilities before attempting
+- ✅ Handles all error cases
+
+---
+
+## 9. Testing Recommendations
+
+### 9.1 ⚠️ Missing Tests
+
+**Critical Tests Needed:**
+1. Test that auto-prompt only runs once
+2. Test that button in `AuthForm` still works after cancelling auto-prompt
+3. Test that unlock check doesn't run after biometric sign-in
+4. Test that effect doesn't cause infinite loops
+5. Test rapid auth state changes
+
+**Recommended Test Cases:**
+```typescript
+describe('AuthScreen Biometric Flow', () => {
+  it('should only auto-prompt once', async () => {
+    // Mock hasStoredCredentials = true
+    // Verify authenticateAndGetCredentials is called only once
+  });
+
+  it('should allow manual biometric sign-in after cancelling auto-prompt', async () => {
+    // Cancel auto-prompt
+    // Verify button in AuthForm works
+  });
+
+  it('should not run unlock check after biometric sign-in', async () => {
+    // Sign in via biometric
+    // Verify unlock check is skipped
+  });
+
+  it('should handle rapid auth state changes without loops', async () => {
+    // Simulate rapid state changes
+    // Verify effect doesn't run excessively
+  });
+});
+```
+
+---
+
+## 10. Recommendations Summary
+
+### Must Fix (Before Production):
+1. 🔴 **CRITICAL:** Fix potential infinite loop in `app/auth.tsx` (section 2.1)
+2. 🟡 Add guard for rapid auth state changes (section 2.1, Option 2)
+3. 🟡 Improve edge case handling for unlock check (section 2.2)
+
+### Should Fix (Quality Improvements):
+1. Extract long `useEffect` into helper functions (section 3.3)
+2. Add comprehensive tests (section 9.1)
+3. Add more defensive checks for edge cases (section 5.4)
 
 ### Nice to Have:
-6. Add comprehensive tests
-7. Create shared permission context for caching
-8. Document field name differences in schema
+1. Standardize error logging (use `console.error` consistently)
+2. Add more detailed error messages for debugging
 
 ---
 
-## Conclusion
+## 11. Final Verdict
 
-The improvements successfully reduce code duplication and improve maintainability. **All critical issues have been fixed:**
+**Status:** ⚠️ **CONDITIONAL APPROVAL**
 
-✅ **Fixed**: Field name inconsistency - props now use `userId`, shows/boards use `ownerId`
-✅ **Fixed**: TypeScript type errors - improved type constraints and added UserProfile mapping
-✅ **Fixed**: Unused variable - added eslint-disable comment with explanation
-✅ **Fixed**: Error handling - added try-catch in adapter utility
-✅ **Fixed**: Import issues - corrected SubscriptionPlan/SubscriptionLimits imports
+**Reasoning:**
+- ✅ Issues reported by user are fixed
+- ⚠️ Critical infinite loop risk needs to be addressed before production
+- ✅ Code quality is good overall
+- ⚠️ Edge cases need better handling
 
-The code is now production-ready with improved type safety, error handling, and correct field name usage.
+**Recommendation:** 
+1. Implement the infinite loop fix (section 2.1, Option 2)
+2. Add the edge case improvements (section 2.2)
+3. Add comprehensive tests
+4. Then approve for production
 
-**Overall Code Quality: 8/10** (improved from 7/10)
-- Structure: 9/10 (excellent architecture)
-- Type Safety: 7/10 (improved with proper constraints, minor type assertions remain)
-- Performance: 8/10 (good memoisation, prevents infinite loops)
-- Error Handling: 8/10 (comprehensive error handling added)
-- Testing: 0/10 (no tests yet - recommended for future)
-- Security: 7/10 (good permission checks, but client-side only - Firestore rules should also enforce)
+**Confidence Level:** 85% - Fixes address the issues, but infinite loop risk needs to be resolved for 95%+ confidence.
 
 ---
 
-## Code Review Checklist Results
+## 12. Code Changes Required
 
-### ✅ Did you truly fix the issue?
-Yes - All critical issues have been addressed:
-- Field name mismatch fixed (props use `userId`, shows/boards use `ownerId`)
-- TypeScript errors resolved with proper type constraints
-- Infinite loop prevention with memoisation
-- Error handling added throughout
+### Priority 1: Fix Infinite Loop Risk
 
-### ✅ Is there any redundant code or files?
-No redundant code - successfully extracted duplicate adapter logic to shared utility (`createFirebaseAdapter.ts`)
+```typescript
+// app/auth.tsx - Add guard for signing in process
+const isSigningInRef = useRef(false);
 
-### ✅ Is the code well written?
-Yes - Clean architecture, good separation of concerns, proper use of React hooks and memoisation
-
-### ✅ Data Flow Analysis
-**New Pattern**: Adapter Pattern
-- Platform-specific hooks (`src/hooks/usePermissions.ts`, `web-app/src/hooks/usePermissions.ts`) create adapters using shared utility
-- Adapters convert platform-specific FirebaseService to unified interface
-- Shared hook (`usePermissionsShared`) uses adapters to fetch counts and evaluate permissions
-- **Why**: Allows code reuse between web and mobile while maintaining platform-specific context injection
-
-**Data Flow**:
+// In the useEffect, around line 70:
+if (hasStoredCredentials && isBiometricEnabled && isInitialized && firebaseService && !hasAttemptedAutoPrompt.current && !isSigningInRef.current) {
+  isSigningInRef.current = true;
+  hasAttemptedAutoPrompt.current = true;
+  setAttemptingBiometricSignIn(true);
+  const result = await BiometricService.authenticateAndGetCredentials('Sign in to The Props List');
+  
+  if (result.success && result.credentials) {
+    try {
+      await firebaseService.signInWithEmailAndPassword(
+        result.credentials.email,
+        result.credentials.password
+      );
+      justCompletedBiometricSignIn.current = true;
+      setBiometricOk(true);
+    } catch (signInError: any) {
+      console.error('Biometric sign-in failed:', signInError);
+      await BiometricService.clearStoredCredentials();
+      setBiometricOk(false);
+    } finally {
+      isSigningInRef.current = false;
+      setAttemptingBiometricSignIn(false);
+    }
+  } else if (result.errorCode === 'USER_CANCELLED') {
+    setBiometricOk(true);
+    isSigningInRef.current = false;
+    setAttemptingBiometricSignIn(false);
+  } else {
+    setBiometricOk(false);
+    isSigningInRef.current = false;
+    setAttemptingBiometricSignIn(false);
+  }
+}
 ```
-Component → usePermissions() [platform-specific] 
-  → createFirebaseAdapter() [shared utility, memoised]
-  → usePermissionsShared() [shared hook]
-  → FirebaseService.getDocuments() [via adapter]
-  → PermissionService [evaluates permissions]
+
+### Priority 2: Improve Unlock Check Edge Case
+
+```typescript
+// app/auth.tsx - Around line 34:
+if (justCompletedBiometricSignIn.current && !initialUserState.current?.user) {
+  justCompletedBiometricSignIn.current = false;
+  setBiometricOk(true);
+  setBiometricChecked(true);
+  return;
+}
 ```
-
-### ✅ Have you added an infinite loop?
-No - All dependencies properly memoised:
-- `firebaseServiceAdapter` memoised with `useMemo` and `firebaseService` dependency
-- `permissionUserProfile` memoised with `userProfile` and `user` dependencies
-- `permissionContext` memoised in shared hook
-- All permission check functions properly memoised
-
-### ✅ Is the code readable and consistent?
-Yes - Consistent naming, clear comments, proper TypeScript types, follows React best practices
-
-### ✅ Are functions/classes appropriately sized?
-Yes - Functions are focused and single-purpose:
-- `createFirebaseAdapter`: 25 lines, single responsibility
-- `usePermissions`: 37 lines, adapter pattern
-- `usePermissionsShared`: 150 lines, well-structured with clear sections
-
-### ✅ Are comments clear and necessary?
-Yes - Comments explain:
-- Why adapters are needed (platform compatibility)
-- Field name differences (props vs shows)
-- Future use cases (admin routes)
-- Type mapping rationale
-
-### ✅ Does the code do what it claims to do?
-Yes - All functionality works as intended:
-- Permission checks enforce limits correctly
-- Field names match actual database schema
-- Error handling prevents crashes
-- Type safety ensures correctness
-
-### ✅ Are edge cases handled?
-Yes - Handles:
-- Null/undefined user and userProfile
-- Missing FirebaseService
-- Query errors (returns empty array)
-- Type mismatches (proper mapping)
-
-### ✅ Effect on rest of codebase?
-**Positive Impact**:
-- No breaking changes - all existing code continues to work
-- Backwards compatible - web-app re-exports maintained
-- Improved type safety prevents runtime errors
-- Better error handling prevents crashes
-
-### ✅ Front-end optimised?
-Yes - React Native optimisations:
-- Memoisation prevents unnecessary re-renders
-- Parallel Promise.all for count fetching
-- Early returns for null checks
-- Proper dependency arrays
-
-### ✅ Code DRY and meets standards?
-Yes - DRY principle followed:
-- Shared adapter utility eliminates duplication
-- Consistent patterns across platforms
-- TypeScript best practices
-- React hooks best practices
-
-### ✅ Input validation and sanitisation?
-Yes - Permission checks validate:
-- User existence before checks
-- Action strings (typed enums)
-- Subscription limits (typed interfaces)
-- Error handling prevents malicious input
-
-### ✅ Error handling robust?
-Yes - Comprehensive error handling:
-- Try-catch blocks around permission checks
-- Try-catch in adapter utility
-- User-friendly error messages
-- Graceful degradation (empty arrays on error)
-
-### ✅ UK English?
-Yes - Uses UK English:
-- "organised" not "organized"
-- "colour" not "color"
-- Comments and documentation use UK spelling
-
-### ✅ No unnecessary dependencies?
-No new dependencies added - uses existing React, TypeScript, and Firebase libraries
-
-### ✅ Backwards compatibility?
-Yes - All changes are backwards compatible:
-- Web-app re-exports maintained
-- No breaking API changes
-- Existing code continues to work
-
-### ⚠️ Missing Tests?
-No tests added yet - Recommended for future:
-- Unit tests for adapter utility
-- Integration tests for permission flow
-- Edge case testing
-
-### ⚠️ Accessibility?
-Not applicable - This is backend/permission logic, not UI components
-
-### ⚠️ Firestore Security Rules?
-Client-side checks only - Firestore security rules should also enforce permissions (recommended for future)
 
 ---
 
-## Final Verdict
-
-**All critical issues have been resolved.** The code is production-ready with:
-- ✅ Correct field name usage
-- ✅ Proper type safety
-- ✅ Comprehensive error handling
-- ✅ No infinite loops
-- ✅ Clean, maintainable architecture
-- ✅ UK English throughout
-
-**Ready for testing and deployment.**
+**Review Complete** ✅

@@ -7,6 +7,8 @@ import { lightTheme, darkTheme } from '../../../src/styles/theme';
 import { useShows } from '../../../src/contexts/ShowsContext';
 import { useProps } from '../../../src/contexts/PropsContext';
 import { usePacking } from '../../../src/hooks/usePacking';
+import { useLimitChecker } from '../../../src/hooks/useLimitChecker';
+import { useAuth } from '../../../src/contexts/AuthContext';
 import type { PackedProp } from '../../../src/types/packing';
 import { CONTAINER_TYPES } from '../../../src/shared/constants/containerTypes';
 
@@ -20,6 +22,8 @@ export default function CreateBoxScreen() {
   const { selectedShow } = useShows();
   const { props: allProps } = useProps();
   const { operations, loading: packingLoading } = usePacking(selectedShow?.id);
+  const { user } = useAuth();
+  const { checkPackingBoxLimit, checkPackingBoxLimitForShow } = useLimitChecker();
 
   const available = useMemo(
     () => (selectedShow ? (allProps || []).filter(p => p.showId === selectedShow.id) : (allProps || [])),
@@ -43,7 +47,59 @@ export default function CreateBoxScreen() {
       Alert.alert('Select a show first');
       return;
     }
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to create a box.');
+      return;
+    }
     if (selected.length === 0 || !name.trim()) return;
+
+    // Check subscription limits
+    try {
+      // Check per-plan limit
+      const planLimitCheck = await checkPackingBoxLimit(user.uid);
+      if (!planLimitCheck.withinLimit) {
+        Alert.alert(
+          'Limit Reached',
+          planLimitCheck.message || `You have reached your plan's packing box limit of ${planLimitCheck.limit}. Please upgrade to create more packing boxes.`,
+          [
+            { text: 'OK' },
+            { 
+              text: 'View Plans', 
+              onPress: () => {
+                // TODO: Navigate to subscription/upgrade screen when available
+                console.log('Navigate to upgrade screen');
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      // Check per-show limit
+      const showLimitCheck = await checkPackingBoxLimitForShow(selectedShow.id);
+      if (!showLimitCheck.withinLimit) {
+        Alert.alert(
+          'Limit Reached',
+          showLimitCheck.message || `This show has reached its packing box limit of ${showLimitCheck.limit}. Please upgrade to create more packing boxes.`,
+          [
+            { text: 'OK' },
+            { 
+              text: 'View Plans', 
+              onPress: () => {
+                // TODO: Navigate to subscription/upgrade screen when available
+                console.log('Navigate to upgrade screen');
+              }
+            }
+          ]
+        );
+        return;
+      }
+    } catch (limitError) {
+      console.error('Limit check failed:', limitError);
+      Alert.alert('Error', 'Unable to verify subscription limits. Please try again.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const packedProps: PackedProp[] = selected.map(p => ({

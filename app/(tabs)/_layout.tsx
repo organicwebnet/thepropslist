@@ -112,6 +112,7 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Ensure no additional visible tabs appear after help */}
       {/* Hide all nested routes from tab bar */}
       <Tabs.Screen
         name="todos/index"
@@ -190,6 +191,12 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="shopping/[id]/add-option"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="subscription"
         options={{
           href: null,
         }}

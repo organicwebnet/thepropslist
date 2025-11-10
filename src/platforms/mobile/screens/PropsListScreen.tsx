@@ -2,12 +2,9 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, Alert, TextInput, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { ActivityIndicator, IconButton } from 'react-native-paper';
 import { FAB } from 'react-native-paper';
-import { useFocusEffect } from '@react-navigation/native';
 import PropCard from '../../../shared/components/PropCard/index';
 import { EnhancedPropList } from '../../../components/EnhancedPropList';
 import { Filters } from '../../../types/props';
@@ -21,16 +18,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { globalStyles } from '../../../styles/globalStyles';
 import { propCategories } from '../../../shared/types/props';
 
-type RootStackParamList = {
-  PropsList: undefined;
-  PropForm: { propId?: string };
-  PropDetails: { propId: string };
-};
-
-type PropsListScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PropsList'>;
-
 export function PropsListScreen() {
-  const navigation = useNavigation<PropsListScreenNavigationProp>();
   const { service } = useFirebase();
   const { selectedShow } = useShows();
   const { canViewAllProps } = usePermissions();
@@ -253,8 +241,8 @@ export function PropsListScreen() {
             <EnhancedPropList
               props={filteredProps}
               showId={selectedShow?.id}
-              onPropPress={(prop) => navigation.navigate('PropDetails', { propId: prop.id })}
-              onEdit={(prop) => navigation.navigate('PropForm', { propId: prop.id })}
+              onPropPress={(prop) => handlePropPress(prop.id)}
+              onEdit={(prop) => router.navigate({ pathname: '/(tabs)/props/create', params: { propId: prop.id } })}
               onDelete={(prop) => handleDeleteProp(prop.id)}
             />
             <TouchableOpacity 

@@ -19,12 +19,14 @@ interface BiometricSetupModalProps {
   visible: boolean;
   onClose: () => void;
   onSetupComplete: () => void;
+  pendingCredentials?: { email: string; password: string } | null;
 }
 
 export function BiometricSetupModal({ 
   visible, 
   onClose, 
-  onSetupComplete 
+  onSetupComplete,
+  pendingCredentials
 }: BiometricSetupModalProps): React.JSX.Element {
   const { t, tWithParams } = useTranslation();
   const { user } = useAuth();

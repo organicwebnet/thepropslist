@@ -25,6 +25,8 @@ export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
           'task-planning-assistant',
           'upcoming-deadlines',
           'board-creation-prompt',
+          'cut-props-packing',
+          'props-needing-work',
         ],
         config: {},
       };
@@ -46,6 +48,8 @@ export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
         enabled: [
           ...universalWidgets,
           'upcoming-deadlines',
+          'cut-props-packing',
+          'props-needing-work',
         ],
         config: {},
       };
@@ -72,4 +76,10 @@ export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
       };
   }
 }
+
+
+
+
+
+
 

@@ -10,6 +10,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { useAuth } from './AuthContext';
 // import { ShowsContext } from './ShowsContext'; // REMOVE self-import
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
+import { useLimitChecker } from '../hooks/useLimitChecker';
 import { Show } from '../shared/services/firebase/types';
 // Import FirebaseDocument type
 import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types';

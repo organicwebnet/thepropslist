@@ -146,6 +146,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       await firebaseService.signOut();
+      // Clear stored biometric credentials on sign out for security
+      try {
+        const { BiometricService } = await import('../services/biometric');
+        await BiometricService.clearStoredCredentials();
+      } catch (clearError) {
+        console.error('Failed to clear biometric credentials on sign out:', clearError);
+        // Don't fail sign out if credential clearing fails
+      }
       // Auth state change will clear user and profile via onAuthStateChanged listener
     } catch (e: any) {
       setError(new Error("Sign out failed: " + e.message));

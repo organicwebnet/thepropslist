@@ -41,6 +41,8 @@ export interface UserProfile {
   updatedAt?: Date;
   themePreference?: 'light' | 'dark' | 'system';
   fontPreference?: string; // e.g., 'default', 'OpenDyslexic'
+  onboardingCompleted?: boolean; // Whether user has completed onboarding
+  onboardingCompletedAt?: Date; // When onboarding was completed
 
   // Saved Addresses
   savedSenderAddresses?: Address[];

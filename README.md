@@ -96,8 +96,10 @@ npm run lint             # Run ESLint
 npm run lint:fix         # Fix ESLint issues
 
 # Building
-npm run build:android    # Build Android APK
-npm run build:ios        # Build iOS app (macOS only)
+npm run android:build:release    # Build Android release APK
+npm run android:build:release:clean  # Clean and build Android release APK
+npm run prebuild:android         # Prebuild Android native code
+npm run prebuild:ios            # Prebuild iOS native code (macOS only)
 ```
 
 ### Project Structure
@@ -212,11 +214,17 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📚 Documentation
 
+### Setup & Configuration
 - [Setup Guide](_docs/SETUP.md)
 - [iOS Setup](_docs/IOS_SETUP.md)
+- [Android Release Build Guide](_docs/ANDROID_RELEASE_BUILD_GUIDE.md)
+- [Android Release Keystore Setup](android/RELEASE_KEYSTORE_SETUP.md)
 - [Firebase Configuration](_docs/FIREBASE_DEPLOYMENT_SETUP.md)
+
+### Troubleshooting & Reference
 - [Known Issues](_docs/KNOWN_ISSUES.md)
 - [API Documentation](_docs/API.md)
+- [Mobile App README](_docs/MOBILE_README.md)
 
 ## 🐛 Troubleshooting
 

@@ -55,14 +55,65 @@ export class GoogleSignInService {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
       // Get the users ID token
-      const { idToken, user } = await GoogleSignin.signIn();
+      const signInResult = await GoogleSignin.signIn();
+      
+      // Validate that we have an idToken - this is critical to prevent crashes
+      if (!signInResult || !signInResult.idToken) {
+        console.error('Google Sign-In failed: No ID token received');
+        return {
+          success: false,
+          error: 'Google Sign-In failed: No authentication token received. Please try again.'
+        };
+      }
+
+      const { idToken, user } = signInResult;
+
+      // Validate idToken is not empty
+      if (!idToken || typeof idToken !== 'string' || idToken.trim().length === 0) {
+        console.error('Google Sign-In failed: Invalid ID token');
+        return {
+          success: false,
+          error: 'Google Sign-In failed: Invalid authentication token. Please try again.'
+        };
+      }
 
       // Create a Google credential with the token
       const googleCredential = GoogleAuthProvider.credential(idToken);
+      
+      // Validate credential was created successfully
+      if (!googleCredential) {
+        console.error('Google Sign-In failed: Failed to create credential');
+        return {
+          success: false,
+          error: 'Google Sign-In failed: Failed to create authentication credential. Please try again.'
+        };
+      }
 
       // Sign-in the user with the credential
-      const auth = getAuth();
+      let auth;
+      try {
+        auth = getAuth();
+        if (!auth) {
+          throw new Error('Firebase Auth is not initialized');
+        }
+      } catch (authError: any) {
+        console.error('Firebase Auth initialization error:', authError);
+        return {
+          success: false,
+          error: 'Firebase authentication is not available. Please restart the app and try again.'
+        };
+      }
+
       const result = await signInWithCredential(auth, googleCredential);
+      
+      // Validate sign-in result
+      if (!result || !result.user) {
+        console.error('Google Sign-In failed: No user returned from Firebase');
+        return {
+          success: false,
+          error: 'Google Sign-In failed: Authentication completed but no user data was received. Please try again.'
+        };
+      }
 
       return {
         success: true,
@@ -74,6 +125,7 @@ export class GoogleSignInService {
     } catch (error: any) {
       console.error('Google Sign-In error:', error);
 
+      // Handle specific error codes
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         return {
           success: false,
@@ -89,10 +141,28 @@ export class GoogleSignInService {
           success: false,
           error: 'Google Play Services is not available on this device'
         };
+      } else if (error.code === 'auth/network-request-failed') {
+        return {
+          success: false,
+          error: 'Network error. Please check your internet connection and try again.'
+        };
+      } else if (error.code === 'auth/invalid-credential') {
+        return {
+          success: false,
+          error: 'Invalid authentication credentials. Please try signing in again.'
+        };
+      } else if (error.message) {
+        // Return a user-friendly error message
+        return {
+          success: false,
+          error: error.message.includes('DEVELOPER_ERROR') 
+            ? 'Google Sign-In configuration error. Please contact support.'
+            : error.message
+        };
       } else {
         return {
           success: false,
-          error: error.message || 'Google Sign-In failed'
+          error: 'Google Sign-In failed. Please try again.'
         };
       }
     }

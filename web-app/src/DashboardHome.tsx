@@ -19,6 +19,8 @@ import { BoardCreationPromptWidget } from './components/DashboardWidgets/BoardCr
 import { PropsWithoutTasksWidget } from './components/DashboardWidgets/PropsWithoutTasksWidget';
 import { TaskboardActivitySummaryWidget } from './components/DashboardWidgets/TaskboardActivitySummaryWidget';
 import { UpcomingDeadlinesWidget } from './components/DashboardWidgets/UpcomingDeadlinesWidget';
+import { CutPropsPackingWidget } from './components/DashboardWidgets/CutPropsPackingWidget';
+import { PropsNeedingWorkWidget } from './components/DashboardWidgets/PropsNeedingWorkWidget';
 import { WidgetSettingsModal } from './components/DashboardWidgets/WidgetSettingsModal';
 import { useWidgetPreferences } from './hooks/useWidgetPreferences';
 
@@ -338,6 +340,20 @@ const DashboardHome: React.FC = () => {
             />
           )}
 
+          {isWidgetEnabled('cut-props-packing') && (
+            <CutPropsPackingWidget
+              showId={currentShowId}
+              props={props}
+            />
+          )}
+
+          {isWidgetEnabled('props-needing-work') && (
+            <PropsNeedingWorkWidget
+              showId={currentShowId}
+              props={props}
+            />
+          )}
+
           {/* Subscription Resource Panel - keep this */}
           <SubscriptionResourcePanel />
         </WidgetGrid>
@@ -348,7 +364,9 @@ const DashboardHome: React.FC = () => {
           !isWidgetEnabled('upcoming-deadlines') &&
           !isWidgetEnabled('task-planning-assistant') &&
           !isWidgetEnabled('taskboard-activity-summary') &&
-          !isWidgetEnabled('board-creation-prompt') && (
+          !isWidgetEnabled('board-creation-prompt') &&
+          !isWidgetEnabled('cut-props-packing') &&
+          !isWidgetEnabled('props-needing-work') && (
             <motion.div
               variants={cardVariants}
               className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-12 border border-pb-primary/20 text-center"

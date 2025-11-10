@@ -1,5 +1,6 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 export interface BiometricCapabilities {
   isAvailable: boolean;
@@ -8,8 +9,14 @@ export interface BiometricCapabilities {
   supportedTypes: LocalAuthentication.AuthenticationType[];
 }
 
+export interface StoredCredentials {
+  email: string;
+  password: string;
+}
+
 export class BiometricService {
   private static readonly BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
+  private static readonly CREDENTIALS_STORAGE_KEY = 'biometric_credentials';
 
   static async getCapabilities(): Promise<BiometricCapabilities> {
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -128,5 +135,104 @@ export class BiometricService {
       return 'Iris';
     }
     return 'Biometric';
+  }
+
+  /**
+   * Store user credentials securely for biometric sign-in
+   */
+  static async storeCredentials(email: string, password: string): Promise<void> {
+    try {
+      const credentials: StoredCredentials = { email, password };
+      const credentialsJson = JSON.stringify(credentials);
+      await SecureStore.setItemAsync(this.CREDENTIALS_STORAGE_KEY, credentialsJson);
+    } catch (error) {
+      console.error('Failed to store credentials:', error);
+      throw new Error('Failed to store credentials securely');
+    }
+  }
+
+  /**
+   * Retrieve stored credentials for biometric sign-in
+   */
+  static async getStoredCredentials(): Promise<StoredCredentials | null> {
+    try {
+      const credentialsJson = await SecureStore.getItemAsync(this.CREDENTIALS_STORAGE_KEY);
+      if (!credentialsJson) {
+        return null;
+      }
+      return JSON.parse(credentialsJson) as StoredCredentials;
+    } catch (error) {
+      console.error('Failed to retrieve credentials:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if credentials are stored
+   */
+  static async hasStoredCredentials(): Promise<boolean> {
+    try {
+      const credentials = await this.getStoredCredentials();
+      return credentials !== null;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Clear stored credentials
+   */
+  static async clearStoredCredentials(): Promise<void> {
+    try {
+      await SecureStore.deleteItemAsync(this.CREDENTIALS_STORAGE_KEY);
+    } catch (error) {
+      console.error('Failed to clear credentials:', error);
+    }
+  }
+
+  /**
+   * Authenticate with biometric and return stored credentials if successful
+   */
+  static async authenticateAndGetCredentials(
+    reason = 'Sign in to The Props List'
+  ): Promise<{ success: boolean; credentials?: StoredCredentials; error?: string; errorCode?: string }> {
+    try {
+      // First check if credentials are stored
+      const hasCredentials = await this.hasStoredCredentials();
+      if (!hasCredentials) {
+        return {
+          success: false,
+          error: 'No stored credentials found. Please sign in with email and password first.',
+          errorCode: 'NO_CREDENTIALS'
+        };
+      }
+
+      // Authenticate with biometric
+      const authResult = await this.authenticate(reason);
+      if (!authResult.success) {
+        return authResult;
+      }
+
+      // Retrieve credentials
+      const credentials = await this.getStoredCredentials();
+      if (!credentials) {
+        return {
+          success: false,
+          error: 'Failed to retrieve stored credentials',
+          errorCode: 'CREDENTIALS_RETRIEVAL_FAILED'
+        };
+      }
+
+      return {
+        success: true,
+        credentials
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Authentication error',
+        errorCode: 'UNKNOWN_ERROR'
+      };
+    }
   }
 } 

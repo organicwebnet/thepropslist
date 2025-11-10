@@ -57,6 +57,8 @@ src/
 
 ## Building for Production
 
+### Using EAS Build (Recommended for Expo)
+
 1. Install EAS CLI:
 ```bash
 npm install -g eas-cli
@@ -76,6 +78,12 @@ eas build --platform android
 ```bash
 eas build --platform ios
 ```
+
+### Building Native Android APK
+
+For building native Android APKs without EAS, see the [Android Release Build Guide](_docs/ANDROID_RELEASE_BUILD_GUIDE.md).
+
+**Important:** Before building for production, you must set up a release keystore. See [Release Keystore Setup Guide](../android/RELEASE_KEYSTORE_SETUP.md) for detailed instructions.
 
 ## Testing
 

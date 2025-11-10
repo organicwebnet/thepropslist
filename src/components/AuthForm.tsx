@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import LinearGradient from 'react-native-linear-gradient';
 import type { AuthError } from 'firebase/auth';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { appleAuthService } from '../services/AppleAuthService';
@@ -37,6 +38,7 @@ function RequiredLabel({ children }: { children: React.ReactNode }): React.JSX.E
 }
 
 export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
+  const router = useRouter();
   const { service: firebaseService, isInitialized, error: firebaseError } = useFirebase();
   const [mode, setMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
@@ -46,6 +48,9 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showBiometricSetup, setShowBiometricSetup] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [hasStoredCredentials, setHasStoredCredentials] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<{ email: string; password: string } | null>(null);
 
   useEffect(() => {
     if (firebaseError) {
@@ -53,11 +58,35 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
     }
   }, [firebaseError]);
 
+  // Check biometric availability and stored credentials on mount
+  useEffect(() => {
+    const checkBiometricAvailability = async () => {
+      try {
+        const capabilities = await BiometricService.getCapabilities();
+        const hasCredentials = await BiometricService.hasStoredCredentials();
+        setBiometricAvailable(capabilities.isAvailable);
+        setHasStoredCredentials(hasCredentials);
+      } catch (error) {
+        console.error('Error checking biometric availability:', error);
+        setBiometricAvailable(false);
+        setHasStoredCredentials(false);
+      }
+    };
+
+    checkBiometricAvailability();
+  }, []);
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError(null);
     
     try {
+      // Ensure Firebase is initialized before attempting sign-in
+      if (!isInitialized || !firebaseService) {
+        setError("Firebase service is not available. Please wait for initialization to complete.");
+        return;
+      }
+
       const result = await googleSignInService.signIn();
       
       if (result.success && result.user) {
@@ -65,20 +94,29 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
         setSuccess('Google Sign-In successful!');
         
         // Check if biometric is already enabled
-        const isBiometricEnabled = await BiometricService.isBiometricEnabled();
-        
-        if (!isBiometricEnabled) {
-          // Show biometric setup modal
-          setShowBiometricSetup(true);
-        } else {
-          // Close the auth form if biometric is already enabled
+        try {
+          const isBiometricEnabled = await BiometricService.isBiometricEnabled();
+          
+          if (!isBiometricEnabled) {
+            // Show biometric setup modal
+            setShowBiometricSetup(true);
+          } else {
+            // Close the auth form if biometric is already enabled
+            onClose();
+          }
+        } catch (biometricError) {
+          console.error('Error checking biometric status:', biometricError);
+          // Don't block sign-in if biometric check fails
           onClose();
         }
       } else {
         setError(result.error || 'Google Sign-In failed');
       }
     } catch (err: any) {
-      setError(err.message || 'Google Sign-In error occurred');
+      console.error('Google Sign-In error in AuthForm:', err);
+      // Provide a user-friendly error message
+      const errorMessage = err?.message || err?.error?.message || 'Google Sign-In error occurred. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -133,7 +171,9 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       return false;
     }
     
-    if (!trimmedEmail.includes('@')) {
+    // Proper email validation using regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
       setError('Please enter a valid email address');
       return false;
     }
@@ -148,53 +188,8 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
   };
 
   const handleForgotPassword = async () => {
-    setError(null);
-    setSuccess(null);
-
-    if (!isInitialized || !firebaseService) {
-      setError("Firebase service not available.");
-      return;
-    }
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      await firebaseService.sendPasswordResetEmail(email.trim());
-      setSuccess('Password reset email sent! Please check your inbox.');
-      setEmail('');
-    } catch (error: any) {
-              console.error('[AuthForm Forgot Password Error]', error);
-      
-      let message = 'Failed to send reset email. Please try again.';
-      
-      // Handle Firebase error structure (could be nested)
-      const errorCode = error?.code || error?.error?.code;
-      const errorMessage = error?.message || error?.error?.message;
-      
-      switch (errorCode) {
-        case 'auth/user-not-found':
-          message = 'No account found with this email address.';
-          break;
-        case 'auth/invalid-email':
-          message = 'Please enter a valid email address.';
-          break;
-        case 'auth/too-many-requests':
-          message = 'Too many attempts. Please try again later.';
-          break;
-        default:
-          if (errorMessage) {
-            message = errorMessage;
-          }
-      }
-      
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
+    // Navigate to reset password screen
+    router.push('/reset-password');
   };
 
   const handleSubmit = async () => {
@@ -222,9 +217,20 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       const isBiometricEnabled = await BiometricService.isBiometricEnabled();
       
       if (!isBiometricEnabled) {
-        // Show biometric setup modal
+        // Store credentials temporarily to pass to setup modal
+        // They will only be permanently stored if user opts in
+        setPendingCredentials({ email: trimmedEmail, password: trimmedPassword });
+        // Show biometric setup modal to ask user if they want to enable biometric
         setShowBiometricSetup(true);
       } else {
+        // Biometric already enabled - store credentials for future use
+        try {
+          await BiometricService.storeCredentials(trimmedEmail, trimmedPassword);
+          setHasStoredCredentials(true);
+        } catch (storeError) {
+          console.error('Failed to store credentials for biometric sign-in:', storeError);
+          // Don't fail the sign-in if credential storage fails
+        }
         // Close the auth form if biometric is already enabled
         onClose();
       }
@@ -282,14 +288,89 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
     }
   };
 
-  const handleBiometricSetupComplete = () => {
+  const handleBiometricSetupComplete = async () => {
+    // User enabled biometric - store the pending credentials
+    if (pendingCredentials) {
+      try {
+        await BiometricService.storeCredentials(pendingCredentials.email, pendingCredentials.password);
+        setHasStoredCredentials(true);
+        setPendingCredentials(null);
+      } catch (storeError) {
+        console.error('Failed to store credentials for biometric sign-in:', storeError);
+        // Show user-friendly warning but don't block the flow
+        setError('Your sign-in was successful, but we couldn\'t save your credentials for biometric sign-in. You can still use email/password to sign in.');
+        // Still close modal and proceed
+      }
+    }
     setShowBiometricSetup(false);
     onClose();
   };
 
   const handleBiometricSetupClose = () => {
+    // User skipped biometric setup - clear pending credentials
+    setPendingCredentials(null);
     setShowBiometricSetup(false);
     onClose();
+  };
+
+  const handleBiometricSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      if (!isInitialized || !firebaseService) {
+        setError("Firebase service not available.");
+        return;
+      }
+
+      // Authenticate with biometric and get stored credentials
+      const result = await BiometricService.authenticateAndGetCredentials('Sign in to The Props List');
+      
+      if (!result.success || !result.credentials) {
+        setError(result.error || 'Biometric authentication failed');
+        return;
+      }
+
+      // Sign in with stored credentials
+      await firebaseService.signInWithEmailAndPassword(
+        result.credentials.email,
+        result.credentials.password
+      );
+
+      setSuccess('Biometric sign-in successful!');
+      onClose();
+    } catch (error: any) {
+      console.error('[Biometric Sign-In Error]', error);
+      
+      let message = 'Biometric sign-in failed. Please try again.';
+      
+      const errorCode = error?.code || error?.error?.code;
+      const errorMessage = error?.message || error?.error?.message;
+      
+      switch (errorCode) {
+        case 'auth/invalid-email':
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          message = 'Stored credentials are invalid. Please sign in with email and password.';
+          // Clear invalid credentials
+          await BiometricService.clearStoredCredentials();
+          setHasStoredCredentials(false);
+          break;
+        case 'auth/network-request-failed':
+          message = 'Network error. Please check your connection.';
+          break;
+        default:
+          if (errorMessage) {
+            message = errorMessage;
+          }
+      }
+      
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -389,6 +470,27 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
                 </Text>
               </TouchableOpacity>
 
+              {/* Biometric Sign In Button */}
+              {biometricAvailable && hasStoredCredentials && (
+                <>
+                  <TouchableOpacity
+                    style={[styles.biometricButton, loading && styles.submitButtonDisabled]}
+                    onPress={handleBiometricSignIn}
+                    disabled={loading}
+                  >
+                    {loading && <ActivityIndicator size="small" color="#FFFFFF" style={styles.loadingIcon} />}
+                    <Ionicons 
+                      name={Platform.OS === 'ios' ? 'fingerprint' : 'fingerprint-outline'} 
+                      size={20} 
+                      color="#fff" 
+                    />
+                    <Text style={styles.biometricButtonText}>
+                      Sign in with {Platform.OS === 'ios' ? 'Face ID' : 'Biometric'}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
               {/* Divider */}
               <View style={styles.dividerContainer}>
                 <View style={styles.dividerLine} />
@@ -427,12 +529,11 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
                 </Text>
                 <TouchableOpacity
                   onPress={() => {
-                    // Open marketing site in browser
-                    Linking.openURL('https://thepropslist.uk');
+                    router.push('/signup');
                   }}
                 >
                   <Text style={styles.switchLink}>
-                    Join the waitlist
+                    Sign Up
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -480,6 +581,7 @@ export function AuthForm({ onClose }: AuthFormProps): React.JSX.Element {
       visible={showBiometricSetup}
       onClose={handleBiometricSetupClose}
       onSetupComplete={handleBiometricSetupComplete}
+      pendingCredentials={pendingCredentials}
     />
     </LinearGradient>
   );
@@ -606,6 +708,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
+  },
+  biometricButton: {
+    backgroundColor: '#10B981',
+    paddingVertical: 14,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  biometricButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 12,
   },
   submitButtonDisabled: {
     opacity: 0.5,

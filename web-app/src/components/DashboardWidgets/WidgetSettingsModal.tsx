@@ -41,6 +41,14 @@ const WIDGET_DESCRIPTIONS: Record<WidgetId, { name: string; description: string 
     name: 'Upcoming Deadlines',
     description: 'Critical tasks with due dates',
   },
+  'cut-props-packing': {
+    name: 'Cut Props Packing',
+    description: 'Props cut from the show, grouped by packing destination',
+  },
+  'props-needing-work': {
+    name: 'Props Needing Work',
+    description: 'Props requiring repairs, maintenance, or modifications',
+  },
 };
 
 export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({

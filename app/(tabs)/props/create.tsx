@@ -7,6 +7,7 @@ import { useFirebase } from '../../../src/platforms/mobile/contexts/FirebaseCont
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { useShows } from '../../../src/contexts/ShowsContext';
 import { usePermissions } from '../../../src/hooks/usePermissions';
+import { useLimitChecker } from '../../../src/hooks/useLimitChecker';
 import { Permission } from '../../../src/shared/permissions';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -16,6 +17,7 @@ export default function CreatePropScreen() {
   const { user } = useAuth();
   const { selectedShow } = useShows();
   const { hasPermission, canPerformAction } = usePermissions();
+  const { checkPropLimit, checkPropLimitForShow } = useLimitChecker();
 
   // Validate user and userProfile are available
   if (!user) {
@@ -81,6 +83,55 @@ export default function CreatePropScreen() {
     } catch (error) {
       console.error('Permission check failed:', error);
       Alert.alert('Error', 'Unable to verify permissions. Please try again.');
+      return false;
+    }
+
+    // Check subscription limits
+    try {
+      // Check per-plan limit
+      const planLimitCheck = await checkPropLimit(user.uid);
+      if (!planLimitCheck.withinLimit) {
+        Alert.alert(
+          'Limit Reached',
+          planLimitCheck.message || `You have reached your plan's props limit of ${planLimitCheck.limit}. Please upgrade to create more props.`,
+          [
+            { text: 'OK' },
+            { 
+              text: 'View Plans', 
+              onPress: () => {
+                // TODO: Navigate to subscription/upgrade screen when available
+                console.log('Navigate to upgrade screen');
+              }
+            }
+          ]
+        );
+        return false;
+      }
+
+      // Check per-show limit if show is selected
+      if (selectedShow) {
+        const showLimitCheck = await checkPropLimitForShow(selectedShow.id);
+        if (!showLimitCheck.withinLimit) {
+          Alert.alert(
+            'Limit Reached',
+            showLimitCheck.message || `This show has reached its props limit of ${showLimitCheck.limit}. Please upgrade to create more props.`,
+            [
+              { text: 'OK' },
+              { 
+                text: 'View Plans', 
+                onPress: () => {
+                  // TODO: Navigate to subscription/upgrade screen when available
+                  console.log('Navigate to upgrade screen');
+                }
+              }
+            ]
+          );
+          return false;
+        }
+      }
+    } catch (limitError) {
+      console.error('Limit check failed:', limitError);
+      Alert.alert('Error', 'Unable to verify subscription limits. Please try again.');
       return false;
     }
 

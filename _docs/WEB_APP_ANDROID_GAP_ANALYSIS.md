@@ -69,17 +69,26 @@ This document compares the web-app and Android app implementations to identify:
 - ✅ Subscription limit warnings
 
 ### Android App Features
-- ❌ **No subscription features found** - This is a major gap
+- ✅ **Subscription hooks (`useSubscription`)** - ✅ IMPLEMENTED
+- ✅ **Subscription limits enforcement (`useLimitChecker`)** - ✅ IMPLEMENTED
+- ✅ **Add-ons support** - ✅ IMPLEMENTED (types and calculation)
+- ✅ **Subscription limits** - ✅ IMPLEMENTED (with add-ons support)
+- ⚠️ **Stripe integration** - Partial (reads from Firestore, optional Functions support)
+- ❌ **Subscription UI** - No UI components yet
+- ❌ **Add-ons marketplace** - Missing UI
+- ❌ **Discount codes** - Missing feature
+- ❌ **Subscription validation guards** - Missing component
 
-**Critical Gaps:**
-- ❌ **No Stripe integration** - Android app cannot process payments
-- ❌ **No subscription plans** - Users cannot subscribe
-- ❌ **No subscription limits** - No enforcement of plan limits
-- ❌ **No subscription UI** - No way to view/manage subscriptions
-- ❌ **No add-ons marketplace** - Missing feature
-- ❌ **No discount codes** - Missing feature
+**Status:** ✅ **Core subscription system implemented** - The critical subscription infrastructure is now in place.
 
-**Impact:** This is a critical business gap. Users cannot subscribe or manage subscriptions on Android.
+**Remaining Gaps:**
+- ⚠️ **Stripe payment processing** - Can read subscription data but cannot process payments
+- ❌ **Subscription UI components** - No subscription management UI
+- ❌ **Add-ons marketplace UI** - Missing UI for purchasing add-ons
+- ❌ **Discount codes** - Missing feature
+- ❌ **Subscription validation guards** - Missing component for blocking actions
+
+**Impact:** Core subscription functionality is now available. Users can have subscription limits enforced, but cannot yet purchase subscriptions or add-ons through the mobile app.
 
 ---
 
@@ -493,15 +502,15 @@ Missing routes:
 - ✅ `useImageLoading` - Image loading
 
 ### Android App Hooks
-- ❌ **No subscription hooks** - Missing
-- ❌ **No permission hooks** - Missing
-- ❌ **No limit checker hooks** - Missing
+- ✅ **Subscription hooks (`useSubscription`)** - ✅ IMPLEMENTED
+- ✅ **Permission hooks (`usePermissions`)** - ✅ IMPLEMENTED
+- ✅ **Limit checker hooks (`useLimitChecker`)** - ✅ IMPLEMENTED
 - ❌ **No widget preference hooks** - Missing
 
-**Gaps:**
-- ❌ **Subscription hooks** - No subscription management
-- ❌ **Permission hooks** - No permission checking
-- ❌ **Limit checker hooks** - No limit enforcement
+**Status:** ✅ **Core hooks implemented** - Subscription, permissions, and limit checking hooks are now available.
+
+**Remaining Gaps:**
+- ❌ **Widget preference hooks** - Missing (lower priority for mobile)
 
 ---
 
@@ -537,17 +546,19 @@ Missing routes:
 ## Priority Recommendations
 
 ### Critical Priority (Business Impact)
-1. **Subscription & Payment System** ⚠️
-   - Implement Stripe integration
-   - Add subscription plans and limits
-   - Add subscription UI
-   - Implement limit enforcement
+1. **Subscription & Payment System** ✅ **PARTIALLY COMPLETE**
+   - ✅ Implemented subscription hooks (`useSubscription`)
+   - ✅ Implemented subscription limits enforcement (`useLimitChecker`)
+   - ✅ Implemented add-ons support (types and calculation)
+   - ⚠️ Stripe payment processing (can read data, cannot process payments)
+   - ❌ Subscription UI components (management, upgrade flows)
+   - ❌ Add-ons marketplace UI
 
-2. **Role-Based Permissions** ⚠️
-   - Implement permission system
-   - Add role-based access control
-   - Add permission checking hooks
-   - Enforce permissions throughout app
+2. **Role-Based Permissions** ✅ **COMPLETE**
+   - ✅ Permission system implemented (shared with web-app)
+   - ✅ Role-based access control implemented
+   - ✅ Permission checking hooks (`usePermissions`)
+   - ⚠️ Permissions enforcement throughout app (needs verification in components)
 
 3. **Admin Features** ⚠️
    - Add user management
@@ -636,6 +647,95 @@ The Android app excels in:
 
 ---
 
-**Document Version:** 1.0  
+**Document Version:** 1.2  
 **Last Updated:** 2025-01-27
+
+---
+
+## Implementation Progress Update (2025-01-27)
+
+### ✅ Completed
+
+1. **Subscription System Core** ✅
+   - Implemented `useSubscription` hook with full functionality
+   - Added loading and error states
+   - Implemented add-ons support with `DEFAULT_ADDONS` constant
+   - Added proper type safety (replaced `any` types)
+   - Added input validation for plan names
+   - Handles expired subscriptions and add-ons
+   - Graceful fallbacks when Firebase Functions unavailable
+
+2. **Limit Checking** ✅
+   - Implemented `useLimitChecker` hook
+   - Supports per-plan and per-show limits
+   - Checks for shows, boards, props, packing boxes, collaborators
+   - Respects exempt users (god/admin/props_supervisor)
+   - Uses effective limits (base + add-ons)
+
+3. **Permission System** ✅
+   - Already implemented and working
+   - Integrated with subscription system
+   - Uses shared permission service
+
+4. **Limit Enforcement in Creation Flows** ✅
+   - Added limit checks to show creation (`app/(tabs)/shows/create.tsx`)
+   - Added limit checks to prop creation (`app/(tabs)/props/create.tsx`)
+   - Added limit checks to packing box creation (`app/(tabs)/packing/createBox.tsx`)
+   - Added limit checks to board creation (`src/platforms/mobile/screens/HomeScreen.tsx`)
+   - All checks include user-friendly error messages and upgrade prompts
+
+5. **Subscription Status Component** ✅
+   - Created `SubscriptionStatus` component (`src/components/SubscriptionStatus.tsx`)
+   - Displays current plan, limits, and usage
+   - Supports compact and full display modes
+   - Integrated into profile screen (`app/(tabs)/profile.tsx`)
+
+### ⚠️ Partially Complete
+
+1. **Stripe Integration**
+   - Can read subscription data from Firestore ✅
+   - Can optionally fetch pricing from Firebase Functions ✅
+   - Cannot process payments ❌ (requires Stripe SDK integration)
+   - Cannot create checkout sessions ❌
+
+### ❌ Remaining Work
+
+1. **Subscription UI Components** ⚠️ **PARTIALLY COMPLETE**
+   - ✅ Subscription status display (basic component added)
+   - ❌ Subscription management screen
+   - ❌ Upgrade/downgrade flows
+   - ❌ Plan comparison UI
+
+2. **Add-ons Marketplace UI**
+   - Add-ons listing
+   - Purchase flow
+   - Add-ons management
+
+3. **Subscription Validation Guards** ⚠️ **PARTIALLY COMPLETE**
+   - ✅ Upgrade prompts (added to limit check alerts)
+   - ✅ Limit warnings (shown in alerts)
+   - ❌ Reusable validation guard component (can be added later)
+
+4. **Integration in Components** ✅ **COMPLETE**
+   - ✅ Add limit checking to show creation
+   - ✅ Add limit checking to prop creation
+   - ✅ Add limit checking to board creation
+   - ✅ Add limit checking to packing box creation
+
+### Next Steps
+
+1. **High Priority:** ✅ **COMPLETE**
+   - ✅ Add subscription limit checks to creation flows
+   - ✅ Create subscription status UI component
+   - ✅ Add upgrade prompts when limits reached
+
+2. **Medium Priority:**
+   - Implement Stripe payment processing (if needed for mobile)
+   - Create add-ons marketplace UI
+   - Add subscription validation guard component
+
+3. **Low Priority:**
+   - Subscription analytics
+   - Discount codes
+   - Admin subscriber stats (admin features)
 

@@ -5,6 +5,7 @@ import ShowFormNative from '../../../src/components/ShowForm.native';
 import { useShows } from '../../../src/contexts/ShowsContext';
 import { usePermissions } from '../../../src/hooks/usePermissions';
 import { useAuth } from '../../../src/contexts/AuthContext';
+import { useLimitChecker } from '../../../src/hooks/useLimitChecker';
 import { Permission } from '../../../src/shared/permissions';
 import type { Show } from '../../../src/shared/services/firebase/types'; // Using Show from firebase/types
 import { useTheme } from '../../../src/contexts/ThemeContext';
@@ -19,6 +20,7 @@ export default function CreateShowScreen() {
   const styles = getStyles(currentThemeColors);
   const { hasPermission, canPerformAction } = usePermissions();
   const { user } = useAuth();
+  const { checkShowLimit } = useLimitChecker();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -47,6 +49,11 @@ export default function CreateShowScreen() {
   }, [canCreateShows, router]);
 
   const handleFormSubmit = async (formDataFromForm: Partial<Show> & { _logoImageUri?: string | null }) => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to create a show.');
+      return;
+    }
+
     // Check permission before creating
     try {
       const permissionCheck = canPerformAction('create_show');
@@ -61,6 +68,32 @@ export default function CreateShowScreen() {
     } catch (error) {
       console.error('Permission check failed:', error);
       Alert.alert('Error', 'Unable to verify permissions. Please try again.');
+      return;
+    }
+
+    // Check subscription limits
+    try {
+      const limitCheck = await checkShowLimit(user.uid);
+      if (!limitCheck.withinLimit) {
+        Alert.alert(
+          'Limit Reached',
+          limitCheck.message || `You have reached your plan's show limit of ${limitCheck.limit}. Please upgrade to create more shows.`,
+          [
+            { text: 'OK' },
+            { 
+              text: 'View Plans', 
+              onPress: () => {
+                // TODO: Navigate to subscription/upgrade screen when available
+                console.log('Navigate to upgrade screen');
+              }
+            }
+          ]
+        );
+        return;
+      }
+    } catch (limitError) {
+      console.error('Limit check failed:', limitError);
+      Alert.alert('Error', 'Unable to verify subscription limits. Please try again.');
       return;
     }
 

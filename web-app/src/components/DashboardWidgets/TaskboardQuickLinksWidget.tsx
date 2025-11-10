@@ -20,7 +20,11 @@ interface BoardWithStats extends BoardData {
   lastActivity?: Date;
 }
 
-export const TaskboardQuickLinksWidget: React.FC<DashboardWidgetProps> = ({
+interface TaskboardQuickLinksWidgetProps extends DashboardWidgetProps {
+  cards?: CardData[];
+}
+
+export const TaskboardQuickLinksWidget: React.FC<TaskboardQuickLinksWidgetProps> = ({
   showId,
   cards = [],
 }) => {
@@ -65,13 +69,11 @@ export const TaskboardQuickLinksWidget: React.FC<DashboardWidgetProps> = ({
       // Get cards for this board (cards have listId, we need to match to board)
       // For now, we'll count all cards and assume they're distributed across boards
       // This is a simplified version - in a full implementation, we'd track boardId on cards
-      const boardCards = cards.filter((card: CardData) => {
-        // Match cards to board - this is approximate since we don't have direct boardId link
-        return true; // For now, show all cards
-      });
+      // Note: Currently showing all cards as a simplified approach
+      const boardCards = cards;
 
       const totalCards = boardCards.length;
-      const completedCards = boardCards.filter(c => c.completed).length;
+      const completedCards = boardCards.filter((c: CardData) => c.completed).length;
       const completionPercent = totalCards > 0 
         ? Math.round((completedCards / totalCards) * 100) 
         : 0;
@@ -80,7 +82,7 @@ export const TaskboardQuickLinksWidget: React.FC<DashboardWidgetProps> = ({
       let lastActivity: Date | undefined;
       if (boardCards.length > 0) {
         const dates = boardCards
-          .map(c => {
+          .map((c: CardData) => {
             if (c.updatedAt) return new Date(c.updatedAt);
             if (c.createdAt) return new Date(c.createdAt);
             return null;
@@ -88,7 +90,7 @@ export const TaskboardQuickLinksWidget: React.FC<DashboardWidgetProps> = ({
           .filter((d): d is Date => d !== null);
         
         if (dates.length > 0) {
-          lastActivity = new Date(Math.max(...dates.map(d => d.getTime())));
+          lastActivity = new Date(Math.max(...dates.map((d: Date) => d.getTime())));
         }
       }
 
@@ -206,4 +208,10 @@ export const TaskboardQuickLinksWidget: React.FC<DashboardWidgetProps> = ({
     </WidgetContainer>
   );
 };
+
+
+
+
+
+
 

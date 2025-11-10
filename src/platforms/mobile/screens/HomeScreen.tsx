@@ -20,10 +20,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useShows } from '../../../contexts/ShowsContext';
+import { useLimitChecker } from '../../../hooks/useLimitChecker';
 import type { RootStackParamList } from '../../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import LinearGradient from 'react-native-linear-gradient';
+import { OnboardingFlow } from '../../../components/OnboardingFlow';
 
 // Define types locally to avoid import issues
 import type { DocumentData, WhereClause } from '../../../shared/services/firebase/types';
@@ -60,9 +62,11 @@ interface InfoCardProps {
 export function HomeScreen() {
   const router = useRouter();
   const { service } = useFirebase();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const { shows, selectedShow, setSelectedShow, loading: showsLoading } = useShows();
+  const { checkBoardLimit, checkBoardLimitForShow } = useLimitChecker();
   const [globalQuery, setGlobalQuery] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
   
   const [todoBoards, setTodoBoards] = useState<FirebaseDocument<TodoBoard>[]>([]);
   const [loadingBoards, setLoadingBoards] = useState(true);
@@ -96,6 +100,15 @@ export function HomeScreen() {
   const [defaultBoardCreated, setDefaultBoardCreated] = useState<Record<string, boolean>>({});
   const [boardCreateError, setBoardCreateError] = useState<string | null>(null);
 
+  // Check if onboarding should be shown
+  useEffect(() => {
+    if (user && userProfile && !userProfile.onboardingCompleted) {
+      setShowOnboarding(true);
+    } else {
+      setShowOnboarding(false);
+    }
+  }, [user, userProfile]);
+
   useEffect(() => {
     if (!selectedShow?.id) return;
     const now = new Date();
@@ -119,6 +132,62 @@ export function HomeScreen() {
       if (!isDefault) alert('Please select a show before creating a board.');
       return;
     }
+
+    // Check subscription limits before creating
+    try {
+      // Check per-plan board limit
+      const planLimitCheck = await checkBoardLimit(user.uid);
+      if (!planLimitCheck.withinLimit) {
+        if (!isDefault) {
+          Alert.alert(
+            'Limit Reached',
+            planLimitCheck.message || `You have reached your plan's board limit of ${planLimitCheck.limit}. Please upgrade to create more boards.`,
+            [
+              { text: 'OK' },
+              { 
+                text: 'View Plans', 
+                onPress: () => {
+                  // TODO: Navigate to subscription/upgrade screen when available
+                  console.log('Navigate to upgrade screen');
+                }
+              }
+            ]
+          );
+        }
+        return;
+      }
+
+      // Check per-show board limit
+      if (selectedShow) {
+        const showLimitCheck = await checkBoardLimitForShow(selectedShow.id);
+        if (!showLimitCheck.withinLimit) {
+          if (!isDefault) {
+            Alert.alert(
+              'Limit Reached',
+              showLimitCheck.message || `This show has reached its board limit of ${showLimitCheck.limit}. Please upgrade to create more boards.`,
+              [
+                { text: 'OK' },
+                { 
+                  text: 'View Plans', 
+                  onPress: () => {
+                    // TODO: Navigate to subscription/upgrade screen when available
+                    console.log('Navigate to upgrade screen');
+                  }
+                }
+              ]
+            );
+          }
+          return;
+        }
+      }
+    } catch (limitError) {
+      console.error('Limit check failed:', limitError);
+      if (!isDefault) {
+        Alert.alert('Error', 'Unable to verify subscription limits. Please try again.');
+      }
+      return;
+    }
+
     isCreatingLock.current = true;
     setIsCreating(true);
     setBoardCreateError(null);
@@ -143,7 +212,7 @@ export function HomeScreen() {
       isCreatingLock.current = false;
       setIsCreating(false);
     }
-  }, [selectedShow, newBoardName, user, service]);
+  }, [selectedShow, newBoardName, user, service, checkBoardLimit, checkBoardLimitForShow]);
 
   // Effect for fetching boards
   useEffect(() => {
@@ -197,7 +266,10 @@ export function HomeScreen() {
     );
   
     return () => unsubscribe();
-  }, [service, user?.uid, selectedShow?.id, handleCreateBoard]);
+    // Remove handleCreateBoard from dependencies to prevent infinite loops
+    // The handleCreateBoard callback is stable enough, and we only use it conditionally
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [service, user?.uid, selectedShow?.id]);
   
   // Effect for fetching tasks
   useEffect(() => {
@@ -324,7 +396,9 @@ export function HomeScreen() {
       cardListenersRef.current.forEach(unsubArray => unsubArray.forEach(u => u()));
       cardListenersRef.current.clear();
     };
-  }, [service, filteredBoards]);
+    // Use board IDs instead of filteredBoards array to prevent recreation on array reference changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [service, filteredBoards.map(b => b.id).join(',')]);
 
   const renderWelcomeHeader = () => (
     <View style={styles.headerContainer}>
@@ -608,6 +682,10 @@ export function HomeScreen() {
           {renderCreateBoardModal()}
         </View>
       </LinearGradient>
+      <OnboardingFlow
+        isOpen={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+      />
     </SafeAreaView>
   );
 }

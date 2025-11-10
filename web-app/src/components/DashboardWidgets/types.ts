@@ -14,7 +14,9 @@ export type WidgetId =
   | 'board-creation-prompt'
   | 'task-planning-assistant'
   | 'taskboard-activity-summary'
-  | 'upcoming-deadlines';
+  | 'upcoming-deadlines'
+  | 'cut-props-packing'
+  | 'props-needing-work';
 
 export interface WidgetConfig {
   id: WidgetId;

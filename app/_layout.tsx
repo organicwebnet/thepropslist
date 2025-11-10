@@ -13,6 +13,7 @@ import { ThemeProvider } from '../src/contexts/ThemeContext';
 import { FontProvider } from '../src/contexts/FontContext';
 import { ShowsProvider } from '../src/contexts/ShowsContext';
 import { PropsProvider } from '../src/contexts/PropsContext';
+import { IssueLoggerWidget } from '../src/components/IssueLoggerWidget';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -55,7 +56,13 @@ export default function RootLayout() {
                     <Stack.Screen name="index" />
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen name="auth" options={{ headerShown: false }} />
+                    <Stack.Screen name="c/[containerId]" options={{ headerShown: true }} />
+                    <Stack.Screen name="view/prop/[propId]" options={{ headerShown: true }} />
+                    <Stack.Screen name="feedback" options={{ headerShown: true }} />
                   </Stack>
+                  <IssueLoggerWidget
+                    enabled={__DEV__}
+                  />
                   <StatusBar style="light" backgroundColor="#18181b" translucent={false} />
                 </PropsProvider>
               </ShowsProvider>

@@ -10,16 +10,24 @@ import { FontAwesome5, MaterialCommunityIcons, Ionicons, Feather } from '@expo/v
 import { darkTheme, lightTheme } from '../styles/theme';
 import type { FirebaseDocument } from '../shared/services/firebase/types';
 import { useTheme } from '../contexts/ThemeContext';
+import { ArchiveService } from '../services/ArchiveService';
+import { useSubscription } from '../hooks/useSubscription';
+import { useLimitChecker } from '../hooks/useLimitChecker';
 
 export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => void }) {
   const { service: firebaseService } = useFirebase();
   const { user } = useAuth();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { limits } = useSubscription();
+  const { checkArchivedShowsLimit } = useLimitChecker();
   const [show, setShow] = useState<Show | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [propStats, setPropStats] = useState({ totalProps: 0, totalValue: 0, totalWeight: 0 });
+  const [archiveModalVisible, setArchiveModalVisible] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveService] = useState(() => firebaseService ? new ArchiveService(firebaseService) : null);
 
   useEffect(() => {
     if (!id || !firebaseService) return;
@@ -76,11 +84,37 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
           onEdit(show)
       } else {
           if (id) {
-            Alert.alert("Edit Show", "This feature (editing show details via a separate page) is not yet implemented.");
+            router.push(`/shows/${id}/edit` as any);
           }
       }
     } else {
-        Alert.alert("Feature not available", "Editing shows is currently only supported on the web version.");
+        if (id) {
+          router.push(`/(tabs)/shows/${id}/edit` as any);
+        }
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!id || !archiveService || !user?.uid || !show) return;
+
+    setArchiving(true);
+    try {
+      // Check archived shows limit
+      const limitCheck = await checkArchivedShowsLimit(user.uid);
+      if (!limitCheck.withinLimit) {
+        Alert.alert('Limit Reached', limitCheck.message || 'Archived shows limit reached');
+        setArchiving(false);
+        return;
+      }
+
+      await archiveService.archiveShow(id, user.uid, limits.archivedShows);
+      Alert.alert('Success', 'Show archived successfully');
+      setArchiveModalVisible(false);
+      router.back();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to archive show');
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -201,9 +235,17 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
                   {show.description}
                 </Text>
               </View>
-              <TouchableOpacity onPress={handleEdit} style={{ padding: 8 }}>
-                <Feather name="edit" size={20} color="#fff" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity 
+                  onPress={() => id && router.push(`/(tabs)/shows/${id}/team` as any)} 
+                  style={{ padding: 8 }}
+                >
+                  <Ionicons name="people" size={20} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleEdit} style={{ padding: 8 }}>
+                  <Feather name="edit" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -290,6 +332,51 @@ export default function ShowDetailPage({ onEdit }: { onEdit?: (show: Show) => vo
             )}
           </View>
         </ScrollView>
+
+        {/* Archive Modal */}
+        <Modal
+          visible={archiveModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setArchiveModalVisible(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ backgroundColor: '#2D2D2D', borderRadius: 12, padding: 20, width: '100%', maxWidth: 400 }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 16 }}>
+                Archive Show
+              </Text>
+              <Text style={{ color: '#CCCCCC', marginBottom: 20 }}>
+                Archiving will preserve all show data including props, tasks, packing lists, and collaborators. 
+                The show can be restored later if needed.
+              </Text>
+              <View style={{ backgroundColor: '#404040', padding: 12, borderRadius: 8, marginBottom: 20 }}>
+                <Text style={{ color: '#CCCCCC', fontSize: 12 }}>
+                  <Text style={{ fontWeight: 'bold' }}>Archive Limit:</Text>{' '}
+                  {limits.archivedShows === 0 ? 'No archived shows allowed on free plan' : `Up to ${limits.archivedShows} archived shows`}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity
+                  onPress={() => setArchiveModalVisible(false)}
+                  style={{ flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#404040', alignItems: 'center' }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleArchive}
+                  disabled={archiving}
+                  style={{ flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#3b82f6', alignItems: 'center', opacity: archiving ? 0.6 : 1 }}
+                >
+                  {archiving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={{ color: '#FFFFFF', fontWeight: '600' }}>Archive Show</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
