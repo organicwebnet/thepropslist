@@ -11,7 +11,6 @@ import type { Show } from '../../types/Show';
 export type WidgetId = 
   | 'my-tasks'
   | 'taskboard-quick-links'
-  | 'board-creation-prompt'
   | 'task-planning-assistant'
   | 'taskboard-activity-summary'
   | 'upcoming-deadlines'

@@ -13,6 +13,7 @@ import { usePropLifecycle } from '../hooks/usePropLifecycle.ts';
 import { Show } from '../types/index.ts';
 import { MaintenanceRecordForm } from '../components/lifecycle/MaintenanceRecordForm.tsx';
 import { PropStatusUpdate } from '../components/lifecycle/PropStatusUpdate.tsx';
+import { StatusDropdownMobile } from '../components/lifecycle/StatusDropdownMobile.tsx';
 import { lifecycleStatusLabels, lifecycleStatusPriority, MaintenanceRecord, PropLifecycleStatus } from '../types/lifecycle.ts';
 import { VideoPlayer } from '../components/VideoPlayer.tsx';
 import { PropForm } from '../components/PropForm.tsx';
@@ -816,6 +817,17 @@ export default function PropDetailPage() {
             </View>
           </View>
 
+          {/* Status Dropdown */}
+          <View style={styles.statusDropdownContainerMobile}>
+            <StatusDropdownMobile
+              currentStatus={prop.status || 'confirmed'}
+              onStatusChange={async (newStatus) => {
+                await handleStatusUpdate(newStatus, '', false);
+              }}
+              disabled={!hasPermission(Permission.EDIT_PROPS)}
+            />
+          </View>
+
           {/* Mentioned in Tasks (Mobile) */}
           <View style={styles.sectionMobile}>
             <Text style={styles.sectionTitleMobile}>Mentioned in Tasks</Text>
@@ -831,15 +843,6 @@ export default function PropDetailPage() {
               </View>
             )}
           </View>
-
-          {/* Status Badge */}
-          {prop.status && (
-            <View style={styles.statusBadgeMobile}>
-              <Text style={styles.statusTextMobile}>
-                {prop.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </Text>
-            </View>
-          )}
 
           {/* Basic Information Section */}
           <View style={styles.sectionMobile}>
@@ -1062,6 +1065,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(139, 69, 19, 0.5)'
   },
   statusTextMobile: { color: '#D2B48C', fontSize: 14, fontWeight: '600' },
+  statusDropdownContainerMobile: {
+    marginBottom: 16,
+    alignSelf: 'flex-end',
+  },
   sectionMobile: { 
     backgroundColor: 'rgba(40,40,40,0.8)', 
     borderRadius: 8, 

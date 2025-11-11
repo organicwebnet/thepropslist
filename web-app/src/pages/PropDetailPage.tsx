@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
+import { useWebAuth } from '../contexts/WebAuthContext';
 import { Prop } from '../types/props';
 import { LoadingSpinner } from '../components/LoadingSkeleton';
-import { MapPin, Ruler, BadgeInfo, FileText, Image as ImageIcon, Package, Settings2, ChevronDown, ChevronUp, Pencil, ArrowLeft } from 'lucide-react';
+import { StatusDropdown } from '../components/StatusDropdown';
+import { StatusHistory } from '../../src/components/lifecycle/StatusHistory';
+import { PropLifecycleStatus, PropStatusUpdate } from '../../src/types/lifecycle';
+import { MapPin, Ruler, BadgeInfo, FileText, Image as ImageIcon, Package, Settings2, ChevronDown, ChevronUp, Pencil, ArrowLeft, History } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DashboardLayout from '../PropsBibleHomepage';
 
@@ -40,12 +44,14 @@ function Section({ id, title, defaultOpen = true, isOpen, onToggle, children, mi
   );
 }
 
-type SectionId = 'overview' | 'dimensions' | 'identification' | 'usage' | 'purchase' | 'storage' | 'media' | 'notes';
+type SectionId = 'overview' | 'dimensions' | 'identification' | 'usage' | 'purchase' | 'storage' | 'media' | 'notes' | 'statusHistory';
 
 const PropDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { service } = useFirebase();
+  const { user } = useWebAuth();
   const [prop, setProp] = useState<Prop | null>(null);
+  const [statusHistory, setStatusHistory] = useState<PropStatusUpdate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({ 
@@ -56,7 +62,8 @@ const PropDetailPage: React.FC = () => {
     purchase: false, 
     storage: false, 
     media: false, 
-    notes: false 
+    notes: false,
+    statusHistory: false 
   });
 
   useEffect(() => {
@@ -70,6 +77,16 @@ const PropDetailPage: React.FC = () => {
         const doc = await service.getDocument('props', id);
         if (doc) {
           setProp({ ...doc.data, id: doc.id } as Prop);
+          
+          // Load status history
+          try {
+            const historyDocs = await service.getCollection<PropStatusUpdate>(`props/${id}/statusHistory`);
+            const history = historyDocs.map(d => ({ ...d.data, id: d.id } as PropStatusUpdate));
+            setStatusHistory(history);
+          } catch (historyErr) {
+            console.error('Error loading status history:', historyErr);
+            setStatusHistory([]);
+          }
         } else {
           setError('Prop not found');
         }
@@ -99,6 +116,52 @@ const PropDetailPage: React.FC = () => {
       window.history.replaceState(null, '', `#${section}`); 
     } catch (error) {
       console.warn('Failed to update history state:', error);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: PropLifecycleStatus) => {
+    if (!id || !service || !prop || !user) {
+      throw new Error('Missing required data to update status');
+    }
+
+    const previousStatus = prop.status as PropLifecycleStatus;
+    if (previousStatus === newStatus) {
+      return; // No change needed
+    }
+
+    try {
+      // Update the prop status
+      await service.updateDocument('props', id, {
+        status: newStatus,
+        lastStatusUpdate: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Create status history entry
+      const statusUpdate = {
+        previousStatus,
+        newStatus,
+        updatedBy: user.uid,
+        date: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+
+      await service.addDocument(`props/${id}/statusHistory`, statusUpdate);
+
+      // Update local state
+      setProp(prev => prev ? { ...prev, status: newStatus, lastStatusUpdate: new Date().toISOString() } : null);
+      
+      // Reload status history to include the new update
+      try {
+        const historyDocs = await service.getCollection<PropStatusUpdate>(`props/${id}/statusHistory`);
+        const history = historyDocs.map(d => ({ ...d.data, id: d.id } as PropStatusUpdate));
+        setStatusHistory(history);
+      } catch (historyErr) {
+        console.error('Error reloading status history:', historyErr);
+      }
+    } catch (err) {
+      console.error('Error updating prop status:', err);
+      throw err;
     }
   };
 
@@ -185,9 +248,13 @@ const PropDetailPage: React.FC = () => {
               <MapPin className="w-3 h-3 text-pb-primary" />
               {prop.location || prop.currentLocation || 'No location'}
             </span>
-            <span className="px-2 py-1 rounded-full text-xs bg-pb-success/30 text-white">
-              {prop.status?.replace(/_/g, ' ') || 'No status'}
-            </span>
+            {prop.status && (
+              <StatusDropdown
+                currentStatus={prop.status as PropLifecycleStatus}
+                onStatusChange={handleStatusChange}
+                size="sm"
+              />
+            )}
             {missingFields.length > 0 && (
               <a 
                 href="#gaps" 
@@ -229,6 +296,9 @@ const PropDetailPage: React.FC = () => {
             <a href="#storage" onClick={handleNavClick('storage')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Storage</a>
             <a href="#media" onClick={handleNavClick('media')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Media</a>
             <a href="#notes" onClick={handleNavClick('notes')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Notes</a>
+            <a href="#statusHistory" onClick={handleNavClick('statusHistory')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center gap-1">
+              <History className="w-3 h-3" /> Status History
+            </a>
           </nav>
         </div>
 
@@ -497,6 +567,16 @@ const PropDetailPage: React.FC = () => {
               <div className="text-pb-gray">{prop.maintenanceNotes}</div>
             </div>
           )}
+        </Section>
+
+        <Section 
+          id="statusHistory" 
+          title="Status History" 
+          defaultOpen={false} 
+          isOpen={openSections.statusHistory} 
+          onToggle={v => setOpenSections(s => ({ ...s, statusHistory: v }))}
+        >
+          <StatusHistory history={statusHistory} firebaseService={service} />
         </Section>
       </motion.div>
       </div>

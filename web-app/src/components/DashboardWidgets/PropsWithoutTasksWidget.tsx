@@ -1,20 +1,20 @@
 /**
- * Props Without Tasks Widget
+ * Props With Tasks Widget
  * 
- * Identifies props that need tasks but don't have any linked tasks
+ * Identifies props that have tasks but are in actionable statuses,
+ * indicating they may not be in the correct working order
  */
 
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle, Plus, Package, X } from 'lucide-react';
+import { AlertCircle, Package, X, ExternalLink } from 'lucide-react';
 import { WidgetContainer } from './WidgetContainer';
-import { CreateTaskFromPropModal } from './CreateTaskFromPropModal';
 import { parseFirestoreDate, daysBetween } from '../../utils/dateHelpers';
 import type { DashboardWidgetProps } from './types';
 import type { Prop } from '../../types/props';
 import type { CardData } from '../../types/taskManager';
 
-// Statuses that indicate a prop needs a task
+// Statuses that indicate a prop is not in correct working order
 const ACTIONABLE_STATUSES = [
   'to_buy',
   'on_order',
@@ -28,10 +28,11 @@ const ACTIONABLE_STATUSES = [
 
 type ActionableStatus = typeof ACTIONABLE_STATUSES[number];
 
-interface PropNeedingTask {
+interface PropWithTask {
   prop: Prop;
   reason: string;
   priority: 'high' | 'medium';
+  taskCount: number;
 }
 
 interface PropsWithoutTasksWidgetProps extends DashboardWidgetProps {
@@ -45,29 +46,31 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
   cards = [],
   showId: _showId, // Unused but kept for API consistency
 }) => {
-  const [selectedProp, setSelectedProp] = useState<Prop | null>(null);
   const [dismissedProps, setDismissedProps] = useState<Set<string>>(new Set());
 
-  // Get all prop IDs that have linked tasks
+  // Get all prop IDs that have linked tasks and count tasks per prop
   const propsWithTasks = useMemo(() => {
-    return new Set(
-      (cards as CardData[])
-        .filter(card => card.propId)
-        .map(card => card.propId!)
-    );
+    const propTaskCounts = new Map<string, number>();
+    (cards as CardData[])
+      .filter(card => card.propId)
+      .forEach(card => {
+        const count = propTaskCounts.get(card.propId!) || 0;
+        propTaskCounts.set(card.propId!, count + 1);
+      });
+    return propTaskCounts;
   }, [cards]);
 
-  // Identify props that need tasks
-  const propsNeedingTasks = useMemo((): PropNeedingTask[] => {
+  // Identify props that have tasks but are in actionable statuses
+  const propsWithTasksInActionableStatus = useMemo((): PropWithTask[] => {
     return (props as Prop[])
       .filter(prop => {
         // Skip if dismissed
         if (dismissedProps.has(prop.id)) return false;
         
-        // Skip if already has a task
-        if (propsWithTasks.has(prop.id)) return false;
+        // Only include props that have tasks
+        if (!propsWithTasks.has(prop.id)) return false;
 
-        // Check if prop has an actionable status
+        // Check if prop has an actionable status (not in correct working order)
         const status = prop.status as string;
         return ACTIONABLE_STATUSES.includes(status as ActionableStatus);
       })
@@ -140,7 +143,8 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
           }
         }
 
-        return { prop, reason, priority };
+        const taskCount = propsWithTasks.get(prop.id) || 0;
+        return { prop, reason, priority, taskCount };
       })
       .sort((a, b) => {
         // Sort by priority first (high before medium)
@@ -156,26 +160,21 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
     setDismissedProps(prev => new Set(prev).add(propId));
   };
 
-  const handleTaskCreated = (_taskId: string) => {
-    // Close modal and optionally refresh
-    setSelectedProp(null);
-  };
-
-  const highPriority = propsNeedingTasks.filter(p => p.priority === 'high');
-  const mediumPriority = propsNeedingTasks.filter(p => p.priority === 'medium');
+  const highPriority = propsWithTasksInActionableStatus.filter(p => p.priority === 'high');
+  const mediumPriority = propsWithTasksInActionableStatus.filter(p => p.priority === 'medium');
 
   return (
     <>
       <WidgetContainer
         widgetId="task-planning-assistant"
-        title="Props Without Tasks"
+        title="Props With Tasks"
         loading={false}
       >
-        {propsNeedingTasks.length === 0 ? (
+        {propsWithTasksInActionableStatus.length === 0 ? (
           <div className="text-center py-8">
             <Package className="w-12 h-12 text-pb-gray mx-auto mb-3 opacity-50" />
-            <p className="text-pb-gray text-sm">All props have tasks</p>
-            <p className="text-pb-gray text-xs mt-1">Great job staying organized!</p>
+            <p className="text-pb-gray text-sm">No props with tasks in actionable status</p>
+            <p className="text-pb-gray text-xs mt-1">All props with tasks are in correct working order!</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -189,7 +188,7 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
                   </h4>
                 </div>
                 <div className="space-y-2">
-                  {highPriority.slice(0, 5).map(({ prop, reason }) => (
+                  {highPriority.slice(0, 5).map(({ prop, reason, taskCount }) => (
                     <div
                       key={prop.id}
                       className="p-3 rounded-lg bg-red-500/20 border border-red-500/30"
@@ -200,6 +199,9 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
                             {prop.name}
                           </div>
                           <div className="text-xs text-pb-gray">{reason}</div>
+                          <div className="text-xs text-pb-gray mt-1">
+                            {taskCount} task{taskCount === 1 ? '' : 's'} linked
+                          </div>
                           {prop.category && (
                             <div className="text-xs text-pb-gray mt-1">
                               Category: {prop.category}
@@ -215,13 +217,13 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
                         </button>
                       </div>
                       <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => setSelectedProp(prop)}
+                        <Link
+                          to={`/boards`}
                           className="flex-1 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
                         >
-                          <Plus className="w-3 h-3" />
-                          Create Task
-                        </button>
+                          <ExternalLink className="w-3 h-3" />
+                          View Tasks
+                        </Link>
                         <Link
                           to={`/props/${prop.id}`}
                           className="px-3 py-1.5 bg-pb-primary/20 hover:bg-pb-primary/30 text-white text-xs rounded-lg transition-colors"
@@ -245,7 +247,7 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
                   </h4>
                 </div>
                 <div className="space-y-2">
-                  {mediumPriority.slice(0, 3).map(({ prop, reason }) => (
+                  {mediumPriority.slice(0, 3).map(({ prop, reason, taskCount }) => (
                     <div
                       key={prop.id}
                       className="p-3 rounded-lg bg-yellow-500/20 border border-yellow-500/30"
@@ -256,6 +258,9 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
                             {prop.name}
                           </div>
                           <div className="text-xs text-pb-gray">{reason}</div>
+                          <div className="text-xs text-pb-gray mt-1">
+                            {taskCount} task{taskCount === 1 ? '' : 's'} linked
+                          </div>
                         </div>
                         <button
                           onClick={() => handleDismiss(prop.id)}
@@ -266,13 +271,13 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
                         </button>
                       </div>
                       <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => setSelectedProp(prop)}
+                        <Link
+                          to={`/taskboard?propId=${prop.id}`}
                           className="flex-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
                         >
-                          <Plus className="w-3 h-3" />
-                          Create Task
-                        </button>
+                          <ExternalLink className="w-3 h-3" />
+                          View Tasks
+                        </Link>
                         <Link
                           to={`/props/${prop.id}`}
                           className="px-3 py-1.5 bg-pb-primary/20 hover:bg-pb-primary/30 text-white text-xs rounded-lg transition-colors"
@@ -286,28 +291,19 @@ export const PropsWithoutTasksWidget: React.FC<PropsWithoutTasksWidgetProps> = (
               </div>
             )}
 
-            {propsNeedingTasks.length > 8 && (
+            {propsWithTasksInActionableStatus.length > 8 && (
               <div className="pt-2 text-center">
                 <Link
                   to="/props"
                   className="text-sm text-pb-primary hover:text-pb-secondary underline"
                 >
-                  View all {propsNeedingTasks.length} props needing tasks →
+                  View all {propsWithTasksInActionableStatus.length} props with tasks in actionable status →
                 </Link>
               </div>
             )}
           </div>
         )}
       </WidgetContainer>
-
-      {selectedProp && (
-        <CreateTaskFromPropModal
-          prop={selectedProp}
-          isOpen={true}
-          onClose={() => setSelectedProp(null)}
-          onTaskCreated={handleTaskCreated}
-        />
-      )}
     </>
   );
 };

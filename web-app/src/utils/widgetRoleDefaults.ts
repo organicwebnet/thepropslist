@@ -24,7 +24,6 @@ export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
           'taskboard-activity-summary',
           'task-planning-assistant',
           'upcoming-deadlines',
-          'board-creation-prompt',
           'cut-props-packing',
           'props-needing-work',
         ],

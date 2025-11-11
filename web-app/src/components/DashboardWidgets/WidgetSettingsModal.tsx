@@ -25,13 +25,9 @@ const WIDGET_DESCRIPTIONS: Record<WidgetId, { name: string; description: string 
     name: 'Taskboard Quick Links',
     description: 'Fast access to your taskboards',
   },
-  'board-creation-prompt': {
-    name: 'Board Creation Prompt',
-    description: 'Suggestions for creating new taskboards',
-  },
   'task-planning-assistant': {
-    name: 'Props Without Tasks',
-    description: 'Identifies props that need tasks',
+    name: 'Props With Tasks',
+    description: 'Shows props with tasks that are not in correct working order',
   },
   'taskboard-activity-summary': {
     name: 'Taskboard Activity Summary',

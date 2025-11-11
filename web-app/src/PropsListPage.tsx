@@ -12,6 +12,8 @@ import AvailabilityCounter from './components/AvailabilityCounter';
 import { useSubscription } from './hooks/useSubscription';
 import { PropCard } from './components/PropCard';
 import { PropsListSkeleton } from './components/LoadingSkeleton';
+import { StatusDropdown } from './components/StatusDropdown';
+import { PropLifecycleStatus } from '../../src/types/lifecycle';
 // Simplified loader removed per design request
 import { usePropListLoading } from './hooks/useImageLoading';
 
@@ -89,6 +91,8 @@ const PropsListPage: React.FC = () => {
   const [downloading, setDownloading] = useState(false);
   const [downloadingCsv, setDownloadingCsv] = useState(false);
   const [viewAllProps, setViewAllProps] = useState(false);
+  const [selectedProps, setSelectedProps] = useState<Set<string>>(new Set());
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -209,6 +213,76 @@ const PropsListPage: React.FC = () => {
       setDownloading(false);
       setShowPdfDialog(false);
     }});
+  };
+
+  const handleToggleSelect = (propId: string) => {
+    setSelectedProps(prev => {
+      const next = new Set(prev);
+      if (next.has(propId)) {
+        next.delete(propId);
+      } else {
+        next.add(propId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProps.size === filteredProps.length) {
+      setSelectedProps(new Set());
+    } else {
+      setSelectedProps(new Set(filteredProps.map(p => p.id)));
+    }
+  };
+
+  const handleBulkStatusUpdate = async (newStatus: PropLifecycleStatus) => {
+    if (selectedProps.size === 0 || !firebaseService || !user) {
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      const batch = firebaseService.batch();
+      const updates: Promise<void>[] = [];
+
+      for (const propId of selectedProps) {
+        const prop = props.find(p => p.id === propId);
+        if (!prop) continue;
+
+        const previousStatus = prop.status as PropLifecycleStatus;
+        
+        // Update prop status
+        updates.push(
+          firebaseService.updateDocument('props', propId, {
+            status: newStatus,
+            lastStatusUpdate: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+        );
+
+        // Create status history entry
+        const statusUpdate = {
+          previousStatus,
+          newStatus,
+          updatedBy: user.uid,
+          date: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        };
+
+        updates.push(
+          firebaseService.addDocument(`props/${propId}/statusHistory`, statusUpdate)
+            .then(() => {}) // Convert to void
+        );
+      }
+
+      await Promise.all(updates);
+      setSelectedProps(new Set());
+    } catch (err) {
+      console.error('Error updating props status:', err);
+      alert('Failed to update some props. Please try again.');
+    } finally {
+      setIsBulkUpdating(false);
+    }
   };
 
   const handleDownloadCsv = async () => {
@@ -334,10 +408,47 @@ const PropsListPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Bulk Actions Bar */}
+          {selectedProps.size > 0 && (
+            <div className="mb-4 p-4 bg-pb-primary/20 border border-pb-primary/40 rounded-lg flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <span className="text-white font-medium">
+                  {selectedProps.size} prop{selectedProps.size !== 1 ? 's' : ''} selected
+                </span>
+                <button
+                  onClick={() => setSelectedProps(new Set())}
+                  className="text-pb-gray hover:text-white text-sm underline"
+                >
+                  Clear selection
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-white text-sm">Update status:</span>
+                <StatusDropdown
+                  currentStatus={filteredProps.find(p => selectedProps.has(p.id))?.status as PropLifecycleStatus || 'confirmed'}
+                  onStatusChange={handleBulkStatusUpdate}
+                  disabled={isBulkUpdating}
+                  size="sm"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Filters and Actions Row */}
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Filters */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 items-center">
+              {filteredProps.length > 0 && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedProps.size === filteredProps.length && filteredProps.length > 0}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 rounded border-pb-primary/30 bg-pb-darker/60 text-pb-primary focus:ring-pb-primary"
+                  />
+                  <span className="text-white text-sm">Select all</span>
+                </label>
+              )}
               <div className="relative">
                 <select
                   value={category}
@@ -562,12 +673,21 @@ const PropsListPage: React.FC = () => {
                 {filteredProps.map((prop, index) => (
                   <div
                     key={prop.id}
-                    className="animate-slide-up"
+                    className="animate-slide-up relative"
                     style={{
                       animationDelay: `${index * 100}ms`,
                       animationFillMode: 'both'
                     }}
                   >
+                    <div className="absolute top-2 left-2 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedProps.has(prop.id)}
+                        onChange={() => handleToggleSelect(prop.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-5 h-5 rounded border-pb-primary/30 bg-pb-darker/80 text-pb-primary focus:ring-pb-primary cursor-pointer"
+                      />
+                    </div>
                     <PropCard
                       prop={prop}
                       onImageLoad={() => handleImageLoad(prop.id)}

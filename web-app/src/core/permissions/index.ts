@@ -6,7 +6,7 @@
  */
 
 // Re-export everything from shared permissions
-export * from '../../../src/shared/permissions';
+export * from '../../../../src/shared/permissions';
 
 // Re-export commonly used items for convenience
 export { 
@@ -19,6 +19,6 @@ export {
   type PermissionSummary,
   type SubscriptionLimits,
   type CurrentCounts
-} from '../../../src/shared/permissions/types';
+} from '../../../../src/shared/permissions/types';
 
-export { PermissionService } from '../../../src/shared/permissions/PermissionService';
+export { PermissionService } from '../../../../src/shared/permissions/PermissionService';

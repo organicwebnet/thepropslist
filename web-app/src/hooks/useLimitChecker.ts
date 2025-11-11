@@ -9,6 +9,8 @@
 
 import { useSubscription } from './useSubscription';
 import { useFirebase } from '../contexts/FirebaseContext';
+import { useWebAuth } from '../contexts/WebAuthContext';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 export interface LimitCheckResult {
   withinLimit: boolean;
@@ -16,6 +18,9 @@ export interface LimitCheckResult {
   limit: number;
   isPerShow: boolean;
   message?: string;
+  usagePercent?: number;
+  isAlmostOut?: boolean;
+  isShowOwner?: boolean;
 }
 
 /**
@@ -25,6 +30,7 @@ export interface LimitCheckResult {
 export function useLimitChecker() {
   const { limits, perShowLimits } = useSubscription();
   const { service: firebaseService } = useFirebase();
+  const { user } = useWebAuth();
 
 
   /**
@@ -95,24 +101,57 @@ export function useLimitChecker() {
 
   /**
    * Check if user can create more boards for a specific show (per-show limit)
+   * This checks the show owner's subscription limits, not the current user's
    */
   const checkBoardLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
     try {
-      const boards = await firebaseService.getDocuments('todo_boards', {
-        where: [['showId', '==', showId]]
-      });
+      // Get show to find the owner
+      const showDoc = await firebaseService.getDocument('shows', showId);
+      if (!showDoc?.data) {
+        return {
+          withinLimit: true,
+          currentCount: 0,
+          limit: perShowLimits.boards,
+          isPerShow: true,
+          isShowOwner: false
+        };
+      }
       
-      const currentCount = boards.length;
-      const limit = perShowLimits.boards;
+      const showOwnerId = showDoc.data.createdBy || showDoc.data.ownerId || showDoc.data.userId;
+      const isShowOwner = user?.uid === showOwnerId;
+      
+      // Use cloud function to check show owner's limits (counts all boards for all their shows)
+      const functions = getFunctions();
+      const checkLimits = httpsCallable(functions, 'checkSubscriptionLimits');
+      const result = await checkLimits({ userId: showOwnerId, resourceType: 'boards' });
+      const data = result.data as any;
+      
+      const currentCount = data.currentCount || 0;
+      const limit = data.limit || perShowLimits.boards;
+      const usagePercent = data.usagePercent || (limit > 0 ? (currentCount / limit) * 100 : 0);
+      const isAlmostOut = data.isAlmostOut || (usagePercent >= 80 && usagePercent < 100);
+      const isAtLimit = currentCount >= limit;
+      
+      let message: string | undefined;
+      if (isAtLimit) {
+        message = isShowOwner
+          ? `You have reached your plan's boards limit of ${limit}. Upgrade your plan to create more boards.`
+          : `This show has reached its boards limit of ${limit} on the show owner's plan. The show owner needs to upgrade their plan to create more boards.`;
+      } else if (isAlmostOut) {
+        message = isShowOwner
+          ? `Warning: You're using ${currentCount} of ${limit} boards (${Math.round(usagePercent)}%). Consider upgrading your plan soon.`
+          : `Warning: This show is using ${currentCount} of ${limit} boards (${Math.round(usagePercent)}%) on the show owner's plan. The show owner should consider upgrading soon.`;
+      }
       
       return {
-        withinLimit: currentCount < limit,
+        withinLimit: !isAtLimit,
         currentCount,
         limit,
         isPerShow: true,
-        message: currentCount >= limit 
-          ? `This show has reached its board limit of ${limit}. Upgrade to create more boards.`
-          : undefined
+        usagePercent,
+        isAlmostOut,
+        isShowOwner,
+        message
       };
     } catch (error) {
       console.error('Error checking board limit for show:', error);
@@ -121,6 +160,7 @@ export function useLimitChecker() {
         currentCount: 0,
         limit: perShowLimits.boards,
         isPerShow: true,
+        isShowOwner: false,
         message: 'Error checking board limit for show'
       };
     }
@@ -161,24 +201,57 @@ export function useLimitChecker() {
 
   /**
    * Check if user can create more packing boxes for a specific show (per-show limit)
+   * This checks the show owner's subscription limits, not the current user's
    */
   const checkPackingBoxLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
     try {
-      const packingBoxes = await firebaseService.getDocuments('packingBoxes', {
-        where: [['showId', '==', showId]]
-      });
+      // Get show to find the owner
+      const showDoc = await firebaseService.getDocument('shows', showId);
+      if (!showDoc?.data) {
+        return {
+          withinLimit: true,
+          currentCount: 0,
+          limit: perShowLimits.packingBoxes,
+          isPerShow: true,
+          isShowOwner: false
+        };
+      }
       
-      const currentCount = packingBoxes.length;
-      const limit = perShowLimits.packingBoxes;
+      const showOwnerId = showDoc.data.createdBy || showDoc.data.ownerId || showDoc.data.userId;
+      const isShowOwner = user?.uid === showOwnerId;
+      
+      // Use cloud function to check show owner's limits (counts all packing boxes for all their shows)
+      const functions = getFunctions();
+      const checkLimits = httpsCallable(functions, 'checkSubscriptionLimits');
+      const result = await checkLimits({ userId: showOwnerId, resourceType: 'packingBoxes' });
+      const data = result.data as any;
+      
+      const currentCount = data.currentCount || 0;
+      const limit = data.limit || perShowLimits.packingBoxes;
+      const usagePercent = data.usagePercent || (limit > 0 ? (currentCount / limit) * 100 : 0);
+      const isAlmostOut = data.isAlmostOut || (usagePercent >= 80 && usagePercent < 100);
+      const isAtLimit = currentCount >= limit;
+      
+      let message: string | undefined;
+      if (isAtLimit) {
+        message = isShowOwner
+          ? `You have reached your plan's packing boxes limit of ${limit}. Upgrade your plan to create more packing boxes.`
+          : `This show has reached its packing boxes limit of ${limit} on the show owner's plan. The show owner needs to upgrade their plan to create more packing boxes.`;
+      } else if (isAlmostOut) {
+        message = isShowOwner
+          ? `Warning: You're using ${currentCount} of ${limit} packing boxes (${Math.round(usagePercent)}%). Consider upgrading your plan soon.`
+          : `Warning: This show is using ${currentCount} of ${limit} packing boxes (${Math.round(usagePercent)}%) on the show owner's plan. The show owner should consider upgrading soon.`;
+      }
       
       return {
-        withinLimit: currentCount < limit,
+        withinLimit: !isAtLimit,
         currentCount,
         limit,
         isPerShow: true,
-        message: currentCount >= limit 
-          ? `This show has reached its packing box limit of ${limit}. Upgrade to create more packing boxes.`
-          : undefined
+        usagePercent,
+        isAlmostOut,
+        isShowOwner,
+        message
       };
     } catch (error) {
       console.error('Error checking packing box limit for show:', error);
@@ -187,6 +260,7 @@ export function useLimitChecker() {
         currentCount: 0,
         limit: perShowLimits.packingBoxes,
         isPerShow: true,
+        isShowOwner: false,
         message: 'Error checking packing box limit for show'
       };
     }
@@ -227,24 +301,57 @@ export function useLimitChecker() {
 
   /**
    * Check if user can create more props for a specific show (per-show limit)
+   * This checks the show owner's subscription limits, not the current user's
    */
   const checkPropLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
     try {
-      const props = await firebaseService.getDocuments('props', {
-        where: [['showId', '==', showId]]
-      });
+      // Get show to find the owner
+      const showDoc = await firebaseService.getDocument('shows', showId);
+      if (!showDoc?.data) {
+        return {
+          withinLimit: true,
+          currentCount: 0,
+          limit: perShowLimits.props,
+          isPerShow: true,
+          isShowOwner: false
+        };
+      }
       
-      const currentCount = props.length;
-      const limit = perShowLimits.props;
+      const showOwnerId = showDoc.data.createdBy || showDoc.data.ownerId || showDoc.data.userId;
+      const isShowOwner = user?.uid === showOwnerId;
+      
+      // Use cloud function to check show owner's limits (counts all props for all their shows)
+      const functions = getFunctions();
+      const checkLimits = httpsCallable(functions, 'checkSubscriptionLimits');
+      const result = await checkLimits({ userId: showOwnerId, resourceType: 'props' });
+      const data = result.data as any;
+      
+      const currentCount = data.currentCount || 0;
+      const limit = data.limit || perShowLimits.props;
+      const usagePercent = data.usagePercent || (limit > 0 ? (currentCount / limit) * 100 : 0);
+      const isAlmostOut = data.isAlmostOut || (usagePercent >= 80 && usagePercent < 100);
+      const isAtLimit = currentCount >= limit;
+      
+      let message: string | undefined;
+      if (isAtLimit) {
+        message = isShowOwner
+          ? `You have reached your plan's props limit of ${limit}. Upgrade your plan to create more props.`
+          : `This show has reached its props limit of ${limit} on the show owner's plan. The show owner needs to upgrade their plan to create more props.`;
+      } else if (isAlmostOut) {
+        message = isShowOwner
+          ? `Warning: You're using ${currentCount} of ${limit} props (${Math.round(usagePercent)}%). Consider upgrading your plan soon.`
+          : `Warning: This show is using ${currentCount} of ${limit} props (${Math.round(usagePercent)}%) on the show owner's plan. The show owner should consider upgrading soon.`;
+      }
       
       return {
-        withinLimit: currentCount < limit,
+        withinLimit: !isAtLimit,
         currentCount,
         limit,
         isPerShow: true,
-        message: currentCount >= limit 
-          ? `This show has reached its props limit of ${limit}. Upgrade to create more props.`
-          : undefined
+        usagePercent,
+        isAlmostOut,
+        isShowOwner,
+        message
       };
     } catch (error) {
       console.error('Error checking prop limit for show:', error);
@@ -253,6 +360,7 @@ export function useLimitChecker() {
         currentCount: 0,
         limit: perShowLimits.props,
         isPerShow: true,
+        isShowOwner: false,
         message: 'Error checking prop limit for show'
       };
     }
@@ -260,21 +368,56 @@ export function useLimitChecker() {
 
   /**
    * Check if user can add more collaborators to a show (per-show limit)
+   * This checks the show owner's subscription limits
    */
   const checkCollaboratorLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
     try {
       const showDoc = await firebaseService.getDocument('shows', showId);
-      const currentCount = Object.keys(showDoc?.data?.team || {}).length;
-      const limit = perShowLimits.collaborators;
+      if (!showDoc?.data) {
+        return {
+          withinLimit: true,
+          currentCount: 0,
+          limit: perShowLimits.collaborators,
+          isPerShow: true,
+          isShowOwner: false
+        };
+      }
+      
+      const showOwnerId = showDoc.data.createdBy || showDoc.data.ownerId || showDoc.data.userId;
+      const isShowOwner = user?.uid === showOwnerId;
+      const currentCount = Object.keys(showDoc.data.team || {}).length;
+      
+      // Use cloud function to check show owner's limits
+      const functions = getFunctions();
+      const checkLimits = httpsCallable(functions, 'checkSubscriptionLimits');
+      const result = await checkLimits({ userId: showOwnerId, resourceType: 'collaboratorsPerShow' });
+      const data = result.data as any;
+      
+      const limit = data.limit || perShowLimits.collaborators;
+      const usagePercent = limit > 0 ? (currentCount / limit) * 100 : 0;
+      const isAlmostOut = usagePercent >= 80 && usagePercent < 100;
+      const isAtLimit = currentCount >= limit;
+      
+      let message: string | undefined;
+      if (isAtLimit) {
+        message = isShowOwner
+          ? `You have reached your plan's collaborator limit of ${limit} per show. Upgrade your plan to invite more collaborators.`
+          : `This show has reached its collaborator limit of ${limit} on the show owner's plan. The show owner needs to upgrade their plan to invite more collaborators.`;
+      } else if (isAlmostOut) {
+        message = isShowOwner
+          ? `Warning: This show is using ${currentCount} of ${limit} collaborators (${Math.round(usagePercent)}%). Consider upgrading your plan soon.`
+          : `Warning: This show is using ${currentCount} of ${limit} collaborators (${Math.round(usagePercent)}%) on the show owner's plan. The show owner should consider upgrading soon.`;
+      }
       
       return {
-        withinLimit: currentCount < limit,
+        withinLimit: !isAtLimit,
         currentCount,
         limit,
         isPerShow: true,
-        message: currentCount >= limit 
-          ? `This show has reached its collaborator limit of ${limit}. Upgrade to add more collaborators.`
-          : undefined
+        usagePercent,
+        isAlmostOut,
+        isShowOwner,
+        message
       };
     } catch (error) {
       console.error('Error checking collaborator limit for show:', error);
@@ -283,6 +426,7 @@ export function useLimitChecker() {
         currentCount: 0,
         limit: perShowLimits.collaborators,
         isPerShow: true,
+        isShowOwner: false,
         message: 'Error checking collaborator limit for show'
       };
     }
@@ -327,6 +471,9 @@ export function useLimitChecker() {
     checkBoardLimitForShow,
     checkPackingBoxLimit,
     checkPackingBoxLimitForShow,
+    // Alias for backward compatibility
+    checkPackingBoxesLimit: checkPackingBoxLimit,
+    checkPackingBoxesLimitForShow: checkPackingBoxLimitForShow,
     checkPropLimit,
     checkPropLimitForShow,
     checkCollaboratorLimitForShow,

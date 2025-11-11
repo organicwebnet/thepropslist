@@ -5,21 +5,61 @@
 
 import type { FirebaseService } from '../shared/services/firebase/types';
 import type { Show } from '../shared/services/firebase/types';
+import type { Prop } from '../shared/types/props';
+import type { BoardData } from '../shared/types/taskManager';
+import type { ShowCollaborator } from '../types';
+
+/**
+ * Packing list structure (simplified - adjust based on actual type if available)
+ */
+interface PackingList {
+  id: string;
+  showId: string;
+  name: string;
+  boxes: Array<{
+    id: string;
+    name: string;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+}
+
+/**
+ * Shopping list structure (simplified - adjust based on actual type if available)
+ */
+interface ShoppingList {
+  id: string;
+  showId: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Team member structure
+ */
+interface TeamMember {
+  uid: string;
+  role: string;
+}
+
+/**
+ * Associated data structure for archived shows
+ */
+interface AssociatedData {
+  props: Prop[];
+  boards: BoardData[];
+  packingLists: PackingList[];
+  collaborators: ShowCollaborator[];
+  teamMembers: TeamMember[];
+  shoppingLists: ShoppingList[];
+  otherData: unknown[];
+}
 
 export interface ShowArchive {
   id: string;
   archivedAt: Date;
   archivedBy: string;
   originalShow: Show;
-  associatedData: {
-    props: any[];
-    boards: any[];
-    packingLists: any[];
-    collaborators: any[];
-    teamMembers: any[];
-    shoppingLists: any[];
-    otherData: any[];
-  };
+  associatedData: AssociatedData;
   archiveMetadata: {
     totalProps: number;
     totalTasks: number;
@@ -68,7 +108,7 @@ export class ArchiveService {
           ...show,
           id: showId,
         } as Show,
-        associatedData: associatedData as any,
+        associatedData: associatedData,
         archiveMetadata: {
           totalProps: associatedData.props.length,
           totalTasks: associatedData.boards.reduce((total, board) => 
@@ -93,7 +133,7 @@ export class ArchiveService {
         archivedAt: new Date(),
         archivedBy: userId,
         archiveId,
-      } as any);
+      });
 
       // 7. Soft delete associated data (mark as archived)
       await this.markAssociatedDataAsArchived(showId, archiveId);
@@ -141,7 +181,7 @@ export class ArchiveService {
           lastRestoredAt: new Date(),
           restoredBy: userId,
         },
-      } as any);
+      });
 
       return showId;
     } catch (error) {
@@ -184,7 +224,7 @@ export class ArchiveService {
   /**
    * Collect all associated data for a show
    */
-  private async collectAssociatedData(showId: string): Promise<any> {
+  private async collectAssociatedData(showId: string): Promise<AssociatedData> {
     const [props, boards, packingLists, shoppingLists] = await Promise.all([
       this.firebaseService.getCollection('props', { where: [['showId', '==', showId]] }),
       this.firebaseService.getCollection('boards', { where: [['showId', '==', showId]] }),
@@ -224,7 +264,7 @@ export class ArchiveService {
             archived: true,
             archiveId,
             archivedAt: new Date(),
-          } as any);
+          });
         }
       } catch (error) {
         console.error(`Error archiving ${collection}:`, error);

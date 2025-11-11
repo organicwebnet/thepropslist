@@ -37,7 +37,8 @@ const PackingListPage: React.FC = () => {
         // Check per-show packing boxes limit if show is selected
         if (currentShowId) {
           const showLimitCheck = await checkPackingBoxesLimitForShow(currentShowId);
-          if (!showLimitCheck.withinLimit) {
+          // Show warning if at limit or almost out (80%+)
+          if (!showLimitCheck.withinLimit || showLimitCheck.isAlmostOut) {
             setLimitWarning(showLimitCheck.message || 'Show packing boxes limit reached');
             return;
           }
@@ -103,7 +104,8 @@ const PackingListPage: React.FC = () => {
       // Check per-show packing boxes limit if show is selected
       if (currentShowId) {
         const showLimitCheck = await checkPackingBoxesLimitForShow(currentShowId);
-        if (!showLimitCheck.withinLimit) {
+        // Show warning if at limit or almost out (80%+)
+        if (!showLimitCheck.withinLimit || showLimitCheck.isAlmostOut) {
           setError(showLimitCheck.message || 'Show packing boxes limit reached');
           return;
         }

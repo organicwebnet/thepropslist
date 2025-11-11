@@ -55,7 +55,8 @@ function BoardsPageContent() {
         // Check per-show board limit if show is selected
         if (currentShowId) {
           const showLimitCheck = await checkBoardLimitForShow(currentShowId);
-          if (!showLimitCheck.withinLimit) {
+          // Show warning if at limit or almost out (80%+)
+          if (!showLimitCheck.withinLimit || showLimitCheck.isAlmostOut) {
             setLimitWarning(showLimitCheck.message || 'Show board limit reached');
             return;
           }

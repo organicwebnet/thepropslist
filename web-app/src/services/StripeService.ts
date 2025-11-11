@@ -1,6 +1,13 @@
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { PricingConfig, PricingPlan, DEFAULT_PRICING_CONFIG } from '../shared/types/pricing';
 
+/**
+ * Response from createCheckoutSession Cloud Function
+ */
+interface StripeCheckoutSessionResponse {
+  url: string;
+}
+
 // Re-export for backward compatibility
 export type StripePlan = PricingPlan;
 
@@ -31,11 +38,11 @@ class StripeService {
 
     try {
       // Try to fetch from Stripe API via Firebase function
-      const getPricingConfig = httpsCallable(getFunctions(), 'getPricingConfig');
+      const getPricingConfig = httpsCallable<unknown, PricingConfig>(getFunctions(), 'getPricingConfig');
       const result = await getPricingConfig();
       
-      if (result.data && (result.data as any).plans && Array.isArray((result.data as any).plans)) {
-        this.pricingConfig = result.data as PricingConfig;
+      if (result.data && result.data.plans && Array.isArray(result.data.plans)) {
+        this.pricingConfig = result.data;
         this.lastFetch = now;
         // Successfully fetched latest pricing from Stripe
         return this.pricingConfig;
@@ -105,7 +112,12 @@ class StripeService {
       throw new Error(`Price ID not configured for ${planId} ${billingInterval} plan`);
     }
 
-    const createCheckoutSession = httpsCallable(getFunctions(), 'createCheckoutSession');
+    const createCheckoutSession = httpsCallable<{
+      priceId: string;
+      planId: string;
+      billingInterval: 'monthly' | 'yearly';
+      discountCode?: string;
+    }, StripeCheckoutSessionResponse>(getFunctions(), 'createCheckoutSession');
     const result = await createCheckoutSession({ 
       priceId,
       planId,
@@ -113,7 +125,7 @@ class StripeService {
       discountCode
     });
 
-    return (result.data as any).url;
+    return result.data.url;
   }
 
   /**

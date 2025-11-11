@@ -15,7 +15,6 @@ import SubscriptionResourcePanel from './components/SubscriptionResourcePanel';
 import { WidgetGrid } from './components/DashboardWidgets/WidgetGrid';
 import { MyTasksWidget } from './components/DashboardWidgets/MyTasksWidget';
 import { TaskboardQuickLinksWidget } from './components/DashboardWidgets/TaskboardQuickLinksWidget';
-import { BoardCreationPromptWidget } from './components/DashboardWidgets/BoardCreationPromptWidget';
 import { PropsWithoutTasksWidget } from './components/DashboardWidgets/PropsWithoutTasksWidget';
 import { TaskboardActivitySummaryWidget } from './components/DashboardWidgets/TaskboardActivitySummaryWidget';
 import { UpcomingDeadlinesWidget } from './components/DashboardWidgets/UpcomingDeadlinesWidget';
@@ -334,12 +333,6 @@ const DashboardHome: React.FC = () => {
             />
           )}
 
-          {isWidgetEnabled('board-creation-prompt') && (
-            <BoardCreationPromptWidget
-              showId={currentShowId}
-            />
-          )}
-
           {isWidgetEnabled('cut-props-packing') && (
             <CutPropsPackingWidget
               showId={currentShowId}
@@ -364,7 +357,6 @@ const DashboardHome: React.FC = () => {
           !isWidgetEnabled('upcoming-deadlines') &&
           !isWidgetEnabled('task-planning-assistant') &&
           !isWidgetEnabled('taskboard-activity-summary') &&
-          !isWidgetEnabled('board-creation-prompt') &&
           !isWidgetEnabled('cut-props-packing') &&
           !isWidgetEnabled('props-needing-work') && (
             <motion.div

@@ -68,20 +68,21 @@ const AddPropPage: React.FC = () => {
       if (!user?.uid) return;
       
       try {
-        // Check per-plan props limit
+        // Check per-show props limit if show is selected (this checks show owner's limits)
+        if (form.showId) {
+          const showLimitCheck = await checkPropsLimitForShow(form.showId);
+          // Show warning if at limit or almost out (80%+)
+          if (!showLimitCheck.withinLimit || showLimitCheck.isAlmostOut) {
+            setLimitWarning(showLimitCheck.message || 'Show props limit reached');
+            return;
+          }
+        }
+
+        // Check per-plan props limit (for user's own shows)
         const planLimitCheck = await checkPropsLimit(user.uid);
         if (!planLimitCheck.withinLimit) {
           setLimitWarning(planLimitCheck.message || 'Props limit reached');
           return;
-        }
-
-        // Check per-show props limit if show is selected
-        if (form.showId) {
-          const showLimitCheck = await checkPropsLimitForShow(form.showId);
-          if (!showLimitCheck.withinLimit) {
-            setLimitWarning(showLimitCheck.message || 'Show props limit reached');
-            return;
-          }
         }
 
         // Clear warning if within limits

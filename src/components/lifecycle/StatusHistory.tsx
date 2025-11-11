@@ -1,14 +1,44 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { PropStatusUpdate, lifecycleStatusLabels, lifecycleStatusPriority, StatusPriority, PropLifecycleStatus } from '../../types/lifecycle.ts';
-import { History, MoveRight } from 'lucide-react';
+import { History, MoveRight, User } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { UserProfile } from '../../shared/types/auth';
+import type { FirebaseService } from '../../shared/services/firebase/types';
 
 interface StatusHistoryProps {
   history: PropStatusUpdate[];
   maxItems?: number;
+  firebaseService?: FirebaseService | null;
 }
 
-export function StatusHistory({ history, maxItems = 5 }: StatusHistoryProps) {
+interface UserInfo {
+  uid: string;
+  displayName?: string;
+  email?: string;
+}
+
+// Helper to get Firebase service - tries mobile context if service not provided
+function useFirebaseService(providedService?: FirebaseService | null): FirebaseService | null {
+  // If service is provided as prop (web), use it
+  if (providedService) {
+    return providedService;
+  }
+  
+  // Otherwise try mobile context (for mobile/shared pages)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useFirebase } = require('../../platforms/mobile/contexts/FirebaseContext');
+    const { service } = useFirebase();
+    return service || null;
+  } catch {
+    // Not in mobile context or hook not available
+    return null;
+  }
+}
+
+export function StatusHistory({ history, maxItems = 5, firebaseService }: StatusHistoryProps) {
+  const [userInfoMap, setUserInfoMap] = useState<Map<string, UserInfo>>(new Map());
+  const service = useFirebaseService(firebaseService);
   // Sort history by date descending (newest first)
   const sortedHistory = [...history].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -17,6 +47,41 @@ export function StatusHistory({ history, maxItems = 5 }: StatusHistoryProps) {
   // Limit items if needed
   const displayItems = maxItems ? sortedHistory.slice(0, maxItems) : sortedHistory;
   const hasMoreItems = sortedHistory.length > maxItems;
+
+  // Fetch user information for all unique UIDs
+  useEffect(() => {
+    if (!service || history.length === 0) return;
+
+    const fetchUserInfo = async () => {
+      const uniqueUids = [...new Set(history.map(item => item.updatedBy).filter(Boolean))];
+      const userMap = new Map<string, UserInfo>();
+
+      await Promise.all(
+        uniqueUids.map(async (uid) => {
+          try {
+            const userDoc = await service.getDocument<UserProfile>('userProfiles', uid);
+            if (userDoc && userDoc.data) {
+              userMap.set(uid, {
+                uid,
+                displayName: userDoc.data.displayName,
+                email: userDoc.data.email,
+              });
+            } else {
+              // Fallback: use UID if profile not found
+              userMap.set(uid, { uid });
+            }
+          } catch (error) {
+            console.error(`Error fetching user profile for ${uid}:`, error);
+            userMap.set(uid, { uid });
+          }
+        })
+      );
+
+      setUserInfoMap(userMap);
+    };
+
+    fetchUserInfo();
+  }, [service, history]);
 
   // Get status color
   const getStatusColor = (status: string): string => {
@@ -71,6 +136,16 @@ export function StatusHistory({ history, maxItems = 5 }: StatusHistoryProps) {
                     {lifecycleStatusLabels[item.newStatus]}
                   </span>
                 </div>
+                {item.updatedBy && (
+                  <div className="flex items-center gap-1 mt-2 text-xs text-[var(--text-secondary)]">
+                    <User className="h-3 w-3" />
+                    <span>
+                      {userInfoMap.get(item.updatedBy)?.displayName || 
+                       userInfoMap.get(item.updatedBy)?.email || 
+                       'Unknown user'}
+                    </span>
+                  </div>
+                )}
               </div>
               {item.notified && item.notified.length > 0 && (
                 <span className="text-xs px-2 py-1 rounded-full bg-[var(--highlight-bg)] text-[var(--highlight-color)]">

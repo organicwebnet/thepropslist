@@ -25,6 +25,38 @@ interface PropNeedingWork {
   dueDate?: Date;
 }
 
+// Component for displaying prop image with fallback
+const PropImageDisplay: React.FC<{ prop: Prop }> = ({ prop }) => {
+  const [imageError, setImageError] = React.useState(false);
+  
+  // Get image URL from various sources
+  const imageUrl = prop.imageUrl || 
+                  prop.primaryImageUrl || 
+                  (prop.images && prop.images.length > 0 ? prop.images[0].url : null) ||
+                  (prop.images && prop.images.find(img => img.isMain)?.url);
+  
+  if (!imageUrl || imageError) {
+    return (
+      <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-pb-darker border border-pb-primary/20 flex items-center justify-center">
+        <Wrench className="w-6 h-6 text-pb-gray opacity-50" />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-pb-darker border border-pb-primary/20">
+      <img
+        src={imageUrl}
+        alt={prop.name}
+        className="w-full h-full object-cover"
+        onError={() => {
+          setImageError(true);
+        }}
+      />
+    </div>
+  );
+};
+
 export const PropsNeedingWorkWidget: React.FC<PropsNeedingWorkWidgetProps> = ({
   props = [],
 }) => {
@@ -211,18 +243,7 @@ export const PropsNeedingWorkWidget: React.FC<PropsNeedingWorkWidgetProps> = ({
               </div>
             )}
           </div>
-          {item.prop.imageUrl || item.prop.primaryImageUrl ? (
-            <div className="flex-shrink-0 w-12 h-12 rounded overflow-hidden bg-pb-darker">
-              <img
-                src={item.prop.imageUrl || item.prop.primaryImageUrl}
-                alt={item.prop.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </div>
-          ) : null}
+          <PropImageDisplay prop={item.prop} />
         </div>
       </Link>
     );

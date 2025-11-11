@@ -87,7 +87,7 @@ export default function SignupScreen() {
     setSuccess(null);
 
     try {
-      const firestore = (firebaseService as any).getFirestoreReactNativeInstance?.() || firebaseService.firestore;
+      const firestore = firebaseService.getFirestoreReactNativeInstance();
       await startCodeVerification(firestore, email, 'signup');
       setStep('code');
       setSuccess('Verification code sent! Check your email (including spam folder).');
@@ -115,7 +115,7 @@ export default function SignupScreen() {
     setSuccess(null);
 
     try {
-      const firestore = (firebaseService as any).getFirestoreReactNativeInstance?.() || firebaseService.firestore;
+      const firestore = firebaseService.getFirestoreReactNativeInstance();
       const isValid = await verifyCode(firestore, email, code, 'signup');
       if (isValid) {
         // Store verified email

@@ -8,7 +8,7 @@ import * as Crypto from 'expo-crypto';
 import { doc, setDoc, getDoc, deleteDoc, updateDoc, Timestamp } from '@react-native-firebase/firestore';
 import type { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import { buildVerificationEmailDoc } from './EmailTemplateService';
-import { SIGNUP_CODE_EXPIRY, PASSWORD_RESET_CODE_EXPIRY } from '../shared/constants/timing';
+import { SIGNUP_CODE_EXPIRY, PASSWORD_RESET_CODE_EXPIRY, MAX_VERIFICATION_ATTEMPTS, RATE_LIMIT_WINDOW } from '../shared/constants/timing';
 import { isValidVerificationCode } from '../shared/utils/validation';
 
 /**
@@ -108,6 +108,28 @@ export async function verifyCode(
     return false;
   }
   
+  // Check rate limiting - prevent too many attempts
+  const attempts = data?.attempts || 0;
+  const createdAt = data?.createdAt;
+  
+  // If attempts exceed limit, check if we're still within the rate limit window
+  if (attempts >= MAX_VERIFICATION_ATTEMPTS) {
+    if (createdAt) {
+      const createdAtTime = createdAt.toMillis ? createdAt.toMillis() : (createdAt.seconds ? createdAt.seconds * 1000 : Date.now());
+      const timeSinceCreation = Date.now() - createdAtTime;
+      
+      // If still within rate limit window, reject immediately
+      if (timeSinceCreation < RATE_LIMIT_WINDOW) {
+        return false;
+      }
+      // If outside rate limit window, allow new attempts (reset attempts)
+      // This allows users to try again after the window expires
+    } else {
+      // No creation time, reject if attempts exceeded
+      return false;
+    }
+  }
+  
   // Verify code hash
   const providedHash = await hashCode(code);
   const isMatch = providedHash === data?.codeHash;
@@ -118,7 +140,15 @@ export async function verifyCode(
     return true;
   } else {
     // Increment attempts
-    await updateDoc(ref, { attempts: (data?.attempts || 0) + 1 });
+    const newAttempts = attempts + 1;
+    await updateDoc(ref, { attempts: newAttempts });
+    
+    // If this was the last allowed attempt, the next call will be rate limited
+    if (newAttempts >= MAX_VERIFICATION_ATTEMPTS) {
+      // Log rate limit reached for monitoring
+      console.warn(`Rate limit reached for ${type} verification: ${email}`);
+    }
+    
     return false;
   }
 }

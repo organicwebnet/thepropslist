@@ -13,11 +13,13 @@ import { doc as fsDoc, getDoc as fsGetDoc, Firestore } from 'firebase/firestore'
 import { db } from '../firebase';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { UserAddOn, calculateAddOnLimits } from '../types/AddOns';
+import { addOnService } from '../services/AddOnService';
 import { 
   PermissionService, 
   type SubscriptionLimits,
   UNLIMITED_LIMITS
 } from '../core/permissions';
+import type { PricingConfig, PricingPlan } from '../shared/types/pricing';
 
 export type PlanKey = 'free' | 'starter' | 'standard' | 'pro' | 'unknown';
 
@@ -158,12 +160,12 @@ export function useSubscription(): SubscriptionInfo {
         
         // Fetch limits from Stripe
         try {
-          const getPricingConfig = httpsCallable(getFunctions(), 'getPricingConfig');
+          const getPricingConfig = httpsCallable<unknown, PricingConfig>(getFunctions(), 'getPricingConfig');
           const result = await getPricingConfig();
-          const pricingConfig = result.data as any;
+          const pricingConfig = result.data;
           
           if (pricingConfig?.plans) {
-            const planConfig = pricingConfig.plans.find((p: any) => p.id === userPlan);
+            const planConfig = pricingConfig.plans.find((p: PricingPlan) => p.id === userPlan);
             if (planConfig?.limits) {
               const parsedLimits = parseStripeLimits(planConfig.limits);
               if (isMounted) {
@@ -176,20 +178,18 @@ export function useSubscription(): SubscriptionInfo {
           // Keep default limits if Stripe fetch fails
         }
         
-        // Fetch user's add-ons
+        // Fetch user's add-ons using the service
         try {
-          const addOnsRef = fsDoc(db as Firestore, 'userAddOns', user.uid);
-          const addOnsSnapshot = await fsGetDoc(addOnsRef);
-          if (addOnsSnapshot.exists()) {
-            const addOnsData = addOnsSnapshot.data() as any;
-            const userAddOnsList = Array.isArray(addOnsData.addOns) ? addOnsData.addOns : [];
-            if (isMounted) {
-              setUserAddOns(userAddOnsList);
-            }
+          const userAddOnsList = await addOnService.getUserAddOns(user.uid);
+          if (isMounted) {
+            setUserAddOns(userAddOnsList);
           }
         } catch (addOnsError) {
           console.warn('Failed to fetch user add-ons:', addOnsError);
           // Keep empty array if fetch fails
+          if (isMounted) {
+            setUserAddOns([]);
+          }
         }
         
       } catch (error) {

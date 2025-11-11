@@ -67,7 +67,7 @@ export default function ResetPasswordScreen() {
     setError(null);
 
     try {
-      const firestore = (firebaseService as any).getFirestoreReactNativeInstance?.() || firebaseService.firestore;
+      const firestore = firebaseService.getFirestoreReactNativeInstance();
       const isValid = await verifyCode(firestore, params.email, params.code, 'password_reset');
       setCodeValid(isValid);
       if (isValid) {
@@ -102,7 +102,7 @@ export default function ResetPasswordScreen() {
     setSuccess(null);
 
     try {
-      const firestore = (firebaseService as any).getFirestoreReactNativeInstance?.() || firebaseService.firestore;
+      const firestore = firebaseService.getFirestoreReactNativeInstance();
       await startCodeVerification(firestore, email, 'password_reset');
       setStep('code');
       setSuccess('Password reset code sent! Check your email (including spam folder).');
@@ -130,7 +130,7 @@ export default function ResetPasswordScreen() {
     setSuccess(null);
 
     try {
-      const firestore = (firebaseService as any).getFirestoreReactNativeInstance?.() || firebaseService.firestore;
+      const firestore = firebaseService.getFirestoreReactNativeInstance();
       const isValid = await verifyCode(firestore, email, code, 'password_reset');
       if (isValid) {
         setStep('password');
