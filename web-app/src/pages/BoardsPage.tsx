@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "../PropsBibleHomepage";
 import { motion } from "framer-motion";
-import { Calendar, Gem } from "lucide-react";
+import { Calendar, Gem, LayoutGrid, List } from "lucide-react";
 import { useFirebase } from "../contexts/FirebaseContext";
 import type { BoardData } from "../types/taskManager";
 import Board from "../components/TaskBoard/Board";
@@ -11,9 +11,11 @@ import { useWebAuth } from '../contexts/WebAuthContext';
 import { useSearchParams } from "react-router-dom";
 import { useSubscription } from '../hooks/useSubscription';
 import { useLimitChecker } from '../hooks/useLimitChecker';
+import { usePermissions } from '../hooks/usePermissions';
 import UpgradeModal from '../components/UpgradeModal';
 import { logger } from '../utils/logger';
 import { validateBoardTitle } from '../utils/validation';
+import { useBoardPreferences } from '../hooks/useBoardPreferences';
 
 const BoardsPage: React.FC = () => {
   return <BoardsPageContent />;
@@ -34,15 +36,33 @@ function BoardsPageContent() {
   const { user } = useWebAuth();
   const { limits } = useSubscription();
   const { checkBoardLimit, checkBoardLimitForShow } = useLimitChecker();
+  const { isGod } = usePermissions();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
+  const { viewMode, saveViewMode } = useBoardPreferences();
 
   logger.taskBoard("BoardsPage loaded", { currentShowId, userId: user?.uid });
 
+  const handleToggleView = async () => {
+    const newMode = viewMode === 'kanban' ? 'todo' : 'kanban';
+    try {
+      await saveViewMode(newMode);
+    } catch (error) {
+      logger.taskBoardError('Failed to save view mode preference', error);
+    }
+  };
+
   // Check limits on page load and when boards change
+  // Skip limit checks for god users
   useEffect(() => {
     const checkLimits = async () => {
       if (!user?.uid) return;
+      
+      // God users bypass all limit checks
+      if (isGod()) {
+        setLimitWarning(null);
+        return;
+      }
       
       try {
         // Check per-plan board limit
@@ -71,7 +91,7 @@ function BoardsPageContent() {
     };
 
     checkLimits();
-  }, [user?.uid, currentShowId, boards.length, checkBoardLimit, checkBoardLimitForShow]);
+  }, [user?.uid, currentShowId, boards.length, checkBoardLimit, checkBoardLimitForShow, isGod]);
 
   useEffect(() => {
     // Listen to boards collection, filter by showId if selected
@@ -187,8 +207,8 @@ function BoardsPageContent() {
 
   return (
     <DashboardLayout>
-      {/* Limit Warning Banner */}
-      {limitWarning && (
+      {/* Limit Warning Banner - Hidden for god users */}
+      {limitWarning && !isGod() && (
         <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
@@ -232,6 +252,19 @@ function BoardsPageContent() {
                 )}
               </div>
               <div className="shrink-0 flex items-center gap-3">
+                {/* View Toggle Button */}
+                <button
+                  onClick={handleToggleView}
+                  className="p-2 rounded hover:bg-pb-primary/20 text-pb-gray hover:text-white transition"
+                  title={`Switch to ${viewMode === 'kanban' ? 'Todo' : 'Kanban'} view`}
+                  aria-label={`Switch to ${viewMode === 'kanban' ? 'Todo' : 'Kanban'} view`}
+                >
+                  {viewMode === 'kanban' ? (
+                    <List className="w-5 h-5" />
+                  ) : (
+                    <LayoutGrid className="w-5 h-5" />
+                  )}
+                </button>
                 <div className="text-sm text-pb-gray" title={`Boards used: ${boards.length} of ${limits.boards}`}>{boards.length}/{limits.boards}</div>
                 <button
                   className={`${boards.length >= limits.boards ? 'bg-pb-primary/20 text-pb-gray cursor-not-allowed' : 'bg-pb-primary text-white hover:bg-pb-secondary'} px-4 py-2 rounded transition`}
@@ -280,7 +313,7 @@ function BoardsPageContent() {
             )}
           </div>
           <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden p-0">
-            <Board boardId={effectiveBoardId} hideHeader selectedCardId={selectedCardId} />
+            <Board boardId={effectiveBoardId} hideHeader selectedCardId={selectedCardId} viewMode={viewMode} />
           </div>
         </div>
       ) : (

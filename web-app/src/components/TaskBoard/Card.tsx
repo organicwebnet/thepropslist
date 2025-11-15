@@ -117,7 +117,7 @@ function parseMentions(text: string) {
   return items;
 }
 
-const CardDetailModal: React.FC<{
+export const CardDetailModal: React.FC<{
   open: boolean;
   onClose: () => void;
   card: CardData;

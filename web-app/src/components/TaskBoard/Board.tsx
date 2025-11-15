@@ -1,19 +1,22 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useFirebase } from "../../contexts/FirebaseContext";
 import ListColumn from "./ListColumn";
+import TodoView from "./TodoView";
 import type { BoardData, ListData, CardData } from "../../types/taskManager";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { logger } from "../../utils/logger";
 import { validateCardTitle, validateCardDescription } from "../../utils/validation";
+import type { BoardViewMode } from "../../hooks/useBoardPreferences";
 
 interface BoardProps {
   boardId: string;
   hideHeader?: boolean;
   selectedCardId?: string | null;
+  viewMode?: BoardViewMode;
 }
 
-const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) => {
+const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, viewMode = 'kanban' }) => {
   const { service } = useFirebase();
   const [board, setBoard] = useState<BoardData | null>(null);
   const [lists, setLists] = useState<ListData[]>([]);
@@ -384,6 +387,25 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId }) =>
   }
 
   if (!board) return null;
+
+  // Render Todo view if viewMode is 'todo'
+  if (viewMode === 'todo') {
+    return (
+      <div className="relative w-full h-full flex flex-col bg-transparent overflow-hidden p-0">
+        <TodoView
+          boardId={boardId}
+          lists={lists}
+          cards={cards}
+          onAddCard={addCard}
+          onUpdateCard={updateCard}
+          onDeleteCard={deleteCard}
+          selectedCardId={selectedCardId}
+          loading={loading}
+          error={error}
+        />
+      </div>
+    );
+  }
 
   // Deduplicate lists by name (case-insensitive)
   const uniqueLists = lists.filter(
