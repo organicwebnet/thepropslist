@@ -36,6 +36,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
 
   // Separate useEffect for board and lists to prevent infinite loop
   useEffect(() => {
+    setLoading(true);
     // Listen to board document
     const unsubBoard = service.listenToDocument<BoardData>(
       `todo_boards/${boardId}`,
@@ -57,6 +58,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
       (err) => {
         logger.taskBoardError('Error loading lists', err);
         setError(err.message || 'Failed to load lists');
+        setLoading(false);
       }
     );
 
@@ -65,6 +67,14 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
       unsubLists?.();
     };
   }, [boardId, service]);
+
+  // Set loading to false once we have board and lists loaded
+  useEffect(() => {
+    if (board !== null) {
+      // Board is loaded, lists may be empty but that's okay - hide loading
+      setLoading(false);
+    }
+  }, [board, lists]);
 
   // Separate useEffect for card listeners to prevent infinite loop
   useEffect(() => {
