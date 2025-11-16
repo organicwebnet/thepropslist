@@ -39,7 +39,7 @@ function BoardsPageContent() {
   const { isGod } = usePermissions();
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
-  const { viewMode, saveViewMode } = useBoardPreferences();
+  const { viewMode, saveViewMode, loading: preferencesLoading } = useBoardPreferences();
 
   logger.taskBoard("BoardsPage loaded", { currentShowId, userId: user?.uid });
 
@@ -255,11 +255,12 @@ function BoardsPageContent() {
                 {/* View Toggle Button */}
                 <button
                   onClick={handleToggleView}
-                  className="p-2 rounded hover:bg-pb-primary/20 text-pb-gray hover:text-white transition"
-                  title={`Switch to ${viewMode === 'kanban' ? 'Todo' : 'Kanban'} view`}
-                  aria-label={`Switch to ${viewMode === 'kanban' ? 'Todo' : 'Kanban'} view`}
+                  className={`p-2 rounded hover:bg-pb-primary/20 text-pb-gray hover:text-white transition ${preferencesLoading ? 'opacity-50 cursor-wait' : ''}`}
+                  title={`Switch to ${(viewMode || 'kanban') === 'kanban' ? 'Todo' : 'Kanban'} view`}
+                  aria-label={`Switch to ${(viewMode || 'kanban') === 'kanban' ? 'Todo' : 'Kanban'} view`}
+                  disabled={preferencesLoading}
                 >
-                  {viewMode === 'kanban' ? (
+                  {(viewMode || 'kanban') === 'kanban' ? (
                     <List className="w-5 h-5" />
                   ) : (
                     <LayoutGrid className="w-5 h-5" />
