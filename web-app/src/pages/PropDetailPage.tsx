@@ -5,7 +5,7 @@ import { useWebAuth } from '../contexts/WebAuthContext';
 import { Prop } from '../types/props';
 import { LoadingSpinner } from '../components/LoadingSkeleton';
 import { StatusDropdown } from '../components/StatusDropdown';
-import { StatusHistory } from '@root/components/lifecycle/StatusHistory';
+import { StatusHistory } from '../components/lifecycle/StatusHistory';
 import { PropLifecycleStatus, PropStatusUpdate } from '@root/types/lifecycle';
 import { MapPin, Ruler, BadgeInfo, FileText, Image as ImageIcon, Package, Settings2, ChevronDown, ChevronUp, Pencil, ArrowLeft, History } from 'lucide-react';
 import { motion } from 'framer-motion';
