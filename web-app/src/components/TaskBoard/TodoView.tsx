@@ -214,9 +214,9 @@ const TodoView: React.FC<TodoViewProps> = ({
   const displayError = externalError || error;
 
   return (
-    <div className="flex flex-col h-full w-full bg-transparent">
+    <div className="flex flex-col h-full w-full bg-transparent min-h-0">
       {/* Header with quick add and filters */}
-      <div className="sticky top-0 z-10 bg-transparent p-4 border-b border-pb-primary/20">
+      <div className="sticky top-0 z-10 bg-transparent p-4 border-b border-pb-primary/20 flex-shrink-0">
         {/* Error Message */}
         {displayError && (
           <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">

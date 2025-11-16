@@ -312,7 +312,7 @@ function BoardsPageContent() {
               </div>
             )}
           </div>
-          <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden p-0">
+          <div className={`flex-1 min-h-0 p-0 ${viewMode === 'todo' ? 'overflow-hidden' : 'overflow-x-auto overflow-y-hidden'}`}>
             <Board boardId={effectiveBoardId} hideHeader selectedCardId={selectedCardId} viewMode={viewMode} />
           </div>
         </div>
