@@ -28,7 +28,7 @@ interface FlattenedCard extends CardData {
 }
 
 const TodoView: React.FC<TodoViewProps> = ({
-  boardId,
+  boardId: _boardId,
   lists,
   cards,
   onAddCard,
@@ -82,13 +82,14 @@ const TodoView: React.FC<TodoViewProps> = ({
           card.assignedTo?.includes(user?.uid || '')
         );
         break;
-      case 'due_today':
+      case 'due_today': {
         const today = new Date().toISOString().split('T')[0];
         filtered = filtered.filter(card => 
           card.dueDate && card.dueDate.split('T')[0] === today && !card.completed
         );
         break;
-      case 'overdue':
+      }
+      case 'overdue': {
         const now = new Date();
         filtered = filtered.filter(card => 
           card.dueDate && 
@@ -96,6 +97,7 @@ const TodoView: React.FC<TodoViewProps> = ({
           !card.completed
         );
         break;
+      }
       case 'completed':
         filtered = filtered.filter(card => card.completed);
         break;
@@ -118,17 +120,19 @@ const TodoView: React.FC<TodoViewProps> = ({
           if (!a.dueDate) return 1;
           if (!b.dueDate) return -1;
           return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        case 'created_date':
+        case 'created_date': {
           // Use order field or fallback to 0 if createdAt doesn't exist
           const aCreated = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : ((a as any).order ?? 0);
           const bCreated = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : ((b as any).order ?? 0);
           return bCreated - aCreated; // Newest first
+        }
         case 'title':
           return (a.title || '').localeCompare(b.title || '');
-        case 'list':
+        case 'list': {
           const listCompare = (a.listName || '').localeCompare(b.listName || '');
           if (listCompare !== 0) return listCompare;
           return (a.title || '').localeCompare(b.title || '');
+        }
         default:
           return 0;
       }
