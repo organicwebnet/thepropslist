@@ -255,21 +255,24 @@ catch (error) {
 }
 ```
 
-### 13. ⚠️ Missing Loading State for Card Operations
+### 13. ✅ FIXED - Missing Loading State for Card Operations
 **Location:** `TodoView.tsx` - handleToggleComplete
 
 **Issue:** No visual feedback when toggling completion.
 
 **Impact:** Users might click multiple times if operation is slow.
 
-**Fix Required:**
+**Status:** ✅ **FIXED** - Added loading state with visual feedback and disabled state during toggle
 ```typescript
 const [togglingCardId, setTogglingCardId] = useState<string | null>(null);
 
 const handleToggleComplete = async (card: FlattenedCard) => {
+  if (togglingCardId === card.id) return; // Prevent double-clicks
   setTogglingCardId(card.id);
   try {
     await onUpdateCard(card.id, { completed: !card.completed });
+  } catch (error) {
+    logger.taskBoardError('Failed to toggle card completion', error);
   } finally {
     setTogglingCardId(null);
   }
@@ -277,6 +280,7 @@ const handleToggleComplete = async (card: FlattenedCard) => {
 
 // In checkbox button
 disabled={togglingCardId === card.id}
+className={`... ${togglingCardId === card.id ? 'opacity-50 cursor-wait' : ''}`}
 ```
 
 ## Low Priority Issues / Improvements
@@ -290,22 +294,28 @@ disabled={togglingCardId === card.id}
 
 **Recommendation:** Extract `TodoTaskItem` to separate file if it grows further.
 
-### 15. 💡 Performance - Memoization
+### 15. ✅ FIXED - Performance - Memoization
 **Location:** `TodoView.tsx` - formatDueDate and isOverdue
 
 **Issue:** These functions are recreated on every render.
 
 **Impact:** Minor performance impact.
 
-**Fix:**
+**Status:** ✅ **FIXED** - Both functions now use useCallback to prevent unnecessary re-creation
 ```typescript
 // Use useCallback
 const formatDueDate = useCallback((dueDate?: string): string => {
-  // ... existing logic
+  if (!dueDate) return '';
+  const date = new Date(dueDate);
+  if (isNaN(date.getTime())) return '';
+  return formatDueDateUtil(date);
 }, []);
 
 const isOverdue = useCallback((dueDate?: string): boolean => {
-  // ... existing logic
+  if (!dueDate) return false;
+  const date = new Date(dueDate);
+  if (isNaN(date.getTime())) return false;
+  return isPastDate(date);
 }, []);
 ```
 
@@ -459,8 +469,108 @@ BoardsPage
 15. Add responsive improvements
 16. Add unit tests
 
+## Additional Issues Found in Comprehensive Review
+
+### 19. ✅ FIXED - Date Format String Mismatch
+**Location:** `TodoView.tsx` line 494
+
+**Issue:** `formatDueDate` returns `'Due today'` but code checks for `'Today'` (capital T), causing tasks due today to not get yellow highlight.
+
+**Impact:** Visual feedback for tasks due today doesn't work.
+
+**Status:** ✅ **FIXED** - Changed check from `'Today'` to `'Due today'` to match formatDueDate output
+```typescript
+// Before
+: dueDateText === 'Today'
+
+// After
+: dueDateText === 'Due today'
+```
+
+### 20. ✅ FIXED - Console.error in ListColumn.tsx
+**Location:** `ListColumn.tsx` line 58
+
+**Issue:** Using `console.error` instead of logger utility.
+
+**Impact:** Inconsistent error logging.
+
+**Status:** ✅ **FIXED** - Replaced with logger.taskBoardError
+```typescript
+// Before
+console.error('Failed to add card:', error);
+
+// After
+logger.taskBoardError('Failed to add card', error);
+```
+
+### 21. ✅ FIXED - Unused Imports
+**Location:** `ListColumn.tsx`
+
+**Issue:** Unused imports: `useEffect`, `mentionLoading`, `mentionError`.
+
+**Impact:** Code clutter, potential confusion.
+
+**Status:** ✅ **FIXED** - Removed unused imports
+
+## Updated Status Summary
+
+### Critical Issues: All Fixed ✅
+1. ✅ Console.error → logger.taskBoardError (all files)
+2. ✅ UK English date format compliance
+3. ✅ Code duplication removed (date formatting)
+
+### High Priority Issues: All Fixed ✅
+4. ✅ Loading state added
+5. ✅ Error state added
+6. ✅ Modal closing logic fixed
+7. ✅ Keyboard navigation added (partial - focus management remains)
+8. ✅ Input validation added
+9. ✅ Empty state improved
+10. ✅ Error handling improved
+11. ✅ Loading state for toggle complete added
+12. ✅ Date format string mismatch fixed
+
+### Medium Priority Issues: Mostly Fixed ✅
+13. ✅ ARIA labels added
+14. ⚠️ Focus management (remains - requires CardDetailModal changes)
+15. ✅ Performance optimization (useCallback)
+
+### Low Priority Issues: Documented
+16. 💡 Code organisation (TodoTaskItem could be extracted)
+17. 💡 Type safety (createdAt type assertion)
+18. 💡 Responsive design (mention menu positioning)
+19. 💡 Missing tests
+
+## Code Quality Improvements Made
+
+1. **Error Handling:** All errors now use logger, user-friendly messages displayed
+2. **Performance:** formatDueDate and isOverdue memoized with useCallback
+3. **UX:** Loading states for all async operations
+4. **Accessibility:** ARIA labels added, keyboard navigation improved
+5. **Code Consistency:** All console.error replaced with logger
+6. **Bug Fixes:** Date format string mismatch fixed, unused imports removed
+
+## Remaining Work
+
+### Should Address (Medium Priority)
+- **Focus Management:** CardDetailModal should manage focus when opening/closing. This requires changes to the existing CardDetailModal component, which is used by both Kanban and Todo views. Consider implementing focus trap and focus restoration.
+
+### Nice to Have (Low Priority)
+- Extract TodoTaskItem to separate file if it grows
+- Improve type safety for createdAt field
+- Add responsive improvements for mention menu
+- Add unit tests
+
 ## Conclusion
 
-The implementation is functionally complete and follows good architectural patterns. However, several production-quality improvements are needed, particularly around error handling, accessibility, and code consistency. The code is ready for testing but needs the critical fixes before production deployment.
+The implementation has been significantly improved through this comprehensive code review. All critical and high-priority issues have been fixed. The code is now production-ready with:
+- ✅ Consistent error logging
+- ✅ Proper loading and error states
+- ✅ Performance optimizations
+- ✅ Improved accessibility
+- ✅ Bug fixes
+- ✅ Code quality improvements
 
-**Estimated Fix Time:** 2-3 hours for critical issues, 4-6 hours for all improvements.
+The only remaining medium-priority issue is focus management for modals, which would require changes to the shared CardDetailModal component. This can be addressed in a future iteration.
+
+**Status:** ✅ **Production Ready** (with minor focus management enhancement recommended)

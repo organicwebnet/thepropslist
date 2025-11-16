@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import Card from "./Card";
 import type { ListData, CardData } from "../../types/taskManager";
 import { Edit, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMentionData } from "../../contexts/MentionDataContext";
+import { logger } from "../../utils/logger";
 
 interface ListColumnProps {
   list: ListData;
@@ -33,7 +34,7 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
   const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([]);
   
   // Use cached mention data
-  const { propsList, containersList, usersList, loading: mentionLoading, error: mentionError } = useMentionData();
+  const { propsList, containersList, usersList } = useMentionData();
 
   // dnd-kit sortable for lists
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: dndId });
@@ -55,7 +56,7 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
       // Re-focus the input for rapid card entry
       setTimeout(() => newCardInputRef.current?.focus(), 0);
     } catch (error) {
-      console.error('Failed to add card:', error);
+      logger.taskBoardError('Failed to add card', error);
     } finally {
       setIsAddingCard(false);
     }

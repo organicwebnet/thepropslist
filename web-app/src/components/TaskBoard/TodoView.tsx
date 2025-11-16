@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import type { CardData, ListData } from "../../types/taskManager";
 import { CardDetailModal } from "./Card";
 import { useFirebase } from "../../contexts/FirebaseContext";
@@ -182,23 +182,33 @@ const TodoView: React.FC<TodoViewProps> = ({
     }
   };
 
+  const [togglingCardId, setTogglingCardId] = useState<string | null>(null);
+
   const handleToggleComplete = async (card: FlattenedCard) => {
-    await onUpdateCard(card.id, { completed: !card.completed });
+    if (togglingCardId === card.id) return; // Prevent double-clicks
+    setTogglingCardId(card.id);
+    try {
+      await onUpdateCard(card.id, { completed: !card.completed });
+    } catch (error) {
+      logger.taskBoardError('Failed to toggle card completion', error);
+    } finally {
+      setTogglingCardId(null);
+    }
   };
 
-  const formatDueDate = (dueDate?: string): string => {
+  const formatDueDate = useCallback((dueDate?: string): string => {
     if (!dueDate) return '';
     const date = new Date(dueDate);
     if (isNaN(date.getTime())) return '';
     return formatDueDateUtil(date);
-  };
+  }, []);
 
-  const isOverdue = (dueDate?: string): boolean => {
+  const isOverdue = useCallback((dueDate?: string): boolean => {
     if (!dueDate) return false;
     const date = new Date(dueDate);
     if (isNaN(date.getTime())) return false;
     return isPastDate(date);
-  };
+  }, []);
 
   // Combine external error with internal error
   const displayError = externalError || error;
@@ -389,6 +399,7 @@ const TodoView: React.FC<TodoViewProps> = ({
                   key={card.id}
                   card={cardWithList}
                   onToggleComplete={() => handleToggleComplete(cardWithList)}
+                  togglingCardId={togglingCardId}
                   onUpdateCard={onUpdateCard}
                   onDeleteCard={onDeleteCard}
                   formatDueDate={formatDueDate}
@@ -413,6 +424,7 @@ interface TodoTaskItemProps {
   formatDueDate: (dueDate?: string) => string;
   isOverdue: (dueDate?: string) => boolean;
   selectedCardId?: string | null;
+  togglingCardId?: string | null;
 }
 
 const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
@@ -423,6 +435,7 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
   formatDueDate,
   isOverdue,
   selectedCardId,
+  togglingCardId,
 }) => {
   const [modalOpen, setModalOpen] = useState(selectedCardId === card.id);
 
@@ -461,11 +474,12 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
             onToggleComplete();
           }}
           className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all hover:scale-110 ${
-            card.completed
-              ? 'bg-pb-success border-pb-success'
-              : 'border-pb-primary/50 hover:border-pb-primary bg-transparent'
-          }`}
-          aria-label={card.completed ? 'Mark incomplete' : 'Mark complete'}
+                card.completed
+                  ? 'bg-pb-success border-pb-success'
+                  : 'border-pb-primary/50 hover:border-pb-primary bg-transparent'
+              } ${togglingCardId === card.id ? 'opacity-50 cursor-wait' : ''}`}
+              aria-label={card.completed ? 'Mark incomplete' : 'Mark complete'}
+              disabled={togglingCardId === card.id}
         >
           {card.completed && (
             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -491,7 +505,7 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
               <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
                 overdue
                   ? 'bg-red-500/20 text-red-300'
-                  : dueDateText === 'Today'
+                  : dueDateText === 'Due today'
                   ? 'bg-yellow-500/20 text-yellow-300'
                   : 'bg-pb-primary/20 text-pb-primary'
               }`}>
