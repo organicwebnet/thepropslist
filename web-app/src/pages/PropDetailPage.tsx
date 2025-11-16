@@ -5,8 +5,8 @@ import { useWebAuth } from '../contexts/WebAuthContext';
 import { Prop } from '../types/props';
 import { LoadingSpinner } from '../components/LoadingSkeleton';
 import { StatusDropdown } from '../components/StatusDropdown';
-import { StatusHistory } from '../../src/components/lifecycle/StatusHistory';
-import { PropLifecycleStatus, PropStatusUpdate } from '../../src/types/lifecycle';
+import { StatusHistory } from '@root/components/lifecycle/StatusHistory';
+import { PropLifecycleStatus, PropStatusUpdate } from '@root/types/lifecycle';
 import { MapPin, Ruler, BadgeInfo, FileText, Image as ImageIcon, Package, Settings2, ChevronDown, ChevronUp, Pencil, ArrowLeft, History } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DashboardLayout from '../PropsBibleHomepage';
@@ -159,8 +159,11 @@ const PropDetailPage: React.FC = () => {
       } catch (historyErr) {
         console.error('Error reloading status history:', historyErr);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating prop status:', err);
+      const errorMessage = err?.message || err?.code || 'Unknown error';
+      // Show more detailed error message to help debug
+      alert(`Failed to update prop status: ${errorMessage}. Please check the browser console for more details.`);
       throw err;
     }
   };
@@ -253,6 +256,7 @@ const PropDetailPage: React.FC = () => {
                 currentStatus={prop.status as PropLifecycleStatus}
                 onStatusChange={handleStatusChange}
                 size="sm"
+                disabled={false}
               />
             )}
             {missingFields.length > 0 && (

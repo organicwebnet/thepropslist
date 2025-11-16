@@ -12,13 +12,16 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": [
-        "src/shared/*"
+        "../src/shared/*"
       ],
       "@platforms/*": [
-        "src/platforms/*"
+        "../src/platforms/*"
       ],
       "@types/*": [
-        "src/types/*"
+        "../src/types/*"
+      ],
+      "@root/*": [
+        "../src/*"
       ]
     },
     "moduleResolution": "bundler",

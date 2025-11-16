@@ -67,6 +67,7 @@ export default defineConfig({
       '@shared': path.resolve(__dirname, '../src/shared'),
       '@platforms': path.resolve(__dirname, '../src/platforms'),
       '@types': path.resolve(__dirname, '../src/types'),
+      '@root': path.resolve(__dirname, '../src'),
       'firebase/storage': path.resolve(__dirname, './node_modules/firebase/storage/dist'),
     },
     dedupe: ['react', 'react-dom'], // ensure only one copy of React for Fast Refresh
