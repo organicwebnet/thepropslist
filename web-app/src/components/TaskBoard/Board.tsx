@@ -401,7 +401,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
   // Render Todo view if viewMode is 'todo'
   if (viewMode === 'todo') {
     return (
-      <div className="relative w-full flex flex-col bg-transparent p-0">
+      <div className="relative w-full flex flex-col bg-transparent p-0 min-h-0">
         <TodoView
           boardId={boardId}
           lists={lists}

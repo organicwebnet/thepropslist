@@ -347,13 +347,13 @@ export const CardDetailModal: React.FC<{
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div
-        className="relative rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[98vh] min-h-[560px] lg:min-h-[700px] border border-white/10 w-[95vw] max-w-[1100px]"
+        className="relative rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[98vh] min-h-[560px] lg:min-h-[700px] border border-white/10 w-[95vw] max-w-[1400px]"
         style={{ background: cardColor, transition: 'background 0.3s' }}
       >
         {/* Close (X) button top right of modal */}
         <button className="absolute top-4 right-4 text-white text-2xl z-50" onClick={onClose} aria-label="Close">×</button>
         {/* Left column */}
-        <div className="flex-1 min-w-0 lg:min-w-[340px] lg:max-w-[520px] p-4 sm:p-6 flex flex-col gap-3 rounded-l-2xl overflow-y-auto flex-shrink-0" style={{ maxHeight: '90vh' }}>
+        <div className="flex-1 min-w-0 lg:min-w-[340px] lg:max-w-[800px] p-4 sm:p-6 flex flex-col gap-3 rounded-l-2xl overflow-y-auto flex-shrink-0" style={{ maxHeight: '90vh' }}>
           {/* Hero image at top (full width, cropped height) */}
           {(images && images.length > 0) && (() => {
             const mainIdx = Math.max(0, images.findIndex(i => i.isMain));
@@ -722,7 +722,7 @@ export const CardDetailModal: React.FC<{
           )}
         </div>
         {/* Right column: Comments and Activity */}
-        <div className="w-full lg:w-[340px] flex flex-col p-4 sm:p-6 gap-4 bg-pb-darker/90 rounded-r-2xl border-l-0 lg:border-l border-white/10 flex-shrink-0">
+        <div className="w-full lg:w-[280px] flex flex-col p-4 sm:p-6 gap-4 bg-pb-darker/90 rounded-r-2xl border-l-0 lg:border-l border-white/10 flex-shrink-0">
           <div className="font-semibold text-white text-lg mb-2">Comments and activity</div>
           
           {/* Add comment area */}

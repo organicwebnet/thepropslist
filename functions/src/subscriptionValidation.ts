@@ -58,7 +58,10 @@ const SUBSCRIPTION_LIMITS = {
 async function getUserLimits(userId: string): Promise<any> {
   const userDoc = await admin.firestore().doc(`userProfiles/${userId}`).get();
   if (!userDoc.exists) {
-    throw new Error('User profile not found');
+    // If user profile doesn't exist, default to free plan limits
+    // This is more graceful than throwing an error
+    logger.warn(`User profile not found for ${userId}, using free plan limits`);
+    return { exempt: false, limits: SUBSCRIPTION_LIMITS.free };
   }
   
   const userData = userDoc.data();
@@ -649,7 +652,11 @@ export const checkSubscriptionLimits = onCall(async (request) => {
     };
   } catch (error) {
     logger.error('Error checking subscription limits:', error);
-    throw error;
+    // Provide more helpful error information
+    if (error instanceof Error) {
+      throw new HttpsError('internal', `Failed to check subscription limits: ${error.message}`);
+    }
+    throw new HttpsError('internal', 'Failed to check subscription limits');
   }
 });
 

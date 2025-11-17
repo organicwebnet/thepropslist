@@ -11,6 +11,7 @@ import { useSubscription } from './useSubscription';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { logger } from '../utils/logger';
 
 export interface LimitCheckResult {
   withinLimit: boolean;
@@ -21,6 +22,19 @@ export interface LimitCheckResult {
   usagePercent?: number;
   isAlmostOut?: boolean;
   isShowOwner?: boolean;
+}
+
+/**
+ * Response type from the checkSubscriptionLimits cloud function
+ */
+interface SubscriptionLimitsResponse {
+  exempt?: boolean;
+  withinLimit: boolean;
+  currentCount: number;
+  limit: number;
+  usagePercent?: number;
+  isAlmostOut?: boolean;
+  message?: string;
 }
 
 /**
@@ -54,14 +68,15 @@ export function useLimitChecker() {
           ? `You have reached your plan's show limit of ${limit}. Upgrade to create more shows.`
           : undefined
       };
-    } catch (error) {
-      console.error('Error checking show limit:', error);
+    } catch (error: any) {
+      logger.error('Error checking show limit', error, 'LimitChecker');
+      // On error, don't block the user - return withinLimit: true
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: limits.shows,
-        isPerShow: false,
-        message: 'Error checking show limit'
+        isPerShow: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
@@ -87,14 +102,23 @@ export function useLimitChecker() {
           ? `You have reached your plan's board limit of ${limit}. Upgrade to create more boards.`
           : undefined
       };
-    } catch (error) {
-      console.error('Error checking board limit:', error);
+    } catch (error: any) {
+      // Log detailed error information for debugging
+      logger.error('Error checking board limit', {
+        error,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        userId
+      }, 'LimitChecker');
+      
+      // On error, don't block the user - return withinLimit: true
+      // This prevents false "Subscription Limit Reached" warnings when the check fails
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: limits.boards,
-        isPerShow: false,
-        message: 'Error checking board limit'
+        isPerShow: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
@@ -104,9 +128,12 @@ export function useLimitChecker() {
    * This checks the show owner's subscription limits, not the current user's
    */
   const checkBoardLimitForShow = async (showId: string): Promise<LimitCheckResult> => {
+    let showDoc: any = null;
+    let showOwnerId: string | undefined;
+    
     try {
       // Get show to find the owner
-      const showDoc = await firebaseService.getDocument('shows', showId);
+      showDoc = await firebaseService.getDocument('shows', showId);
       if (!showDoc?.data) {
         return {
           withinLimit: true,
@@ -117,14 +144,18 @@ export function useLimitChecker() {
         };
       }
       
-      const showOwnerId = showDoc.data.createdBy || showDoc.data.ownerId || showDoc.data.userId;
+      showOwnerId = showDoc.data.createdBy || showDoc.data.ownerId || showDoc.data.userId;
       const isShowOwner = user?.uid === showOwnerId;
       
       // Use cloud function to check show owner's limits (counts all boards for all their shows)
       const functions = getFunctions();
-      const checkLimits = httpsCallable(functions, 'checkSubscriptionLimits');
+      const checkLimits = httpsCallable<{ userId: string; resourceType: string }, SubscriptionLimitsResponse>(functions, 'checkSubscriptionLimits');
       const result = await checkLimits({ userId: showOwnerId, resourceType: 'boards' });
-      const data = result.data as any;
+      const data = result.data;
+      
+      if (!data) {
+        throw new Error('No data returned from subscription limits check');
+      }
       
       const currentCount = data.currentCount || 0;
       const limit = data.limit || perShowLimits.boards;
@@ -153,15 +184,25 @@ export function useLimitChecker() {
         isShowOwner,
         message
       };
-    } catch (error) {
-      console.error('Error checking board limit for show:', error);
+    } catch (error: any) {
+      // Log detailed error information for debugging
+      logger.error('Error checking board limit for show', {
+        error,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        showId,
+        showOwnerId: showOwnerId || showDoc?.data?.createdBy || showDoc?.data?.ownerId || showDoc?.data?.userId || 'unknown'
+      }, 'LimitChecker');
+      
+      // On error, don't block the user - return withinLimit: true
+      // This prevents false "Subscription Limit Reached" warnings when the check fails
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: perShowLimits.boards,
         isPerShow: true,
-        isShowOwner: false,
-        message: 'Error checking board limit for show'
+        isShowOwner: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
@@ -187,14 +228,15 @@ export function useLimitChecker() {
           ? `You have reached your plan's packing box limit of ${limit}. Upgrade to create more packing boxes.`
           : undefined
       };
-    } catch (error) {
-      console.error('Error checking packing box limit:', error);
+    } catch (error: any) {
+      logger.error('Error checking packing box limit', error, 'LimitChecker');
+      // On error, don't block the user - return withinLimit: true
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: limits.packingBoxes,
-        isPerShow: false,
-        message: 'Error checking packing box limit'
+        isPerShow: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
@@ -222,9 +264,13 @@ export function useLimitChecker() {
       
       // Use cloud function to check show owner's limits (counts all packing boxes for all their shows)
       const functions = getFunctions();
-      const checkLimits = httpsCallable(functions, 'checkSubscriptionLimits');
+      const checkLimits = httpsCallable<{ userId: string; resourceType: string }, SubscriptionLimitsResponse>(functions, 'checkSubscriptionLimits');
       const result = await checkLimits({ userId: showOwnerId, resourceType: 'packingBoxes' });
-      const data = result.data as any;
+      const data = result.data;
+      
+      if (!data) {
+        throw new Error('No data returned from subscription limits check');
+      }
       
       const currentCount = data.currentCount || 0;
       const limit = data.limit || perShowLimits.packingBoxes;
@@ -253,15 +299,16 @@ export function useLimitChecker() {
         isShowOwner,
         message
       };
-    } catch (error) {
-      console.error('Error checking packing box limit for show:', error);
+    } catch (error: any) {
+      logger.error('Error checking packing box limit for show', error, 'LimitChecker');
+      // On error, don't block the user - return withinLimit: true
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: perShowLimits.packingBoxes,
         isPerShow: true,
-        isShowOwner: false,
-        message: 'Error checking packing box limit for show'
+        isShowOwner: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
@@ -287,14 +334,15 @@ export function useLimitChecker() {
           ? `You have reached your plan's props limit of ${limit}. Upgrade to create more props.`
           : undefined
       };
-    } catch (error) {
-      console.error('Error checking prop limit:', error);
+    } catch (error: any) {
+      logger.error('Error checking prop limit', error, 'LimitChecker');
+      // On error, don't block the user - return withinLimit: true
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: limits.props,
-        isPerShow: false,
-        message: 'Error checking prop limit'
+        isPerShow: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
@@ -322,9 +370,13 @@ export function useLimitChecker() {
       
       // Use cloud function to check show owner's limits (counts all props for all their shows)
       const functions = getFunctions();
-      const checkLimits = httpsCallable(functions, 'checkSubscriptionLimits');
+      const checkLimits = httpsCallable<{ userId: string; resourceType: string }, SubscriptionLimitsResponse>(functions, 'checkSubscriptionLimits');
       const result = await checkLimits({ userId: showOwnerId, resourceType: 'props' });
-      const data = result.data as any;
+      const data = result.data;
+      
+      if (!data) {
+        throw new Error('No data returned from subscription limits check');
+      }
       
       const currentCount = data.currentCount || 0;
       const limit = data.limit || perShowLimits.props;
@@ -353,15 +405,16 @@ export function useLimitChecker() {
         isShowOwner,
         message
       };
-    } catch (error) {
-      console.error('Error checking prop limit for show:', error);
+    } catch (error: any) {
+      logger.error('Error checking prop limit for show', error, 'LimitChecker');
+      // On error, don't block the user - return withinLimit: true
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: perShowLimits.props,
         isPerShow: true,
-        isShowOwner: false,
-        message: 'Error checking prop limit for show'
+        isShowOwner: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
@@ -389,9 +442,13 @@ export function useLimitChecker() {
       
       // Use cloud function to check show owner's limits
       const functions = getFunctions();
-      const checkLimits = httpsCallable(functions, 'checkSubscriptionLimits');
+      const checkLimits = httpsCallable<{ userId: string; resourceType: string }, SubscriptionLimitsResponse>(functions, 'checkSubscriptionLimits');
       const result = await checkLimits({ userId: showOwnerId, resourceType: 'collaboratorsPerShow' });
-      const data = result.data as any;
+      const data = result.data;
+      
+      if (!data) {
+        throw new Error('No data returned from subscription limits check');
+      }
       
       const limit = data.limit || perShowLimits.collaborators;
       const usagePercent = limit > 0 ? (currentCount / limit) * 100 : 0;
@@ -419,15 +476,16 @@ export function useLimitChecker() {
         isShowOwner,
         message
       };
-    } catch (error) {
-      console.error('Error checking collaborator limit for show:', error);
+    } catch (error: any) {
+      logger.error('Error checking collaborator limit for show', error, 'LimitChecker');
+      // On error, don't block the user - return withinLimit: true
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: perShowLimits.collaborators,
         isPerShow: true,
-        isShowOwner: false,
-        message: 'Error checking collaborator limit for show'
+        isShowOwner: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
@@ -453,14 +511,15 @@ export function useLimitChecker() {
           ? `You have reached your plan's archived shows limit of ${limit}. Upgrade to archive more shows.`
           : undefined
       };
-    } catch (error) {
-      console.error('Error checking archived show limit:', error);
+    } catch (error: any) {
+      logger.error('Error checking archived show limit', error, 'LimitChecker');
+      // On error, don't block the user - return withinLimit: true
       return {
-        withinLimit: false,
+        withinLimit: true,
         currentCount: 0,
         limit: limits.archivedShows,
-        isPerShow: false,
-        message: 'Error checking archived show limit'
+        isPerShow: false
+        // Don't set message on error - we don't want to show a warning when we can't check the limit
       };
     }
   };
