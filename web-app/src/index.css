@@ -244,4 +244,31 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 input[type="date"]::-webkit-inner-spin-button,
 input[type="date"]::-webkit-clear-button {
   filter: invert(1);
+}
+
+/* Round checkbox styling */
+input[type="checkbox"].rounded-full {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+}
+
+input[type="checkbox"].rounded-full:checked {
+  background-color: rgb(99, 102, 241); /* pb-primary */
+  border-color: rgb(99, 102, 241);
+}
+
+input[type="checkbox"].rounded-full:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -60%) rotate(45deg);
+  width: 0.3em;
+  height: 0.6em;
+  border: solid white;
+  border-width: 0 0.15em 0.15em 0;
+  border-radius: 1px;
 } 

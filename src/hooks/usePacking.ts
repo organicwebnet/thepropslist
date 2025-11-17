@@ -28,7 +28,7 @@ import type { Prop, WeightUnit } from '../shared/types/props'; // Added WeightUn
 import { OfflineSyncManager } from '../platforms/mobile/features/offline/OfflineSyncManager';
 
 interface PackingOperations {
-  createBox: (props: PackedProp[], boxName: string, description?: string, actNumber?: number, sceneNumber?: number) => Promise<string | undefined>;
+  createBox: (props: PackedProp[], boxName: string, description?: string, actNumber?: number, sceneNumber?: number, isSpareBox?: boolean) => Promise<string | undefined>;
   updateBox: (boxId: string, updates: Partial<PackingBox>) => Promise<void>;
   deleteBox: (boxId: string) => Promise<void>;
   updateBoxLabelSettings: (boxId: string, settings: Pick<PackingBox, 'labelHandlingNote' | 'labelIncludeFragile' | 'labelIncludeThisWayUp' | 'labelIncludeKeepDry'>) => Promise<void>;
@@ -112,7 +112,7 @@ export function usePacking(showId?: string): {
   }, [showId, service, isAdmin]);
 
   const operations: PackingOperations = useMemo(() => ({
-    createBox: async (propsToPack: PackedProp[], boxName: string, description = '', actNumber = 0, sceneNumber = 0) => {
+    createBox: async (propsToPack: PackedProp[], boxName: string, description = '', actNumber = 0, sceneNumber = 0, isSpareBox = false) => {
       if (!service?.addDocument || !showId) {
           setError(new Error('Failed to create box: Service not ready.'));
           return undefined;
@@ -134,6 +134,7 @@ export function usePacking(showId?: string): {
          updatedAt: new Date().toISOString(),
          labels: [], 
          status: 'draft' as const,
+         isSpareBox: isSpareBox,
        };
 
       if (offlineSyncManager) {

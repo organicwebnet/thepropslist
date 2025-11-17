@@ -7,6 +7,7 @@ import { buildInviteEmailDocTo, buildReminderEmailDoc } from '../services/EmailS
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useLimitChecker } from '../hooks/useLimitChecker';
+import { usePermissions } from '../hooks/usePermissions';
 import { ROLE_OPTIONS, JOB_ROLES } from '../constants/roleOptions';
 
 type Invitation = {
@@ -40,12 +41,20 @@ const TeamPage: React.FC = () => {
   const [inviteRole, setInviteRole] = useState<string>('propmaker');
   const [submitting, setSubmitting] = useState(false);
   const { checkCollaboratorsLimitForShow } = useLimitChecker();
+  const { isGod } = usePermissions();
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
 
   // Check limits on page load and when collaborators change
+  // Skip limit checks for god users
   useEffect(() => {
     const checkLimits = async () => {
       if (!id || !user?.uid) return;
+      
+      // God users bypass all limit checks
+      if (isGod()) {
+        setLimitWarning(null);
+        return;
+      }
       
       console.log('TeamPage: Checking limits for user:', user.uid, 'show:', id);
       
@@ -64,7 +73,7 @@ const TeamPage: React.FC = () => {
     };
 
     checkLimits();
-  }, [id, user?.uid, collaborators.length, checkCollaboratorsLimitForShow]);
+  }, [id, user?.uid, collaborators.length, checkCollaboratorsLimitForShow, isGod]);
 
   // const _showId = id || show?.id || '';
 
@@ -100,16 +109,19 @@ const TeamPage: React.FC = () => {
     if (!id || !inviteEmail) return;
     
     // Check collaborators limit before inviting
-    try {
-      const limitCheck = await checkCollaboratorsLimitForShow(id);
-      if (!limitCheck.withinLimit) {
-        setError(limitCheck.message || 'Collaborators limit reached');
+    // Skip limit checks for god users
+    if (!isGod()) {
+      try {
+        const limitCheck = await checkCollaboratorsLimitForShow(id);
+        if (!limitCheck.withinLimit) {
+          setError(limitCheck.message || 'Collaborators limit reached');
+          return;
+        }
+      } catch (limitError) {
+        console.error('Error checking collaborators limits:', limitError);
+        setError('Error checking limits. Please try again.');
         return;
       }
-    } catch (limitError) {
-      console.error('Error checking collaborators limits:', limitError);
-      setError('Error checking limits. Please try again.');
-      return;
     }
     
     setSubmitting(true);
@@ -207,8 +219,8 @@ const TeamPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      {/* Limit Warning Banner */}
-      {limitWarning && (
+      {/* Limit Warning Banner - Hidden for god users */}
+      {limitWarning && !isGod() && (
         <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">

@@ -218,7 +218,7 @@ const TodoView: React.FC<TodoViewProps> = ({
   const displayError = externalError || error;
 
   return (
-    <div className="flex flex-col h-full w-full bg-transparent min-h-0">
+    <div className="flex flex-col w-full bg-transparent">
       {/* Header with quick add and filters */}
       <div className="sticky top-0 z-10 bg-transparent p-4 border-b border-pb-primary/20 flex-shrink-0">
         {/* Error Message */}
@@ -367,16 +367,16 @@ const TodoView: React.FC<TodoViewProps> = ({
       </div>
 
       {/* Task List */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="p-4">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary mx-auto mb-4"></div>
               <p className="text-pb-gray/70">Loading tasks...</p>
             </div>
           </div>
         ) : filteredCards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-pb-gray/70">
+          <div className="flex flex-col items-center justify-center py-12 text-center text-pb-gray/70">
             <div className="text-6xl mb-4">✓</div>
             <div className="text-lg mb-2">No tasks found</div>
             <div className="text-sm">

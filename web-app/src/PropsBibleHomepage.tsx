@@ -239,7 +239,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         </motion.aside>
 
         {/* Main Content */}
-        <main className={`flex-1 overflow-hidden ${isBoardsPage ? 'px-0 py-6' : 'p-6'}`}>
+        <main className={`flex-1 ${isBoardsPage ? 'px-0 py-6 overflow-visible' : 'p-6 overflow-hidden'}`}>
           {children}
         </main>
       </div>

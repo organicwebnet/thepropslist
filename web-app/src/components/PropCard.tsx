@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { Prop } from '../types/props';
 import { PropImage } from './ProgressiveImage';
 import { Skeleton } from './LoadingSkeleton';
+import { getQuantityBreakdown, checkLowInventory } from '../utils/propQuantityUtils';
 
 interface PropCardProps {
   prop: Prop;
   onImageLoad?: () => void;
   onImageError?: () => void;
   showSkeleton?: boolean;
+  checkbox?: React.ReactNode;
 }
 
 // Utility function to check if a prop has missing details
@@ -28,7 +30,8 @@ export const PropCard: React.FC<PropCardProps> = ({
   prop, 
   onImageLoad, 
   onImageError,
-  showSkeleton = false 
+  showSkeleton = false,
+  checkbox
 }) => {
   const handleImageLoad = () => {
     onImageLoad?.();
@@ -94,9 +97,25 @@ export const PropCard: React.FC<PropCardProps> = ({
       {/* Prop Info */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-lg font-semibold text-white line-clamp-2 flex-1 group-hover:text-pb-primary transition-colors">
-            {prop.name}
-          </h3>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {checkbox && (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }} 
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                }}
+                className="flex-shrink-0"
+              >
+                {checkbox}
+              </div>
+            )}
+            <h3 className="text-lg font-semibold text-white line-clamp-2 flex-1 group-hover:text-pb-primary transition-colors">
+              {prop.name}
+            </h3>
+          </div>
           {hasMissingDetails(prop) && (
             <div className="flex-shrink-0" title="This prop has missing details that need attention">
               <svg className="w-5 h-5 text-pb-warning" fill="currentColor" viewBox="0 0 20 20">
@@ -131,10 +150,41 @@ export const PropCard: React.FC<PropCardProps> = ({
         </div>
         
         {/* Quantity and Category */}
-        <div className="flex items-center justify-between">
-          <span className="text-pb-gray text-sm group-hover:text-pb-gray/80 transition-colors">
-            Qty: {prop.quantity || 1}
-          </span>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {(() => {
+              const breakdown = getQuantityBreakdown(prop);
+              const hasSpares = breakdown.spare > 0 || breakdown.inStorage > 0;
+              const isLow = checkLowInventory(prop);
+              
+              return (
+                <>
+                  <span className="text-pb-gray text-sm group-hover:text-pb-gray/80 transition-colors">
+                    {hasSpares ? (
+                      <>
+                        {breakdown.required} req, {breakdown.ordered} ord
+                        {breakdown.spare > 0 && (
+                          <span className="text-pb-primary ml-1">({breakdown.spare} spare{breakdown.spare !== 1 ? 's' : ''})</span>
+                        )}
+                      </>
+                    ) : (
+                      `Qty: ${prop.quantity || 1}`
+                    )}
+                  </span>
+                  {isLow && (
+                    <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded-full" title="Low spare inventory">
+                      ⚠️ Low
+                    </span>
+                  )}
+                  {hasSpares && !isLow && (
+                    <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full" title="Spares available">
+                      ✓ Spares
+                    </span>
+                  )}
+                </>
+              );
+            })()}
+          </div>
           {prop.category && (
             <span className="text-pb-primary text-sm font-medium group-hover:text-pb-primary/80 transition-colors">
               {prop.category}

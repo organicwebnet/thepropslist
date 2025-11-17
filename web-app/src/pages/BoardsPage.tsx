@@ -231,7 +231,7 @@ function BoardsPageContent() {
       )}
 
       {effectiveBoardId ? (
-        <div className="w-full h-[calc(100vh-4.5rem)] overflow-hidden flex flex-col p-0">
+        <div className={`w-full flex flex-col p-0 ${viewMode === 'todo' ? '' : 'h-[calc(100vh-4.5rem)] overflow-hidden'}`}>
           {/* Header with title, dropdown if multiple boards, and create button */}
           <div className="sticky top-0 z-20 bg-transparent px-6 pt-2 pb-2">
             <div className="w-full flex items-center justify-between">
@@ -313,7 +313,7 @@ function BoardsPageContent() {
               </div>
             )}
           </div>
-          <div className={`flex-1 min-h-0 p-0 ${viewMode === 'todo' ? 'overflow-hidden' : 'overflow-x-auto overflow-y-hidden'}`}>
+          <div className={`p-0 ${viewMode === 'todo' ? '' : 'flex-1 min-h-0 overflow-x-auto overflow-y-hidden'}`}>
             <Board boardId={effectiveBoardId} hideHeader selectedCardId={selectedCardId} viewMode={viewMode} />
           </div>
         </div>

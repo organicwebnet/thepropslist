@@ -10,6 +10,9 @@ import { PropLifecycleStatus, PropStatusUpdate } from '@root/types/lifecycle';
 import { MapPin, Ruler, BadgeInfo, FileText, Image as ImageIcon, Package, Settings2, ChevronDown, ChevronUp, Pencil, ArrowLeft, History } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DashboardLayout from '../PropsBibleHomepage';
+import { getQuantityBreakdown, checkLowInventory, normalizePropQuantities } from '../utils/propQuantityUtils';
+import { SpareManagement } from '../components/SpareManagement';
+import { logger } from '../utils/logger';
 
 type SectionProps = { 
   id: string; 
@@ -44,7 +47,7 @@ function Section({ id, title, defaultOpen = true, isOpen, onToggle, children, mi
   );
 }
 
-type SectionId = 'overview' | 'dimensions' | 'identification' | 'usage' | 'purchase' | 'storage' | 'media' | 'notes' | 'statusHistory';
+type SectionId = 'overview' | 'dimensions' | 'identification' | 'usage' | 'purchase' | 'storage' | 'media' | 'notes' | 'statusHistory' | 'spareManagement';
 
 const PropDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,7 +66,8 @@ const PropDetailPage: React.FC = () => {
     storage: false, 
     media: false, 
     notes: false,
-    statusHistory: false 
+    statusHistory: false,
+    spareManagement: false
   });
 
   useEffect(() => {
@@ -76,7 +80,8 @@ const PropDetailPage: React.FC = () => {
         
         const doc = await service.getDocument('props', id);
         if (doc) {
-          setProp({ ...doc.data, id: doc.id } as Prop);
+          const propData = { ...doc.data, id: doc.id } as Prop;
+          setProp(normalizePropQuantities(propData));
           
           // Load status history
           try {
@@ -84,14 +89,14 @@ const PropDetailPage: React.FC = () => {
             const history = historyDocs.map(d => ({ ...d.data, id: d.id } as PropStatusUpdate));
             setStatusHistory(history);
           } catch (historyErr) {
-            console.error('Error loading status history:', historyErr);
+            logger.firebaseError('Error loading status history', historyErr);
             setStatusHistory([]);
           }
         } else {
           setError('Prop not found');
         }
       } catch (err) {
-        console.error('Error loading prop:', err);
+        logger.firebaseError('Error loading prop', err);
         setError('Failed to load prop details');
       } finally {
         setLoading(false);
@@ -115,7 +120,19 @@ const PropDetailPage: React.FC = () => {
     try { 
       window.history.replaceState(null, '', `#${section}`); 
     } catch (error) {
-      console.warn('Failed to update history state:', error);
+      logger.warn('Failed to update history state', error);
+    }
+  };
+
+  const handlePropUpdate = async (updates: Partial<Prop>) => {
+    if (!id || !service || !prop) return;
+    
+    try {
+      await service.updateDocument('props', id, updates);
+      setProp({ ...prop, ...updates } as Prop);
+    } catch (err) {
+      logger.firebaseError('Error updating prop', err);
+      throw err;
     }
   };
 
@@ -157,10 +174,10 @@ const PropDetailPage: React.FC = () => {
         const history = historyDocs.map(d => ({ ...d.data, id: d.id } as PropStatusUpdate));
         setStatusHistory(history);
       } catch (historyErr) {
-        console.error('Error reloading status history:', historyErr);
+        logger.firebaseError('Error reloading status history', historyErr);
       }
     } catch (err: any) {
-      console.error('Error updating prop status:', err);
+      logger.firebaseError('Error updating prop status', err);
       const errorMessage = err?.message || err?.code || 'Unknown error';
       // Show more detailed error message to help debug
       alert(`Failed to update prop status: ${errorMessage}. Please check the browser console for more details.`);
@@ -240,9 +257,33 @@ const PropDetailPage: React.FC = () => {
                 <span className="px-2 py-0.5 rounded-full text-xs bg-pb-primary/30 text-white">
                   {prop.category}
                 </span>
-                <span className="px-2 py-0.5 rounded-full text-xs bg-pb-accent/30 text-white">
-                  Qty: {prop.quantity}
-                </span>
+                {(() => {
+                  const breakdown = getQuantityBreakdown(prop);
+                  const hasSpares = breakdown.spare > 0 || breakdown.inStorage > 0;
+                  const isLow = checkLowInventory(prop);
+                  
+                  return (
+                    <>
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-pb-accent/30 text-white">
+                        {hasSpares ? (
+                          `${breakdown.required} req, ${breakdown.ordered} ord${breakdown.spare > 0 ? ` (${breakdown.spare} spare${breakdown.spare !== 1 ? 's' : ''})` : ''}`
+                        ) : (
+                          `Qty: ${prop.quantity}`
+                        )}
+                      </span>
+                      {isLow && (
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-500/30 text-yellow-300" title="Low spare inventory">
+                          ⚠️ Low: {breakdown.inStorage} spare{breakdown.inStorage !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {hasSpares && !isLow && (
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-green-500/30 text-green-300" title="Spares available">
+                          ✓ {breakdown.inStorage} in storage
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -489,7 +530,7 @@ const PropDetailPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-pb-primary" />
                 <span className="text-white">Rental Due:</span>
-                <span className="text-pb-gray">{new Date(prop.rentalDueDate).toLocaleDateString()}</span>
+                <span className="text-pb-gray">{new Date(prop.rentalDueDate).toLocaleDateString('en-GB')}</span>
               </div>
             )}
           </div>
@@ -532,7 +573,84 @@ const PropDetailPage: React.FC = () => {
               </div>
             )}
           </div>
+          
+          {/* Spare Storage Section */}
+          {(() => {
+            const breakdown = getQuantityBreakdown(prop);
+            const hasSpares = breakdown.spare > 0 || breakdown.inStorage > 0;
+            
+            if (!hasSpares && !prop.spareStorage?.location) return null;
+            
+            return (
+              <div className="mt-4 pt-4 border-t border-pb-primary/20">
+                <h4 className="text-white font-semibold mb-3">Spare Storage</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {prop.spareStorage?.location && (
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-pb-primary" />
+                      <span className="text-white">Spare Location:</span>
+                      <span className="text-pb-gray">{prop.spareStorage.location}</span>
+                    </div>
+                  )}
+                  {breakdown.inStorage > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-pb-primary" />
+                      <span className="text-white">In Storage:</span>
+                      <span className="text-pb-gray">{breakdown.inStorage}</span>
+                    </div>
+                  )}
+                  {breakdown.inUse > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-pb-primary" />
+                      <span className="text-white">In Use:</span>
+                      <span className="text-pb-gray">{breakdown.inUse}</span>
+                    </div>
+                  )}
+                  {checkLowInventory(prop) && (
+                    <div className="flex items-center gap-2 sm:col-span-2">
+                      <span className="text-yellow-400">⚠️ Low Inventory Alert: Only {breakdown.inStorage} spare{breakdown.inStorage !== 1 ? 's' : ''} remaining</span>
+                    </div>
+                  )}
+                  {prop.spareStorage?.notes && (
+                    <div className="flex items-start gap-2 sm:col-span-2">
+                      <Package className="w-4 h-4 text-pb-primary mt-1" />
+                      <div>
+                        <span className="text-white">Notes:</span>
+                        <p className="text-pb-gray text-sm mt-1">{prop.spareStorage.notes}</p>
+                      </div>
+                    </div>
+                  )}
+                  {prop.spareStorage?.lastChecked && (
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-pb-primary" />
+                      <span className="text-white">Last Checked:</span>
+                      <span className="text-pb-gray">{new Date(prop.spareStorage.lastChecked).toLocaleDateString('en-GB')}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </Section>
+
+        {/* Spare Management Section */}
+        {prop && (() => {
+          const breakdown = getQuantityBreakdown(prop);
+          if (breakdown.spare > 0 || breakdown.inStorage > 0 || prop.spareStorage?.location) {
+            return (
+              <Section 
+                id="spareManagement" 
+                title="Spare Management" 
+                defaultOpen={false}
+                isOpen={openSections.spareManagement as boolean}
+                onToggle={v => setOpenSections(s => ({ ...s, spareManagement: v }))}
+              >
+                <SpareManagement prop={prop} onUpdate={handlePropUpdate} />
+              </Section>
+            );
+          }
+          return null;
+        })()}
 
         <Section 
           id="media" 

@@ -8,6 +8,7 @@ import { ImageUpload } from '../components/ImageUpload';
 import { DigitalAssetForm } from '../components/DigitalAssetForm';
 import DimensionInput from '../components/DimensionInput';
 import WeightInput from '../components/WeightInput';
+import { getQuantityBreakdown } from '../utils/propQuantityUtils';
 
 const EditPropPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -162,9 +163,38 @@ const EditPropPage: React.FC = () => {
     setForm(prev => prev ? { ...(prev as any), [name]: checked } as any : prev);
   };
 
+  // Validate quantity constraints
+  const validateQuantities = (): string | null => {
+    if (!form) return null;
+    const required = (form as any).requiredQuantity ?? form.quantity;
+    const inUse = (form as any).quantityInUse ?? 0;
+    
+    if (required < 1) {
+      return 'Required quantity must be at least 1';
+    }
+    if (inUse < 0) {
+      return 'Quantity in use cannot be negative';
+    }
+    if (inUse > form.quantity) {
+      return 'Quantity in use cannot exceed ordered quantity';
+    }
+    if ((form as any).spareAlertThreshold !== undefined && (form as any).spareAlertThreshold < 1) {
+      return 'Spare alert threshold must be at least 1';
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form || !id) return;
+    
+    // Validate quantities
+    const validationError = validateQuantities();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
     setSaving(true);
     setError(null);
     
@@ -311,10 +341,80 @@ const EditPropPage: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-pb-gray mb-1 font-medium">Quantity *</label>
+                <label className="block text-pb-gray mb-1 font-medium">Quantity (Ordered) *</label>
                 <input name="quantity" type="number" min={1} value={form.quantity} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
               </div>
+              <div>
+                <label className="block text-pb-gray mb-1 font-medium">Required Quantity</label>
+                <input 
+                  name="requiredQuantity" 
+                  type="number" 
+                  min={1} 
+                  value={(form as any).requiredQuantity ?? form.quantity} 
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (!isNaN(value) && value > 0 && form) {
+                      setForm({ ...form, requiredQuantity: value } as any);
+                    }
+                  }}
+                  className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                  placeholder="What director/show needs"
+                />
+                <p className="text-xs text-pb-gray mt-1">Defaults to ordered quantity if not set</p>
+              </div>
+              <div>
+                <label className="block text-pb-gray mb-1 font-medium">Quantity In Use</label>
+                <input 
+                  name="quantityInUse" 
+                  type="number" 
+                  min={0} 
+                  value={(form as any).quantityInUse ?? 0} 
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (!isNaN(value) && value >= 0 && form) {
+                      setForm({ ...form, quantityInUse: value } as any);
+                    }
+                  }}
+                  className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                />
+                <p className="text-xs text-pb-gray mt-1">Currently being used in the show</p>
+              </div>
             </div>
+            {/* Spare quantity display */}
+            {form && (() => {
+              const breakdown = getQuantityBreakdown({ ...form, quantity: form.quantity } as any);
+              if (breakdown.spare > 0 || breakdown.inStorage > 0) {
+                return (
+                  <div className="mt-4 p-3 rounded bg-pb-primary/10 border border-pb-primary/20">
+                    <div className="text-sm text-pb-gray space-y-1">
+                      <div><strong className="text-white">Quantity Summary:</strong></div>
+                      <div>{breakdown.formattedFull}</div>
+                      <div>{breakdown.formattedUsage}</div>
+                      {breakdown.isLow && (
+                        <div className="text-yellow-400 mt-2">
+                          ⚠️ Low spare inventory: Only {breakdown.inStorage} spare{breakdown.inStorage !== 1 ? 's' : ''} remaining
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            {/* Warning if quantity < requiredQuantity */}
+            {form && (() => {
+              const required = (form as any).requiredQuantity ?? form.quantity;
+              if (form.quantity < required) {
+                return (
+                  <div className="mt-4 p-3 rounded bg-red-500/20 border border-red-500/30">
+                    <div className="text-sm text-red-200">
+                      ⚠️ Warning: Ordered quantity ({form.quantity}) is less than required quantity ({required})
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </fieldset>
 
           {/* Source & Details */}
@@ -597,6 +697,74 @@ const EditPropPage: React.FC = () => {
             )}
             </div>
           </fieldset>
+
+          {/* Spare Storage */}
+          {form && (
+            <fieldset className="border border-pb-primary/20 rounded-lg p-4">
+              <legend className="px-2 text-sm text-pb-primary">Spare Storage</legend>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Spare Storage Location</label>
+                  <input 
+                    name="spareStorageLocation" 
+                    value={(form as any).spareStorage?.location || ''} 
+                    onChange={(e) => {
+                      if (form) {
+                        setForm({
+                          ...form,
+                          spareStorage: {
+                            ...((form as any).spareStorage || {}),
+                            location: e.target.value
+                          }
+                        } as any);
+                      }
+                    }}
+                    placeholder="e.g., Box A, Props Room A, Shelf 3"
+                    className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                  />
+                  <p className="text-xs text-pb-gray mt-1">Where spares are stored (typically Box A or similar)</p>
+                </div>
+                <div>
+                  <label className="block text-pb-gray mb-1 font-medium">Low Inventory Alert Threshold</label>
+                  <input 
+                    name="spareAlertThreshold" 
+                    type="number" 
+                    min={0} 
+                    value={(form as any).spareAlertThreshold ?? 2} 
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (!isNaN(value) && value >= 0 && form) {
+                        setForm({ ...form, spareAlertThreshold: value } as any);
+                      }
+                    }}
+                    className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                  />
+                  <p className="text-xs text-pb-gray mt-1">Alert when spares fall below this number (default: 2)</p>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-pb-gray mb-1 font-medium">Spare Storage Notes</label>
+                  <textarea 
+                    name="spareStorageNotes" 
+                    value={(form as any).spareStorage?.notes || ''} 
+                    onChange={(e) => {
+                      if (form) {
+                        setForm({
+                          ...form,
+                          spareStorage: {
+                            ...((form as any).spareStorage || {}),
+                            notes: e.target.value
+                          }
+                        } as any);
+                      }
+                    }}
+                    rows={2}
+                    placeholder="Notes about spare storage (e.g., 'Keep separate from show props', 'Check weekly')"
+                    className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                  />
+                </div>
+              </div>
+            </fieldset>
+          )}
 
           {/* Location & Custody */}
           <fieldset className="border border-pb-primary/20 rounded-lg p-4">

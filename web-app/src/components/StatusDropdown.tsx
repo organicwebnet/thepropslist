@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PropLifecycleStatus, lifecycleStatusLabels, lifecycleStatusPriority, StatusPriority } from '../../src/types/lifecycle';
+import { PropLifecycleStatus, lifecycleStatusLabels, lifecycleStatusPriority, StatusPriority } from '../../../src/types/lifecycle';
 
 interface StatusDropdownProps {
   currentStatus: PropLifecycleStatus;
@@ -23,15 +23,23 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
     const newStatus = e.target.value as PropLifecycleStatus;
     if (newStatus === localStatus || disabled || isUpdating) return;
 
+    console.log('StatusDropdown: Attempting to change status from', localStatus, 'to', newStatus);
     setIsUpdating(true);
     try {
       await onStatusChange(newStatus);
       setLocalStatus(newStatus);
-    } catch (error) {
-      console.error('Failed to update status:', error);
+      console.log('StatusDropdown: Successfully updated status to', newStatus);
+    } catch (error: any) {
+      console.error('StatusDropdown: Failed to update status:', error);
+      console.error('StatusDropdown: Error details:', {
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack
+      });
       // Revert the select value on error
       e.target.value = localStatus;
-      alert('Failed to update prop status. Please try again.');
+      const errorMsg = error?.message || error?.code || 'Unknown error';
+      alert(`Failed to update prop status: ${errorMsg}. Please check the browser console for more details.`);
     } finally {
       setIsUpdating(false);
     }

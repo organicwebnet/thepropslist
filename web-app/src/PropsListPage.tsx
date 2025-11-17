@@ -16,6 +16,8 @@ import { StatusDropdown } from './components/StatusDropdown';
 import { PropLifecycleStatus } from '../../src/types/lifecycle';
 // Simplified loader removed per design request
 import { usePropListLoading } from './hooks/useImageLoading';
+import { SpareInventoryAlerts } from './components/SpareInventoryAlerts';
+import { getQuantityBreakdown, checkLowInventory, normalizePropQuantities } from './utils/propQuantityUtils';
 
 const defaultPdfOptions: PdfGenerationOptions = {
   selectedFields: {
@@ -86,6 +88,7 @@ const PropsListPage: React.FC = () => {
   const [status, setStatus] = useState<string>('');
   const [act, setAct] = useState<string>('');
   const [scene, setScene] = useState<string>('');
+  const [spareFilter, setSpareFilter] = useState<'all' | 'hasSpares' | 'lowInventory'>('all');
   const [showPdfDialog, setShowPdfDialog] = useState(false);
   const [pdfOptions, setPdfOptions] = useState<PdfGenerationOptions>(defaultPdfOptions);
   const [downloading, setDownloading] = useState(false);
@@ -144,7 +147,8 @@ const PropsListPage: React.FC = () => {
       (data: FirebaseDocument<Prop>[]) => {
         const propList = data
           .map(doc => ({ ...doc.data, id: doc.id }))
-          .filter(prop => viewAllProps || prop.showId === currentShowId || (userProfile?.role === 'god' && !currentShowId));
+          .filter(prop => viewAllProps || prop.showId === currentShowId || (userProfile?.role === 'god' && !currentShowId))
+          .map(normalizePropQuantities);
         setProps(propList);
         setLoading(false);
         handleDataLoaded();
@@ -200,7 +204,17 @@ const PropsListPage: React.FC = () => {
     const matchesStatus = !status || (prop.status && prop.status === status);
     const matchesAct = !act || (prop.act != null && String(prop.act) === act);
     const matchesScene = !scene || (prop.scene != null && String(prop.scene) === scene);
-    return matchesSearch && matchesCategory && matchesStatus && matchesAct && matchesScene;
+    
+    // Spare filters
+    let matchesSpareFilter = true;
+    if (spareFilter === 'hasSpares') {
+      const breakdown = getQuantityBreakdown(prop);
+      matchesSpareFilter = breakdown.spare > 0 || breakdown.inStorage > 0;
+    } else if (spareFilter === 'lowInventory') {
+      matchesSpareFilter = checkLowInventory(prop);
+    }
+    
+    return matchesSearch && matchesCategory && matchesStatus && matchesAct && matchesScene && matchesSpareFilter;
   });
 
   const handleDownloadPdf = async () => {
@@ -444,7 +458,7 @@ const PropsListPage: React.FC = () => {
                     type="checkbox"
                     checked={selectedProps.size === filteredProps.length && filteredProps.length > 0}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-pb-primary/30 bg-pb-darker/60 text-pb-primary focus:ring-pb-primary"
+                    className="w-4 h-4 rounded-full appearance-none border-2 border-pb-primary/30 bg-pb-darker/60 text-pb-primary focus:ring-pb-primary checked:bg-pb-primary checked:border-pb-primary accent-pb-primary"
                   />
                   <span className="text-white text-sm">Select all</span>
                 </label>
@@ -499,6 +513,18 @@ const PropsListPage: React.FC = () => {
                   {scenes.map(s => (
                     <option key={s} value={String(s)}>{s}</option>
                   ))}
+                </select>
+                <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </div>
+              <div className="relative">
+                <select
+                  value={spareFilter}
+                  onChange={e => setSpareFilter(e.target.value as 'all' | 'hasSpares' | 'lowInventory')}
+                  className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+                >
+                  <option value="all">All Props</option>
+                  <option value="hasSpares">Has Spares</option>
+                  <option value="lowInventory">Low Spare Inventory</option>
                 </select>
                 <svg className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/80" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </div>
@@ -669,33 +695,38 @@ const PropsListPage: React.FC = () => {
                 <PropsListSkeleton count={6} />
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                {filteredProps.map((prop, index) => (
+              <>
+                {/* Low Inventory Alerts */}
+                <SpareInventoryAlerts props={filteredProps} />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                  {filteredProps.map((prop, index) => (
                   <div
                     key={prop.id}
-                    className="animate-slide-up relative"
+                    className="animate-slide-up"
                     style={{
                       animationDelay: `${index * 100}ms`,
                       animationFillMode: 'both'
                     }}
                   >
-                    <div className="absolute top-2 left-2 z-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedProps.has(prop.id)}
-                        onChange={() => handleToggleSelect(prop.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-5 h-5 rounded border-pb-primary/30 bg-pb-darker/80 text-pb-primary focus:ring-pb-primary cursor-pointer"
-                      />
-                    </div>
                     <PropCard
                       prop={prop}
                       onImageLoad={() => handleImageLoad(prop.id)}
                       onImageError={() => handleImageError(prop.id)}
-                    />
-                  </div>
-                ))}
-              </div>
+                      checkbox={
+                        <input
+                          type="checkbox"
+                          checked={selectedProps.has(prop.id)}
+                          onChange={() => handleToggleSelect(prop.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-5 h-5 rounded-full appearance-none border-2 border-pb-primary/30 bg-pb-darker/80 text-pb-primary focus:ring-pb-primary checked:bg-pb-primary checked:border-pb-primary accent-pb-primary cursor-pointer"
+                        />
+                    }
+                  />
+                </div>
+              ))}
+                </div>
+              </>
             )}
           </div>
         )}

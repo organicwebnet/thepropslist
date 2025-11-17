@@ -4,15 +4,19 @@ import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { User } from 'firebase/auth';
 import { Prop } from '../shared/types/props.ts';
 import type { PropStatusUpdate, MaintenanceRecord } from '../types/lifecycle.ts';
+import { lifecycleStatusLabels } from '../types/lifecycle.ts';
 import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types.ts';
 
 // Local interface matching Firestore data for status history
+// This matches PropStatusUpdate from lifecycle types
 interface PropStatusFirestoreData {
-  status: string;
-  timestamp: FirebaseTimestamp; // Expect Firestore Timestamp
-  notes?: string;
-  images?: string[];
+  previousStatus?: string;
+  newStatus: string;
+  date: string | FirebaseTimestamp; // Can be ISO string or Firestore Timestamp
+  createdAt: string | FirebaseTimestamp;
   updatedBy: string;
+  notes?: string;
+  damageImageUrls?: string[];
 }
 
 // Local interface matching state for status history
@@ -65,13 +69,22 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
             if (!data) {
               return null; // Return null for invalid data
             }
+            // Handle both old format (status, timestamp) and new format (previousStatus, newStatus, date)
+            const status = data.newStatus || (data as any).status || 'confirmed';
+            const dateValue = data.date || (data as any).timestamp;
+            const timestamp = dateValue && typeof dateValue === 'object' && 'toDate' in dateValue
+              ? dateValue.toDate()
+              : typeof dateValue === 'string'
+              ? new Date(dateValue)
+              : new Date();
+            
             return {
               id: docSnapshot.id,
-              status: data.status,
+              status,
               notes: data.notes,
-              images: data.images,
+              images: data.damageImageUrls || (data as any).images,
               updatedBy: data.updatedBy,
-              timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date(),
+              timestamp,
             } as PropStatusState;
           })
           .filter(Boolean as any as (value: PropStatusState | null) => value is PropStatusState); // Filter out nulls
@@ -141,11 +154,24 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
     notes?: string,
     images?: File[] // Assuming File type for web, adjust for native if needed
   ): Promise<void> => {
-    if (!propId || !currentUser || !service?.addDocument) {
-      throw new Error('PropId, currentUser, and Firebase service (addDocument) are required.');
+    if (!propId || !currentUser || !service?.addDocument || !service?.updateDocument) {
+      throw new Error('PropId, currentUser, and Firebase service (addDocument and updateDocument) are required.');
     }
 
     try {
+      // Validate status is a valid PropLifecycleStatus
+      const validStatuses = Object.keys(lifecycleStatusLabels);
+      if (!validStatuses.includes(status)) {
+        throw new Error(`Invalid status value: ${status}`);
+      }
+
+      // Get current prop to track previous status
+      const propDoc = await service.getDocument<Prop>('props', propId);
+      if (!propDoc || !propDoc.data) {
+        throw new Error('Prop not found');
+      }
+      const previousStatus = propDoc.data.status || 'confirmed';
+
       // Image upload logic (simplified, assuming web API)
       const imageUrls = images?.length
         ? await Promise.all(images.map(async (image) => {
@@ -163,16 +189,25 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
           }))
         : undefined;
 
-      const statusData = {
+      // Update prop document status (CRITICAL FIX)
+      await service.updateDocument('props', propId, {
         status,
-        notes,
-        images: imageUrls,
-        timestamp: new Date().toISOString(),
+        lastStatusUpdate: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Create status history entry with previousStatus for tracking
+      const statusUpdate = {
+        previousStatus,
+        newStatus: status,
         updatedBy: currentUser.uid,
+        date: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        notes,
+        ...(imageUrls && imageUrls.length > 0 && { damageImageUrls: imageUrls }),
       };
-      // Type for addDocument will be Omit<PropStatusFirestoreData, 'id'>, which expects 'timestamp: FirebaseTimestamp'
-      // serverTimestamp() is FieldValue. This will require casting.
-      await service.addDocument<PropStatusFirestoreData>(`props/${propId}/statusHistory`, statusData as any as Omit<PropStatusFirestoreData, 'id'>);
+
+      await service.addDocument(`props/${propId}/statusHistory`, statusUpdate);
 
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to update status');

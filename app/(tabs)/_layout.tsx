@@ -92,6 +92,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="bag" size={24} color={color} />
           ),
+          href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
@@ -101,6 +103,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="person" size={24} color={color} />
           ),
+          href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
@@ -118,32 +122,43 @@ export default function TabLayout() {
         name="todos/index"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="packing/createBox"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       {/* Mock route kept for reference but hidden; remove if no longer needed */}
-      <Tabs.Screen name="packing/createBoxMock" options={{ href: null }} />
+      <Tabs.Screen 
+        name="packing/createBoxMock" 
+        options={{ 
+          href: null,
+          tabBarButton: () => null,
+        }} 
+      />
       <Tabs.Screen
         name="packing/find"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="packing/list"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="props/create"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
@@ -151,54 +166,63 @@ export default function TabLayout() {
         options={{
           href: null,
           headerShown: false,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="props/[id]/edit"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="shows/create"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="shows/new"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="shows/[id]/index"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="shopping/add"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="shopping/[id]"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="shopping/[id]/add-option"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       <Tabs.Screen
         name="subscription"
         options={{
           href: null,
+          tabBarButton: () => null,
         }}
       />
       {/* Future admin routes - will be conditionally rendered based on hasAdminAccess */}

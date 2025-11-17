@@ -42,6 +42,8 @@ export function PackingList({
   const [selectedProps, setSelectedProps] = useState<PropInstance[]>([]); 
   const [propInstances, setPropInstances] = useState<PropInstance[]>([]); 
   const [editingBoxId, setEditingBoxId] = useState<string | null>(null);
+  const [isSpareBox, setIsSpareBox] = useState(false);
+  const [spareProps, setSpareProps] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const instances: PropInstance[] = [];
@@ -99,15 +101,19 @@ export function PackingList({
       quantity: 1, // Assuming quantity 1 per instance for now
       weight: prop.weight ?? 0,
       weightUnit: prop.weightUnit ?? 'lb',
-      isFragile: isFragile(prop) // Reuse existing isFragile logic
+      isFragile: isFragile(prop), // Reuse existing isFragile logic
+      isSpare: spareProps.has(prop.instanceId) || isSpareBox // Mark as spare if in spare set or if box is spare box
     }));
 
     if (editingBoxId) {
       // --- Update Existing Box ---
       try {
-        await onUpdateBox(editingBoxId, { name: currentBoxName, props: packedProps });
+        await onUpdateBox(editingBoxId, { name: currentBoxName, props: packedProps, isSpareBox });
       } catch (error) {
-        console.error(`Error updating box ${editingBoxId}:`, error);
+        // Log error - TODO: Add proper logger utility for React Native
+        if (__DEV__) {
+          console.error(`Error updating box ${editingBoxId}:`, error);
+        }
         // TODO: Add user feedback for error
         return; // Don't clear form on error
       }
@@ -116,9 +122,12 @@ export function PackingList({
       // Use act/scene from the first prop instance if available (as before)
       const firstProp = selectedProps[0];
       try {
-        await onCreateBox(packedProps, firstProp?.act ?? 0, firstProp?.scene ?? 0);
+        await onCreateBox(packedProps, firstProp?.act ?? 0, firstProp?.scene ?? 0, isSpareBox);
       } catch (error) {
-        console.error(`Error creating box ${currentBoxName}:`, error);
+        // Log error - TODO: Add proper logger utility for React Native
+        if (__DEV__) {
+          console.error(`Error creating box ${currentBoxName}:`, error);
+        }
          // TODO: Add user feedback for error
         return; // Don't clear form on error
       }
@@ -128,6 +137,8 @@ export function PackingList({
     setSelectedProps([]);
     setCurrentBoxName('');
     setEditingBoxId(null);
+    setIsSpareBox(false);
+    setSpareProps(new Set());
   };
 
   // Calculate total weight of selected props
@@ -178,9 +189,11 @@ export function PackingList({
     // Editing box
     setEditingBoxId(box.id);
     setCurrentBoxName(box.name ?? '');
+    setIsSpareBox(box.isSpareBox ?? false);
 
     // Find the corresponding PropInstance objects for the props in the box
     const propsToSelect: PropInstance[] = [];
+    const sparePropsSet = new Set<string>();
     box.props?.forEach((packedProp: PackedProp) => {
       const matchingInstances = propInstances.filter(inst => inst.id === packedProp.propId);
       for (let i = 0; i < (packedProp.quantity || 1); i++) {
@@ -192,12 +205,17 @@ export function PackingList({
           if (!propsToSelect.some(p => p.instanceId === instanceId)) {
              propsToSelect.push(instanceToAdd);
           }
+          // Mark as spare if the packed prop is marked as spare
+          if (packedProp.isSpare) {
+            sparePropsSet.add(instanceId);
+          }
         } else {
           // Could not find matching instance for packed prop
         }
       }
     });
     setSelectedProps(propsToSelect);
+    setSpareProps(sparePropsSet);
   };
 
   // --- Add handler for Cancel Edit ---
@@ -205,6 +223,8 @@ export function PackingList({
     setEditingBoxId(null);
     setCurrentBoxName('');
     setSelectedProps([]);
+    setIsSpareBox(false);
+    setSpareProps(new Set());
   };
 
   return (
@@ -267,9 +287,38 @@ export function PackingList({
             type="text"
             value={currentBoxName}
             onChange={(e) => setCurrentBoxName(e.target.value)}
-            placeholder="Enter Box Name"
+            placeholder={isSpareBox ? "Box A" : "Enter Box Name"}
             className="w-full p-3 mb-4 bg-gray-700 border border-gray-600 rounded-md text-gray-200 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
+          <label className="flex items-center gap-2 mb-4 text-sm text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isSpareBox}
+              onChange={(e) => {
+                setIsSpareBox(e.target.checked);
+                if (e.target.checked && !currentBoxName) {
+                  // Auto-suggest "Box A" or next available letter
+                  const existingSpareBoxes = boxes.filter(b => b.isSpareBox || (b.name && /^Box [A-Z]$/i.test(b.name)));
+                  const usedLetters = new Set(existingSpareBoxes.map(b => {
+                    const match = b.name?.match(/^Box ([A-Z])$/i);
+                    return match ? match[1].toUpperCase() : null;
+                  }).filter(Boolean));
+                  
+                  let nextLetter = 'A';
+                  for (let i = 0; i < 26; i++) {
+                    const letter = String.fromCharCode(65 + i);
+                    if (!usedLetters.has(letter)) {
+                      nextLetter = letter;
+                      break;
+                    }
+                  }
+                  setCurrentBoxName(`Box ${nextLetter}`);
+                }
+              }}
+              className="rounded"
+            />
+            <span>Mark as spare box (typically Box A)</span>
+          </label>
           
           <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar mb-4">
             {selectedProps.length === 0 && (
@@ -294,13 +343,37 @@ export function PackingList({
                   )}
                   <span className="text-gray-300 truncate" title={prop.name}>{prop.name}</span>
                 </div>
-                <button 
-                  onClick={() => handleRemoveProp(prop.instanceId)}
-                  className="p-1 text-red-400 hover:text-red-300"
-                  title="Remove Prop"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {!isSpareBox && (
+                    <label className="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={spareProps.has(prop.instanceId)}
+                        onChange={(e) => {
+                          const newSpareProps = new Set(spareProps);
+                          if (e.target.checked) {
+                            newSpareProps.add(prop.instanceId);
+                          } else {
+                            newSpareProps.delete(prop.instanceId);
+                          }
+                          setSpareProps(newSpareProps);
+                        }}
+                        className="rounded"
+                      />
+                      <span>Spare</span>
+                    </label>
+                  )}
+                  {isSpareBox && (
+                    <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded">Spare</span>
+                  )}
+                  <button 
+                    onClick={() => handleRemoveProp(prop.instanceId)}
+                    className="p-1 text-red-400 hover:text-red-300"
+                    title="Remove Prop"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

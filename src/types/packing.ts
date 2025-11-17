@@ -32,6 +32,7 @@ export interface PackingBox {
   labelIncludeBatteries?: boolean;
   // Mobile-only field to align with container types used on web
   containerType?: string;
+  isSpareBox?: boolean;  // Indicates this is a spare storage box (boxes starting with "A")
 }
 
 export interface PackedProp {
@@ -42,6 +43,7 @@ export interface PackedProp {
   // Use WeightUnit from shared types for consistency
   weightUnit: WeightUnit; 
   isFragile: boolean;
+  isSpare?: boolean;  // Tag to indicate this prop instance is a spare
 }
 
 export interface PackingListFilters {

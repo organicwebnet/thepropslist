@@ -367,14 +367,41 @@ service cloud.firestore {
         get(/databases/$(database)/documents/shows/$(request.resource.data.showId)).data.team[request.auth.uid] != null
       ));
       
-      // Update/delete permissions require proper team membership or admin role
-      allow update, delete: if isAdmin() ||
+      // Update permissions: allow status updates for any team member, full updates for supervisors
+      allow update: if isAdmin() ||
+        (request.auth != null && resource.data.showId != null && (
+          // Allow if user is the show owner
+          get(/databases/$(database)/documents/shows/$(resource.data.showId)).data.ownerId == request.auth.uid ||
+          // Or if user is a team member (for status updates and basic edits)
+          isTeamMember(resource.data.showId) ||
+          // Or if user has supervisor role (for full prop updates)
+          hasTeamRole(resource.data.showId, 'god') ||
+          hasTeamRole(resource.data.showId, 'props_supervisor')
+        ));
+      
+      // Delete permissions require proper team membership or admin role
+      allow delete: if isAdmin() ||
         (request.auth != null &&
           (
             hasTeamRole(resource.data.showId, 'god') ||
             hasTeamRole(resource.data.showId, 'props_supervisor')
           )
         );
+      
+      // Status history subcollection - allow team members to read/write
+      match /statusHistory/{statusId} {
+        // Helper function to get prop's showId and check team membership
+        function isPropTeamMember() {
+          let propDoc = get(/databases/$(database)/documents/props/$(propId));
+          let showId = propDoc.data.showId;
+          return isAdmin() || (request.auth != null && (
+            get(/databases/$(database)/documents/shows/$(showId)).data.ownerId == request.auth.uid ||
+            get(/databases/$(database)/documents/shows/$(showId)).data.team[request.auth.uid] != null
+          ));
+        }
+        
+        allow read, create, update, delete: if isPropTeamMember();
+      }
     }
 
     // Shopping items

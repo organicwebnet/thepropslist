@@ -6,6 +6,7 @@ import DashboardLayout from '../PropsBibleHomepage';
 import { useNavigate } from 'react-router-dom';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { useLimitChecker } from '../hooks/useLimitChecker';
+import { usePermissions } from '../hooks/usePermissions';
 import SubFootnote from '../components/SubFootnote';
 
 const PackingListPage: React.FC = () => {
@@ -19,12 +20,20 @@ const PackingListPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading: webAuthLoading } = useWebAuth();
   const { checkPackingBoxesLimit, checkPackingBoxesLimitForShow } = useLimitChecker();
+  const { isGod } = usePermissions();
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
 
   // Check limits on page load and when packing lists change
+  // Skip limit checks for god users
   useEffect(() => {
     const checkLimits = async () => {
       if (!user?.uid) return;
+      
+      // God users bypass all limit checks
+      if (isGod()) {
+        setLimitWarning(null);
+        return;
+      }
       
       try {
         // Check per-plan packing boxes limit
@@ -53,7 +62,7 @@ const PackingListPage: React.FC = () => {
     };
 
     checkLimits();
-  }, [user?.uid, currentShowId, packingLists.length, checkPackingBoxesLimit, checkPackingBoxesLimitForShow]);
+  }, [user?.uid, currentShowId, packingLists.length, checkPackingBoxesLimit, checkPackingBoxesLimitForShow, isGod]);
 
   useEffect(() => {
     if (webAuthLoading) return;
@@ -93,27 +102,30 @@ const PackingListPage: React.FC = () => {
     }
 
     // Check packing boxes limits before creating
-    try {
-      // Check per-plan packing boxes limit
-      const planLimitCheck = await checkPackingBoxesLimit(user.uid);
-      if (!planLimitCheck.withinLimit) {
-        setError(planLimitCheck.message || 'Packing boxes limit reached');
-        return;
-      }
-
-      // Check per-show packing boxes limit if show is selected
-      if (currentShowId) {
-        const showLimitCheck = await checkPackingBoxesLimitForShow(currentShowId);
-        // Show warning if at limit or almost out (80%+)
-        if (!showLimitCheck.withinLimit || showLimitCheck.isAlmostOut) {
-          setError(showLimitCheck.message || 'Show packing boxes limit reached');
+    // Skip limit checks for god users
+    if (!isGod()) {
+      try {
+        // Check per-plan packing boxes limit
+        const planLimitCheck = await checkPackingBoxesLimit(user.uid);
+        if (!planLimitCheck.withinLimit) {
+          setError(planLimitCheck.message || 'Packing boxes limit reached');
           return;
         }
+
+        // Check per-show packing boxes limit if show is selected
+        if (currentShowId) {
+          const showLimitCheck = await checkPackingBoxesLimitForShow(currentShowId);
+          // Show warning if at limit or almost out (80%+)
+          if (!showLimitCheck.withinLimit || showLimitCheck.isAlmostOut) {
+            setError(showLimitCheck.message || 'Show packing boxes limit reached');
+            return;
+          }
+        }
+      } catch (limitError) {
+        console.error('Error checking packing boxes limits:', limitError);
+        setError('Error checking limits. Please try again.');
+        return;
       }
-    } catch (limitError) {
-      console.error('Error checking packing boxes limits:', limitError);
-      setError('Error checking limits. Please try again.');
-      return;
     }
 
     setCreating(true);
@@ -188,8 +200,8 @@ const PackingListPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      {/* Limit Warning Banner */}
-      {limitWarning && (
+      {/* Limit Warning Banner - Hidden for god users */}
+      {limitWarning && !isGod() && (
         <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">

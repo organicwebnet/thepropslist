@@ -49,6 +49,11 @@ export function NativePropForm({
   const [act, setAct] = useState(initialData?.act?.toString() || '');
   const [scene, setScene] = useState(initialData?.scene?.toString() || '');
   const [quantity, setQuantity] = useState(initialData?.quantity?.toString() || '1');
+  const [requiredQuantity, setRequiredQuantity] = useState(initialData?.requiredQuantity?.toString() || '');
+  const [quantityInUse, setQuantityInUse] = useState(initialData?.quantityInUse?.toString() || '0');
+  const [spareAlertThreshold, setSpareAlertThreshold] = useState(initialData?.spareAlertThreshold?.toString() || '');
+  const [spareStorageLocation, setSpareStorageLocation] = useState(initialData?.spareStorage?.location || '');
+  const [spareStorageNotes, setSpareStorageNotes] = useState(initialData?.spareStorage?.notes || '');
   const [price, setPrice] = useState(initialData?.price?.toString() || '0');
   const [category, setCategory] = useState<PropCategory>(initialData?.category || 'Other');
   const [source, setSource] = useState<PropSource>(initialData?.source || 'owned');
@@ -100,6 +105,11 @@ export function NativePropForm({
     setAct(initialData?.act?.toString() || '');
     setScene(initialData?.scene?.toString() || '');
     setQuantity(initialData?.quantity?.toString() || '1');
+    setRequiredQuantity(initialData?.requiredQuantity?.toString() || '');
+    setQuantityInUse(initialData?.quantityInUse?.toString() || '0');
+    setSpareAlertThreshold(initialData?.spareAlertThreshold?.toString() || '');
+    setSpareStorageLocation(initialData?.spareStorage?.location || '');
+    setSpareStorageNotes(initialData?.spareStorage?.notes || '');
     setPrice(initialData?.price?.toString() || '0');
     setCategory(initialData?.category || 'Other');
     setSource(initialData?.source || 'owned');
@@ -183,7 +193,14 @@ export function NativePropForm({
         act: parseInt(act, 10) || undefined,
         scene: parseInt(scene, 10) || undefined,
         category: category, 
-        quantity: parseInt(quantity, 10) || 1, 
+        quantity: parseInt(quantity, 10) || 1,
+        requiredQuantity: requiredQuantity ? parseInt(requiredQuantity, 10) : undefined,
+        quantityInUse: quantityInUse ? parseInt(quantityInUse, 10) : 0,
+        spareAlertThreshold: spareAlertThreshold ? parseInt(spareAlertThreshold, 10) : undefined,
+        spareStorage: spareStorageLocation || spareStorageNotes ? {
+          location: spareStorageLocation.trim(),
+          notes: spareStorageNotes.trim() || undefined,
+        } : undefined, 
         price: parseFloat(price) || 0, 
         source: source, 
         status: status, 
@@ -470,12 +487,64 @@ export function NativePropForm({
         />
 
         {/* --- 11. Quantity --- */}
-        <Text style={styles.label}>Quantity<Text style={styles.requiredAsterisk}> *</Text></Text>
+        <Text style={styles.label}>Quantity (Ordered)<Text style={styles.requiredAsterisk}> *</Text></Text>
         <TextInput
           style={styles.input}
           value={quantity}
           onChangeText={setQuantity}
           placeholder="1"
+          placeholderTextColor="#9CA3AF"
+          keyboardType="numeric"
+        />
+
+        {/* --- 11a. Required Quantity --- */}
+        <Text style={styles.label}>Required Quantity</Text>
+        <TextInput
+          style={styles.input}
+          value={requiredQuantity}
+          onChangeText={setRequiredQuantity}
+          placeholder="Defaults to ordered quantity"
+          placeholderTextColor="#9CA3AF"
+          keyboardType="numeric"
+        />
+
+        {/* --- 11b. Quantity In Use --- */}
+        <Text style={styles.label}>Quantity In Use</Text>
+        <TextInput
+          style={styles.input}
+          value={quantityInUse}
+          onChangeText={setQuantityInUse}
+          placeholder="0"
+          placeholderTextColor="#9CA3AF"
+          keyboardType="numeric"
+        />
+
+        {/* --- 11c. Spare Storage --- */}
+        <Text style={styles.sectionTitle}>Spare Storage</Text>
+        <Text style={styles.label}>Spare Storage Location</Text>
+        <TextInput
+          style={styles.input}
+          value={spareStorageLocation}
+          onChangeText={setSpareStorageLocation}
+          placeholder="e.g., Box A, Props Room A, Shelf 3"
+          placeholderTextColor="#9CA3AF"
+        />
+        <Text style={styles.label}>Spare Storage Notes</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={spareStorageNotes}
+          onChangeText={setSpareStorageNotes}
+          placeholder="Notes about spare storage"
+          placeholderTextColor="#9CA3AF"
+          multiline={true}
+          numberOfLines={3}
+        />
+        <Text style={styles.label}>Spare Alert Threshold</Text>
+        <TextInput
+          style={styles.input}
+          value={spareAlertThreshold}
+          onChangeText={setSpareAlertThreshold}
+          placeholder="2 (default)"
           placeholderTextColor="#9CA3AF"
           keyboardType="numeric"
         />

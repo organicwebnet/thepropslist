@@ -161,6 +161,23 @@ export interface PropFormData {
   assignedTo?: string[]; // Array of user IDs assigned for maintenance/repair
   repairDeadline?: string;
   showId?: string;
+
+  // Spare props tracking
+  requiredQuantity?: number;  // What director/show needs (defaults to quantity if not set)
+  quantityInUse?: number;     // Currently being used in the show (defaults to 0)
+  quantityInStorage?: number; // Spares in storage (calculated: quantity - quantityInUse)
+  spareStorage?: {
+    location: string;         // Where spares are stored (e.g., "Box A", "Props Room A, Shelf 3")
+    notes?: string;          // Notes about spare storage
+    lastChecked?: string;    // ISO date string - last inventory check
+  };
+  spareUsageHistory?: Array<{
+    date: string;            // ISO date string
+    quantity: number;
+    reason: 'broken' | 'lost' | 'damaged' | 'used' | 'other';
+    notes?: string;
+  }>;
+  spareAlertThreshold?: number; // Low inventory alert threshold (default: 2)
 }
 
 export interface Prop {
@@ -291,6 +308,23 @@ export interface Prop {
   estimatedDeliveryDate?: string; // ISO date string for expected delivery
   courier?: string; // Name of the courier
   trackingNumber?: string; // Tracking number for the delivery
+
+  // Spare props tracking
+  requiredQuantity?: number;  // What director/show needs (defaults to quantity if not set)
+  quantityInUse?: number;     // Currently being used in the show (defaults to 0)
+  quantityInStorage?: number; // Spares in storage (calculated: quantity - quantityInUse)
+  spareStorage?: {
+    location: string;         // Where spares are stored (e.g., "Box A", "Props Room A, Shelf 3")
+    notes?: string;          // Notes about spare storage
+    lastChecked?: string;    // ISO date string - last inventory check
+  };
+  spareUsageHistory?: Array<{
+    date: string;            // ISO date string
+    quantity: number;
+    reason: 'broken' | 'lost' | 'damaged' | 'used' | 'other';
+    notes?: string;
+  }>;
+  spareAlertThreshold?: number; // Low inventory alert threshold (default: 2)
 }
 
 export type PropUpdateFormData = Partial<PropFormData>;

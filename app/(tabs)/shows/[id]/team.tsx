@@ -16,6 +16,7 @@ import { useFirebase } from '../../../../src/platforms/mobile/contexts/FirebaseC
 import { useAuth } from '../../../../src/contexts/AuthContext';
 import { useShows } from '../../../../src/contexts/ShowsContext';
 import { useLimitChecker } from '../../../../src/hooks/useLimitChecker';
+import { usePermissions } from '../../../../src/hooks/usePermissions';
 import { Picker } from '@react-native-picker/picker';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getAuth, fetchSignInMethodsForEmail } from 'firebase/auth';
@@ -48,6 +49,7 @@ export default function TeamPage() {
   const { user } = useAuth();
   const { getShowById } = useShows();
   const { checkCollaboratorsLimitForShow } = useLimitChecker();
+  const { isGod } = usePermissions();
   const { theme } = useTheme();
   const colors = theme === 'dark' ? appDarkTheme : appLightTheme;
 
@@ -97,10 +99,17 @@ export default function TeamPage() {
     return () => { if (unsub) unsub(); };
   }, [service, params.id]);
 
-  // Check limits
+  // Check limits - Skip limit checks for god users
   useEffect(() => {
     const checkLimits = async () => {
       if (!params.id || !user?.uid) return;
+      
+      // God users bypass all limit checks
+      if (isGod()) {
+        setLimitWarning(null);
+        return;
+      }
+      
       try {
         const limitCheck = await checkCollaboratorsLimitForShow(params.id);
         if (!limitCheck.withinLimit) {
@@ -113,7 +122,7 @@ export default function TeamPage() {
       }
     };
     checkLimits();
-  }, [params.id, user?.uid, collaborators.length, checkCollaboratorsLimitForShow]);
+  }, [params.id, user?.uid, collaborators.length, checkCollaboratorsLimitForShow, isGod]);
 
   const handleInvite = async () => {
     if (!params.id || !inviteEmail) return;
@@ -126,16 +135,19 @@ export default function TeamPage() {
     }
 
     // Check collaborators limit before inviting
-    try {
-      const limitCheck = await checkCollaboratorsLimitForShow(params.id);
-      if (!limitCheck.withinLimit) {
-        setError(limitCheck.message || 'Collaborators limit reached');
+    // Skip limit checks for god users
+    if (!isGod()) {
+      try {
+        const limitCheck = await checkCollaboratorsLimitForShow(params.id);
+        if (!limitCheck.withinLimit) {
+          setError(limitCheck.message || 'Collaborators limit reached');
+          return;
+        }
+      } catch (limitError) {
+        console.error('Error checking collaborators limits:', limitError);
+        setError('Error checking limits. Please try again.');
         return;
       }
-    } catch (limitError) {
-      console.error('Error checking collaborators limits:', limitError);
-      setError('Error checking limits. Please try again.');
-      return;
     }
 
     setSubmitting(true);
@@ -287,8 +299,8 @@ export default function TeamPage() {
     >
       <Stack.Screen options={{ title: `Team · ${show.name}` }} />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Limit Warning Banner */}
-        {limitWarning && (
+        {/* Limit Warning Banner - Hidden for god users */}
+        {limitWarning && !isGod() && (
           <View style={[styles.warningBanner, { backgroundColor: colors.error + '20', borderColor: colors.error + '30' }]}>
             <View style={styles.warningContent}>
               <Ionicons name="warning" size={24} color={colors.error} />

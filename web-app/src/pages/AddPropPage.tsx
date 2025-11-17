@@ -12,6 +12,8 @@ import WeightInput from '../components/WeightInput';
 // import ImportPropsModal from '../components/ImportPropsModal';
 import { useLimitChecker } from '../hooks/useLimitChecker';
 import { useWebAuth } from '../contexts/WebAuthContext';
+import { usePermissions } from '../hooks/usePermissions';
+import { getQuantityBreakdown } from '../utils/propQuantityUtils';
 
 const initialForm: PropFormData = {
   name: '',
@@ -44,6 +46,7 @@ const AddPropPage: React.FC = () => {
   const { currentShowId } = useShowSelection();
   const { user } = useWebAuth();
   const { checkPropsLimit, checkPropsLimitForShow } = useLimitChecker();
+  const { isGod } = usePermissions();
   const [form, setForm] = useState<PropFormData>(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +66,17 @@ const AddPropPage: React.FC = () => {
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
 
   // Check limits on page load and when show changes
+  // Skip limit checks for god users
   useEffect(() => {
     const checkLimits = async () => {
       if (!user?.uid) return;
+      
+      // God users bypass all limit checks
+      if (isGod()) {
+        setLimitWarning(null);
+        setLimitError(null);
+        return;
+      }
       
       try {
         // Check per-show props limit if show is selected (this checks show owner's limits)
@@ -94,7 +105,7 @@ const AddPropPage: React.FC = () => {
     };
 
     checkLimits();
-  }, [user?.uid, form.showId, checkPropsLimit, checkPropsLimitForShow]);
+  }, [user?.uid, form.showId, checkPropsLimit, checkPropsLimitForShow, isGod]);
 
   // Fetch shows for assignment
   useEffect(() => {
@@ -229,8 +240,36 @@ const AddPropPage: React.FC = () => {
 
   // TODO: Implement image and digital asset upload logic
 
+  // Validate quantity constraints
+  const validateQuantities = (): string | null => {
+    const required = (form as any).requiredQuantity ?? form.quantity;
+    const inUse = (form as any).quantityInUse ?? 0;
+    
+    if (required < 1) {
+      return 'Required quantity must be at least 1';
+    }
+    if (inUse < 0) {
+      return 'Quantity in use cannot be negative';
+    }
+    if (inUse > form.quantity) {
+      return 'Quantity in use cannot exceed ordered quantity';
+    }
+    if ((form as any).spareAlertThreshold !== undefined && (form as any).spareAlertThreshold < 1) {
+      return 'Spare alert threshold must be at least 1';
+    }
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent, addAnother?: boolean) => {
     e.preventDefault();
+    
+    // Validate quantities
+    const validationError = validateQuantities();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
     setSaving(true);
     setError(null);
     setLimitError(null);
@@ -243,21 +282,24 @@ const AddPropPage: React.FC = () => {
         return;
       }
 
-      // Check per-plan props limit
-      const planLimitCheck = await checkPropsLimit(user.uid);
-      if (!planLimitCheck.withinLimit) {
-        setLimitError(planLimitCheck.message || 'Props limit reached');
-        setSaving(false);
-        return;
-      }
-
-      // Check per-show props limit if show is selected
-      if (form.showId) {
-        const showLimitCheck = await checkPropsLimitForShow(form.showId);
-        if (!showLimitCheck.withinLimit) {
-          setLimitError(showLimitCheck.message || 'Show props limit reached');
+      // Skip limit checks for god users
+      if (!isGod()) {
+        // Check per-plan props limit
+        const planLimitCheck = await checkPropsLimit(user.uid);
+        if (!planLimitCheck.withinLimit) {
+          setLimitError(planLimitCheck.message || 'Props limit reached');
           setSaving(false);
           return;
+        }
+
+        // Check per-show props limit if show is selected
+        if (form.showId) {
+          const showLimitCheck = await checkPropsLimitForShow(form.showId);
+          if (!showLimitCheck.withinLimit) {
+            setLimitError(showLimitCheck.message || 'Show props limit reached');
+            setSaving(false);
+            return;
+          }
         }
       }
       // Persist new maker / hire company if user typed a new one
@@ -309,8 +351,8 @@ const AddPropPage: React.FC = () => {
           </Link>
         </div>
         
-        {/* Limit Warning Banner */}
-        {limitWarning && (
+        {/* Limit Warning Banner - Hidden for god users */}
+        {limitWarning && !isGod() && (
           <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
@@ -351,7 +393,7 @@ const AddPropPage: React.FC = () => {
         >
           <h1 className="text-2xl font-bold text-white mb-4">Add Prop</h1>
           {error && <div className="text-red-500 mb-2">{error}</div>}
-          {limitError && (
+          {limitError && !isGod() && (
             <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-4">
               <div className="text-red-200 font-semibold mb-2">Subscription Limit Reached</div>
               <div className="text-red-100 text-sm">{limitError}</div>
@@ -446,10 +488,80 @@ const AddPropPage: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-pb-gray mb-1 font-medium">Quantity *</label>
+                <label className="block text-pb-gray mb-1 font-medium">Quantity (Ordered) *</label>
                 <input name="quantity" type="number" min={1} value={form.quantity} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
               </div>
+              <div>
+                <label className="block text-pb-gray mb-1 font-medium">Required Quantity</label>
+                <input 
+                  name="requiredQuantity" 
+                  type="number" 
+                  min={1} 
+                  value={(form as any).requiredQuantity ?? form.quantity} 
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (!isNaN(value) && value > 0) {
+                      setForm(prev => ({ ...prev, requiredQuantity: value } as any));
+                    }
+                  }}
+                  className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                  placeholder="What director/show needs"
+                />
+                <p className="text-xs text-pb-gray mt-1">Defaults to ordered quantity if not set</p>
+              </div>
+              <div>
+                <label className="block text-pb-gray mb-1 font-medium">Quantity In Use</label>
+                <input 
+                  name="quantityInUse" 
+                  type="number" 
+                  min={0} 
+                  value={(form as any).quantityInUse ?? 0} 
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (!isNaN(value) && value >= 0) {
+                      setForm(prev => ({ ...prev, quantityInUse: value } as any));
+                    }
+                  }}
+                  className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                />
+                <p className="text-xs text-pb-gray mt-1">Currently being used in the show</p>
+              </div>
             </div>
+            {/* Spare quantity display */}
+            {(() => {
+              const breakdown = getQuantityBreakdown({ ...form, quantity: form.quantity } as any);
+              if (breakdown.spare > 0 || breakdown.inStorage > 0) {
+                return (
+                  <div className="mt-4 p-3 rounded bg-pb-primary/10 border border-pb-primary/20">
+                    <div className="text-sm text-pb-gray space-y-1">
+                      <div><strong className="text-white">Quantity Summary:</strong></div>
+                      <div>{breakdown.formattedFull}</div>
+                      <div>{breakdown.formattedUsage}</div>
+                      {breakdown.isLow && (
+                        <div className="text-yellow-400 mt-2">
+                          ⚠️ Low spare inventory: Only {breakdown.inStorage} spare{breakdown.inStorage !== 1 ? 's' : ''} remaining
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+            {/* Warning if quantity < requiredQuantity */}
+            {(() => {
+              const required = (form as any).requiredQuantity ?? form.quantity;
+              if (form.quantity < required) {
+                return (
+                  <div className="mt-4 p-3 rounded bg-red-500/20 border border-red-500/30">
+                    <div className="text-sm text-red-200">
+                      ⚠️ Warning: Ordered quantity ({form.quantity}) is less than required quantity ({required})
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </fieldset>
 
           {/* Source & Details */}
@@ -778,6 +890,68 @@ const AddPropPage: React.FC = () => {
                   />
                 </div>
               )}
+            </div>
+          </fieldset>
+
+          {/* Spare Storage */}
+          <fieldset className="border border-pb-primary/20 rounded-lg p-4">
+            <legend className="px-2 text-sm text-pb-primary">Spare Storage</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-pb-gray mb-1 font-medium">Spare Storage Location</label>
+                <input 
+                  name="spareStorageLocation" 
+                  value={(form as any).spareStorage?.location || ''} 
+                  onChange={(e) => {
+                    setForm(prev => ({
+                      ...prev,
+                      spareStorage: {
+                        ...((prev as any).spareStorage || {}),
+                        location: e.target.value
+                      }
+                    } as any));
+                  }}
+                  placeholder="e.g., Box A, Props Room A, Shelf 3"
+                  className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                />
+                <p className="text-xs text-pb-gray mt-1">Where spares are stored (typically Box A or similar)</p>
+              </div>
+              <div>
+                <label className="block text-pb-gray mb-1 font-medium">Low Inventory Alert Threshold</label>
+                <input 
+                  name="spareAlertThreshold" 
+                  type="number" 
+                  min={0} 
+                  value={(form as any).spareAlertThreshold ?? 2} 
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (!isNaN(value) && value >= 0) {
+                      setForm(prev => ({ ...prev, spareAlertThreshold: value } as any));
+                    }
+                  }}
+                  className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                />
+                <p className="text-xs text-pb-gray mt-1">Alert when spares fall below this number (default: 2)</p>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-pb-gray mb-1 font-medium">Spare Storage Notes</label>
+                <textarea 
+                  name="spareStorageNotes" 
+                  value={(form as any).spareStorage?.notes || ''} 
+                  onChange={(e) => {
+                    setForm(prev => ({
+                      ...prev,
+                      spareStorage: {
+                        ...((prev as any).spareStorage || {}),
+                        notes: e.target.value
+                      }
+                    } as any));
+                  }}
+                  rows={2}
+                  placeholder="Notes about spare storage (e.g., 'Keep separate from show props', 'Check weekly')"
+                  className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" 
+                />
+              </div>
             </div>
           </fieldset>
 
