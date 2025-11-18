@@ -9,7 +9,10 @@ interface SpareInventoryAlertsProps {
 }
 
 export const SpareInventoryAlerts: React.FC<SpareInventoryAlertsProps> = ({ props, onDismiss }) => {
-  const lowInventoryProps = props.filter(prop => shouldUseSparesLogic(prop) && checkLowInventory(prop));
+  const lowInventoryProps = props.filter(prop => {
+    if (!shouldUseSparesLogic(prop)) return false;
+    return checkLowInventory(prop);
+  });
 
   if (lowInventoryProps.length === 0) {
     return null;

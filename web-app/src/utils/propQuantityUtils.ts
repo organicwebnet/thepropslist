@@ -46,15 +46,17 @@ export function checkLowInventory(prop: Prop): boolean {
 /**
  * Check if spares logic should be used for this prop
  * Spares logic should only be used if:
- * - The number of spares is greater than 1
+ * - The number of spares is greater than 1 (both calculated spare and inStorage)
  * - AND the prop is used in the show (quantityInUse > 0)
  * @param prop The prop to check
  * @returns True if spares logic should be used
  */
 export function shouldUseSparesLogic(prop: Prop): boolean {
   const spare = calculateSpareQuantity(prop);
+  const inStorage = calculateQuantityInStorage(prop);
   const quantityInUse = prop.quantityInUse ?? 0;
-  return spare > 1 && quantityInUse > 0;
+  // Both spare quantity and inStorage must be > 1, and prop must be used in show
+  return spare > 1 && inStorage > 1 && quantityInUse > 0;
 }
 
 /**
