@@ -454,6 +454,19 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
   const dueDateText = formatDueDate(card.dueDate);
   const overdue = isOverdue(card.dueDate);
 
+  // Get thumbnail image URL - prioritize images array with isMain, then fallback to imageUrl
+  const getThumbnailUrl = (): string | null => {
+    if (Array.isArray(card.images) && card.images.length > 0) {
+      const mainImage = card.images.find(img => img.isMain);
+      if (mainImage) return mainImage.url;
+      return card.images[0].url;
+    }
+    if (card.imageUrl) return card.imageUrl;
+    return null;
+  };
+
+  const thumbnailUrl = getThumbnailUrl();
+
   return (
     <>
       <div
@@ -471,6 +484,17 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
         tabIndex={0}
         aria-label={`Task: ${card.title || 'Untitled Task'}`}
       >
+        {/* Thumbnail Image */}
+        {thumbnailUrl && (
+          <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border border-pb-primary/20">
+            <img
+              src={thumbnailUrl}
+              alt={card.title || 'Task thumbnail'}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
         {/* Checkbox */}
         <button
           onClick={(e) => {
