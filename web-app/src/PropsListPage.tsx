@@ -17,7 +17,7 @@ import { PropLifecycleStatus } from '../../src/types/lifecycle';
 // Simplified loader removed per design request
 import { usePropListLoading } from './hooks/useImageLoading';
 import { SpareInventoryAlerts } from './components/SpareInventoryAlerts';
-import { getQuantityBreakdown, checkLowInventory, normalizePropQuantities } from './utils/propQuantityUtils';
+import { getQuantityBreakdown, checkLowInventory, normalizePropQuantities, shouldUseSparesLogic } from './utils/propQuantityUtils';
 
 const defaultPdfOptions: PdfGenerationOptions = {
   selectedFields: {
@@ -209,9 +209,11 @@ const PropsListPage: React.FC = () => {
     let matchesSpareFilter = true;
     if (spareFilter === 'hasSpares') {
       const breakdown = getQuantityBreakdown(prop);
-      matchesSpareFilter = breakdown.spare > 0 || breakdown.inStorage > 0;
+      const shouldUseSpares = shouldUseSparesLogic(prop);
+      matchesSpareFilter = shouldUseSpares && (breakdown.spare > 0 || breakdown.inStorage > 0);
     } else if (spareFilter === 'lowInventory') {
-      matchesSpareFilter = checkLowInventory(prop);
+      const shouldUseSpares = shouldUseSparesLogic(prop);
+      matchesSpareFilter = shouldUseSpares && checkLowInventory(prop);
     }
     
     return matchesSearch && matchesCategory && matchesStatus && matchesAct && matchesScene && matchesSpareFilter;

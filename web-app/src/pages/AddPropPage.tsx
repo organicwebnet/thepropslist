@@ -13,7 +13,7 @@ import WeightInput from '../components/WeightInput';
 import { useLimitChecker } from '../hooks/useLimitChecker';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { usePermissions } from '../hooks/usePermissions';
-import { getQuantityBreakdown } from '../utils/propQuantityUtils';
+import { getQuantityBreakdown, shouldUseSparesLogic } from '../utils/propQuantityUtils';
 
 const initialForm: PropFormData = {
   name: '',
@@ -529,8 +529,10 @@ const AddPropPage: React.FC = () => {
             </div>
             {/* Spare quantity display */}
             {(() => {
-              const breakdown = getQuantityBreakdown({ ...form, quantity: form.quantity } as any);
-              if (breakdown.spare > 0 || breakdown.inStorage > 0) {
+              const propData = { ...form, quantity: form.quantity } as any;
+              const breakdown = getQuantityBreakdown(propData);
+              const shouldUseSpares = shouldUseSparesLogic(propData);
+              if (shouldUseSpares && (breakdown.spare > 0 || breakdown.inStorage > 0)) {
                 return (
                   <div className="mt-4 p-3 rounded bg-pb-primary/10 border border-pb-primary/20">
                     <div className="text-sm text-pb-gray space-y-1">

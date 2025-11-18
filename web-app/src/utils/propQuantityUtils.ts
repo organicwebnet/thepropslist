@@ -44,6 +44,20 @@ export function checkLowInventory(prop: Prop): boolean {
 }
 
 /**
+ * Check if spares logic should be used for this prop
+ * Spares logic should only be used if:
+ * - The number of spares is greater than 1
+ * - AND the prop is used in the show (quantityInUse > 0)
+ * @param prop The prop to check
+ * @returns True if spares logic should be used
+ */
+export function shouldUseSparesLogic(prop: Prop): boolean {
+  const spare = calculateSpareQuantity(prop);
+  const quantityInUse = prop.quantityInUse ?? 0;
+  return spare > 1 && quantityInUse > 0;
+}
+
+/**
  * Get a formatted breakdown of quantity information
  * @param prop The prop to get breakdown for
  * @returns Object with formatted quantity breakdown

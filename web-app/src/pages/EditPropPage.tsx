@@ -8,7 +8,7 @@ import { ImageUpload } from '../components/ImageUpload';
 import { DigitalAssetForm } from '../components/DigitalAssetForm';
 import DimensionInput from '../components/DimensionInput';
 import WeightInput from '../components/WeightInput';
-import { getQuantityBreakdown } from '../utils/propQuantityUtils';
+import { getQuantityBreakdown, shouldUseSparesLogic } from '../utils/propQuantityUtils';
 
 const EditPropPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -382,8 +382,10 @@ const EditPropPage: React.FC = () => {
             </div>
             {/* Spare quantity display */}
             {form && (() => {
-              const breakdown = getQuantityBreakdown({ ...form, quantity: form.quantity } as any);
-              if (breakdown.spare > 0 || breakdown.inStorage > 0) {
+              const propData = { ...form, quantity: form.quantity } as any;
+              const breakdown = getQuantityBreakdown(propData);
+              const shouldUseSpares = shouldUseSparesLogic(propData);
+              if (shouldUseSpares && (breakdown.spare > 0 || breakdown.inStorage > 0)) {
                 return (
                   <div className="mt-4 p-3 rounded bg-pb-primary/10 border border-pb-primary/20">
                     <div className="text-sm text-pb-gray space-y-1">

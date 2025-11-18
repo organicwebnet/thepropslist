@@ -1,7 +1,7 @@
 import React from 'react';
 import { Prop } from '../types/props';
 import { Link } from 'react-router-dom';
-import { checkLowInventory, getQuantityBreakdown } from '../utils/propQuantityUtils';
+import { checkLowInventory, getQuantityBreakdown, shouldUseSparesLogic } from '../utils/propQuantityUtils';
 
 interface SpareInventoryAlertsProps {
   props: Prop[];
@@ -9,7 +9,7 @@ interface SpareInventoryAlertsProps {
 }
 
 export const SpareInventoryAlerts: React.FC<SpareInventoryAlertsProps> = ({ props, onDismiss }) => {
-  const lowInventoryProps = props.filter(prop => checkLowInventory(prop));
+  const lowInventoryProps = props.filter(prop => shouldUseSparesLogic(prop) && checkLowInventory(prop));
 
   if (lowInventoryProps.length === 0) {
     return null;

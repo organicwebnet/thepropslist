@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Prop } from '../types/props';
-import { getQuantityBreakdown, calculateQuantityInStorage } from '../utils/propQuantityUtils';
+import { getQuantityBreakdown, calculateQuantityInStorage, shouldUseSparesLogic } from '../utils/propQuantityUtils';
 import { X } from 'lucide-react';
 
 interface SpareManagementProps {
@@ -131,8 +131,9 @@ export const SpareManagement: React.FC<SpareManagementProps> = ({ prop, onUpdate
     }
   };
 
-  if (breakdown.spare <= 0 && inStorage <= 0 && !prop.spareStorage?.location) {
-    return null; // Don't show spare management if no spares
+  // Only show spare management if spares logic should be used
+  if (!shouldUseSparesLogic(prop) && !prop.spareStorage?.location) {
+    return null; // Don't show spare management if spares logic shouldn't be used
   }
 
   return (

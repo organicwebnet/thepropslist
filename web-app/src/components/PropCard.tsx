@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Prop } from '../types/props';
 import { PropImage } from './ProgressiveImage';
 import { Skeleton } from './LoadingSkeleton';
-import { getQuantityBreakdown, checkLowInventory } from '../utils/propQuantityUtils';
+import { getQuantityBreakdown, checkLowInventory, shouldUseSparesLogic } from '../utils/propQuantityUtils';
 
 interface PropCardProps {
   prop: Prop;
@@ -154,8 +154,9 @@ export const PropCard: React.FC<PropCardProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             {(() => {
               const breakdown = getQuantityBreakdown(prop);
-              const hasSpares = breakdown.spare > 0 || breakdown.inStorage > 0;
-              const isLow = checkLowInventory(prop);
+              const shouldUseSpares = shouldUseSparesLogic(prop);
+              const hasSpares = shouldUseSpares && (breakdown.spare > 0 || breakdown.inStorage > 0);
+              const isLow = shouldUseSpares && checkLowInventory(prop);
               
               return (
                 <>

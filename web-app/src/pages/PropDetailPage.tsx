@@ -10,7 +10,7 @@ import { PropLifecycleStatus, PropStatusUpdate } from '@root/types/lifecycle';
 import { MapPin, Ruler, BadgeInfo, FileText, Image as ImageIcon, Package, Settings2, ChevronDown, ChevronUp, Pencil, ArrowLeft, History } from 'lucide-react';
 import { motion } from 'framer-motion';
 import DashboardLayout from '../PropsBibleHomepage';
-import { getQuantityBreakdown, checkLowInventory, normalizePropQuantities } from '../utils/propQuantityUtils';
+import { getQuantityBreakdown, checkLowInventory, normalizePropQuantities, shouldUseSparesLogic } from '../utils/propQuantityUtils';
 import { SpareManagement } from '../components/SpareManagement';
 import { logger } from '../utils/logger';
 
@@ -259,8 +259,9 @@ const PropDetailPage: React.FC = () => {
                 </span>
                 {(() => {
                   const breakdown = getQuantityBreakdown(prop);
-                  const hasSpares = breakdown.spare > 0 || breakdown.inStorage > 0;
-                  const isLow = checkLowInventory(prop);
+                  const shouldUseSpares = shouldUseSparesLogic(prop);
+                  const hasSpares = shouldUseSpares && (breakdown.spare > 0 || breakdown.inStorage > 0);
+                  const isLow = shouldUseSpares && checkLowInventory(prop);
                   
                   return (
                     <>
@@ -577,7 +578,8 @@ const PropDetailPage: React.FC = () => {
           {/* Spare Storage Section */}
           {(() => {
             const breakdown = getQuantityBreakdown(prop);
-            const hasSpares = breakdown.spare > 0 || breakdown.inStorage > 0;
+            const shouldUseSpares = shouldUseSparesLogic(prop);
+            const hasSpares = shouldUseSpares && (breakdown.spare > 0 || breakdown.inStorage > 0);
             
             if (!hasSpares && !prop.spareStorage?.location) return null;
             
@@ -592,7 +594,7 @@ const PropDetailPage: React.FC = () => {
                       <span className="text-pb-gray">{prop.spareStorage.location}</span>
                     </div>
                   )}
-                  {breakdown.inStorage > 0 && (
+                  {shouldUseSpares && breakdown.inStorage > 0 && (
                     <div className="flex items-center gap-2">
                       <Package className="w-4 h-4 text-pb-primary" />
                       <span className="text-white">In Storage:</span>
@@ -606,7 +608,7 @@ const PropDetailPage: React.FC = () => {
                       <span className="text-pb-gray">{breakdown.inUse}</span>
                     </div>
                   )}
-                  {checkLowInventory(prop) && (
+                  {shouldUseSpares && checkLowInventory(prop) && (
                     <div className="flex items-center gap-2 sm:col-span-2">
                       <span className="text-yellow-400">⚠️ Low Inventory Alert: Only {breakdown.inStorage} spare{breakdown.inStorage !== 1 ? 's' : ''} remaining</span>
                     </div>
@@ -636,7 +638,8 @@ const PropDetailPage: React.FC = () => {
         {/* Spare Management Section */}
         {prop && (() => {
           const breakdown = getQuantityBreakdown(prop);
-          if (breakdown.spare > 0 || breakdown.inStorage > 0 || prop.spareStorage?.location) {
+          const shouldUseSpares = shouldUseSparesLogic(prop);
+          if ((shouldUseSpares && (breakdown.spare > 0 || breakdown.inStorage > 0)) || prop.spareStorage?.location) {
             return (
               <Section 
                 id="spareManagement" 
