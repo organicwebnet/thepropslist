@@ -71,22 +71,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   // Build sidebar items and append god-only entries
   const navItems = [
-    { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/' },
-    { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props' },
-    { icon: FileText, text: 'Import Props', subtext: 'CSV import', link: '/props?import=1' },
-    { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export' },
-    { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists' },
-    { icon: Theater, text: 'Show Management', subtext: 'Manage productions and venues', link: '/shows' },
-    { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards' },
-    { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping' },
-    { icon: HelpCircle, text: 'Help', subtext: 'Documentation and support', link: '/help' },
-  ] as Array<{ icon: any; text: string; subtext: string; link?: string }>;
+    { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/', color: '#60a5fa' }, // Blue
+    { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props', color: '#34d399' }, // Emerald
+    { icon: FileText, text: 'Import Props', subtext: 'CSV import', link: '/props?import=1', color: '#fbbf24' }, // Amber
+    { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export', color: '#fb923c' }, // Orange
+    { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists', color: '#a78bfa' }, // Violet
+    { icon: Theater, text: 'Show Management', subtext: 'Manage productions, venues, and team members', link: '/shows', color: '#ec4899' }, // Pink
+    { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards', color: '#10b981' }, // Green
+    { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping', color: '#f59e0b' }, // Yellow
+    { icon: HelpCircle, text: 'Help', subtext: 'Documentation and support', link: '/help', color: '#8b5cf6' }, // Purple
+  ] as Array<{ icon: any; text: string; subtext: string; link?: string; color: string }>;
   if (userProfile?.role === 'god') {
-    navItems.push({ icon: Users, text: 'User Management', subtext: 'Manage all users and roles', link: '/admin/users' });
-    navItems.push({ icon: Shield, text: 'Role Management', subtext: 'Manage job roles and permissions', link: '/admin/roles' });
-    navItems.push({ icon: TestTube, text: 'Permission Tests', subtext: 'Test permission system functionality', link: '/admin/permission-tests' });
-    navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers' });
-    navItems.push({ icon: FileText, text: 'Admin Debug', subtext: 'Debug admin functionality', link: '/admin/debug' });
+    navItems.push({ icon: Users, text: 'User Management', subtext: 'Manage all users and roles', link: '/admin/users', color: '#06b6d4' }); // Cyan
+    navItems.push({ icon: Shield, text: 'Role Management', subtext: 'Manage job roles and permissions', link: '/admin/roles', color: '#3b82f6' }); // Blue
+    navItems.push({ icon: TestTube, text: 'Permission Tests', subtext: 'Test permission system functionality', link: '/admin/permission-tests', color: '#ef4444' }); // Red
+    navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers', color: '#14b8a6' }); // Teal
+    navItems.push({ icon: FileText, text: 'Admin Debug', subtext: 'Debug admin functionality', link: '/admin/debug', color: '#6366f1' }); // Indigo
   }
 
   return (
@@ -200,8 +200,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                           : 'bg-pb-primary/10 hover:bg-pb-primary/20'
                       }`}
                     >
-                      <div className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors`}>
-                        <item.icon className="w-4 h-4 text-pb-primary" />
+                      <div 
+                        className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} rounded-lg flex items-center justify-center transition-colors`}
+                        style={{ 
+                          backgroundColor: `${item.color}20`,
+                        }}
+                      >
+                        <item.icon className="w-4 h-4" style={{ color: item.color }} />
                       </div>
                       {!navCollapsed && (
                         <div>
@@ -222,8 +227,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     title={item.text}
                     aria-label={item.text}
                   >
-                    <div className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} bg-pb-primary/20 rounded-lg flex items-center justify-center group-hover:bg-pb-primary/30 transition-colors`}>
-                      <item.icon className="w-4 h-4 text-pb-primary" />
+                    <div 
+                      className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} rounded-lg flex items-center justify-center transition-colors`}
+                      style={{ 
+                        backgroundColor: `${item.color}20`,
+                      }}
+                    >
+                      <item.icon className="w-4 h-4" style={{ color: item.color }} />
                     </div>
                     {!navCollapsed && (
                       <div>
