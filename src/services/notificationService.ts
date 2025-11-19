@@ -1,5 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import type { NotificationPreferences } from '../shared/types/auth';
+import { NotificationPreferencesService } from './notificationPreferences';
 
 export interface ShoppingNotification {
   id: string;
@@ -64,8 +66,14 @@ export class NotificationService {
     optionIndex: number,
     itemDescription: string,
     shopName?: string,
-    price?: number
-  ) {
+    price?: number,
+    preferences?: NotificationPreferences
+  ): Promise<ShoppingNotification | null> {
+    // Check if user has disabled shopping option selected notifications
+    if (!NotificationPreferencesService.shouldReceiveShoppingOptionSelected(preferences)) {
+      return null;
+    }
+
     try {
       const notification: ShoppingNotification = {
         id: `shopping_${Date.now()}`,

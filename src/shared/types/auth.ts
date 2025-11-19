@@ -47,6 +47,38 @@ export interface UserProfile {
   // Saved Addresses
   savedSenderAddresses?: Address[];
   savedDeliveryAddresses?: Address[];
+
+  // Notification Preferences
+  notificationPreferences?: NotificationPreferences;
+}
+
+/**
+ * Notification preferences for controlling what notifications a user receives.
+ * All preferences default to true if not specified.
+ */
+export interface NotificationPreferences {
+  // Prop-related notifications
+  propStatusUpdates?: boolean; // Notifications when prop status changes
+  maintenanceReminders?: boolean; // Notifications for maintenance due dates
+  
+  // Show-related notifications
+  showReminders?: boolean; // Notifications for upcoming shows
+  
+  // Shopping-related notifications
+  shoppingItemAssigned?: boolean; // Notifications when shopping item is assigned to you
+  shoppingItemApproved?: boolean; // Notifications when shopping item is approved
+  shoppingItemRejected?: boolean; // Notifications when shopping item is rejected
+  shoppingOptionSelected?: boolean; // Notifications when a shopping option is selected
+  shoppingOptionAdded?: boolean; // Notifications when a new shopping option is added
+  
+  // Task-related notifications
+  taskAssigned?: boolean; // Notifications when a task is assigned to you
+  taskDueSoon?: boolean; // Notifications when a task is due soon
+  taskDueToday?: boolean; // Notifications when a task is due today
+  
+  // General notifications
+  comments?: boolean; // Notifications for comments on props/items
+  systemNotifications?: boolean; // System-wide notifications
 }
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {

@@ -1,5 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import type { NotificationPreferences } from '../../../../shared/types/auth';
+import { NotificationPreferencesService } from '../../../../services/notificationPreferences';
 
 export interface NotificationData {
   title: string;
@@ -49,7 +51,16 @@ export class NotificationService {
     });
   }
 
-  async schedulePropStatusNotification(propName: string, newStatus: string): Promise<string> {
+  async schedulePropStatusNotification(
+    propName: string, 
+    newStatus: string, 
+    preferences?: NotificationPreferences
+  ): Promise<string | null> {
+    // Check if user has disabled prop status update notifications
+    if (!NotificationPreferencesService.shouldReceivePropStatusUpdate(preferences)) {
+      return null;
+    }
+
     return await this.scheduleNotification({
       title: 'Prop Status Update',
       body: `${propName} is now ${newStatus}`,
@@ -57,7 +68,16 @@ export class NotificationService {
     });
   }
 
-  async scheduleMaintenanceReminder(propName: string, dueDate: Date): Promise<string> {
+  async scheduleMaintenanceReminder(
+    propName: string, 
+    dueDate: Date, 
+    preferences?: NotificationPreferences
+  ): Promise<string | null> {
+    // Check if user has disabled maintenance reminder notifications
+    if (!NotificationPreferencesService.shouldReceiveMaintenanceReminder(preferences)) {
+      return null;
+    }
+
     return await this.scheduleNotification({
       title: 'Maintenance Reminder',
       body: `${propName} is due for maintenance on ${dueDate.toLocaleDateString()}`,
@@ -65,7 +85,16 @@ export class NotificationService {
     });
   }
 
-  async scheduleShowReminder(showName: string, startTime: Date): Promise<string> {
+  async scheduleShowReminder(
+    showName: string, 
+    startTime: Date, 
+    preferences?: NotificationPreferences
+  ): Promise<string | null> {
+    // Check if user has disabled show reminder notifications
+    if (!NotificationPreferencesService.shouldReceiveShowReminder(preferences)) {
+      return null;
+    }
+
     return await this.scheduleNotification({
       title: 'Show Starting Soon',
       body: `${showName} is starting at ${startTime.toLocaleTimeString()}`,

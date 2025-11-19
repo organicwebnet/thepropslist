@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -7,10 +7,12 @@ import { BiometricService, BiometricCapabilities } from '../../src/services/biom
 import { SubscriptionStatus } from '../../src/components/SubscriptionStatus';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../src/styles/theme';
+import type { NotificationPreferences } from '../../src/shared/types/auth';
+import { NotificationPreferencesService } from '../../src/services/notificationPreferences';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, userProfile, signOut } = useAuth();
+  const { user, userProfile, signOut, updateUserProfile } = useAuth();
   const { theme } = useTheme();
   const colors = theme === 'light' ? lightTheme.colors : darkTheme.colors;
   const styles = getStyles(colors);
@@ -18,10 +20,35 @@ export default function ProfileScreen() {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricCapabilities, setBiometricCapabilities] = useState<BiometricCapabilities | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
+  const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferences>(
+    NotificationPreferencesService.getDefaultPreferences()
+  );
+  const [savedNotificationPreferences, setSavedNotificationPreferences] = useState<NotificationPreferences>(
+    NotificationPreferencesService.getDefaultPreferences()
+  );
+  const [savingNotifications, setSavingNotifications] = useState(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
 
   useEffect(() => {
     checkBiometricStatus();
   }, []);
+
+  useEffect(() => {
+    if (userProfile) {
+      const prefs = {
+        ...NotificationPreferencesService.getDefaultPreferences(),
+        ...(userProfile.notificationPreferences || {}),
+      };
+      setNotificationPreferences(prefs);
+      setSavedNotificationPreferences(prefs);
+    } else {
+      // Set defaults if no user profile yet
+      const defaults = NotificationPreferencesService.getDefaultPreferences();
+      setNotificationPreferences(defaults);
+      setSavedNotificationPreferences(defaults);
+    }
+  }, [userProfile]);
 
   const checkBiometricStatus = async () => {
     try {
@@ -96,6 +123,98 @@ export default function ProfileScreen() {
   const handleSettings = () => {
     // TODO: Navigate to settings screen
     console.log('Settings pressed');
+  };
+
+  const handleNotificationSettings = () => {
+    setShowNotificationSettings(true);
+    setNotificationError(null);
+  };
+
+  const handleCloseNotificationSettings = () => {
+    // Check if there are unsaved changes
+    const hasUnsavedChanges = JSON.stringify(notificationPreferences) !== JSON.stringify(savedNotificationPreferences);
+    
+    if (hasUnsavedChanges) {
+      Alert.alert(
+        'Unsaved Changes',
+        'You have unsaved notification preference changes. Do you want to discard them?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Discard', 
+            style: 'destructive',
+            onPress: () => {
+              // Reset to saved preferences
+              setNotificationPreferences(savedNotificationPreferences);
+              setShowNotificationSettings(false);
+              setNotificationError(null);
+            }
+          }
+        ]
+      );
+    } else {
+      setShowNotificationSettings(false);
+      setNotificationError(null);
+    }
+  };
+
+  const handleResetToDefaults = () => {
+    Alert.alert(
+      'Reset to Defaults',
+      'Are you sure you want to reset all notification preferences to their default values?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Reset', 
+          style: 'destructive',
+          onPress: () => {
+            const defaults = NotificationPreferencesService.getDefaultPreferences();
+            setNotificationPreferences(defaults);
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSaveNotificationPreferences = async () => {
+    if (!user) {
+      setNotificationError('You must be logged in to save preferences');
+      return;
+    }
+    
+    // Validate preferences object
+    if (!notificationPreferences || typeof notificationPreferences !== 'object') {
+      setNotificationError('Invalid notification preferences');
+      return;
+    }
+    
+    setSavingNotifications(true);
+    setNotificationError(null);
+    
+    try {
+      await updateUserProfile({
+        notificationPreferences,
+      });
+      // Update saved preferences to match current
+      setSavedNotificationPreferences(notificationPreferences);
+      Alert.alert('Success', 'Notification preferences saved successfully!');
+      setShowNotificationSettings(false);
+    } catch (error: any) {
+      console.error('Error saving notification preferences:', error);
+      const errorMessage = error?.message || 'Failed to save notification preferences. Please try again.';
+      setNotificationError(errorMessage);
+      // Also show alert for immediate feedback
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
+
+  const toggleNotificationPreference = (key: keyof NotificationPreferences) => {
+    setNotificationPreferences(prev => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
 
   const handleLogout = () => {
@@ -178,6 +297,17 @@ export default function ProfileScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={handleNotificationSettings}
+            accessibilityLabel="Notification settings"
+            accessibilityRole="button"
+          >
+            <Ionicons name="notifications-outline" size={24} color={colors.primary} />
+            <Text style={styles.menuText}>Notifications</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -282,6 +412,278 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               )}
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Notification Settings Modal */}
+      <Modal
+        visible={showNotificationSettings}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCloseNotificationSettings}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Notification Settings</Text>
+              <TouchableOpacity 
+                onPress={handleCloseNotificationSettings}
+                accessibilityLabel="Close notification settings"
+                accessibilityRole="button"
+              >
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Error Message */}
+            {notificationError && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={20} color={colors.error || '#ef4444'} />
+                <Text style={styles.errorText}>{notificationError}</Text>
+              </View>
+            )}
+
+            <ScrollView style={styles.notificationScrollView} showsVerticalScrollIndicator={false}>
+              <View style={styles.modalBody}>
+                {/* Prop-related notifications */}
+                <View style={styles.notificationSection}>
+                  <Text style={styles.sectionTitle}>Props</Text>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="cube-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Prop Status Updates</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.propStatusUpdates ?? true}
+                      onValueChange={() => toggleNotificationPreference('propStatusUpdates')}
+                      accessibilityLabel="Enable prop status update notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="build-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Maintenance Reminders</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.maintenanceReminders ?? true}
+                      onValueChange={() => toggleNotificationPreference('maintenanceReminders')}
+                      accessibilityLabel="Enable maintenance reminder notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </View>
+
+                {/* Show-related notifications */}
+                <View style={styles.notificationSection}>
+                  <Text style={styles.sectionTitle}>Shows</Text>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Show Reminders</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.showReminders ?? true}
+                      onValueChange={() => toggleNotificationPreference('showReminders')}
+                      accessibilityLabel="Enable show reminder notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </View>
+
+                {/* Shopping-related notifications */}
+                <View style={styles.notificationSection}>
+                  <Text style={styles.sectionTitle}>Shopping</Text>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="bag-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Item Assigned to Me</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.shoppingItemAssigned ?? true}
+                      onValueChange={() => toggleNotificationPreference('shoppingItemAssigned')}
+                      accessibilityLabel="Enable shopping item assigned notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="checkmark-circle-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Item Approved</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.shoppingItemApproved ?? true}
+                      onValueChange={() => toggleNotificationPreference('shoppingItemApproved')}
+                      accessibilityLabel="Enable shopping item approved notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="close-circle-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Item Rejected</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.shoppingItemRejected ?? true}
+                      onValueChange={() => toggleNotificationPreference('shoppingItemRejected')}
+                      accessibilityLabel="Enable shopping item rejected notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="star-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Option Selected</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.shoppingOptionSelected ?? true}
+                      onValueChange={() => toggleNotificationPreference('shoppingOptionSelected')}
+                      accessibilityLabel="Enable shopping option selected notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>New Option Added</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.shoppingOptionAdded ?? true}
+                      onValueChange={() => toggleNotificationPreference('shoppingOptionAdded')}
+                      accessibilityLabel="Enable new shopping option added notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </View>
+
+                {/* Task-related notifications */}
+                <View style={styles.notificationSection}>
+                  <Text style={styles.sectionTitle}>Tasks</Text>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="person-add-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Task Assigned to Me</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.taskAssigned ?? true}
+                      onValueChange={() => toggleNotificationPreference('taskAssigned')}
+                      accessibilityLabel="Enable task assigned notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="time-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Task Due Soon</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.taskDueSoon ?? true}
+                      onValueChange={() => toggleNotificationPreference('taskDueSoon')}
+                      accessibilityLabel="Enable task due soon notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="alert-circle-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Task Due Today</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.taskDueToday ?? true}
+                      onValueChange={() => toggleNotificationPreference('taskDueToday')}
+                      accessibilityLabel="Enable task due today notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </View>
+
+                {/* General notifications */}
+                <View style={styles.notificationSection}>
+                  <Text style={styles.sectionTitle}>General</Text>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Comments</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.comments ?? true}
+                      onValueChange={() => toggleNotificationPreference('comments')}
+                      accessibilityLabel="Enable comment notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>System Notifications</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.systemNotifications ?? true}
+                      onValueChange={() => toggleNotificationPreference('systemNotifications')}
+                      accessibilityLabel="Enable system notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.actionButtonsContainer}>
+                  <TouchableOpacity
+                    style={styles.resetButton}
+                    onPress={handleResetToDefaults}
+                    accessibilityLabel="Reset notification preferences to defaults"
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="refresh-outline" size={20} color={colors.primary} />
+                    <Text style={styles.resetButtonText}>Reset to Defaults</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.saveButton, savingNotifications && styles.saveButtonDisabled]}
+                    onPress={handleSaveNotificationPreferences}
+                    disabled={savingNotifications}
+                    accessibilityLabel="Save notification preferences"
+                    accessibilityRole="button"
+                  >
+                    {savingNotifications ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark" size={20} color="white" />
+                        <Text style={styles.saveButtonText}>Save Preferences</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -431,6 +833,97 @@ const getStyles = (colors: typeof lightTheme.colors) => StyleSheet.create({
   },
   toggleButtonText: {
     color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  notificationScrollView: {
+    maxHeight: '80%',
+  },
+  notificationSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  notificationItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.textSecondary + '20',
+  },
+  notificationItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  notificationItemText: {
+    fontSize: 15,
+    color: colors.text,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: (colors.error || '#ef4444') + '20',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: colors.error || '#ef4444',
+    fontSize: 14,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  resetButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    gap: 8,
+  },
+  resetButtonText: {
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
