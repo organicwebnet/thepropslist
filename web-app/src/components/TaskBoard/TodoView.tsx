@@ -3,7 +3,7 @@ import type { CardData, ListData } from "../../types/taskManager";
 import { CardDetailModal } from "./Card";
 import { useFirebase } from "../../contexts/FirebaseContext";
 import { useMentionData } from "../../contexts/MentionDataContext";
-import { Calendar, Filter, SortAsc } from "lucide-react";
+import { Calendar, Filter, SortAsc, Plus } from "lucide-react";
 import { logger } from "../../utils/logger";
 import { formatDueDate as formatDueDateUtil, isPastDate } from "../../utils/taskHelpers";
 
@@ -220,36 +220,52 @@ const TodoView: React.FC<TodoViewProps> = ({
   return (
     <div className="flex flex-col w-full bg-transparent min-h-0">
       {/* Header with quick add and filters */}
-      <div className="sticky top-0 z-10 bg-transparent p-4 border-b border-pb-primary/20 flex-shrink-0">
+      <div className="sticky top-0 z-20 bg-pb-dark/95 backdrop-blur-sm p-4 border-b border-pb-primary/20 flex-shrink-0 shadow-md">
         {/* Error Message */}
         {displayError && (
           <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
             <div className="text-red-200 text-sm">{displayError}</div>
           </div>
         )}
-        {/* Quick Add Input */}
+        {/* Quick Add Input - Microsoft Todo Style */}
         <div className="mb-4 relative">
-          <input
-            ref={quickAddInputRef}
-            type="text"
-            value={quickAddText}
-            onChange={e => setQuickAddText(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleQuickAdd();
-              }
-              if (e.key === 'Escape') {
-                setQuickAddText("");
-              }
-              if (e.key === '@') {
-                setShowMentionMenu(true);
-              }
-            }}
-            placeholder="Add a task..."
-            className="w-full px-4 py-3 rounded-lg bg-pb-darker/60 border border-pb-primary/30 text-white placeholder:text-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary"
-            disabled={isAddingCard}
-          />
+          <div className="relative flex items-center">
+            <div className="absolute left-4 z-10 pointer-events-none">
+              <Plus className="w-5 h-5 text-pb-primary" />
+            </div>
+            <input
+              ref={quickAddInputRef}
+              type="text"
+              value={quickAddText}
+              onChange={e => setQuickAddText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleQuickAdd();
+                }
+                if (e.key === 'Escape') {
+                  setQuickAddText("");
+                }
+                if (e.key === '@') {
+                  setShowMentionMenu(true);
+                }
+              }}
+              placeholder="Add a task..."
+              className="w-full pl-12 pr-4 py-4 text-lg rounded-lg bg-pb-darker/80 border-2 border-pb-primary/40 text-white placeholder:text-pb-gray/60 focus:outline-none focus:ring-2 focus:ring-pb-primary focus:border-pb-primary shadow-lg"
+              disabled={isAddingCard}
+              autoFocus
+            />
+            {isAddingCard && (
+              <div className="absolute right-4 z-10">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-pb-primary"></div>
+              </div>
+            )}
+          </div>
+          {quickAddText.trim() && (
+            <div className="mt-2 text-xs text-pb-gray/70 px-1">
+              Press <kbd className="px-1.5 py-0.5 bg-pb-darker/60 rounded text-pb-primary">Enter</kbd> to add task, <kbd className="px-1.5 py-0.5 bg-pb-darker/60 rounded text-pb-primary">Esc</kbd> to cancel
+            </div>
+          )}
           {showMentionMenu && (
             <div 
               className="absolute -top-28 left-0 bg-white text-black rounded shadow p-2 z-50 w-48 sm:w-56"
@@ -379,11 +395,21 @@ const TodoView: React.FC<TodoViewProps> = ({
           <div className="flex flex-col items-center justify-center py-12 text-center text-pb-gray/70">
             <div className="text-6xl mb-4">✓</div>
             <div className="text-lg mb-2">No tasks found</div>
-            <div className="text-sm">
+            <div className="text-sm mb-4">
               {filter !== 'all' 
                 ? `No tasks match the "${filter.replace('_', ' ')}" filter`
-                : 'Add a task above to get started'}
+                : 'Type in the input field above to add your first task'}
             </div>
+            {filter === 'all' && (
+              <button
+                onClick={() => quickAddInputRef.current?.focus()}
+                className="px-4 py-2 bg-pb-primary text-white rounded hover:bg-pb-secondary transition flex items-center gap-2"
+                aria-label="Focus add task input"
+              >
+                <Plus className="w-4 h-4" />
+                Add your first task
+              </button>
+            )}
             {filter !== 'all' && (
               <button
                 onClick={() => setFilter('all')}
@@ -484,17 +510,6 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
         tabIndex={0}
         aria-label={`Task: ${card.title || 'Untitled Task'}`}
       >
-        {/* Thumbnail Image */}
-        {thumbnailUrl && (
-          <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border border-pb-primary/20">
-            <img
-              src={thumbnailUrl}
-              alt={card.title || 'Task thumbnail'}
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-
         {/* Checkbox */}
         <button
           onClick={(e) => {
@@ -515,6 +530,17 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
             </svg>
           )}
         </button>
+
+        {/* Thumbnail Image */}
+        {thumbnailUrl && (
+          <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border border-pb-primary/20">
+            <img
+              src={thumbnailUrl}
+              alt={card.title || 'Task thumbnail'}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
 
         {/* Task Content */}
         <div className="flex-1 min-w-0">

@@ -381,15 +381,15 @@ export const CardDetailModal: React.FC<{
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div
-        className="relative rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[98vh] min-h-[560px] lg:min-h-[700px] border border-white/10 w-[95vw] max-w-[1400px]"
+        className="relative rounded-l-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[96vh] min-h-[560px] lg:min-h-[700px] border-l border-t border-b border-white/10 w-full max-w-[1100px]"
         style={{ background: cardColor, transition: 'background 0.3s' }}
       >
         {/* Close (X) button top right of modal */}
-        <button className="absolute top-4 right-4 text-white text-2xl z-50" onClick={onClose} aria-label="Close">×</button>
+        <button className="absolute top-4 right-4 text-white text-2xl z-50 hover:bg-white/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors" onClick={onClose} aria-label="Close">×</button>
         {/* Left column */}
-        <div className="flex-1 min-w-0 lg:min-w-[340px] lg:max-w-[800px] p-4 sm:p-6 flex flex-col gap-3 rounded-l-2xl overflow-y-auto flex-shrink-0" style={{ maxHeight: '90vh' }}>
+        <div className="flex-1 min-w-0 lg:min-w-[360px] lg:max-w-[680px] p-5 sm:p-6 flex flex-col gap-4 rounded-l-2xl overflow-y-auto flex-shrink-0" style={{ maxHeight: '96vh' }}>
           {/* Hero image at top (full width, cropped height) */}
           {(images && images.length > 0) && (() => {
             const mainIdx = Math.max(0, images.findIndex(i => i.isMain));
@@ -416,19 +416,19 @@ export const CardDetailModal: React.FC<{
             </div>
           )}
           {/* Title */}
-          <div className="flex items-center gap-2 mb-1 relative">
+          <div className="flex items-start gap-3 mb-2 relative">
             {/* Status toggle (click to cycle: not_started → in_progress → done) */}
             <button
               type="button"
               onClick={() => setStatus(s => (s === 'not_started' ? 'in_progress' : s === 'in_progress' ? 'done' : 'not_started'))}
-              className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-white/60 text-white/90 bg-transparent hover:bg-white/10 transition"
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full border-2 border-white/60 text-white/90 bg-transparent hover:bg-white/10 transition-all mt-0.5 flex-shrink-0"
               aria-label={`Status: ${status}`}
               title={`Status: ${status} (click to change)`}
             >
               {status === 'done' ? '✓' : status === 'in_progress' ? '◐' : ''}
             </button>
             <textarea
-              className={`rounded-lg px-3 py-1.5 text-2xl font-bold bg-transparent shadow-none focus:ring-2 focus:ring-pb-primary focus:outline-none placeholder:text-gray-300 text-white resize-none leading-snug overflow-hidden ${completed ? 'line-through opacity-60' : ''}`}
+              className={`flex-1 rounded-lg px-3 py-2 text-xl font-bold bg-transparent shadow-none focus:ring-2 focus:ring-pb-primary focus:outline-none placeholder:text-gray-300 text-white resize-none leading-tight overflow-hidden ${completed ? 'line-through opacity-60' : ''}`}
               value={title}
               onChange={e => setTitle(e.target.value)}
               onKeyDown={e => {
@@ -517,28 +517,28 @@ export const CardDetailModal: React.FC<{
             </div>
           </Popover>
           {/* Add bar (closer to title) */}
-          <div className="flex gap-1.5 mt-1 mb-1">
-            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowLabels(true)}>
+          <div className="flex flex-wrap gap-2 mt-2 mb-2">
+            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1.5 px-3 rounded-full flex items-center gap-1.5 text-xs transition-colors" onClick={() => setShowLabels(true)}>
               <span>🏷️</span> Labels
             </button>
-            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowDates(true)}>
+            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1.5 px-3 rounded-full flex items-center gap-1.5 text-xs transition-colors" onClick={() => setShowDates(true)}>
               <span>🕒</span> Dates
             </button>
             
-            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowMembers(true)}>
+            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1.5 px-3 rounded-full flex items-center gap-1.5 text-xs transition-colors" onClick={() => setShowMembers(true)}>
               <span>✅</span> Assign to
               {members.length > 0 && (
-                <span className="ml-2 bg-pb-success text-white rounded-full px-2 py-1 text-xs font-bold">{usersList.find(u => u.id === members[0])?.name?.[0] || '?'}</span>
+                <span className="ml-1.5 bg-pb-success text-white rounded-full px-1.5 py-0.5 text-xs font-bold">{usersList.find(u => u.id === members[0])?.name?.[0] || '?'}</span>
               )}
             </button>
-            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowMentionUser(true)}>
+            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1.5 px-3 rounded-full flex items-center gap-1.5 text-xs transition-colors" onClick={() => setShowMentionUser(true)}>
               <span>👤</span> Mention
             </button>
-            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowDocs(true)} title="Add documents">
+            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1.5 px-3 rounded-full flex items-center gap-1.5 text-xs transition-colors" onClick={() => setShowDocs(true)} title="Add documents">
               <span role="img" aria-label="paperclip">📎</span> Docs
             </button>
             {/* Image upload icon */}
-            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowImageUpload(true)} title="Upload Images">
+            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1.5 px-3 rounded-full flex items-center gap-1.5 text-xs transition-colors" onClick={() => setShowImageUpload(true)} title="Upload Images">
               <span role="img" aria-label="Upload">📷</span>
             </button>
           </div>
@@ -606,45 +606,49 @@ export const CardDetailModal: React.FC<{
             <ImageUpload currentImages={images} onImagesChange={setImages} />
           </Popover>
           {/* Card color picker */}
-            <div className="flex gap-2 items-center mt-2">
-            <span className="text-gray-200 text-sm">Card color:</span>
-            {["#27ae60", "#f1c40f", "#e67e22", "#e74c3c", "#8e44ad", "#2980b9", "#374151"].map(color => (
+          <div className="flex gap-2.5 items-center mt-1 mb-1">
+            <span className="text-gray-200 text-sm font-medium">Card color:</span>
+            <div className="flex gap-2">
+              {["#27ae60", "#f1c40f", "#e67e22", "#e74c3c", "#8e44ad", "#2980b9", "#374151"].map(color => (
                 <button
                   key={color}
-                className="w-7 h-7 rounded-full border-2 border-white shadow hover:scale-110 transition"
+                  className={`w-8 h-8 rounded-full border-2 shadow-md hover:scale-110 transition-all ${
+                    cardColor === color ? 'border-white scale-110' : 'border-white/40'
+                  }`}
                   style={{ background: color }}
-                onClick={() => setCardColor(color)}
+                  onClick={() => setCardColor(color)}
                   aria-label={`Set card color ${color}`}
                 />
               ))}
+            </div>
           </div>
           {/* Description */}
-          <div className="rounded-lg p-2">
-            <div className="flex items-center justify-between">
-              <label className="block font-semibold text-white mb-1">Description</label>
+          <div className="rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block font-semibold text-white text-sm">Description</label>
             </div>
             {editingDescription ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <textarea
-                  className="w-full rounded bg-black/30 border border-white/20 p-2 text-white min-h-[120px]"
+                  className="w-full rounded-lg bg-black/30 border border-white/20 p-3 text-white min-h-[120px] focus:outline-none focus:ring-2 focus:ring-pb-primary/50 resize-none"
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Add a more detailed description..."
                 />
                 <div className="flex gap-2 justify-end">
                   <button
-                    className="bg-pb-primary hover:bg-pb-success text-white font-semibold py-1 px-3 rounded"
-                    onClick={() => { onUpdateCard(card.id, { description }); setEditingDescription(false); }}
-                  >Save</button>
-                  <button
-                    className="bg-pb-darker hover:bg-pb-primary/40 text-white font-semibold py-1 px-3 rounded"
+                    className="bg-pb-darker hover:bg-pb-primary/40 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
                     onClick={() => { setDescription(card.description || ""); setEditingDescription(false); }}
                   >Cancel</button>
+                  <button
+                    className="bg-pb-primary hover:bg-pb-secondary text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                    onClick={() => { onUpdateCard(card.id, { description }); setEditingDescription(false); }}
+                  >Save</button>
                 </div>
               </div>
             ) : (
-              <div className="text-white/90 text-sm leading-6 min-h-[80px]" onClick={() => setEditingDescription(true)}>
-                {description ? renderDescriptionWithLinks(description) : <span className="text-pb-gray">Add a more detailed description...</span>}
+              <div className="text-white/90 text-sm leading-6 min-h-[80px] p-3 rounded-lg bg-black/20 border border-white/10 cursor-text hover:border-white/20 transition-colors" onClick={() => setEditingDescription(true)}>
+                {description ? renderDescriptionWithLinks(description) : <span className="text-pb-gray/70">Add a more detailed description...</span>}
               </div>
             )}
           </div>
@@ -676,10 +680,10 @@ export const CardDetailModal: React.FC<{
           )}
           {/* Checklist */}
           <div>
-            <div className="font-semibold text-gray-300 mb-2">Checklists</div>
-            <div className="flex gap-2 mb-2">
+            <div className="font-semibold text-white text-sm mb-3">Checklists</div>
+            <div className="flex gap-2 mb-3">
               <input
-                className="flex-1 rounded-lg border border-white/20 px-2 py-1 text-base bg-black/20 text-white placeholder:text-gray-200"
+                className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-sm bg-black/20 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
                 value={newChecklistItem}
                 onChange={e => setNewChecklistItem(e.target.value)}
                 placeholder="Add checklist item..."
@@ -690,7 +694,7 @@ export const CardDetailModal: React.FC<{
                   }
                 }}
               />
-              <button className="bg-pb-primary hover:bg-pb-success text-white font-semibold py-1 px-3 rounded-lg shadow" disabled={!newChecklistItem.trim()} onClick={() => {
+              <button className="bg-pb-primary hover:bg-pb-secondary text-white font-semibold py-2 px-4 rounded-lg shadow transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled={!newChecklistItem.trim()} onClick={() => {
                 if (newChecklistItem.trim()) {
                   setChecklists(list => [...list, { id: uuidv4(), text: newChecklistItem, checked: false }]);
                   setNewChecklistItem("");
@@ -788,13 +792,13 @@ export const CardDetailModal: React.FC<{
           )}
         </div>
         {/* Right column: Comments and Activity */}
-        <div className="w-full lg:w-[280px] flex flex-col p-4 sm:p-6 gap-4 bg-pb-darker/90 rounded-r-2xl border-l-0 lg:border-l border-white/10 flex-shrink-0">
-          <div className="font-semibold text-white text-lg mb-2">Comments and activity</div>
+        <div className="w-full lg:w-[340px] flex flex-col p-5 sm:p-6 gap-4 bg-pb-darker/90 border-l-0 lg:border-l border-white/10 flex-shrink-0" style={{ maxHeight: '96vh', overflowY: 'auto' }}>
+          <div className="font-semibold text-white text-lg mb-1">Comments and activity</div>
           
           {/* Add comment area */}
-          <div className="flex gap-2 items-start mb-4">
+          <div className="flex gap-2 items-start mb-3">
             <input
-              className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-white bg-white/5 placeholder:text-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+              className="flex-1 rounded-lg border border-white/20 px-3 py-2 text-sm text-white bg-white/5 placeholder:text-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
               value={newComment}
               onChange={e => setNewComment(e.target.value)}
               placeholder="Write a comment..."
@@ -814,7 +818,7 @@ export const CardDetailModal: React.FC<{
               }}
             />
             <button
-              className="bg-pb-primary hover:bg-pb-secondary text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-pb-primary hover:bg-pb-secondary text-white font-semibold py-2 px-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               disabled={!newComment.trim()}
               onClick={() => {
                 if (newComment.trim()) {
@@ -836,40 +840,40 @@ export const CardDetailModal: React.FC<{
           </div>
           
           {/* Comments and activity list */}
-          <div className="flex-1 overflow-y-auto mb-4">
+          <div className="flex-1 overflow-y-auto mb-3 min-h-0">
             {combinedLog.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-2">💬</div>
-                <div className="text-pb-gray/70 text-sm">No comments or activity yet</div>
-                <div className="text-pb-gray/50 text-xs mt-1">Add a comment to get started</div>
+              <div className="text-center py-12">
+                <div className="text-4xl mb-3">💬</div>
+                <div className="text-pb-gray/70 text-sm font-medium">No comments or activity yet</div>
+                <div className="text-pb-gray/50 text-xs mt-1.5">Add a comment to get started</div>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2.5">
                 {combinedLog.map((item, i) => (
-                  <div key={item.id || i} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10">
-                    <div className="w-8 h-8 rounded-full bg-pb-primary flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  <div key={item.id || i} className="flex items-start gap-2.5 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                    <div className="w-8 h-8 rounded-full bg-pb-primary flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                       {item.userId?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="text-white font-semibold text-sm">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="text-white font-semibold text-xs">
                           {usersList.find(u => u.id === item.userId)?.name || 
                            (item.userId === (user?.uid || '')) ? 
                            (user?.displayName || user?.email || 'You') : 
                            item.userId}
                         </div>
                         {item.type === 'activity' && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-pb-primary/20 text-pb-primary border border-pb-primary/30">
+                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-pb-primary/20 text-pb-primary border border-pb-primary/30">
                             Activity
                           </span>
                         )}
                       </div>
-                      <div className={`text-sm mb-1 ${
-                        item.type === 'comment' ? 'text-white' : 'text-pb-primary'
+                      <div className={`text-sm mb-1 leading-relaxed ${
+                        item.type === 'comment' ? 'text-white/90' : 'text-pb-primary/90'
                       }`}>
                         {item.text}
                       </div>
-                      <div className="text-pb-gray/60 text-xs">
+                      <div className="text-pb-gray/50 text-xs mt-1">
                         {item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}
                       </div>
                     </div>
@@ -880,9 +884,9 @@ export const CardDetailModal: React.FC<{
           </div>
           
           {/* Save button at bottom of comments section */}
-          <div className="flex justify-end pt-4 border-t border-white/10">
+          <div className="flex justify-end pt-3 mt-auto border-t border-white/10">
             <button 
-              className="bg-pb-primary hover:bg-pb-secondary text-white font-semibold py-2 px-4 rounded-lg transition-colors" 
+              className="bg-pb-primary hover:bg-pb-secondary text-white font-semibold py-2.5 px-6 rounded-lg transition-colors shadow-md" 
               onClick={handleSave}
             >
               Save
@@ -967,7 +971,7 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially, o
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            handleOpen(e as React.MouseEvent);
+            handleOpen(e as unknown as React.MouseEvent);
           }
         }}
       >

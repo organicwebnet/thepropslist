@@ -12,7 +12,7 @@ import { UserRole } from '../../shared/types/auth';
  */
 export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
   // Universal widgets (shown to all roles)
-  const universalWidgets = ['my-tasks', 'taskboard-quick-links'] as const;
+  const universalWidgets = ['my-tasks', 'taskboard-quick-links', 'notifications'] as const;
 
   switch (role) {
     case UserRole.PROPS_SUPERVISOR:

@@ -10,7 +10,7 @@ import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
-import type { FirebaseStorageTypes } from '@react-native-firebase/storage';
+import { storageRef, getDownloadURL, type FirebaseStorageTypes } from '@react-native-firebase/storage';
 
 // Utility function to strip HTML tags
 const stripHtmlTags = (str: string) => {
@@ -141,25 +141,29 @@ export function NativePropForm({
 
   // --- Upload Image Function --- 
   const uploadImage = async (uri: string): Promise<string | null> => {
-    if (!firebaseService) {
+    if (!firebaseService?.storage) {
       Alert.alert("Error", "Firebase service is not available.");
       return null;
     }
     const filename = `props_images/${uuidv4()}-${uri.substring(uri.lastIndexOf('/') + 1)}`;
-    const reference = firebaseService.storage.ref(filename);
     
     try {
-      const task = reference.putFile(uri);
+      // Use the functional API from @react-native-firebase/storage
+      const fileRef = storageRef(firebaseService.storage, filename);
+      const uploadTask = fileRef.putFile(uri);
 
-      task.on('state_changed',
+      // Track upload progress
+      uploadTask.on('state_changed',
         (taskSnapshot: FirebaseStorageTypes.TaskSnapshot) => {
           const progress = (taskSnapshot.bytesTransferred / taskSnapshot.totalBytes) * 100;
           setUploadProgress(progress);
         });
 
-      await task;
+      // Wait for upload to complete
+      await uploadTask;
       
-      const url = await reference.getDownloadURL();
+      // Get download URL using the functional API
+      const url = await getDownloadURL(fileRef);
       setUploadProgress(0); // Reset progress
       return url;
     } catch (error) {

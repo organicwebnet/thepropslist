@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, RotateCcw, Check, GripVertical } from 'lucide-react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useWidgetPreferences } from '../../hooks/useWidgetPreferences';
@@ -52,6 +52,10 @@ const WIDGET_DESCRIPTIONS: Record<WidgetId, { name: string; description: string 
     name: 'Shopping Items Needing Approval',
     description: 'Shopping items with options pending approval',
   },
+  'notifications': {
+    name: 'Notifications',
+    description: 'Latest notifications and updates',
+  },
 };
 
 // Sortable Widget Item Component
@@ -63,6 +67,11 @@ interface SortableWidgetItemProps {
 
 const SortableWidgetItem: React.FC<SortableWidgetItemProps> = ({ widgetId, enabled, onToggle }) => {
   const info = WIDGET_DESCRIPTIONS[widgetId];
+  if (!info) {
+    console.warn(`Widget description not found for: ${widgetId}`);
+    return null;
+  }
+  
   const {
     attributes,
     listeners,
@@ -93,15 +102,16 @@ const SortableWidgetItem: React.FC<SortableWidgetItemProps> = ({ widgetId, enabl
               <div
                 {...attributes}
                 {...listeners}
-                className="cursor-grab active:cursor-grabbing text-pb-gray hover:text-white transition-colors"
+                className="cursor-grab active:cursor-grabbing text-pb-gray hover:text-white transition-colors touch-none"
                 aria-label="Drag to reorder"
+                style={{ touchAction: 'none' }}
               >
                 <GripVertical className="w-5 h-5" />
               </div>
             )}
             <button
               onClick={() => onToggle(widgetId)}
-              className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary ${
+              className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary flex-shrink-0 ${
                 enabled ? 'bg-green-500' : 'bg-pb-primary/30'
               }`}
               aria-label={`${enabled ? 'Disable' : 'Enable'} ${info.name} widget`}
@@ -147,13 +157,16 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
   const [localEnabled, setLocalEnabled] = useState<Set<WidgetId>>(new Set());
   const [localOrder, setLocalOrder] = useState<WidgetId[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [activeId, setActiveId] = useState<WidgetId | null>(null);
 
   // Initialize local state from preferences
   useEffect(() => {
     if (preferences) {
-      setLocalEnabled(new Set(preferences.enabled));
+      // Filter out any widget IDs that don't have descriptions
+      const validEnabled = (preferences.enabled || []).filter(id => WIDGET_DESCRIPTIONS[id]);
+      setLocalEnabled(new Set(validEnabled));
       // Use the enabled array as the order (it represents the display order)
-      setLocalOrder(preferences.enabled || []);
+      setLocalOrder(validEnabled);
       setHasChanges(false);
     }
   }, [preferences]);
@@ -183,6 +196,9 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
     try {
       // Save each widget toggle state
       for (const widgetId of Object.keys(WIDGET_DESCRIPTIONS) as WidgetId[]) {
+        // Skip if widget description doesn't exist
+        if (!WIDGET_DESCRIPTIONS[widgetId]) continue;
+        
         const shouldBeEnabled = localEnabled.has(widgetId);
         const currentlyEnabled = isWidgetEnabled(widgetId);
         
@@ -192,7 +208,7 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
       }
       
       // Save the new order (only enabled widgets in the order they appear)
-      const orderedEnabled = localOrder.filter(id => localEnabled.has(id));
+      const orderedEnabled = localOrder.filter(id => localEnabled.has(id) && WIDGET_DESCRIPTIONS[id]);
       if (updateWidgetOrder) {
         await updateWidgetOrder(orderedEnabled);
       }
@@ -216,20 +232,44 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px of movement before starting drag
+        distance: 5, // Require 5px of movement before starting drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     })
   );
 
+  const handleDragStart = (event: any) => {
+    const widgetId = event.active.id as WidgetId;
+    // Only set activeId if it's a valid widget with a description
+    if (WIDGET_DESCRIPTIONS[widgetId]) {
+      setActiveId(widgetId);
+    }
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
     
     if (!over || active.id === over.id) {
       return;
     }
 
-    const oldIndex = localOrder.indexOf(active.id as WidgetId);
-    const newIndex = localOrder.indexOf(over.id as WidgetId);
+    const activeWidgetId = active.id as WidgetId;
+    const overWidgetId = over.id as WidgetId;
+
+    // Validate widget IDs exist in descriptions
+    if (!WIDGET_DESCRIPTIONS[activeWidgetId] || !WIDGET_DESCRIPTIONS[overWidgetId]) {
+      console.warn('Invalid widget ID in drag operation:', { activeWidgetId, overWidgetId });
+      return;
+    }
+
+    const oldIndex = localOrder.indexOf(activeWidgetId);
+    const newIndex = localOrder.indexOf(overWidgetId);
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const newOrder = arrayMove(localOrder, oldIndex, newIndex);
@@ -238,9 +278,16 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
     }
   };
 
+  const handleDragCancel = () => {
+    setActiveId(null);
+  };
+
   if (!isOpen) return null;
 
-  const allWidgetIds = Object.keys(WIDGET_DESCRIPTIONS) as WidgetId[];
+  // Filter to only include valid widget IDs that have descriptions
+  const allWidgetIds = (Object.keys(WIDGET_DESCRIPTIONS) as WidgetId[]).filter(
+    id => WIDGET_DESCRIPTIONS[id]
+  );
 
   return (
     <div 
@@ -281,7 +328,9 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
+                    onDragCancel={handleDragCancel}
                   >
                     <SortableContext
                       items={localOrder.filter(id => localEnabled.has(id))}
@@ -289,7 +338,7 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
                     >
                       <div className="space-y-3">
                         {localOrder
-                          .filter(id => localEnabled.has(id))
+                          .filter(id => localEnabled.has(id) && WIDGET_DESCRIPTIONS[id])
                           .map((widgetId) => (
                             <SortableWidgetItem
                               key={widgetId}
@@ -300,6 +349,18 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
                           ))}
                       </div>
                     </SortableContext>
+                    <DragOverlay>
+                      {activeId && WIDGET_DESCRIPTIONS[activeId] ? (
+                        <div className="p-4 rounded-lg border border-pb-primary/20 bg-pb-primary/10 opacity-90 rotate-2 shadow-lg">
+                          <div className="flex items-center gap-3">
+                            <GripVertical className="w-5 h-5 text-pb-gray" />
+                            <div>
+                              <h3 className="text-white font-medium">{WIDGET_DESCRIPTIONS[activeId].name}</h3>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                    </DragOverlay>
                   </DndContext>
                 </div>
               )}
@@ -310,7 +371,7 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
                   <h3 className="text-sm font-medium text-white mb-3">Disabled Widgets</h3>
                   <div className="space-y-3">
                     {allWidgetIds
-                      .filter(id => !localEnabled.has(id))
+                      .filter(id => !localEnabled.has(id) && WIDGET_DESCRIPTIONS[id])
                       .map((widgetId) => (
                         <SortableWidgetItem
                           key={widgetId}
@@ -361,4 +422,5 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
     </div>
   );
 };
+
 

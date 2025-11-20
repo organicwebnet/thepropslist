@@ -162,22 +162,16 @@ export default function ProfileScreen() {
   };
 
   const handleUpdateProfileImage = async (imageUri: string) => {
-    if (!user || !firebaseService?.storage) {
+    if (!user || !firebaseService) {
       Alert.alert('Error', 'Unable to update profile image. Please try again.');
       return;
     }
 
     setSavingProfile(true);
     try {
-      // Upload to Firebase Storage using React Native Firebase API
-      const storageRef = firebaseService.storage.ref(`profileImages/${user.uid}`);
-      const task = storageRef.putFile(imageUri);
-
-      // Wait for upload to complete
-      await task;
-
-      // Get download URL
-      const downloadURL = await storageRef.getDownloadURL();
+      // Upload to Firebase Storage using the service's uploadFile method
+      const storagePath = `profileImages/${user.uid}`;
+      const downloadURL = await firebaseService.uploadFile(storagePath, imageUri);
 
       // Update user profile
       await updateUserProfile({

@@ -17,7 +17,8 @@ export type WidgetId =
   | 'upcoming-deadlines'
   | 'cut-props-packing'
   | 'props-needing-work'
-  | 'shopping-approval-needed';
+  | 'shopping-approval-needed'
+  | 'notifications';
 
 export interface WidgetConfig {
   id: WidgetId;

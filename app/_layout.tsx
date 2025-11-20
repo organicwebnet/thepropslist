@@ -63,7 +63,7 @@ export default function RootLayout() {
                       <Stack.Screen name="feedback" options={{ headerShown: true }} />
                     </Stack>
                     <IssueLoggerWidget
-                      enabled={true}
+                      enabled={__DEV__}
                     />
                     <StatusBar style="light" backgroundColor="#18181b" translucent={false} />
                   </PropsProvider>

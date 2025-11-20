@@ -21,6 +21,7 @@ import { UpcomingDeadlinesWidget } from './components/DashboardWidgets/UpcomingD
 import { CutPropsPackingWidget } from './components/DashboardWidgets/CutPropsPackingWidget';
 import { PropsNeedingWorkWidget } from './components/DashboardWidgets/PropsNeedingWorkWidget';
 import { ShoppingApprovalWidget } from './components/DashboardWidgets/ShoppingApprovalWidget';
+import { NotificationsWidget } from './components/DashboardWidgets/NotificationsWidget';
 import { WidgetSettingsModal } from './components/DashboardWidgets/WidgetSettingsModal';
 import { useWidgetPreferences } from './hooks/useWidgetPreferences';
 
@@ -365,6 +366,14 @@ const DashboardHome: React.FC = () => {
                     showId={currentShowId}
                   />
                 );
+              case 'notifications':
+                return (
+                  <NotificationsWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    userId={user?.uid}
+                  />
+                );
               default:
                 return null;
             }
@@ -382,7 +391,8 @@ const DashboardHome: React.FC = () => {
           !isWidgetEnabled('taskboard-activity-summary') &&
           !isWidgetEnabled('cut-props-packing') &&
           !isWidgetEnabled('props-needing-work') &&
-          !isWidgetEnabled('shopping-approval-needed') && (
+          !isWidgetEnabled('shopping-approval-needed') &&
+          !isWidgetEnabled('notifications') && (
             <motion.div
               variants={cardVariants}
               className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-12 border border-pb-primary/20 text-center"

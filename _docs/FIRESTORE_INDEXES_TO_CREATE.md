@@ -28,6 +28,24 @@ The garbage collection system requires the following composite indexes to be cre
 
 **Create Index**: https://console.firebase.google.com/v1/r/project/props-bible-app-1c1cb/firestore/indexes?create_composite=ClRwcm9qZWN0cy9wcm9wcy1iaWJsZS1hcHAtMWMxY2IvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL3BlbmRpbmdfcGFzc3dvcmRfcmVzZXRzL2luZGV4ZXMvXxABGg4KCmV4cGlyZXNBdBABGgwKCF9fbmFtZV9fEAE
 
+### 5. **Notifications Collection - User Notifications**
+**Purpose**: For notifications widget to query user notifications
+**Fields**: `userId` (Ascending), `createdAt` (Descending)
+
+**Create Index**: Go to [Firebase Console > Firestore > Indexes](https://console.firebase.google.com/project/props-bible-app-1c1cb/firestore/indexes) and create:
+- Collection ID: `notifications`
+- Fields: `userId` (Ascending), `createdAt` (Descending)
+- Query scope: Collection
+
+### 6. **Notifications Collection - Unread Notifications**
+**Purpose**: For notifications widget to query unread notifications
+**Fields**: `userId` (Ascending), `read` (Ascending), `createdAt` (Descending)
+
+**Create Index**: Go to [Firebase Console > Firestore > Indexes](https://console.firebase.google.com/project/props-bible-app-1c1cb/firestore/indexes) and create:
+- Collection ID: `notifications`
+- Fields: `userId` (Ascending), `read` (Ascending), `createdAt` (Descending)
+- Query scope: Collection
+
 ## 📋 **Manual Creation Steps**
 
 If the links don't work, you can create the indexes manually:

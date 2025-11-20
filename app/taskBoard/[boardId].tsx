@@ -28,6 +28,7 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { BoardData, CardData, ListData, MemberData } from '../../src/shared/types/taskManager';
 import { darkTheme, lightTheme } from '../../src/styles/theme';
 import BoardList from '../../src/components/taskManager/BoardList';
+import TodoView from '../../src/components/taskManager/TodoView';
 import { useProps } from '../../src/hooks/useProps';
 import { OfflineSyncManager } from '../../src/platforms/mobile/features/offline/OfflineSyncManager';
 import type { Prop } from '../../src/shared/types/props';
@@ -110,6 +111,9 @@ const TaskBoardDetailScreen = () => {
 
   // --- FAB Speed Dial State ---
   const [fabOpen, setFabOpen] = useState(false);
+
+  // --- View Mode State ---
+  const [viewMode, setViewMode] = useState<'kanban' | 'todo'>('kanban');
 
   // --- Detail Panel State ---
   const selectedCard = useMemo(() => {
@@ -894,7 +898,18 @@ const TaskBoardDetailScreen = () => {
                 }}>
                   {show?.name || board?.name || 'Task Board'}
                 </DefaultText>
-                <View style={{ width: 40, alignItems: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {/* View Mode Toggle */}
+                  <Pressable
+                    onPress={() => setViewMode(viewMode === 'kanban' ? 'todo' : 'kanban')}
+                    style={{ padding: 8 }}
+                  >
+                    <Ionicons
+                      name={viewMode === 'kanban' ? 'list' : 'grid'}
+                      size={24}
+                      color="#FFFFFF"
+                    />
+                  </Pressable>
                   {syncingFromNetwork && (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   )}
@@ -921,11 +936,27 @@ const TaskBoardDetailScreen = () => {
               )}
             </View>
             
-            <ScrollView
-              horizontal
-              style={[styles.listsContainer]}
-              showsHorizontalScrollIndicator={false}>
-              {orderedLists.map((list) => {
+            {/* Render Todo View or Kanban View */}
+            {viewMode === 'todo' ? (
+              <TodoView
+                boardId={boardId!}
+                lists={orderedLists}
+                cards={cards}
+                onAddCard={handleAddCardFromList}
+                onUpdateCard={handleUpdateCard}
+                onDeleteCard={handleDeleteCard}
+                selectedCardId={selectedCardId}
+                loading={loading}
+                error={error}
+                allShowMembers={memoizedMembers}
+                availableLabels={availableLabels}
+              />
+            ) : (
+              <ScrollView
+                horizontal
+                style={[styles.listsContainer]}
+                showsHorizontalScrollIndicator={false}>
+                {orderedLists.map((list) => {
                 if (!list) return null;
                 
                 const allCards = cards[list.id] || [];
@@ -981,7 +1012,8 @@ const TaskBoardDetailScreen = () => {
                   />
                 );
               })}
-            </ScrollView>
+              </ScrollView>
+            )}
             <CardDetailPanel
               isVisible={!!selectedCard}
               card={selectedCard}
