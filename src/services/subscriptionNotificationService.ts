@@ -8,14 +8,31 @@ import { NotificationPreferencesService } from './notificationPreferences';
  */
 export class SubscriptionNotificationService {
   /**
+   * Convert timestamp to milliseconds.
+   * Distinguishes between seconds-based timestamps (Unix timestamps like 1700000000)
+   * and millisecond-based timestamps (like 1700000000000).
+   * Uses threshold of 1e12 (1 trillion) to distinguish:
+   * - Timestamps < 1e12 are assumed to be in seconds (e.g., 1.7 billion for 2023)
+   * - Timestamps >= 1e12 are assumed to be in milliseconds (e.g., 1.7 trillion)
+   */
+  private static convertToMilliseconds(timestamp: number): number {
+    // If timestamp is less than 1e12 (1 trillion), it's likely in seconds
+    // Unix timestamps in seconds for 2023-2025 are around 1.7 billion
+    // Millisecond timestamps would be 1.7 trillion or higher
+    if (timestamp < 1e12) {
+      return timestamp * 1000; // Convert seconds to milliseconds
+    }
+    // Already in milliseconds, return as-is
+    return timestamp;
+  }
+
+  /**
    * Check if subscription is expiring soon (within 7 days)
    */
   static isExpiringSoon(currentPeriodEnd?: number): boolean {
     if (!currentPeriodEnd) return false;
     const now = Date.now();
-    const expirationTime = typeof currentPeriodEnd === 'number' 
-      ? currentPeriodEnd * 1000 // Convert from seconds to milliseconds if needed
-      : currentPeriodEnd;
+    const expirationTime = this.convertToMilliseconds(currentPeriodEnd);
     const daysUntilExpiration = (expirationTime - now) / (1000 * 60 * 60 * 24);
     return daysUntilExpiration <= 7 && daysUntilExpiration > 0;
   }
@@ -26,9 +43,7 @@ export class SubscriptionNotificationService {
   static isExpiringToday(currentPeriodEnd?: number): boolean {
     if (!currentPeriodEnd) return false;
     const now = Date.now();
-    const expirationTime = typeof currentPeriodEnd === 'number' 
-      ? currentPeriodEnd * 1000 // Convert from seconds to milliseconds if needed
-      : currentPeriodEnd;
+    const expirationTime = this.convertToMilliseconds(currentPeriodEnd);
     const daysUntilExpiration = (expirationTime - now) / (1000 * 60 * 60 * 24);
     return daysUntilExpiration <= 1 && daysUntilExpiration > 0;
   }
@@ -39,9 +54,7 @@ export class SubscriptionNotificationService {
   static isExpired(currentPeriodEnd?: number): boolean {
     if (!currentPeriodEnd) return false;
     const now = Date.now();
-    const expirationTime = typeof currentPeriodEnd === 'number' 
-      ? currentPeriodEnd * 1000 // Convert from seconds to milliseconds if needed
-      : currentPeriodEnd;
+    const expirationTime = this.convertToMilliseconds(currentPeriodEnd);
     return expirationTime < now;
   }
 
@@ -107,9 +120,7 @@ export class SubscriptionNotificationService {
     switch (type) {
       case 'subscription_expiring_soon':
         if (currentPeriodEnd) {
-          const expirationTime = typeof currentPeriodEnd === 'number' 
-            ? currentPeriodEnd * 1000
-            : currentPeriodEnd;
+          const expirationTime = this.convertToMilliseconds(currentPeriodEnd);
           const daysUntilExpiration = Math.ceil((expirationTime - Date.now()) / (1000 * 60 * 60 * 24));
           return `Your ${plan} subscription expires in ${daysUntilExpiration} day${daysUntilExpiration !== 1 ? 's' : ''}. Renew now to continue enjoying all features.`;
         }

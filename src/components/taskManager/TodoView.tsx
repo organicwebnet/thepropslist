@@ -15,6 +15,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { darkTheme, lightTheme } from '../../styles/theme';
 import type { CardData, ListData } from '../../shared/types/taskManager';
 import CardDetailPanel from './CardDetailPanel';
+import SwipeableTaskItem from './SwipeableTaskItem';
 import { formatDueDate as formatDueDateUtil, isPastDate } from '../../utils/taskHelpers';
 
 interface TodoViewProps {
@@ -260,114 +261,18 @@ const TodoView: React.FC<TodoViewProps> = ({
   };
 
   const renderTaskItem = ({ item: card }: { item: FlattenedCard }) => {
-    const dueDateText = formatDueDate(card.dueDate);
-    const overdue = isOverdue(card.dueDate);
-
     return (
-      <Pressable
-        style={[
-          styles.taskItem,
-          { 
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-          card.completed && { opacity: 0.6 },
-        ]}
-        onPress={() => handleCardPress(card)}
-      >
-        {/* Checkbox */}
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation();
-            handleToggleComplete(card);
-          }}
-          style={[
-            styles.checkbox,
-            {
-              borderColor: card.completed ? colors.success : colors.primary,
-              backgroundColor: card.completed ? colors.success : 'transparent',
-            },
-            togglingCardId === card.id && { opacity: 0.5 },
-          ]}
-          disabled={togglingCardId === card.id}
-        >
-          {card.completed && (
-            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-          )}
-        </Pressable>
-
-        {/* Task Content */}
-        <View style={styles.taskContent}>
-          <Text
-            style={[
-              styles.taskTitle,
-              { color: colors.text },
-              card.completed && styles.completedText,
-            ]}
-          >
-            {card.title || 'Untitled Task'}
-          </Text>
-          {card.description && (
-            <Text
-              style={[styles.taskDescription, { color: colors.textSecondary }]}
-              numberOfLines={2}
-            >
-              {card.description}
-            </Text>
-          )}
-
-          {/* Metadata */}
-          <View style={styles.taskMetadata}>
-            {card.dueDate && (
-              <View
-                style={[
-                  styles.metadataBadge,
-                  {
-                    backgroundColor: overdue
-                      ? 'rgba(239, 68, 68, 0.2)'
-                      : dueDateText === 'Due today'
-                      ? 'rgba(234, 179, 8, 0.2)'
-                      : 'rgba(139, 92, 246, 0.2)',
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={12}
-                  color={
-                    overdue
-                      ? '#ef4444'
-                      : dueDateText === 'Due today'
-                      ? '#eab308'
-                      : colors.primary
-                  }
-                />
-                <Text
-                  style={[
-                    styles.metadataText,
-                    {
-                      color: overdue
-                        ? '#ef4444'
-                        : dueDateText === 'Due today'
-                        ? '#eab308'
-                        : colors.primary,
-                    },
-                  ]}
-                >
-                  {dueDateText}
-                </Text>
-              </View>
-            )}
-            {card.listName && (
-              <View style={[styles.metadataBadge, { backgroundColor: 'rgba(139, 92, 246, 0.2)' }]}>
-                <Text style={[styles.metadataText, { color: colors.primary }]}>
-                  {card.listName}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </Pressable>
+      <SwipeableTaskItem
+        card={card}
+        onToggleComplete={handleToggleComplete}
+        onPress={handleCardPress}
+        onDelete={onDeleteCard}
+        onEdit={handleCardPress}
+        formatDueDate={formatDueDate}
+        isOverdue={isOverdue}
+        togglingCardId={togglingCardId}
+        colors={colors}
+      />
     );
   };
 
@@ -424,50 +329,51 @@ const TodoView: React.FC<TodoViewProps> = ({
           )}
         </View>
 
-        {/* Filter and Sort Controls */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.controlsContainer}>
-          <View style={styles.controlsRow}>
-            <Pressable
-              style={styles.controlGroup}
-              onPress={() => {
-                // Cycle through filters
-                const filters: FilterType[] = ['all', 'my_tasks', 'due_today', 'overdue', 'completed'];
-                const currentIndex = filters.indexOf(filter);
-                setFilter(filters[(currentIndex + 1) % filters.length]);
-              }}
-            >
-              <Ionicons name="filter" size={16} color={colors.textSecondary} />
-              <View style={[styles.selectWrapper, { backgroundColor: colors.inputBg }]}>
-                <Text style={[styles.selectText, { color: colors.text }]}>
-                  {filter === 'all' ? 'All Tasks' :
-                   filter === 'my_tasks' ? 'My Tasks' :
-                   filter === 'due_today' ? 'Due Today' :
-                   filter === 'overdue' ? 'Overdue' :
-                   'Completed'}
-                </Text>
-              </View>
-            </Pressable>
-            <Pressable
-              style={styles.controlGroup}
-              onPress={() => {
-                // Cycle through sort options
-                const sorts: SortType[] = ['due_date', 'created_date', 'title', 'list'];
-                const currentIndex = sorts.indexOf(sortBy);
-                setSortBy(sorts[(currentIndex + 1) % sorts.length]);
-              }}
-            >
-              <Ionicons name="swap-vertical" size={16} color={colors.textSecondary} />
-              <View style={[styles.selectWrapper, { backgroundColor: colors.inputBg }]}>
-                <Text style={[styles.selectText, { color: colors.text }]}>
-                  {sortBy === 'due_date' ? 'Due Date' :
-                   sortBy === 'created_date' ? 'Created Date' :
-                   sortBy === 'title' ? 'Title' :
-                   'List'}
-                </Text>
-              </View>
-            </Pressable>
+        {/* Filter and Sort Controls - Simplified for Mobile */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.controlsContainer}
+          contentContainerStyle={styles.controlsContent}
+        >
+          <Pressable
+            style={[styles.controlButton, { backgroundColor: colors.inputBg }]}
+            onPress={() => {
+              // Cycle through filters
+              const filters: FilterType[] = ['all', 'my_tasks', 'due_today', 'overdue', 'completed'];
+              const currentIndex = filters.indexOf(filter);
+              setFilter(filters[(currentIndex + 1) % filters.length]);
+            }}
+          >
+            <Ionicons name="filter" size={14} color={colors.textSecondary} />
+            <Text style={[styles.controlText, { color: colors.text }]}>
+              {filter === 'all' ? 'All' :
+               filter === 'my_tasks' ? 'My Tasks' :
+               filter === 'due_today' ? 'Today' :
+               filter === 'overdue' ? 'Overdue' :
+               'Done'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.controlButton, { backgroundColor: colors.inputBg }]}
+            onPress={() => {
+              // Cycle through sort options
+              const sorts: SortType[] = ['due_date', 'created_date', 'title', 'list'];
+              const currentIndex = sorts.indexOf(sortBy);
+              setSortBy(sorts[(currentIndex + 1) % sorts.length]);
+            }}
+          >
+            <Ionicons name="swap-vertical" size={14} color={colors.textSecondary} />
+            <Text style={[styles.controlText, { color: colors.text }]}>
+              {sortBy === 'due_date' ? 'Due' :
+               sortBy === 'created_date' ? 'New' :
+               sortBy === 'title' ? 'A-Z' :
+               'List'}
+            </Text>
+          </Pressable>
+          <View style={[styles.taskCountBadge, { backgroundColor: colors.inputBg }]}>
             <Text style={[styles.taskCount, { color: colors.textSecondary }]}>
-              {filteredCards.length} {filteredCards.length === 1 ? 'task' : 'tasks'}
+              {filteredCards.length}
             </Text>
           </View>
         </ScrollView>
@@ -552,7 +458,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
     paddingTop: 8,
   },
@@ -569,7 +475,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   quickAddContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   quickAddInputWrapper: {
     flexDirection: 'row',
@@ -587,9 +493,9 @@ const styles = StyleSheet.create({
     paddingLeft: 48,
     paddingRight: 48,
     paddingVertical: 16,
-    fontSize: 18,
+    fontSize: 16,
     borderRadius: 12,
-    borderWidth: 2,
+    borderWidth: 1,
   },
   loadingIndicator: {
     position: 'absolute',
@@ -603,28 +509,33 @@ const styles = StyleSheet.create({
   controlsContainer: {
     marginTop: 8,
   },
-  controlsRow: {
+  controlsContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    paddingRight: 16,
   },
-  controlGroup: {
+  controlButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  selectWrapper: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    minWidth: 100,
   },
-  selectText: {
-    fontSize: 14,
+  controlText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  taskCountBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginLeft: 'auto',
   },
   taskCount: {
-    fontSize: 14,
-    marginLeft: 'auto',
+    fontSize: 13,
+    fontWeight: '600',
   },
   centered: {
     flex: 1,
@@ -664,56 +575,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    padding: 16,
-  },
-  taskItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     padding: 12,
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 2,
-    marginRight: 12,
-    marginTop: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  taskContent: {
-    flex: 1,
-  },
-  taskTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  completedText: {
-    textDecorationLine: 'line-through',
-  },
-  taskDescription: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  taskMetadata: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  metadataBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  metadataText: {
-    fontSize: 12,
+    paddingBottom: 24,
   },
 });
 

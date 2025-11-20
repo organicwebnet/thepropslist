@@ -3,6 +3,7 @@ import type { CardData } from "../../types/taskManager";
 import { ImageUpload } from "../ImageUpload";
 import type { PropImage } from "../../types/props";
 import { useFirebase } from "../../contexts/FirebaseContext";
+import { useShowSelection } from "../../contexts/ShowSelectionContext";
 import { v4 as uuidv4 } from 'uuid';
 // import { RichTextEditor } from "../../../shared/components/RichTextEditor";
 import { useSortable } from '@dnd-kit/sortable';
@@ -30,6 +31,148 @@ const Popover: React.FC<{ open: boolean; onClose: () => void; title: string; chi
     </div>
   );
 };
+
+// Helper: convert markdown mentions to display text (for editing in textarea)
+function markdownToDisplayText(text: string): string {
+  if (!text) return '';
+  // Replace [@Name](type:id) with just @Name
+  return text.replace(/\[@([^\]]+)\]\((?:prop|container|user):[^)]*\)/g, '@$1');
+}
+
+// Helper: convert display text back to markdown (for storage)
+function displayTextToMarkdown(text: string, propsList: any[], containersList: any[], usersList: any[]): string {
+  if (!text) return '';
+  let result = text;
+  
+  // Sort all entities by name length (longest first) to match longest names first
+  const allEntities = [
+    ...propsList.map(p => ({ ...p, type: 'prop' as const })),
+    ...containersList.map(c => ({ ...c, type: 'container' as const })),
+    ...usersList.map(u => ({ ...u, type: 'user' as const }))
+  ].sort((a, b) => (b.name || '').length - (a.name || '').length);
+  
+  const replacements: Array<{ start: number; end: number; replacement: string }> = [];
+  
+  // Search for @ mentions and try to match against entity names (longest first)
+  let searchIndex = 0;
+  while (searchIndex < text.length) {
+    const atIndex = text.indexOf('@', searchIndex);
+    if (atIndex === -1) break;
+    
+    // Try each entity (sorted longest first) to see if it matches starting at this position
+    let bestMatch: { entity: any; endIndex: number } | null = null;
+    
+    for (const entity of allEntities) {
+      const entityName = entity.name || '';
+      const entityNameLower = entityName.toLowerCase();
+      
+      // Check if the text after @ starts with this entity name (case-insensitive)
+      // We need to check if there's enough text remaining
+      const textAfterAt = text.substring(atIndex + 1).toLowerCase();
+      
+      if (textAfterAt.startsWith(entityNameLower)) {
+        // Check if it's followed by a word boundary (space, punctuation, end, etc.)
+        const entityEndPos = atIndex + 1 + entityName.length;
+        if (entityEndPos >= text.length || 
+            /\s/.test(text[entityEndPos]) || 
+            /[.,!?;:]/.test(text[entityEndPos]) ||
+            text[entityEndPos] === '@' ||
+            text[entityEndPos] === '[') {
+          bestMatch = { entity, endIndex: entityEndPos };
+          break; // Found exact match, use it (longest first due to sorting)
+        }
+      }
+    }
+    
+    if (bestMatch) {
+      replacements.push({
+        start: atIndex,
+        end: bestMatch.endIndex,
+        replacement: `[@${bestMatch.entity.name}](${bestMatch.entity.type}:${bestMatch.entity.id})`
+      });
+      searchIndex = bestMatch.endIndex;
+    } else {
+      // No match found, skip this @ and continue
+      searchIndex = atIndex + 1;
+    }
+  }
+  
+  // Apply replacements in reverse order to maintain indices
+  replacements.sort((a, b) => b.start - a.start);
+  for (const rep of replacements) {
+    result = result.substring(0, rep.start) + rep.replacement + result.substring(rep.end);
+  }
+  
+  return result;
+}
+
+// Helper: render text with @-mention links (for both title and description)
+function renderTextWithLinks(text: string) {
+  if (!text) return null;
+  // Regex for [@Name](prop:prop1) and similar, and for @@User
+  const mentionRegex = /\[@([^\]]+)\]\((prop|container|user):([^)]*)\)|@@([a-zA-Z0-9_]+)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = mentionRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    if (match[1] && match[2] && match[3]) {
+      // Markdown-style mention
+      const [, name, type, id] = match;
+      let href = '#';
+      let color = '#3B82F6';
+      let label = name;
+      if (type === 'prop') {
+        href = `/props/${id}`;
+        color = '#3B82F6';
+      } else if (type === 'container') {
+        href = `/containers/${id}`;
+        color = '#A855F7';
+      } else if (type === 'user') {
+        href = `/users/${id}`;
+        color = '#22C55E';
+        label = '@' + name;
+      }
+      parts.push(
+        <a
+          key={match.index}
+          href={href}
+          className="underline hover:text-pb-success"
+          style={{ color, fontWeight: 600, marginRight: 2 }}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {label}
+        </a>
+      );
+    } else if (match[4]) {
+      // @@User mention
+      const user = match[4];
+      const href = `/users/${user}`;
+      const color = '#22C55E';
+      parts.push(
+        <a
+          key={match.index}
+          href={href}
+          className="underline hover:text-pb-success"
+          style={{ color, fontWeight: 600, marginRight: 2 }}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          @{user}
+        </a>
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
+}
 
 // Helper: render description with @-mention links
 function renderDescriptionWithLinks(description: string) {
@@ -131,17 +274,35 @@ export const CardDetailModal: React.FC<{
   onUpdateCard: (cardId: string, updates: Partial<CardData>) => void;
   onDeleteCard: (cardId: string) => void;
 }> = ({ open, onClose, card, onUpdateCard, onDeleteCard }) => {
-  const [title, setTitle] = useState(card.title);
+  // Convert markdown title to display format for editing
+  const [title, setTitle] = useState(() => markdownToDisplayText(card.title || ''));
   const { service: firebaseService, user } = useFirebase();
+  const { currentShowId } = useShowSelection();
   const [propsList, setPropsList] = useState<{ id: string; name: string }[]>([]);
   const [containersList, setContainersList] = useState<{ id: string; name: string }[]>([]);
   const [usersList, setUsersList] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    firebaseService.getDocuments("props").then(docs => setPropsList(docs.map(d => ({ id: d.id, name: d.data.name }))));
+    // Build query options for props - filter by current show if available
+    const propsQueryOptions = currentShowId 
+      ? { where: [['showId', '==', currentShowId] as [string, any, any]] }
+      : undefined;
+
+    firebaseService.getDocuments("props", propsQueryOptions).then(docs => {
+      // Additional client-side filter for safety
+      const filteredDocs = currentShowId 
+        ? docs.filter(d => d.data?.showId === currentShowId)
+        : docs;
+      setPropsList(filteredDocs.map(d => ({ id: d.id, name: d.data.name })));
+    });
     firebaseService.getDocuments("containers").then(docs => setContainersList(docs.map(d => ({ id: d.id, name: d.data.name }))));
     firebaseService.getDocuments("userProfiles").then(docs => setUsersList(docs.map(d => ({ id: d.data?.uid || d.id, name: d.data?.displayName || d.data?.name || d.data?.email }))));
-  }, [firebaseService]);
+  }, [firebaseService, currentShowId]);
+
+  // Update title display when card changes
+  useEffect(() => {
+    setTitle(markdownToDisplayText(card.title || ''));
+  }, [card.title]);
 
   const [description, setDescription] = useState(card.description || "");
   const [editingDescription, setEditingDescription] = useState(false);
@@ -231,7 +392,9 @@ export const CardDetailModal: React.FC<{
   const [mentionSuggestionsTitle, setMentionSuggestionsTitle] = useState<any[]>([]);
 
   const linkedItems = React.useMemo(() => {
-    const fromTitle = parseMentions(title || '');
+    // Convert display title to markdown for parsing mentions
+    const titleMarkdown = displayTextToMarkdown(title || '', propsList, containersList, usersList);
+    const fromTitle = parseMentions(titleMarkdown);
     const fromDesc = parseMentions(description || '');
     const combined = [...fromTitle, ...fromDesc].map(i => {
       // Try to resolve plain labels to known entities for linking
@@ -251,7 +414,7 @@ export const CardDetailModal: React.FC<{
     const map = new Map<string, any>();
     combined.forEach(i => { if (!map.has(key(i))) map.set(key(i), i); });
     return Array.from(map.values());
-  }, [title, description, propsList, containersList, usersList]);
+  }, [title, description, propsList, containersList, usersList]); // Note: title is display format, converted to markdown inside
 
   // Helper to log activity
   function logActivity(type: string, details: any) {
@@ -269,7 +432,10 @@ export const CardDetailModal: React.FC<{
 
   // On save, compare previous and new values, log changes
   const handleSave = () => {
-    if (title !== card.title) logActivity('Title changed', { from: card.title, to: title });
+    // Convert display text back to markdown format for storage
+    const titleMarkdown = displayTextToMarkdown(title, propsList, containersList, usersList);
+    
+    if (titleMarkdown !== card.title) logActivity('Title changed', { from: card.title, to: titleMarkdown });
     if (description !== card.description) logActivity('Description changed', {});
     if (dueDate !== card.dueDate) logActivity('Due date changed', { from: card.dueDate, to: dueDate });
     if (cardColor !== card.color) logActivity('Color changed', { from: card.color, to: cardColor });
@@ -285,15 +451,16 @@ export const CardDetailModal: React.FC<{
     if (JSON.stringify(checklists) !== JSON.stringify(card.checklist)) logActivity('Checklist changed', {});
     const attachmentUrls = (attachments || []).map((a: { id: string; url: string; name?: string }) => a.url);
     
-    // Also extract propId from mentions if a prop is mentioned
-    const propMentions = linkedItems
+    // Parse mentions from the markdown title to extract propId
+    const titleMentions = parseMentions(titleMarkdown);
+    const propMentions = titleMentions
       .filter(item => item.type === 'prop' && item.id)
       .map(item => item.id!)
       .filter((id): id is string => !!id);
     const propId = propMentions.length > 0 ? propMentions[0] : card.propId;
     
     onUpdateCard(card.id, { 
-      title, 
+      title: titleMarkdown, // Store markdown format
       description, 
       color: cardColor, 
       assignedTo: members, // Only manually assigned members, not @ mentions
@@ -430,10 +597,39 @@ export const CardDetailModal: React.FC<{
             <textarea
               className={`flex-1 rounded-lg px-3 py-2 text-xl font-bold bg-transparent shadow-none focus:ring-2 focus:ring-pb-primary focus:outline-none placeholder:text-gray-300 text-white resize-none leading-tight overflow-hidden ${completed ? 'line-through opacity-60' : ''}`}
               value={title}
-              onChange={e => setTitle(e.target.value)}
+              onChange={e => {
+                const newValue = e.target.value;
+                setTitle(newValue);
+                
+                // Auto-detect mentions as user types
+                const cursorPos = e.target.selectionStart || 0;
+                const textBeforeCursor = newValue.substring(0, cursorPos);
+                
+                // Check if we're typing a mention (look for @ followed by text, but not already in markdown format)
+                const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                const isInMarkdown = textBeforeCursor.match(/\[@[^\]]*\]\([^)]*\)$/);
+                
+                if (mentionMatch && !isInMarkdown && !showMentionSearchTitle) {
+                  // User is typing a mention - show menu if not already shown
+                  if (!showMentionMenuTitle) {
+                    setShowMentionMenuTitle(true);
+                  }
+                  // If mention type is already selected, update search text as they type
+                  if (mentionTypeTitle && mentionMatch[1]) {
+                    setMentionSearchTextTitle(mentionMatch[1].trim());
+                  }
+                } else if (!mentionMatch && showMentionMenuTitle && !showMentionSearchTitle) {
+                  // No mention being typed - close menu if open
+                  setShowMentionMenuTitle(false);
+                }
+              }}
               onKeyDown={e => {
                 if (e.key === '@') {
                   setShowMentionMenuTitle(true);
+                }
+                // If user presses space or period while mention menu is open, close it
+                if ((e.key === ' ' || e.key === '.' || e.key === ',') && showMentionMenuTitle && !showMentionSearchTitle) {
+                  setShowMentionMenuTitle(false);
                 }
               }}
               placeholder="Card title"
@@ -456,9 +652,45 @@ export const CardDetailModal: React.FC<{
             {showMentionMenuTitle && (
               <div className="absolute top-12 left-10 bg-white text-black rounded shadow p-2 z-50 w-56">
                 <div className="font-semibold mb-1">Mention Type</div>
-                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionTypeTitle('prop'); setShowMentionMenuTitle(false); setShowMentionSearchTitle(true); setMentionSearchTextTitle(''); setMentionSuggestionsTitle(propsList); }}>Prop</button>
-                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionTypeTitle('container'); setShowMentionMenuTitle(false); setShowMentionSearchTitle(true); setMentionSearchTextTitle(''); setMentionSuggestionsTitle(containersList); }}>Box/Container</button>
-                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionTypeTitle('user'); setShowMentionMenuTitle(false); setShowMentionSearchTitle(true); setMentionSearchTextTitle(''); setMentionSuggestionsTitle(usersList); }}>Mention User</button>
+                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = titleRef.current?.selectionStart || title.length;
+                  const textBeforeCursor = title.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                  
+                  setMentionTypeTitle('prop');
+                  setShowMentionMenuTitle(false);
+                  setShowMentionSearchTitle(true);
+                  setMentionSearchTextTitle(typedText);
+                  setMentionSuggestionsTitle(propsList);
+                }}>Prop</button>
+                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = titleRef.current?.selectionStart || title.length;
+                  const textBeforeCursor = title.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                  
+                  setMentionTypeTitle('container');
+                  setShowMentionMenuTitle(false);
+                  setShowMentionSearchTitle(true);
+                  setMentionSearchTextTitle(typedText);
+                  setMentionSuggestionsTitle(containersList);
+                }}>Box/Container</button>
+                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = titleRef.current?.selectionStart || title.length;
+                  const textBeforeCursor = title.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                  
+                  setMentionTypeTitle('user');
+                  setShowMentionMenuTitle(false);
+                  setShowMentionSearchTitle(true);
+                  setMentionSearchTextTitle(typedText);
+                  setMentionSuggestionsTitle(usersList);
+                }}>Mention User</button>
               </div>
             )}
             {showMentionSearchTitle && (
@@ -469,19 +701,47 @@ export const CardDetailModal: React.FC<{
                   placeholder={`Type to search ${mentionTypeTitle}...`}
                   value={mentionSearchTextTitle}
                   onChange={e => setMentionSearchTextTitle(e.target.value)}
+                  autoFocus
                 />
                 <div className="max-h-40 overflow-auto space-y-1">
                   {mentionSuggestionsTitle.filter(i => (i.name || '').toLowerCase().includes(mentionSearchTextTitle.toLowerCase())).map(i => (
                     <button key={i.id} className="block w-full text-left px-2 py-1 rounded hover:bg-white/10" onClick={() => {
-                      const textToInsert = `@${i.name}`; // title uses plain mentions
+                      // Insert plain @Name format for display (will be converted to markdown on save)
+                      const textToInsert = `@${i.name}`;
+                      
                       setTitle(prev => {
                         const t = prev || '';
-                        const endsWithAt = /@\s*$/.test(t) || t.endsWith('@');
-                        const base = endsWithAt ? t.replace(/@\s*$/, '').trimEnd() : t.trimEnd();
-                        return (base ? base + ' ' : '') + textToInsert + ' ';
+                        const cursorPos = titleRef.current?.selectionStart || t.length;
+                        const textBeforeCursor = t.substring(0, cursorPos);
+                        const textAfterCursor = t.substring(cursorPos);
+                        
+                        // Find the @ mention that was being typed (look backwards from cursor)
+                        const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                        
+                        if (mentionMatch) {
+                          // Replace the typed mention with the plain @Name format
+                          const beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                          return beforeMention + textToInsert + ' ' + textAfterCursor;
+                        } else {
+                          // Fallback: just append if we can't find the mention
+                          const endsWithAt = /@\s*$/.test(t) || t.endsWith('@');
+                          const base = endsWithAt ? t.replace(/@\s*$/, '').trimEnd() : t.trimEnd();
+                          return (base ? base + ' ' : '') + textToInsert + ' ';
+                        }
                       });
+                      
+                      // Reset cursor position after a short delay
+                      setTimeout(() => {
+                        if (titleRef.current) {
+                          const newText = titleRef.current.value;
+                          const newPos = newText.indexOf(textToInsert) + textToInsert.length + 1;
+                          titleRef.current.setSelectionRange(newPos, newPos);
+                        }
+                      }, 0);
+                      
                       setShowMentionSearchTitle(false);
                       setMentionTypeTitle(null);
+                      setShowMentionMenuTitle(false);
                     }}>{i.name}</button>
                   ))}
                 </div>
@@ -999,7 +1259,7 @@ const Card: React.FC<CardProps> = ({ card, onUpdateCard, dndId, openInitially, o
           <span aria-label={card.status || 'not_started'} title={card.status || 'not_started'} className="inline-flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 text-gray-200">
             {card.status === 'done' ? '✓' : card.status === 'in_progress' ? '◐' : ''}
           </span>
-          <div className="font-semibold" style={{ color: '#fff' }}>{card.title}</div>
+          <div className="font-semibold" style={{ color: '#fff' }}>{renderTextWithLinks(card.title)}</div>
         </div>
         {card.description && (
           <div className="text-xs mt-1" style={{ color: '#fff' }}>{renderDescriptionWithLinks(card.description)}</div>

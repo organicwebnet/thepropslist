@@ -1567,53 +1567,83 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                             
 
 
-                            {/* Mention Menu - Simple white menu */}
+                            {/* Mention Menu - Modal on mobile for better touch handling */}
                             {showMentionMenu && (
-                                <View style={{
-                                    position: 'absolute',
-                                    top: 80,
-                                    left: 12,
-                                    right: 12,
-                                    backgroundColor: '#fff',
-                                    borderRadius: 8,
-                                    padding: 12,
-                                    elevation: 5,
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 2 },
-                                    shadowOpacity: 0.2,
-                                    shadowRadius: 4,
-                                    zIndex: 1000
-                                }}>
-                                    <Text style={{ fontWeight: 'bold', fontSize: 16, color: '#000', marginBottom: 8 }}>
-                                        Mention Type
-                                    </Text>
-                                    <Pressable
-                                        onPress={handleSelectProp}
+                                <Modal
+                                    visible={showMentionMenu}
+                                    transparent={true}
+                                    animationType="fade"
+                                    onRequestClose={closeMentionSystem}
+                                >
+                                    <Pressable 
                                         style={{ 
-                                            padding: 12, 
-                                            borderBottomWidth: 1, 
-                                            borderBottomColor: '#eee' 
+                                            flex: 1, 
+                                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                            justifyContent: 'center',
+                                            alignItems: 'center'
                                         }}
+                                        onPress={closeMentionSystem}
                                     >
-                                        <Text style={{ fontSize: 15, color: '#000' }}>Prop</Text>
+                                        <Pressable 
+                                            style={{
+                                                backgroundColor: '#fff',
+                                                borderRadius: 12,
+                                                padding: 16,
+                                                width: '80%',
+                                                maxWidth: 300,
+                                                elevation: 8,
+                                                shadowColor: '#000',
+                                                shadowOffset: { width: 0, height: 4 },
+                                                shadowOpacity: 0.3,
+                                                shadowRadius: 8,
+                                            }}
+                                            onPress={(e) => e.stopPropagation()}
+                                        >
+                                            <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#000', marginBottom: 12 }}>
+                                                Mention Type
+                                            </Text>
+                                            <Pressable
+                                                onPress={handleSelectProp}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                style={({ pressed }) => ({ 
+                                                    padding: 16, 
+                                                    borderBottomWidth: 1, 
+                                                    borderBottomColor: '#eee',
+                                                    backgroundColor: pressed ? '#f5f5f5' : 'transparent',
+                                                    borderRadius: 8,
+                                                    marginBottom: 4
+                                                })}
+                                            >
+                                                <Text style={{ fontSize: 16, color: '#000', fontWeight: '500' }}>Prop</Text>
+                                            </Pressable>
+                                            <Pressable
+                                                onPress={handleSelectContainer}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                style={({ pressed }) => ({ 
+                                                    padding: 16, 
+                                                    borderBottomWidth: 1, 
+                                                    borderBottomColor: '#eee',
+                                                    backgroundColor: pressed ? '#f5f5f5' : 'transparent',
+                                                    borderRadius: 8,
+                                                    marginBottom: 4
+                                                })}
+                                            >
+                                                <Text style={{ fontSize: 16, color: '#000', fontWeight: '500' }}>Box/Container</Text>
+                                            </Pressable>
+                                            <Pressable
+                                                onPress={handleSelectUser}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                style={({ pressed }) => ({ 
+                                                    padding: 16,
+                                                    backgroundColor: pressed ? '#f5f5f5' : 'transparent',
+                                                    borderRadius: 8
+                                                })}
+                                            >
+                                                <Text style={{ fontSize: 16, color: '#000', fontWeight: '500' }}>User</Text>
+                                            </Pressable>
+                                        </Pressable>
                                     </Pressable>
-                                    <Pressable
-                                        onPress={handleSelectContainer}
-                                        style={{ 
-                                            padding: 12, 
-                                            borderBottomWidth: 1, 
-                                            borderBottomColor: '#eee' 
-                                        }}
-                                    >
-                                        <Text style={{ fontSize: 15, color: '#000' }}>Box/Container</Text>
-                                    </Pressable>
-                                    <Pressable
-                                        onPress={handleSelectUser}
-                                        style={{ padding: 12 }}
-                                    >
-                                        <Text style={{ fontSize: 15, color: '#000' }}>User</Text>
-                                    </Pressable>
-                                </View>
+                                </Modal>
                             )}
                             
                             {/* Prop Search Interface */}
@@ -1631,8 +1661,12 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                         <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>
                                             Search Props:
                                         </Text>
-                                        <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
-                                            <Ionicons name="close" size={16} color="#9CA3AF" />
+                                        <Pressable 
+                                            onPress={closeMentionSystem} 
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            style={{ padding: 8 }}
+                                        >
+                                            <Ionicons name="close" size={20} color="#9CA3AF" />
                                         </Pressable>
                                     </View>
                                     <TextInput
@@ -1668,12 +1702,14 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                                     <Pressable
                                                         key={prop.id}
                                                         onPress={() => handleSelectPropFromList(prop)}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                                         style={({ pressed }) => ({
                                                             paddingHorizontal: 12,
-                                                            paddingVertical: 8,
+                                                            paddingVertical: 12,
                                                             backgroundColor: pressed ? '#4B5563' : 'transparent',
                                                             borderBottomWidth: prop.id !== propSuggestions[propSuggestions.length - 1].id ? 1 : 0,
-                                                            borderBottomColor: 'rgba(255,255,255,0.05)'
+                                                            borderBottomColor: 'rgba(255,255,255,0.05)',
+                                                            minHeight: 44 // Better touch target for mobile
                                                         })}
                                                     >
                                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1705,8 +1741,12 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                         <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>
                                             Search Users:
                                         </Text>
-                                        <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
-                                            <Ionicons name="close" size={16} color="#9CA3AF" />
+                                        <Pressable 
+                                            onPress={closeMentionSystem} 
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            style={{ padding: 8 }}
+                                        >
+                                            <Ionicons name="close" size={20} color="#9CA3AF" />
                                         </Pressable>
                                     </View>
                                     <TextInput
@@ -1742,12 +1782,14 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                                     <Pressable
                                                         key={user.id}
                                                         onPress={() => handleSelectUserFromList(user)}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                                         style={({ pressed }) => ({
                                                             paddingHorizontal: 12,
-                                                            paddingVertical: 8,
+                                                            paddingVertical: 12,
                                                             backgroundColor: pressed ? '#4B5563' : 'transparent',
                                                             borderBottomWidth: user.id !== userSuggestions[userSuggestions.length - 1].id ? 1 : 0,
-                                                            borderBottomColor: 'rgba(255,255,255,0.05)'
+                                                            borderBottomColor: 'rgba(255,255,255,0.05)',
+                                                            minHeight: 44 // Better touch target for mobile
                                                         })}
                                                     >
                                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1779,8 +1821,12 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                         <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>
                                             Search Containers:
                                         </Text>
-                                        <Pressable onPress={closeMentionSystem} style={{ padding: 4 }}>
-                                            <Ionicons name="close" size={16} color="#9CA3AF" />
+                                        <Pressable 
+                                            onPress={closeMentionSystem} 
+                                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                            style={{ padding: 8 }}
+                                        >
+                                            <Ionicons name="close" size={20} color="#9CA3AF" />
                                         </Pressable>
                                     </View>
                                     <TextInput
@@ -1816,12 +1862,14 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                                     <Pressable
                                                         key={container.id}
                                                         onPress={() => handleSelectContainerFromList(container)}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                                         style={({ pressed }) => ({
                                                             paddingHorizontal: 12,
-                                                            paddingVertical: 8,
+                                                            paddingVertical: 12,
                                                             backgroundColor: pressed ? '#4B5563' : 'transparent',
                                                             borderBottomWidth: container.id !== containerSuggestions[containerSuggestions.length - 1].id ? 1 : 0,
-                                                            borderBottomColor: 'rgba(255,255,255,0.05)'
+                                                            borderBottomColor: 'rgba(255,255,255,0.05)',
+                                                            minHeight: 44 // Better touch target for mobile
                                                         })}
                                                     >
                                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

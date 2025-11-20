@@ -7,6 +7,74 @@ import { Calendar, Filter, SortAsc, Plus } from "lucide-react";
 import { logger } from "../../utils/logger";
 import { formatDueDate as formatDueDateUtil, isPastDate } from "../../utils/taskHelpers";
 
+// Helper: render text with @-mention links (for both title and description)
+function renderTextWithLinks(text: string) {
+  if (!text) return null;
+  // Regex for [@Name](prop:prop1) and similar, and for @@User
+  const mentionRegex = /\[@([^\]]+)\]\((prop|container|user):([^)]*)\)|@@([a-zA-Z0-9_]+)/g;
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = mentionRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    if (match[1] && match[2] && match[3]) {
+      // Markdown-style mention
+      const [, name, type, id] = match;
+      let href = '#';
+      let color = '#3B82F6';
+      let label = name;
+      if (type === 'prop') {
+        href = `/props/${id}`;
+        color = '#3B82F6';
+      } else if (type === 'container') {
+        href = `/containers/${id}`;
+        color = '#A855F7';
+      } else if (type === 'user') {
+        href = `/users/${id}`;
+        color = '#22C55E';
+        label = '@' + name;
+      }
+      parts.push(
+        <a
+          key={match.index}
+          href={href}
+          className="underline hover:text-pb-success"
+          style={{ color, fontWeight: 600, marginRight: 2 }}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {label}
+        </a>
+      );
+    } else if (match[4]) {
+      // @@User mention
+      const user = match[4];
+      const href = `/users/${user}`;
+      const color = '#22C55E';
+      parts.push(
+        <a
+          key={match.index}
+          href={href}
+          className="underline hover:text-pb-success"
+          style={{ color, fontWeight: 600, marginRight: 2 }}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          @{user}
+        </a>
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts.length > 0 ? parts : text;
+}
+
 interface TodoViewProps {
   boardId: string;
   lists: ListData[];
@@ -237,7 +305,30 @@ const TodoView: React.FC<TodoViewProps> = ({
               ref={quickAddInputRef}
               type="text"
               value={quickAddText}
-              onChange={e => setQuickAddText(e.target.value)}
+              onChange={e => {
+                const newValue = e.target.value;
+                setQuickAddText(newValue);
+                
+                // Auto-detect mentions as user types
+                const cursorPos = e.target.selectionStart || 0;
+                const textBeforeCursor = newValue.substring(0, cursorPos);
+                const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                const isInMarkdown = textBeforeCursor.match(/\[@[^\]]*\]\([^)]*\)$/);
+                
+                if (mentionMatch && !isInMarkdown && !showMentionSearch) {
+                  // User is typing a mention - show menu if not already shown
+                  if (!showMentionMenu) {
+                    setShowMentionMenu(true);
+                  }
+                  // If mention type is already selected, update search text as they type
+                  if (mentionType && mentionMatch[1]) {
+                    setMentionSearchText(mentionMatch[1].trim());
+                  }
+                } else if (!mentionMatch && showMentionMenu && !showMentionSearch) {
+                  // No mention being typed - close menu if open
+                  setShowMentionMenu(false);
+                }
+              }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -248,6 +339,10 @@ const TodoView: React.FC<TodoViewProps> = ({
                 }
                 if (e.key === '@') {
                   setShowMentionMenu(true);
+                }
+                // If user presses space or period while mention menu is open, close it
+                if ((e.key === ' ' || e.key === '.' || e.key === ',') && showMentionMenu && !showMentionSearch) {
+                  setShowMentionMenu(false);
                 }
               }}
               placeholder="Add a task..."
@@ -274,36 +369,54 @@ const TodoView: React.FC<TodoViewProps> = ({
               <div className="font-semibold mb-1">Mention Type</div>
               <button 
                 className="w-full text-left py-1 hover:bg-gray-100 px-2"
-                onClick={() => { 
-                  setMentionType('prop'); 
-                  setShowMentionMenu(false); 
-                  setShowMentionSearch(true); 
-                  setMentionSearchText(''); 
-                  setMentionSuggestions(propsList); 
+                onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddText.length;
+                  const textBeforeCursor = quickAddText.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                  
+                  setMentionType('prop');
+                  setShowMentionMenu(false);
+                  setShowMentionSearch(true);
+                  setMentionSearchText(typedText);
+                  setMentionSuggestions(propsList);
                 }}
               >
                 Prop
               </button>
               <button 
                 className="w-full text-left py-1 hover:bg-gray-100 px-2"
-                onClick={() => { 
-                  setMentionType('container'); 
-                  setShowMentionMenu(false); 
-                  setShowMentionSearch(true); 
-                  setMentionSearchText(''); 
-                  setMentionSuggestions(containersList); 
+                onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddText.length;
+                  const textBeforeCursor = quickAddText.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                  
+                  setMentionType('container');
+                  setShowMentionMenu(false);
+                  setShowMentionSearch(true);
+                  setMentionSearchText(typedText);
+                  setMentionSuggestions(containersList);
                 }}
               >
                 Box/Container
               </button>
               <button 
                 className="w-full text-left py-1 hover:bg-gray-100 px-2"
-                onClick={() => { 
-                  setMentionType('user'); 
-                  setShowMentionMenu(false); 
-                  setShowMentionSearch(true); 
-                  setMentionSearchText(''); 
-                  setMentionSuggestions(usersList); 
+                onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddText.length;
+                  const textBeforeCursor = quickAddText.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                  
+                  setMentionType('user');
+                  setShowMentionMenu(false);
+                  setShowMentionSearch(true);
+                  setMentionSearchText(typedText);
+                  setMentionSuggestions(usersList);
                 }}
               >
                 User
@@ -327,7 +440,11 @@ const TodoView: React.FC<TodoViewProps> = ({
                     key={i.id} 
                     className="block w-full text-left px-2 py-1 rounded hover:bg-white/10"
                     onClick={() => {
-                      const text = `@${i.name}`;
+                      // Use markdown format for props and containers to handle multi-word names properly
+                      // Use plain @ for users
+                      const text = mentionType === 'user' 
+                        ? `@${i.name}` 
+                        : `[@${i.name}](${mentionType}:${i.id})`;
                       setQuickAddText(prev => {
                         const t = prev || '';
                         const base = t.endsWith('@') ? t.slice(0, -1).trimEnd() : t.trimEnd();
@@ -546,7 +663,7 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
         <div className="flex-1 min-w-0">
           <div className={`flex items-start gap-2 ${card.completed ? 'line-through' : ''}`}>
             <div className="flex-1">
-              <div className="text-white font-medium">{card.title || 'Untitled Task'}</div>
+              <div className="text-white font-medium">{renderTextWithLinks(card.title || 'Untitled Task')}</div>
               {card.description && (
                 <div className="text-sm text-pb-gray/70 mt-1 line-clamp-2">{card.description}</div>
               )}
@@ -561,9 +678,15 @@ const TodoTaskItem: React.FC<TodoTaskItemProps> = ({
                   ? 'bg-red-500/20 text-red-300'
                   : dueDateText === 'Due today'
                   ? 'bg-yellow-500/20 text-yellow-300'
-                  : 'bg-pb-primary/20 text-pb-primary'
+                  : 'bg-pb-primary/20 text-white'
               }`}>
-                <Calendar className="w-3 h-3" />
+                <Calendar className={`w-3 h-3 ${
+                  overdue
+                    ? 'text-red-300'
+                    : dueDateText === 'Due today'
+                    ? 'text-yellow-300'
+                    : 'text-white'
+                }`} />
                 {dueDateText}
               </div>
             )}

@@ -137,7 +137,30 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
                 className="rounded border border-pb-primary/40 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-pb-primary text-white bg-pb-darker/60 placeholder:text-pb-gray/50"
                 type="text"
                 value={newCardTitle}
-                onChange={e => setNewCardTitle(e.target.value)}
+                onChange={e => {
+                  const newValue = e.target.value;
+                  setNewCardTitle(newValue);
+                  
+                  // Auto-detect mentions as user types
+                  const cursorPos = e.target.selectionStart || 0;
+                  const textBeforeCursor = newValue.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  const isInMarkdown = textBeforeCursor.match(/\[@[^\]]*\]\([^)]*\)$/);
+                  
+                  if (mentionMatch && !isInMarkdown && !showMentionSearch) {
+                    // User is typing a mention - show menu if not already shown
+                    if (!showMentionMenu) {
+                      setShowMentionMenu(true);
+                    }
+                    // If mention type is already selected, update search text as they type
+                    if (mentionType && mentionMatch[1]) {
+                      setMentionSearchText(mentionMatch[1].trim());
+                    }
+                  } else if (!mentionMatch && showMentionMenu && !showMentionSearch) {
+                    // No mention being typed - close menu if open
+                    setShowMentionMenu(false);
+                  }
+                }}
                 placeholder="Enter a title for this card..."
                 autoFocus
                 aria-label="Card title input"
@@ -148,6 +171,10 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
                   }
                   if (e.key === 'Escape') { setAddingCard(false); setNewCardTitle(""); }
                   if (e.key === '@') { setShowMentionMenu(true); }
+                  // If user presses space or period while mention menu is open, close it
+                  if ((e.key === ' ' || e.key === '.' || e.key === ',') && showMentionMenu && !showMentionSearch) {
+                    setShowMentionMenu(false);
+                  }
                 }}
                 disabled={isAddingCard}
               />
@@ -161,21 +188,57 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
                   <button 
                     className="w-full text-left py-1 hover:bg-gray-100 px-2 focus:bg-gray-100 focus:outline-none"
                     role="menuitem"
-                    onClick={() => { setMentionType('prop'); setShowMentionMenu(false); setShowMentionSearch(true); setMentionSearchText(''); setMentionSuggestions(propsList); }}
+                    onClick={() => {
+                      // Extract any text typed after @
+                      const cursorPos = newCardInputRef.current?.selectionStart || newCardTitle.length;
+                      const textBeforeCursor = newCardTitle.substring(0, cursorPos);
+                      const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                      const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                      
+                      setMentionType('prop');
+                      setShowMentionMenu(false);
+                      setShowMentionSearch(true);
+                      setMentionSearchText(typedText);
+                      setMentionSuggestions(propsList);
+                    }}
                   >
                     Prop
                   </button>
                   <button 
                     className="w-full text-left py-1 hover:bg-gray-100 px-2 focus:bg-gray-100 focus:outline-none"
                     role="menuitem"
-                    onClick={() => { setMentionType('container'); setShowMentionMenu(false); setShowMentionSearch(true); setMentionSearchText(''); setMentionSuggestions(containersList); }}
+                    onClick={() => {
+                      // Extract any text typed after @
+                      const cursorPos = newCardInputRef.current?.selectionStart || newCardTitle.length;
+                      const textBeforeCursor = newCardTitle.substring(0, cursorPos);
+                      const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                      const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                      
+                      setMentionType('container');
+                      setShowMentionMenu(false);
+                      setShowMentionSearch(true);
+                      setMentionSearchText(typedText);
+                      setMentionSuggestions(containersList);
+                    }}
                   >
                     Box/Container
                   </button>
                   <button 
                     className="w-full text-left py-1 hover:bg-gray-100 px-2 focus:bg-gray-100 focus:outline-none"
                     role="menuitem"
-                    onClick={() => { setMentionType('user'); setShowMentionMenu(false); setShowMentionSearch(true); setMentionSearchText(''); setMentionSuggestions(usersList); }}
+                    onClick={() => {
+                      // Extract any text typed after @
+                      const cursorPos = newCardInputRef.current?.selectionStart || newCardTitle.length;
+                      const textBeforeCursor = newCardTitle.substring(0, cursorPos);
+                      const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                      const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                      
+                      setMentionType('user');
+                      setShowMentionMenu(false);
+                      setShowMentionSearch(true);
+                      setMentionSearchText(typedText);
+                      setMentionSuggestions(usersList);
+                    }}
                   >
                     User
                   </button>
@@ -206,15 +269,44 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
                         className="block w-full text-left px-2 py-1 rounded hover:bg-white/10 focus:bg-white/10 focus:outline-none" 
                         role="option"
                         onClick={() => {
-                          // For card titles, insert plain @Name (no brackets/IDs); remove trailing lone '@'
-                          const text = `@${i.name}`;
+                          // Use markdown format for props and containers to handle multi-word names properly
+                          // Use plain @ for users
+                          const text = mentionType === 'user' 
+                            ? `@${i.name}` 
+                            : `[@${i.name}](${mentionType}:${i.id})`;
+                          
                           setNewCardTitle(prev => {
                             const t = prev || '';
-                            const base = t.endsWith('@') ? t.slice(0, -1).trimEnd() : t.trimEnd();
-                            return (base ? base + ' ' : '') + text + ' ';
+                            const cursorPos = newCardInputRef.current?.selectionStart || t.length;
+                            const textBeforeCursor = t.substring(0, cursorPos);
+                            const textAfterCursor = t.substring(cursorPos);
+                            
+                            // Find the @ mention that was being typed (look backwards from cursor)
+                            const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                            
+                            if (mentionMatch) {
+                              // Replace the typed mention with the markdown format
+                              const beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                              return beforeMention + text + ' ' + textAfterCursor;
+                            } else {
+                              // Fallback: just append if we can't find the mention
+                              const base = t.endsWith('@') ? t.slice(0, -1).trimEnd() : t.trimEnd();
+                              return (base ? base + ' ' : '') + text + ' ';
+                            }
                           });
+                          
+                          // Reset cursor position after a short delay
+                          setTimeout(() => {
+                            if (newCardInputRef.current) {
+                              const newText = newCardInputRef.current.value;
+                              const newPos = newText.indexOf(text) + text.length + 1;
+                              newCardInputRef.current.setSelectionRange(newPos, newPos);
+                            }
+                          }, 0);
+                          
                           setShowMentionSearch(false);
                           setMentionType(null);
+                          setShowMentionMenu(false);
                         }}
                       >
                         {i.name}

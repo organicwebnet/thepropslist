@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useFirebase } from './FirebaseContext';
+import { useShowSelection } from './ShowSelectionContext';
 import { logger } from '../utils/logger';
 
 interface MentionItem {
@@ -28,6 +29,7 @@ interface MentionDataProviderProps {
 
 export const MentionDataProvider: React.FC<MentionDataProviderProps> = ({ children }) => {
   const { service } = useFirebase();
+  const { currentShowId } = useShowSelection();
   const [propsList, setPropsList] = useState<MentionItem[]>([]);
   const [containersList, setContainersList] = useState<MentionItem[]>([]);
   const [usersList, setUsersList] = useState<MentionItem[]>([]);
@@ -47,9 +49,14 @@ export const MentionDataProvider: React.FC<MentionDataProviderProps> = ({ childr
       setLoading(true);
       setError(null);
 
+      // Build query options for props - filter by current show if available
+      const propsQueryOptions = currentShowId 
+        ? { where: [['showId', '==', currentShowId] as [string, any, any]] }
+        : undefined;
+
       // Only load data that the user has permission to access
       const [props, containers, users] = await Promise.allSettled([
-        service.getDocuments<{ name?: string }>('props').catch(() => []),
+        service.getDocuments<{ name?: string; showId?: string }>('props', propsQueryOptions).catch(() => []),
         service.getDocuments<{ name?: string }>('packing_boxes').catch(() => []),
         service.getDocuments<{ displayName?: string; name?: string; email?: string }>('userProfiles').catch(() => [])
       ]);
@@ -58,7 +65,12 @@ export const MentionDataProvider: React.FC<MentionDataProviderProps> = ({ childr
       const containersData = containers.status === 'fulfilled' ? containers.value : [];
       const usersData = users.status === 'fulfilled' ? users.value : [];
 
-      setPropsList(propsData.map(d => ({ 
+      // Filter props by showId if currentShowId is set (additional client-side filter for safety)
+      const filteredPropsData = currentShowId 
+        ? propsData.filter(d => d.data?.showId === currentShowId)
+        : propsData;
+
+      setPropsList(filteredPropsData.map(d => ({ 
         id: d.id, 
         name: d.data?.name || 'Prop' 
       })));
@@ -89,7 +101,7 @@ export const MentionDataProvider: React.FC<MentionDataProviderProps> = ({ childr
 
   useEffect(() => {
     loadMentionData();
-  }, [service]);
+  }, [service, currentShowId]);
 
   const value: MentionDataContextType = {
     propsList,
