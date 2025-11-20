@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useFirebase } from "../../contexts/FirebaseContext";
+import { useWebAuth } from "../../contexts/WebAuthContext";
+import { useMentionData } from "../../contexts/MentionDataContext";
 import ListColumn from "./ListColumn";
 import TodoView from "./TodoView";
 import type { BoardData, ListData, CardData } from "../../types/taskManager";
@@ -8,6 +10,26 @@ import { arrayMove, SortableContext, horizontalListSortingStrategy } from '@dnd-
 import { logger } from "../../utils/logger";
 import { validateCardTitle, validateCardDescription } from "../../utils/validation";
 import type { BoardViewMode } from "../../hooks/useBoardPreferences";
+import { NotificationService } from "../../shared/services/notificationService";
+
+// Parse mentions in a text and normalize to {type,id,label}
+function parseMentions(text: string) {
+  const items: { type: 'prop' | 'container' | 'user'; id?: string; label: string }[] = [];
+  if (!text) return items;
+  const bracket = /\[@([^\]]+)\]\((prop|container|user):([^)]*)\)/g;
+  let m;
+  while ((m = bracket.exec(text)) !== null) {
+    const mentionType = m[2] as 'prop' | 'container' | 'user';
+    items.push({ type: mentionType, id: m[3], label: m[1] });
+  }
+  // Also match plain @Name mentions (not in brackets)
+  const plainMention = /(^|\s)@([A-Za-z0-9\s]+?)(?=\s|$|@)/g;
+  while ((m = plainMention.exec(text)) !== null) {
+    const label = (m[2] || '').trim();
+    if (label) items.push({ type: 'user', label });
+  }
+  return items;
+}
 
 interface BoardProps {
   boardId: string;
@@ -18,6 +40,8 @@ interface BoardProps {
 
 const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, viewMode = 'kanban' }) => {
   const { service } = useFirebase();
+  const { user } = useWebAuth();
+  const { usersList } = useMentionData();
   const [board, setBoard] = useState<BoardData | null>(null);
   const [lists, setLists] = useState<ListData[]>([]);
   const [cards, setCards] = useState<Record<string, CardData[]>>({}); // listId -> cards
@@ -29,6 +53,9 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
   const scrollLeft = useRef(0);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [activeDragType, setActiveDragType] = useState<'list' | 'card' | null>(null);
+  
+  // Initialize notification service
+  const notificationService = new NotificationService(service);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -165,15 +192,20 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
       setLoading(true);
       setError(null);
       
+      // Parse mentions from title - @ mentions are just mentions, not assignments
+      // Mentions will be handled separately for notifications (if needed)
       const order = (cards[listId]?.length || 0);
       const newCard = {
         title: validation.sanitizedValue!,
         description: '',
         createdAt: new Date().toISOString(),
         order,
+        assignedTo: [], // Only assign via "Assign to" button, not @ mentions
         // Add more fields as needed
       };
+      
       await service.addDocument(`todo_boards/${boardId}/lists/${listId}/cards`, newCard);
+      
       // The listener will update state
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add card';
@@ -211,6 +243,59 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
           return;
         }
         updates.description = descValidation.sanitizedValue!;
+      }
+      
+      // Check if assignedTo is being updated and send notifications
+      if (updates.assignedTo !== undefined) {
+        const currentCard = cards[listId]?.find(card => card.id === cardId);
+        const previousAssignedTo = currentCard?.assignedTo || [];
+        const newAssignedTo = updates.assignedTo || [];
+        
+        // Find newly assigned users (users in newAssignedTo but not in previousAssignedTo)
+        const newlyAssigned = newAssignedTo.filter(
+          (userId: string) => !previousAssignedTo.includes(userId)
+        );
+        
+        // Send notifications to newly assigned users
+        if (newlyAssigned.length > 0 && board?.showId && currentCard) {
+          const cardTitle = currentCard.title || 'Untitled Task';
+          
+          for (const assignedUserId of newlyAssigned) {
+            // Don't notify the user who is making the assignment
+            if (assignedUserId === user?.uid) {
+              continue;
+            }
+            
+            try {
+              await notificationService.create({
+                userId: assignedUserId,
+                showId: board.showId,
+                type: 'task_assigned',
+                title: 'Task Assigned',
+                message: `You have been assigned to: ${cardTitle}`,
+                entity: { 
+                  kind: 'task', 
+                  id: cardId 
+                },
+                read: false,
+                createdAt: new Date(),
+                metadata: {
+                  taskId: cardId,
+                  taskTitle: cardTitle,
+                  boardId: boardId,
+                  listId: listId,
+                  assignedBy: user?.uid || null
+                }
+              });
+            } catch (notificationError) {
+              // Log error but don't fail the card update
+              if (process.env.NODE_ENV === 'development') {
+                console.error('Failed to send task assignment notification:', notificationError);
+              }
+              logger.taskBoardError('Failed to send task assignment notification', notificationError);
+            }
+          }
+        }
       }
       
       await service.updateDocument(`todo_boards/${boardId}/lists/${listId}/cards`, cardId, updates);

@@ -102,11 +102,18 @@ function renderDescriptionWithLinks(description: string) {
 function parseMentions(text: string) {
   const items: { type: 'prop' | 'container' | 'user'; id?: string; label: string }[] = [];
   if (!text) return items;
+  // Match markdown format: [@Name](type:id)
   const bracket = /\[@([^\]]+)\]\((prop|container|user):([^)]*)\)/g;
   let m;
   while ((m = bracket.exec(text)) !== null) {
     const mentionType = m[2] as 'prop' | 'container' | 'user';
     items.push({ type: mentionType, id: m[3], label: m[1] });
+  }
+  // Match plain @Name mentions (for users)
+  const plainMention = /(^|\s)@([A-Za-z0-9\s]+?)(?=\s|$|@|\[)/g;
+  while ((m = plainMention.exec(text)) !== null) {
+    const label = (m[2] || '').trim();
+    if (label) items.push({ type: 'user', label });
   }
   // Optional explicit user syntax beginning with @@username
   const explicitUser = /(^|\s)@@([A-Za-z0-9_.-]+)/g;
@@ -160,6 +167,7 @@ export const CardDetailModal: React.FC<{
   const [showDates, setShowDates] = useState(false);
   // const [showChecklist, setShowChecklist] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [showMentionUser, setShowMentionUser] = useState(false);
   // const [showAdd, setShowAdd] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
   const [newDocName, setNewDocName] = useState("");
@@ -265,12 +273,40 @@ export const CardDetailModal: React.FC<{
     if (description !== card.description) logActivity('Description changed', {});
     if (dueDate !== card.dueDate) logActivity('Due date changed', { from: card.dueDate, to: dueDate });
     if (cardColor !== card.color) logActivity('Color changed', { from: card.color, to: cardColor });
-    if (JSON.stringify(members) !== JSON.stringify(card.assignedTo)) logActivity('Assignee changed', { from: card.assignedTo, to: members });
+    
+    // Only use manually assigned members - @ mentions are just mentions, not assignments
+    // @ mentions will be handled separately for notifications only
+    if (JSON.stringify(members) !== JSON.stringify(card.assignedTo)) {
+      logActivity('Assignee changed', { from: card.assignedTo, to: members });
+    }
+    
     if (completed !== card.completed) logActivity('Completed changed', { from: card.completed, to: completed });
     if (JSON.stringify(labels) !== JSON.stringify(card.labels)) logActivity('Labels changed', {});
     if (JSON.stringify(checklists) !== JSON.stringify(card.checklist)) logActivity('Checklist changed', {});
     const attachmentUrls = (attachments || []).map((a: { id: string; url: string; name?: string }) => a.url);
-    onUpdateCard(card.id, { title, description, color: cardColor, assignedTo: members, completed, status, activityLog, dueDate, labels, checklist: checklists, images, attachments: attachmentUrls });
+    
+    // Also extract propId from mentions if a prop is mentioned
+    const propMentions = linkedItems
+      .filter(item => item.type === 'prop' && item.id)
+      .map(item => item.id!)
+      .filter((id): id is string => !!id);
+    const propId = propMentions.length > 0 ? propMentions[0] : card.propId;
+    
+    onUpdateCard(card.id, { 
+      title, 
+      description, 
+      color: cardColor, 
+      assignedTo: members, // Only manually assigned members, not @ mentions
+      completed, 
+      status, 
+      activityLog, 
+      dueDate, 
+      labels, 
+      checklist: checklists, 
+      images, 
+      attachments: attachmentUrls,
+      propId: propId || undefined
+    });
     onClose();
   };
 
@@ -422,7 +458,7 @@ export const CardDetailModal: React.FC<{
                 <div className="font-semibold mb-1">Mention Type</div>
                 <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionTypeTitle('prop'); setShowMentionMenuTitle(false); setShowMentionSearchTitle(true); setMentionSearchTextTitle(''); setMentionSuggestionsTitle(propsList); }}>Prop</button>
                 <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionTypeTitle('container'); setShowMentionMenuTitle(false); setShowMentionSearchTitle(true); setMentionSearchTextTitle(''); setMentionSuggestionsTitle(containersList); }}>Box/Container</button>
-                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionTypeTitle('user'); setShowMentionMenuTitle(false); setShowMentionSearchTitle(true); setMentionSearchTextTitle(''); setMentionSuggestionsTitle(usersList); }}>User</button>
+                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => { setMentionTypeTitle('user'); setShowMentionMenuTitle(false); setShowMentionSearchTitle(true); setMentionSearchTextTitle(''); setMentionSuggestionsTitle(usersList); }}>Mention User</button>
               </div>
             )}
             {showMentionSearchTitle && (
@@ -490,10 +526,13 @@ export const CardDetailModal: React.FC<{
             </button>
             
             <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowMembers(true)}>
-              <span>👤</span> Assign to
+              <span>✅</span> Assign to
               {members.length > 0 && (
                 <span className="ml-2 bg-pb-success text-white rounded-full px-2 py-1 text-xs font-bold">{usersList.find(u => u.id === members[0])?.name?.[0] || '?'}</span>
               )}
+            </button>
+            <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowMentionUser(true)}>
+              <span>👤</span> Mention
             </button>
             <button className="bg-white/5 hover:bg-white/10 border border-white/10 text-white/90 font-medium py-1 px-2.5 rounded-full flex items-center gap-1.5 text-xs" onClick={() => setShowDocs(true)} title="Add documents">
               <span role="img" aria-label="paperclip">📎</span> Docs
@@ -532,6 +571,33 @@ export const CardDetailModal: React.FC<{
                 >
                   Save
                 </button>
+              </div>
+            </div>
+          </Popover>
+          {/* Mention user popover */}
+          <Popover open={showMentionUser} onClose={() => setShowMentionUser(false)} title="Mention User">
+            <div className="space-y-2">
+              <div className="text-white text-sm mb-1">Mention a user (they'll be notified but not assigned):</div>
+              <div className="max-h-56 overflow-auto flex flex-col gap-1">
+                {usersList.map(u => (
+                  <button
+                    key={u.id}
+                    className="flex items-center gap-2 text-white/90 hover:bg-white/10 px-2 py-1 rounded text-left"
+                    onClick={() => {
+                      const mentionText = `@${u.name}`;
+                      setTitle(prev => {
+                        const t = prev || '';
+                        return (t.trim() ? t.trim() + ' ' : '') + mentionText + ' ';
+                      });
+                      setShowMentionUser(false);
+                    }}
+                  >
+                    <span>{u.name}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <button className="bg-pb-darker hover:bg-pb-primary/40 text-white font-semibold py-1 px-3 rounded" onClick={() => setShowMentionUser(false)}>Close</button>
               </div>
             </div>
           </Popover>
