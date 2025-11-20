@@ -136,7 +136,15 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
       } catch (err: any) {
         if (!mounted) return;
         console.error('Error loading notifications:', err);
-        setError(err.message || 'Failed to load notifications');
+        
+        // Check if this is an index building error
+        if (err.code === 'failed-precondition' || 
+            err.message?.includes('index') || 
+            err.message?.includes('building')) {
+          setError('Notifications index is being set up. This may take a few minutes. Please refresh the page in a moment.');
+        } else {
+          setError(err.message || 'Failed to load notifications');
+        }
         setNotifications([]);
       } finally {
         if (mounted) {
@@ -214,8 +222,13 @@ export const NotificationsWidget: React.FC<NotificationsWidgetProps> = ({
         error={error}
       >
         <div className="text-center py-8">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3 opacity-50" />
-          <p className="text-pb-gray text-sm">Failed to load notifications</p>
+          <AlertCircle className="w-12 h-12 text-yellow-400 mx-auto mb-3 opacity-50" />
+          <p className="text-pb-gray text-sm px-4">{error}</p>
+          {error.includes('index') && (
+            <p className="text-pb-gray text-xs mt-2 px-4 opacity-75">
+              The notifications system is being set up. This usually takes 2-5 minutes.
+            </p>
+          )}
         </div>
       </WidgetContainer>
     );
