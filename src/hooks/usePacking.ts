@@ -26,6 +26,7 @@ import {
 import { FirebaseError, FirebaseService, QueryOptions } from '../shared/services/firebase/types';
 import type { Prop, WeightUnit } from '../shared/types/props'; // Added WeightUnit
 import { OfflineSyncManager } from '../platforms/mobile/features/offline/OfflineSyncManager';
+import { generateBoxId } from '../lib/utils';
 
 interface PackingOperations {
   createBox: (props: PackedProp[], boxName: string, description?: string, actNumber?: number, sceneNumber?: number, isSpareBox?: boolean) => Promise<string | undefined>;
@@ -113,7 +114,7 @@ export function usePacking(showId?: string): {
 
   const operations: PackingOperations = useMemo(() => ({
     createBox: async (propsToPack: PackedProp[], boxName: string, description = '', actNumber = 0, sceneNumber = 0, isSpareBox = false) => {
-      if (!service?.addDocument || !showId) {
+      if (!service?.setDocument || !showId) {
           setError(new Error('Failed to create box: Service not ready.'));
           return undefined;
       }
@@ -138,11 +139,45 @@ export function usePacking(showId?: string): {
        };
 
       if (offlineSyncManager) {
-        await offlineSyncManager.queueOperation('create', 'packingBoxes', newBoxDataForFirestore);
-        return 'offline';
+        // Generate a user-friendly two-word box ID for offline mode
+        const boxId = generateBoxId();
+        // Include the ID in the data so offline sync can use it
+        await offlineSyncManager.queueOperation('create', 'packingBoxes', { ...newBoxDataForFirestore, id: boxId });
+        return boxId;
       } else {
-        const docRef = await service.addDocument<PackingBox>('packingBoxes', newBoxDataForFirestore as any); 
-        return docRef?.id;
+        // Generate a user-friendly two-word box ID and retry if collision occurs
+        let boxId = generateBoxId();
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (attempts < maxAttempts) {
+          try {
+            // Check if document already exists to avoid overwriting
+            const existingDoc = await service.getDocument<PackingBox>('packingBoxes', boxId);
+            if (existingDoc && existingDoc.exists) {
+              // Collision detected, generate new ID and retry
+              boxId = generateBoxId();
+              attempts++;
+              continue;
+            }
+            
+            // Use setDocument with the custom ID instead of addDocument
+            await service.setDocument<PackingBox>('packingBoxes', boxId, newBoxDataForFirestore as any); 
+            return boxId;
+          } catch (error: any) {
+            // If error is due to document already existing, retry with new ID
+            if (error?.code === 'already-exists' || error?.message?.includes('already exists')) {
+              boxId = generateBoxId();
+              attempts++;
+              continue;
+            }
+            // For other errors, throw immediately
+            throw error;
+          }
+        }
+        
+        // If we've exhausted retries, throw an error
+        throw new Error('Failed to create box: Unable to generate unique ID after multiple attempts');
       }
     },
     updateBox: async (boxId, updates) => {

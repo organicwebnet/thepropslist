@@ -168,7 +168,12 @@ export class OfflineSyncManager {
         const collection = rnFirestore.collection(operation.collection);
         switch (operation.type) {
           case 'create':
-            await collection.add(operation.data);
+            // If data has an 'id' field, use setDoc with that ID; otherwise use addDoc
+            if (operation.data?.id) {
+              await collection.doc(operation.data.id).set(operation.data);
+            } else {
+              await collection.add(operation.data);
+            }
             break;
           case 'update':
             await collection.doc(operation.data.id).update(operation.data);

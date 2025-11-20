@@ -1,4 +1,4 @@
-import { generateId } from "../lib/utils";
+import { generateBoxId } from "../lib/utils";
 import { PackedProp } from "../types/index";
 import { PackingBox } from '../types/index';
 import type { Prop } from '../shared/types/props';
@@ -29,7 +29,7 @@ export class PackingService {
     const totalWeight = this.calculateTotalWeight(packedProps);
 
     return {
-      id: generateId(),
+      id: generateBoxId(),
       name: `Box ${actNumber}.${sceneNumber}`,
       showId,
       actNumber,
