@@ -122,37 +122,57 @@ export function RoleBasedPropCard({
     );
   };
 
+  // Compact card view - show only essential information
+  const firstImage = prop.images && prop.images.length > 0 ? prop.images[0] : null;
+  
   return (
     <TouchableOpacity 
-      style={[styles.card, getCardLayoutStyle(config.cardLayout)]}
+      style={styles.compactCard}
       onPress={() => onPress?.(prop)}
       activeOpacity={0.7}
     >
-      {/* Header with name and status */}
-      <View style={styles.header}>
-        <Text style={styles.propName} numberOfLines={1}>
-          {prop.name}
-        </Text>
-        {renderStatusIndicator()}
+      {/* Compact header with image, name and status */}
+      <View style={styles.compactHeader}>
+        {/* Image on the left */}
+        {firstImage ? (
+          <Image
+            source={{ uri: firstImage.url }}
+            style={styles.compactPropImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.compactImagePlaceholder}>
+            <Text style={styles.compactImagePlaceholderText}>
+              {(prop.name?.[0] || 'P').toUpperCase()}
+            </Text>
+          </View>
+        )}
+        
+        <View style={styles.compactNameContainer}>
+          <Text style={styles.compactPropName} numberOfLines={1}>
+            {prop.name}
+          </Text>
+          {prop.category && (
+            <Text style={styles.compactCategory} numberOfLines={1}>
+              {prop.category}
+            </Text>
+          )}
+        </View>
+        {prop.status && (
+          <View style={[styles.compactStatusBadge, getStatusColor(prop.status)]}>
+            <Text style={styles.compactStatusText} numberOfLines={1}>
+              {prop.status.replace(/_/g, ' ')}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Images */}
-      {renderImages()}
-
-      {/* Priority fields first */}
-      {priorityFields.map(fieldName => {
-        const value = prop[fieldName as keyof Prop];
-        return renderField(fieldName, value);
-      })}
-
-      {/* Other visible fields */}
-      {Object.entries(prop).map(([fieldName, value]) => {
-        if (priorityFields.includes(fieldName)) return null; // Already rendered
-        return renderField(fieldName, value);
-      })}
-
-      {/* Quick actions */}
-      {renderQuickActions()}
+      {/* Optional: Show description if available and short */}
+      {prop.description && prop.description.length < 100 && (
+        <Text style={styles.compactDescription} numberOfLines={2}>
+          {prop.description}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -243,9 +263,14 @@ function getStatusColor(status: string) {
     completed: '#10B981',
     damaged: '#EF4444',
     missing: '#EF4444',
+    available: '#10B981',
+    'in-use': '#3B82F6',
+    maintenance: '#F59E0B',
+    retired: '#6B7280',
+    unknown: '#6B7280',
   };
 
-  return { backgroundColor: statusColors[status] || '#6B7280' };
+  return { backgroundColor: statusColors[status.toLowerCase()] || '#6B7280' };
 }
 
 function getCardLayoutStyle(layout: 'compact' | 'detailed' | 'minimal') {
@@ -274,7 +299,74 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   compactCard: {
-    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 6,
+    marginHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  compactHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  compactPropImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  compactImagePlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compactImagePlaceholderText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#cbd5e1',
+  },
+  compactNameContainer: {
+    flex: 1,
+    marginRight: 8,
+  },
+  compactPropName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  compactCategory: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 2,
+  },
+  compactStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  compactStatusText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  compactDescription: {
+    fontSize: 13,
+    color: '#cbd5e1',
+    marginTop: 6,
+    lineHeight: 18,
   },
   minimalCard: {
     padding: 6,

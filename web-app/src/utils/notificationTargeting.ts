@@ -160,6 +160,33 @@ export const SHOPPING_NOTIFICATION_MATRIX: Record<NotificationType, {
     targetRoles: ['buyer', 'props_supervisor'],
     priority: 'low',
     channels: ['in_app']
+  },
+
+  // Subscription-related notifications
+  subscription_expiring_soon: {
+    targetRoles: [], // User-specific, not role-based
+    priority: 'medium',
+    channels: ['push', 'in_app', 'email']
+  },
+  subscription_expiring_today: {
+    targetRoles: [],
+    priority: 'high',
+    channels: ['push', 'in_app', 'email']
+  },
+  subscription_expired: {
+    targetRoles: [],
+    priority: 'urgent',
+    channels: ['push', 'in_app', 'email']
+  },
+  subscription_payment_failed: {
+    targetRoles: [],
+    priority: 'urgent',
+    channels: ['push', 'in_app', 'email']
+  },
+  subscription_upgrade_available: {
+    targetRoles: [],
+    priority: 'low',
+    channels: ['in_app']
   }
 };
 

@@ -97,6 +97,41 @@ export class NotificationPreferencesService {
   }
 
   /**
+   * Check if user should receive subscription expiring soon notifications
+   */
+  static shouldReceiveSubscriptionExpiringSoon(preferences?: NotificationPreferences): boolean {
+    return preferences?.subscriptionExpiringSoon !== false;
+  }
+
+  /**
+   * Check if user should receive subscription expiring today notifications
+   */
+  static shouldReceiveSubscriptionExpiringToday(preferences?: NotificationPreferences): boolean {
+    return preferences?.subscriptionExpiringToday !== false;
+  }
+
+  /**
+   * Check if user should receive subscription expired notifications
+   */
+  static shouldReceiveSubscriptionExpired(preferences?: NotificationPreferences): boolean {
+    return preferences?.subscriptionExpired !== false;
+  }
+
+  /**
+   * Check if user should receive subscription payment failed notifications
+   */
+  static shouldReceiveSubscriptionPaymentFailed(preferences?: NotificationPreferences): boolean {
+    return preferences?.subscriptionPaymentFailed !== false;
+  }
+
+  /**
+   * Check if user should receive subscription upgrade available notifications
+   */
+  static shouldReceiveSubscriptionUpgradeAvailable(preferences?: NotificationPreferences): boolean {
+    return preferences?.subscriptionUpgradeAvailable !== false;
+  }
+
+  /**
    * Get default notification preferences (all enabled)
    */
   static getDefaultPreferences(): NotificationPreferences {
@@ -114,6 +149,11 @@ export class NotificationPreferencesService {
       taskDueToday: true,
       comments: true,
       systemNotifications: true,
+      subscriptionExpiringSoon: true,
+      subscriptionExpiringToday: true,
+      subscriptionExpired: true,
+      subscriptionPaymentFailed: true,
+      subscriptionUpgradeAvailable: true,
     };
   }
 }

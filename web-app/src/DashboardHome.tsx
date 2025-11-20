@@ -20,6 +20,7 @@ import { TaskboardActivitySummaryWidget } from './components/DashboardWidgets/Ta
 import { UpcomingDeadlinesWidget } from './components/DashboardWidgets/UpcomingDeadlinesWidget';
 import { CutPropsPackingWidget } from './components/DashboardWidgets/CutPropsPackingWidget';
 import { PropsNeedingWorkWidget } from './components/DashboardWidgets/PropsNeedingWorkWidget';
+import { ShoppingApprovalWidget } from './components/DashboardWidgets/ShoppingApprovalWidget';
 import { WidgetSettingsModal } from './components/DashboardWidgets/WidgetSettingsModal';
 import { useWidgetPreferences } from './hooks/useWidgetPreferences';
 
@@ -61,7 +62,7 @@ const DashboardHome: React.FC = () => {
   const [showWidgetSettings, setShowWidgetSettings] = useState(false);
   const { userProfile } = useWebAuth();
   const userRole = userProfile?.role || '';
-  const { isWidgetEnabled } = useWidgetPreferences(userRole);
+  const { isWidgetEnabled, preferences } = useWidgetPreferences(userRole);
 
   useEffect(() => {
     // Show onboarding if user hasn't completed it
@@ -294,58 +295,80 @@ const DashboardHome: React.FC = () => {
 
         {/* Widget Grid */}
         <WidgetGrid>
-          {isWidgetEnabled('my-tasks') && (
-            <MyTasksWidget
-              showId={currentShowId}
-              cards={cards}
-              userId={user?.uid}
-              userDisplayName={userProfile?.displayName}
-              userEmail={userProfile?.email}
-            />
-          )}
-
-          {isWidgetEnabled('taskboard-quick-links') && (
-            <TaskboardQuickLinksWidget
-              showId={currentShowId}
-              cards={cards}
-            />
-          )}
-
-          {isWidgetEnabled('upcoming-deadlines') && (
-            <UpcomingDeadlinesWidget
-              showId={currentShowId}
-              cards={cards}
-            />
-          )}
-
-          {isWidgetEnabled('task-planning-assistant') && (
-            <PropsWithoutTasksWidget
-              showId={currentShowId}
-              props={props}
-              cards={cards}
-            />
-          )}
-
-          {isWidgetEnabled('taskboard-activity-summary') && (
-            <TaskboardActivitySummaryWidget
-              showId={currentShowId}
-              cards={cards}
-            />
-          )}
-
-          {isWidgetEnabled('cut-props-packing') && (
-            <CutPropsPackingWidget
-              showId={currentShowId}
-              props={props}
-            />
-          )}
-
-          {isWidgetEnabled('props-needing-work') && (
-            <PropsNeedingWorkWidget
-              showId={currentShowId}
-              props={props}
-            />
-          )}
+          {/* Render widgets in the order from preferences.enabled */}
+          {(preferences?.enabled || []).map((widgetId) => {
+            switch (widgetId) {
+              case 'my-tasks':
+                return (
+                  <MyTasksWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    cards={cards}
+                    userId={user?.uid}
+                    userDisplayName={userProfile?.displayName}
+                    userEmail={userProfile?.email}
+                  />
+                );
+              case 'taskboard-quick-links':
+                return (
+                  <TaskboardQuickLinksWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    cards={cards}
+                  />
+                );
+              case 'upcoming-deadlines':
+                return (
+                  <UpcomingDeadlinesWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    cards={cards}
+                  />
+                );
+              case 'task-planning-assistant':
+                return (
+                  <PropsWithoutTasksWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    props={props}
+                    cards={cards}
+                  />
+                );
+              case 'taskboard-activity-summary':
+                return (
+                  <TaskboardActivitySummaryWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    cards={cards}
+                  />
+                );
+              case 'cut-props-packing':
+                return (
+                  <CutPropsPackingWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    props={props}
+                  />
+                );
+              case 'props-needing-work':
+                return (
+                  <PropsNeedingWorkWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    props={props}
+                  />
+                );
+              case 'shopping-approval-needed':
+                return (
+                  <ShoppingApprovalWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                  />
+                );
+              default:
+                return null;
+            }
+          })}
 
           {/* Subscription Resource Panel - keep this */}
           <SubscriptionResourcePanel />
@@ -358,7 +381,8 @@ const DashboardHome: React.FC = () => {
           !isWidgetEnabled('task-planning-assistant') &&
           !isWidgetEnabled('taskboard-activity-summary') &&
           !isWidgetEnabled('cut-props-packing') &&
-          !isWidgetEnabled('props-needing-work') && (
+          !isWidgetEnabled('props-needing-work') &&
+          !isWidgetEnabled('shopping-approval-needed') && (
             <motion.div
               variants={cardVariants}
               className="bg-pb-darker/50 backdrop-blur-sm rounded-2xl p-12 border border-pb-primary/20 text-center"

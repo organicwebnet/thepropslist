@@ -26,6 +26,7 @@ export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
           'upcoming-deadlines',
           'cut-props-packing',
           'props-needing-work',
+          'shopping-approval-needed',
         ],
         config: {},
       };
@@ -37,6 +38,7 @@ export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
           ...universalWidgets,
           'taskboard-activity-summary',
           'upcoming-deadlines',
+          'shopping-approval-needed',
         ],
         config: {},
       };
@@ -59,6 +61,7 @@ export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
           ...universalWidgets,
           'taskboard-activity-summary',
           'upcoming-deadlines',
+          'shopping-approval-needed',
         ],
         config: {},
       };

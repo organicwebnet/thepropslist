@@ -7,6 +7,7 @@
 import type { Prop } from '../../types/props';
 import type { CardData, BoardData } from '../../types/taskManager';
 import type { Show } from '../../types/Show';
+import type { ShoppingItem } from '../../shared/types/shopping';
 
 export type WidgetId = 
   | 'my-tasks'
@@ -15,7 +16,8 @@ export type WidgetId =
   | 'taskboard-activity-summary'
   | 'upcoming-deadlines'
   | 'cut-props-packing'
-  | 'props-needing-work';
+  | 'props-needing-work'
+  | 'shopping-approval-needed';
 
 export interface WidgetConfig {
   id: WidgetId;
@@ -38,6 +40,7 @@ export interface DashboardWidgetProps {
     cards?: CardData[];
     boards?: BoardData[];
     show?: Show;
+    shoppingItems?: ShoppingItem[];
   };
   onRefresh?: () => void;
 }

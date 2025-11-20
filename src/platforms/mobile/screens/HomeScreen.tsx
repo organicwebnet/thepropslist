@@ -72,7 +72,7 @@ export function HomeScreen() {
   const [loadingBoards, setLoadingBoards] = useState(true);
   const [errorBoards, setErrorBoards] = useState<string | null>(null);
 
-  const [upcomingTasks, setUpcomingTasks] = useState<FirebaseDocument<Task>[]>([]);
+  const [myTasks, setMyTasks] = useState<FirebaseDocument<Task>[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [errorTasks, setErrorTasks] = useState<string | null>(null);
 
@@ -92,9 +92,6 @@ export function HomeScreen() {
   // State for the FAB group
   const [fabOpen, setFabOpen] = useState(false);
 
-  // Add this state to memoize the date range per selectedShow
-  const [dateRange, setDateRange] = useState<{start: string, end: string} | null>(null);
-
   const [boardCardCounts, setBoardCardCounts] = useState<Record<string, number>>({});
 
   const [defaultBoardCreated, setDefaultBoardCreated] = useState<Record<string, boolean>>({});
@@ -108,13 +105,6 @@ export function HomeScreen() {
       setShowOnboarding(false);
     }
   }, [user, userProfile]);
-
-  useEffect(() => {
-    if (!selectedShow?.id) return;
-    const now = new Date();
-    const twoWeeksFromNow = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-    setDateRange({ start: now.toISOString(), end: twoWeeksFromNow.toISOString() });
-  }, [selectedShow?.id]);
 
   // Board creation handler, now wrapped in useCallback and stabilized with a ref lock
   const handleCreateBoard = useCallback(async ({ isDefault = false } = {}) => {
@@ -271,11 +261,11 @@ export function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service, user?.uid, selectedShow?.id]);
   
-  // Effect for fetching tasks
+  // Effect for fetching tasks assigned to the user
   useEffect(() => {
     setErrorTasks(null);
-    if (!service || !user?.uid || !selectedShow?.id || !dateRange) {
-      setUpcomingTasks([]);
+    if (!service || !user?.uid || !selectedShow?.id) {
+      setMyTasks([]);
       setLoadingTasks(false);
       if (!selectedShow) {
         setErrorTasks('Please select a show to view tasks.');
@@ -288,30 +278,23 @@ export function HomeScreen() {
     const unsubscribe = service.listenToCollection<Task>(
         'tasks',
         (tasks) => {
-            if (!dateRange) {
-              setUpcomingTasks([]);
-              setLoadingTasks(false);
-              return;
-            }
-            const startDate = new Date(dateRange.start);
-            const endDate = new Date(dateRange.end);
-
+            // Filter and sort all tasks assigned to the user
+            // Tasks with due dates are sorted by due date (earliest first)
+            // Tasks without due dates are placed at the end
             const filteredAndSortedTasks = tasks
-              .filter(task => {
-                if (!task.data?.dueDate) return false;
-                
-                const dueDate = task.data.dueDate.toDate ? task.data.dueDate.toDate() : new Date(task.data.dueDate as any);
-                return dueDate >= startDate && dueDate <= endDate;
-              })
               .sort((a, b) => {
-                const dateA = a.data?.dueDate ? (a.data.dueDate.toDate ? a.data.dueDate.toDate() : new Date(a.data.dueDate as any)) : 0;
-                const dateB = b.data?.dueDate ? (b.data.dueDate.toDate ? b.data.dueDate.toDate() : new Date(b.data.dueDate as any)) : 0;
+                const dateA = a.data?.dueDate ? (a.data.dueDate.toDate ? a.data.dueDate.toDate() : new Date(a.data.dueDate as any)) : null;
+                const dateB = b.data?.dueDate ? (b.data.dueDate.toDate ? b.data.dueDate.toDate() : new Date(b.data.dueDate as any)) : null;
+                
+                // Tasks without due dates go to the end
+                if (!dateA && !dateB) return 0;
                 if (!dateA) return 1;
                 if (!dateB) return -1;
+                
                 return dateA.getTime() - dateB.getTime();
               });
 
-            setUpcomingTasks(filteredAndSortedTasks);
+            setMyTasks(filteredAndSortedTasks);
             setLoadingTasks(false);
         },
         (err: Error) => {
@@ -326,7 +309,7 @@ export function HomeScreen() {
         }
     );
     return () => unsubscribe();
-}, [service, user?.uid, selectedShow?.id, dateRange]);
+}, [service, user?.uid, selectedShow?.id]);
 
   // Fetch card counts for each board
   useEffect(() => {
@@ -399,6 +382,16 @@ export function HomeScreen() {
     // Use board IDs instead of filteredBoards array to prevent recreation on array reference changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [service, filteredBoards.map(b => b.id).join(',')]);
+
+  const renderBetaBanner = () => (
+    <View style={styles.betaBanner}>
+      <View style={styles.betaBannerContent}>
+        <Ionicons name="information-circle" size={16} color="#fca5a5" />
+        <Text style={styles.betaBannerText}>BETA</Text>
+        <Text style={styles.betaBannerSubtext}>This app is in beta - things may change</Text>
+      </View>
+    </View>
+  );
 
   const renderWelcomeHeader = () => (
     <View style={styles.headerContainer}>
@@ -581,6 +574,7 @@ export function HomeScreen() {
         </View>
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
+            {renderBetaBanner()}
             {renderWelcomeHeader()}
             {renderGlobalSearch()}
             {renderShowSelector()}
@@ -596,14 +590,14 @@ export function HomeScreen() {
             {selectedShow && (
               <>
                 {renderInfoCard({
-                  title: "Upcoming Tasks",
-                  data: upcomingTasks,
+                  title: "Your Tasks",
+                  data: myTasks,
                   loading: loadingTasks,
                   error: errorTasks,
                   onCardPress: (item) => router.navigate(`/tasks/${item.id}` as any),
                   onSeeAllPress: () => router.navigate('/(tabs)/tasks' as any),
                   renderItem: (item) => item.data?.title || 'Untitled Task',
-                  emptyText: "No upcoming tasks for this show."
+                  emptyText: "No tasks assigned to you."
                 })}
               </>
             )}
@@ -739,6 +733,31 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   gridText: { color: darkColors.text, fontWeight: '600', fontSize: 12, textAlign: 'center' },
+  betaBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  betaBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  betaBannerText: {
+    color: '#fca5a5',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  betaBannerSubtext: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    flex: 1,
+  },
   headerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
   avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 12 },
   welcomeText: { color: darkColors.secondaryText, fontSize: 16 },

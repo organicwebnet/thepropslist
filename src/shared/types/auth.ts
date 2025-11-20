@@ -79,6 +79,13 @@ export interface NotificationPreferences {
   // General notifications
   comments?: boolean; // Notifications for comments on props/items
   systemNotifications?: boolean; // System-wide notifications
+  
+  // Subscription-related notifications
+  subscriptionExpiringSoon?: boolean; // Notifications when subscription expires in 7 days
+  subscriptionExpiringToday?: boolean; // Notifications when subscription expires today
+  subscriptionExpired?: boolean; // Notifications when subscription has expired
+  subscriptionPaymentFailed?: boolean; // Notifications when subscription payment fails
+  subscriptionUpgradeAvailable?: boolean; // Notifications when upgrade to higher tier is available
 }
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, UserPermissions> = {

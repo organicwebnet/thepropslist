@@ -164,12 +164,29 @@ export function useWidgetPreferences(userRole?: string) {
     return preferences?.config?.[widgetId] || {};
   }, [preferences]);
 
+  const updateWidgetOrder = useCallback(async (orderedWidgetIds: WidgetId[]) => {
+    try {
+      await service.updateWidgetOrder(orderedWidgetIds);
+      setPreferences(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          enabled: orderedWidgetIds,
+        };
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update widget order');
+      throw err;
+    }
+  }, [service]);
+
   return {
     preferences,
     loading,
     error,
     toggleWidget,
     updateConfig,
+    updateWidgetOrder,
     isWidgetEnabled,
     getWidgetConfig,
   };

@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 // Context Providers
@@ -45,31 +46,33 @@ export default function RootLayout() {
 
   // For mobile platforms, use full Firebase setup
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <FirebaseProvider>
-        <AuthProvider>
-          <ThemeProvider>
-            <FontProvider>
-              <ShowsProvider>
-                <PropsProvider>
-                  <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="index" />
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen name="auth" options={{ headerShown: false }} />
-                    <Stack.Screen name="c/[containerId]" options={{ headerShown: true }} />
-                    <Stack.Screen name="view/prop/[propId]" options={{ headerShown: true }} />
-                    <Stack.Screen name="feedback" options={{ headerShown: true }} />
-                  </Stack>
-                  <IssueLoggerWidget
-                    enabled={__DEV__}
-                  />
-                  <StatusBar style="light" backgroundColor="#18181b" translucent={false} />
-                </PropsProvider>
-              </ShowsProvider>
-            </FontProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </FirebaseProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <FirebaseProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              <FontProvider>
+                <ShowsProvider>
+                  <PropsProvider>
+                    <Stack screenOptions={{ headerShown: false }}>
+                      <Stack.Screen name="index" />
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen name="auth" options={{ headerShown: false }} />
+                      <Stack.Screen name="c/[containerId]" options={{ headerShown: true }} />
+                      <Stack.Screen name="view/prop/[propId]" options={{ headerShown: true }} />
+                      <Stack.Screen name="feedback" options={{ headerShown: true }} />
+                    </Stack>
+                    <IssueLoggerWidget
+                      enabled={true}
+                    />
+                    <StatusBar style="light" backgroundColor="#18181b" translucent={false} />
+                  </PropsProvider>
+                </ShowsProvider>
+              </FontProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </FirebaseProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 } 

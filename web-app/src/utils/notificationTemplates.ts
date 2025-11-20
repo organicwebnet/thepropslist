@@ -189,6 +189,48 @@ export const SHOPPING_NOTIFICATION_TEMPLATES: Record<NotificationType, Notificat
     action: 'View Task',
     priority: 'low',
     channels: ['in_app']
+  },
+
+  // Subscription-related notifications
+  subscription_expiring_soon: {
+    title: (_item: ShoppingItem) => '⚠️ Subscription Expiring Soon',
+    message: (_item: ShoppingItem) => 
+      'Your subscription will expire in 7 days. Renew now to continue enjoying all features.',
+    action: 'Renew Subscription',
+    priority: 'medium',
+    channels: ['push', 'in_app', 'email']
+  },
+  subscription_expiring_today: {
+    title: (_item: ShoppingItem) => '🔔 Subscription Expiring Today',
+    message: (_item: ShoppingItem) => 
+      'Your subscription expires today. Renew now to avoid losing access to premium features.',
+    action: 'Renew Now',
+    priority: 'high',
+    channels: ['push', 'in_app', 'email']
+  },
+  subscription_expired: {
+    title: (_item: ShoppingItem) => '❌ Subscription Expired',
+    message: (_item: ShoppingItem) => 
+      'Your subscription has expired. Renew now to restore access to all features.',
+    action: 'Renew Subscription',
+    priority: 'urgent',
+    channels: ['push', 'in_app', 'email']
+  },
+  subscription_payment_failed: {
+    title: (_item: ShoppingItem) => '💳 Payment Failed',
+    message: (_item: ShoppingItem) => 
+      'Payment for your subscription failed. Please update your payment method to continue service.',
+    action: 'Update Payment',
+    priority: 'urgent',
+    channels: ['push', 'in_app', 'email']
+  },
+  subscription_upgrade_available: {
+    title: (_item: ShoppingItem) => '⬆️ Upgrade Available',
+    message: (_item: ShoppingItem) => 
+      'You can upgrade your subscription to access more features and higher limits.',
+    action: 'View Plans',
+    priority: 'low',
+    channels: ['in_app']
   }
 };
 

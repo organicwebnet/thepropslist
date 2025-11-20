@@ -5,7 +5,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, RotateCcw, Check } from 'lucide-react';
+import { X, RotateCcw, Check, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useWidgetPreferences } from '../../hooks/useWidgetPreferences';
 import { useWebAuth } from '../../contexts/WebAuthContext';
 import { getRoleBasedWidgetDefaults } from '../../utils/widgetRoleDefaults';
@@ -45,6 +48,85 @@ const WIDGET_DESCRIPTIONS: Record<WidgetId, { name: string; description: string 
     name: 'Props Needing Work',
     description: 'Props requiring repairs, maintenance, or modifications',
   },
+  'shopping-approval-needed': {
+    name: 'Shopping Items Needing Approval',
+    description: 'Shopping items with options pending approval',
+  },
+};
+
+// Sortable Widget Item Component
+interface SortableWidgetItemProps {
+  widgetId: WidgetId;
+  enabled: boolean;
+  onToggle: (widgetId: WidgetId) => void;
+}
+
+const SortableWidgetItem: React.FC<SortableWidgetItemProps> = ({ widgetId, enabled, onToggle }) => {
+  const info = WIDGET_DESCRIPTIONS[widgetId];
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: widgetId, disabled: !enabled });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`p-4 rounded-lg border border-pb-primary/20 bg-pb-primary/5 hover:bg-pb-primary/10 transition-colors ${
+        isDragging ? 'z-50' : ''
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 mb-1">
+            {enabled && (
+              <div
+                {...attributes}
+                {...listeners}
+                className="cursor-grab active:cursor-grabbing text-pb-gray hover:text-white transition-colors"
+                aria-label="Drag to reorder"
+              >
+                <GripVertical className="w-5 h-5" />
+              </div>
+            )}
+            <button
+              onClick={() => onToggle(widgetId)}
+              className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary ${
+                enabled ? 'bg-green-500' : 'bg-pb-primary/30'
+              }`}
+              aria-label={`${enabled ? 'Disable' : 'Enable'} ${info.name} widget`}
+              aria-checked={enabled}
+              role="switch"
+              type="button"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                  enabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+            <div>
+              <h3 className="text-white font-medium">{info.name}</h3>
+              <p className="text-xs text-pb-gray mt-0.5">{info.description}</p>
+            </div>
+          </div>
+        </div>
+        {enabled && (
+          <Check className="w-5 h-5 text-green-400 flex-shrink-0 ml-2" />
+        )}
+      </div>
+    </div>
+  );
 };
 
 export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
@@ -58,28 +140,42 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
     loading,
     toggleWidget,
     isWidgetEnabled,
+    updateWidgetOrder,
     // updateConfig, // Available for future widget-specific configuration
   } = useWidgetPreferences(userRole);
 
   const [localEnabled, setLocalEnabled] = useState<Set<WidgetId>>(new Set());
+  const [localOrder, setLocalOrder] = useState<WidgetId[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Initialize local state from preferences
   useEffect(() => {
     if (preferences) {
       setLocalEnabled(new Set(preferences.enabled));
+      // Use the enabled array as the order (it represents the display order)
+      setLocalOrder(preferences.enabled || []);
       setHasChanges(false);
     }
   }, [preferences]);
 
   const handleToggle = (widgetId: WidgetId) => {
     const newEnabled = new Set(localEnabled);
+    let newOrder = [...localOrder];
+    
     if (newEnabled.has(widgetId)) {
+      // Disable widget - remove from enabled and order
       newEnabled.delete(widgetId);
+      newOrder = newOrder.filter(id => id !== widgetId);
     } else {
+      // Enable widget - add to enabled and append to order
       newEnabled.add(widgetId);
+      if (!newOrder.includes(widgetId)) {
+        newOrder.push(widgetId);
+      }
     }
+    
     setLocalEnabled(newEnabled);
+    setLocalOrder(newOrder);
     setHasChanges(true);
   };
 
@@ -95,6 +191,12 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
         }
       }
       
+      // Save the new order (only enabled widgets in the order they appear)
+      const orderedEnabled = localOrder.filter(id => localEnabled.has(id));
+      if (updateWidgetOrder) {
+        await updateWidgetOrder(orderedEnabled);
+      }
+      
       setHasChanges(false);
       onClose();
     } catch (error) {
@@ -106,7 +208,34 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
   const handleReset = () => {
     const defaults = getRoleBasedWidgetDefaults(userRole);
     setLocalEnabled(new Set(defaults.enabled));
+    setLocalOrder(defaults.enabled || []);
     setHasChanges(true);
+  };
+
+  // Drag and drop handlers
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before starting drag
+      },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = localOrder.indexOf(active.id as WidgetId);
+    const newIndex = localOrder.indexOf(over.id as WidgetId);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newOrder = arrayMove(localOrder, oldIndex, newIndex);
+      setLocalOrder(newOrder);
+      setHasChanges(true);
+    }
   };
 
   if (!isOpen) return null;
@@ -142,52 +271,57 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
           ) : (
             <>
               <p className="text-sm text-pb-gray mb-4">
-                Choose which widgets to display on your dashboard. You can always change these settings later.
+                Choose which widgets to display on your dashboard. Drag enabled widgets to reorder them. You can always change these settings later.
               </p>
 
-              <div className="space-y-3">
-                {allWidgetIds.map((widgetId) => {
-                  const info = WIDGET_DESCRIPTIONS[widgetId];
-                  const enabled = localEnabled.has(widgetId);
-
-                  return (
-                    <div
-                      key={widgetId}
-                      className="p-4 rounded-lg border border-pb-primary/20 bg-pb-primary/5 hover:bg-pb-primary/10 transition-colors"
+              {/* Enabled widgets - draggable */}
+              {localOrder.filter(id => localEnabled.has(id)).length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-white mb-3">Enabled Widgets (drag to reorder)</h3>
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={localOrder.filter(id => localEnabled.has(id))}
+                      strategy={verticalListSortingStrategy}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-1">
-                            <button
-                              onClick={() => handleToggle(widgetId)}
-                              className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-pb-primary ${
-                                enabled ? 'bg-green-500' : 'bg-pb-primary/30'
-                              }`}
-                              aria-label={`${enabled ? 'Disable' : 'Enable'} ${info.name} widget`}
-                              aria-checked={enabled}
-                              role="switch"
-                              type="button"
-                            >
-                              <span
-                                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                                  enabled ? 'translate-x-5' : 'translate-x-0'
-                                }`}
-                              />
-                            </button>
-                            <div>
-                              <h3 className="text-white font-medium">{info.name}</h3>
-                              <p className="text-xs text-pb-gray mt-0.5">{info.description}</p>
-                            </div>
-                          </div>
-                        </div>
-                        {enabled && (
-                          <Check className="w-5 h-5 text-green-400 flex-shrink-0 ml-2" />
-                        )}
+                      <div className="space-y-3">
+                        {localOrder
+                          .filter(id => localEnabled.has(id))
+                          .map((widgetId) => (
+                            <SortableWidgetItem
+                              key={widgetId}
+                              widgetId={widgetId}
+                              enabled={true}
+                              onToggle={handleToggle}
+                            />
+                          ))}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    </SortableContext>
+                  </DndContext>
+                </div>
+              )}
+
+              {/* Disabled widgets - not draggable */}
+              {allWidgetIds.filter(id => !localEnabled.has(id)).length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-white mb-3">Disabled Widgets</h3>
+                  <div className="space-y-3">
+                    {allWidgetIds
+                      .filter(id => !localEnabled.has(id))
+                      .map((widgetId) => (
+                        <SortableWidgetItem
+                          key={widgetId}
+                          widgetId={widgetId}
+                          enabled={false}
+                          onToggle={handleToggle}
+                        />
+                      ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between pt-4 border-t border-pb-primary/20">
                 <button

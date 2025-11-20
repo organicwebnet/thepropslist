@@ -107,6 +107,17 @@ export class WidgetPreferencesService {
       },
     });
   }
+
+  /**
+   * Update widget order (the enabled array order represents display order)
+   */
+  async updateWidgetOrder(orderedWidgetIds: WidgetId[]): Promise<void> {
+    const current = await this.loadPreferences();
+    await this.savePreferences({
+      enabled: orderedWidgetIds,
+      config: current?.config || {},
+    });
+  }
 }
 
 /**

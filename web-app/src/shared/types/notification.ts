@@ -20,7 +20,13 @@ export type NotificationType =
   | 'shopping_approval_needed'     // Items waiting for approval
   | 'shopping_material_request'    // Material request from maker
   | 'shopping_material_approved'   // Material request approved
-  | 'shopping_task_linked';        // Material linked to task board
+  | 'shopping_task_linked'         // Material linked to task board
+  // Subscription-related notifications
+  | 'subscription_expiring_soon'   // Subscription expiring in 7 days
+  | 'subscription_expiring_today'  // Subscription expiring today
+  | 'subscription_expired'         // Subscription has expired
+  | 'subscription_payment_failed'  // Payment failed for subscription
+  | 'subscription_upgrade_available'; // Upgrade available to higher tier
 
 export interface AppNotification {
   id: string;

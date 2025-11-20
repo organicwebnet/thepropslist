@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator, Switch, Image, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -9,6 +9,8 @@ import { useTheme } from '../../src/contexts/ThemeContext';
 import { lightTheme, darkTheme } from '../../src/styles/theme';
 import type { NotificationPreferences } from '../../src/shared/types/auth';
 import { NotificationPreferencesService } from '../../src/services/notificationPreferences';
+import * as ImagePicker from 'expo-image-picker';
+import { useFirebase } from '../../src/platforms/mobile/contexts/FirebaseContext';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -29,6 +31,10 @@ export default function ProfileScreen() {
   );
   const [savingNotifications, setSavingNotifications] = useState(false);
   const [notificationError, setNotificationError] = useState<string | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editingDisplayName, setEditingDisplayName] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const { service: firebaseService } = useFirebase();
 
   useEffect(() => {
     checkBiometricStatus();
@@ -49,6 +55,12 @@ export default function ProfileScreen() {
       setSavedNotificationPreferences(defaults);
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    if (showEditProfile) {
+      setEditingDisplayName(userProfile?.displayName || user?.displayName || '');
+    }
+  }, [showEditProfile, userProfile, user]);
 
   const checkBiometricStatus = async () => {
     try {
@@ -116,8 +128,90 @@ export default function ProfileScreen() {
   };
 
   const handleEditProfile = () => {
-    // TODO: Navigate to edit profile screen
-    console.log('Edit profile pressed');
+    setShowEditProfile(true);
+  };
+
+  const handleCloseEditProfile = () => {
+    setShowEditProfile(false);
+    setEditingDisplayName('');
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant camera roll permissions to update your profile photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const { uri } = result.assets[0];
+        await handleUpdateProfileImage(uri);
+      }
+    } catch (error: any) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
+  const handleUpdateProfileImage = async (imageUri: string) => {
+    if (!user || !firebaseService?.storage) {
+      Alert.alert('Error', 'Unable to update profile image. Please try again.');
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      // Upload to Firebase Storage using React Native Firebase API
+      const storageRef = firebaseService.storage.ref(`profileImages/${user.uid}`);
+      const task = storageRef.putFile(imageUri);
+
+      // Wait for upload to complete
+      await task;
+
+      // Get download URL
+      const downloadURL = await storageRef.getDownloadURL();
+
+      // Update user profile
+      await updateUserProfile({
+        photoURL: downloadURL,
+      });
+
+      Alert.alert('Success', 'Profile photo updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating profile image:', error);
+      Alert.alert('Error', error.message || 'Failed to update profile photo. Please try again.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editingDisplayName.trim()) {
+      Alert.alert('Error', 'Display name cannot be empty.');
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      await updateUserProfile({
+        displayName: editingDisplayName.trim(),
+      });
+      Alert.alert('Success', 'Profile updated successfully!');
+      setShowEditProfile(false);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', error.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const handleSettings = () => {
@@ -257,7 +351,11 @@ export default function ProfileScreen() {
         <View style={styles.profileSection}>
           <View style={styles.avatar}>
             {user?.photoURL ? (
-              <Text style={styles.avatarText}>Photo</Text>
+              <Image 
+                source={{ uri: user.photoURL }} 
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
             ) : (
               <Ionicons name="person" size={48} color="#6b7280" />
             )}
@@ -369,7 +467,7 @@ export default function ProfileScreen() {
               <View style={styles.biometricInfo}>
                 <Ionicons 
                   name="finger-print" 
-                  size={48} 
+                  size={32} 
                   color={biometricCapabilities?.isAvailable ? "#10B981" : "#6b7280"} 
                 />
                 <Text style={styles.biometricTitle}>
@@ -653,6 +751,81 @@ export default function ProfileScreen() {
                   </View>
                 </View>
 
+                {/* Subscription-related notifications */}
+                <View style={styles.notificationSection}>
+                  <Text style={styles.sectionTitle}>Subscription</Text>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="time-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Expiring Soon (7 days)</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.subscriptionExpiringSoon ?? true}
+                      onValueChange={() => toggleNotificationPreference('subscriptionExpiringSoon')}
+                      accessibilityLabel="Enable subscription expiring soon notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="alert-circle-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Expiring Today</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.subscriptionExpiringToday ?? true}
+                      onValueChange={() => toggleNotificationPreference('subscriptionExpiringToday')}
+                      accessibilityLabel="Enable subscription expiring today notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="close-circle-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Expired</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.subscriptionExpired ?? true}
+                      onValueChange={() => toggleNotificationPreference('subscriptionExpired')}
+                      accessibilityLabel="Enable subscription expired notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="card-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Payment Failed</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.subscriptionPaymentFailed ?? true}
+                      onValueChange={() => toggleNotificationPreference('subscriptionPaymentFailed')}
+                      accessibilityLabel="Enable subscription payment failed notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  <View style={styles.notificationItem}>
+                    <View style={styles.notificationItemLeft}>
+                      <Ionicons name="arrow-up-circle-outline" size={20} color={colors.primary} />
+                      <Text style={styles.notificationItemText}>Upgrade Available</Text>
+                    </View>
+                    <Switch
+                      value={notificationPreferences.subscriptionUpgradeAvailable ?? true}
+                      onValueChange={() => toggleNotificationPreference('subscriptionUpgradeAvailable')}
+                      accessibilityLabel="Enable subscription upgrade available notifications"
+                      accessibilityRole="switch"
+                      trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </View>
+
                 {/* Action Buttons */}
                 <View style={styles.actionButtonsContainer}>
                   <TouchableOpacity
@@ -682,6 +855,92 @@ export default function ProfileScreen() {
                     )}
                   </TouchableOpacity>
                 </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={showEditProfile}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCloseEditProfile}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Profile</Text>
+              <TouchableOpacity 
+                onPress={handleCloseEditProfile}
+                accessibilityLabel="Close edit profile"
+                accessibilityRole="button"
+              >
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Profile Photo Section */}
+              <View style={styles.editProfilePhotoSection}>
+                <Text style={styles.sectionTitle}>Profile Photo</Text>
+                <View style={styles.editPhotoContainer}>
+                  <View style={styles.editAvatar}>
+                    {user?.photoURL ? (
+                      <Image 
+                        source={{ uri: user.photoURL }} 
+                        style={styles.editAvatarImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Ionicons name="person" size={48} color="#6b7280" />
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.changePhotoButton}
+                    onPress={handlePickImage}
+                    disabled={savingProfile}
+                    accessibilityLabel="Change profile photo"
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="camera" size={20} color="white" />
+                    <Text style={styles.changePhotoButtonText}>Change Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Display Name Section */}
+              <View style={styles.editProfileSection}>
+                <Text style={styles.sectionTitle}>Display Name</Text>
+                <TextInput
+                  style={styles.nameInput}
+                  value={editingDisplayName}
+                  onChangeText={setEditingDisplayName}
+                  placeholder="Enter your display name"
+                  placeholderTextColor={colors.textSecondary}
+                  editable={!savingProfile}
+                />
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtonsContainer}>
+                <TouchableOpacity
+                  style={[styles.saveButton, savingProfile && styles.saveButtonDisabled]}
+                  onPress={handleSaveProfile}
+                  disabled={savingProfile}
+                  accessibilityLabel="Save profile changes"
+                  accessibilityRole="button"
+                >
+                  {savingProfile ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark" size={20} color="white" />
+                      <Text style={styles.saveButtonText}>Save Changes</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
             </ScrollView>
           </View>
@@ -732,10 +991,12 @@ const getStyles = (colors: typeof lightTheme.colors) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    overflow: 'hidden',
   },
-  avatarText: {
-    color: colors.textSecondary,
-    fontSize: 12,
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   userName: {
     fontSize: 24,
@@ -926,5 +1187,54 @@ const getStyles = (colors: typeof lightTheme.colors) => StyleSheet.create({
     color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
+  },
+  editProfilePhotoSection: {
+    marginBottom: 24,
+  },
+  editPhotoContainer: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  editAvatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  editAvatarImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+  },
+  changePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    gap: 8,
+  },
+  changePhotoButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editProfileSection: {
+    marginBottom: 24,
+  },
+  nameInput: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.textSecondary + '30',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: colors.text,
+    marginTop: 8,
   },
 }); 
