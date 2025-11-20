@@ -9,6 +9,7 @@ const tabIcons: Record<string, { focused: string; unfocused: string }> = {
   'props/index': { focused: 'cube', unfocused: 'cube-outline' },
   'shows/index': { focused: 'film', unfocused: 'film-outline' },
   'packing': { focused: 'cube', unfocused: 'cube-outline' },
+  'todos/index': { focused: 'checkbox', unfocused: 'checkbox-outline' },
   'help': { focused: 'help-circle', unfocused: 'help-circle-outline' },
   'profile': { focused: 'person', unfocused: 'person-outline' },
 };
@@ -18,6 +19,7 @@ const tabLabels: Record<string, string> = {
   'props/index': 'Props',
   'shows/index': 'Shows',
   'packing': 'Packing',
+  'todos/index': 'Taskboard',
   'help': 'Help',
   'profile': 'Profile',
 };
@@ -26,7 +28,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
   const insets = useSafeAreaInsets();
   
   // Define the order of tabs
-  const tabOrder = ['index', 'props/index', 'shows/index', 'packing', 'help', 'profile'];
+  const tabOrder = ['index', 'props/index', 'shows/index', 'packing', 'todos/index', 'help', 'profile'];
   
   // Filter and sort to only show the main tabs in the correct order
   const visibleRoutes = state.routes

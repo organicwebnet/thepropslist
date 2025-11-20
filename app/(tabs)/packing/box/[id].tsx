@@ -1,0 +1,688 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Image,
+} from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePacking } from '../../../../src/hooks/usePacking';
+import { useShows } from '../../../../src/contexts/ShowsContext';
+import { useProps } from '../../../../src/contexts/PropsContext';
+import type { PackingBox } from '../../../../src/types/packing';
+import LinearGradient from 'react-native-linear-gradient';
+import StyledText from '../../../../src/components/StyledText';
+import { useTheme } from '../../../../src/contexts/ThemeContext';
+import { lightTheme, darkTheme } from '../../../../src/styles/theme';
+import { formatDistanceToNow } from 'date-fns';
+
+export default function BoxDetailsScreen() {
+  const router = useRouter();
+  const { id, showId } = useLocalSearchParams<{ id: string; showId: string }>();
+  const { theme } = useTheme();
+  const currentThemeColors = theme === 'light' ? lightTheme.colors : darkTheme.colors;
+  
+  const [box, setBox] = useState<PackingBox | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [parentBox, setParentBox] = useState<PackingBox | null>(null);
+  const [showName, setShowName] = useState<string>('');
+  
+  // We'll get showId from box data if not provided, so use a placeholder for now
+  const { getDocument: getBoxById } = usePacking(showId);
+  const { getShowById } = useShows();
+  const { props: allProps } = useProps();
+
+  useEffect(() => {
+    const loadBox = async () => {
+      if (!id) {
+        setError('Box ID is required');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Determine which showId to use - prefer param, fallback to box data
+        const effectiveShowId = showId || undefined;
+
+        // Fetch box document
+        const boxDoc = await getBoxById(id);
+        if (!boxDoc || !boxDoc.data) {
+          setError('Box not found');
+          setLoading(false);
+          return;
+        }
+
+        const boxData = {
+          ...boxDoc.data,
+          id: boxDoc.id,
+        } as PackingBox;
+
+        setBox(boxData);
+
+        // Load show name if we have showId
+        const boxShowId = boxData.showId || effectiveShowId;
+        if (boxShowId) {
+          const show = await getShowById(boxShowId);
+          if (show) {
+            setShowName(show.name || '');
+          }
+        }
+
+        // Check if box has a parent (current location)
+        // Note: PackingBox doesn't have parentId in the type, but we can check if it exists
+        const parentId = (boxData as any).parentId;
+        if (parentId) {
+          try {
+            // Try to fetch parent using the same getBoxById function
+            // This will work if parent is in the same show context
+            const parentDoc = await getBoxById(parentId);
+            if (parentDoc && parentDoc.data) {
+              setParentBox({
+                ...parentDoc.data,
+                id: parentDoc.id,
+              } as PackingBox);
+            }
+          } catch (parentErr) {
+            // Silently fail if parent can't be loaded
+            console.warn('Could not load parent box:', parentErr);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading box:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load box');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBox();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, showId, getBoxById, getShowById]);
+
+  const makeQrCodeUrl = (boxId: string) => {
+    const payload = JSON.stringify({ type: 'packingBox', id: boxId, showId: box?.showId || showId });
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payload)}`;
+  };
+
+  const getStatusColor = (status?: string) => {
+    switch (status) {
+      case 'draft': return '#9CA3AF';
+      case 'packed': return '#93C5FD';
+      case 'shipped': return '#C4B5FD';
+      case 'delivered': return '#86EFAC';
+      case 'cancelled': return '#F87171';
+      default: return '#FCD34D';
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'draft': return 'edit-3';
+      case 'packed': return 'package';
+      case 'shipped': return 'truck';
+      case 'delivered': return 'check-circle';
+      case 'cancelled': return 'x-circle';
+      default: return 'alert-triangle';
+    }
+  };
+
+  if (loading) {
+    return (
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.container}
+      >
+        <Stack.Screen
+          options={{
+            title: 'Box Details',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: '#fff',
+          }}
+        />
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#fff" />
+          <StyledText style={[styles.loadingText, { color: currentThemeColors.textPrimary }]}>
+            Loading box details...
+          </StyledText>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  if (error || !box) {
+    return (
+      <LinearGradient
+        colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+        locations={[0, 0.2, 0.5, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.container}
+      >
+        <Stack.Screen
+          options={{
+            title: 'Box Details',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: '#fff',
+          }}
+        />
+        <View style={styles.centerContent}>
+          <Feather name="alert-circle" size={64} color="#fff" />
+          <StyledText style={[styles.errorTitle, { color: currentThemeColors.textPrimary }]}>
+            {error || 'Box Not Found'}
+          </StyledText>
+          <TouchableOpacity
+            style={[styles.backButton, { backgroundColor: 'rgba(192,132,252,0.25)' }]}
+            onPress={() => router.back()}
+          >
+            <Feather name="arrow-left" size={18} color="#fff" />
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  const status = box.status || 'draft';
+  const statusColor = getStatusColor(status);
+  const statusIcon = getStatusIcon(status);
+  const totalWeight = box.totalWeight || box.props?.reduce((sum, p) => sum + (p.weight || 0), 0) || 0;
+  const propCount = box.props?.reduce((sum, p) => sum + (p.quantity || 1), 0) || 0;
+  
+  let timeAgo = 'Just now';
+  if (box.updatedAt) {
+    try {
+      const updatedDate = box.updatedAt instanceof Date ? box.updatedAt : new Date(box.updatedAt);
+      timeAgo = formatDistanceToNow(updatedDate, { addSuffix: true });
+    } catch {
+      timeAgo = 'Unknown';
+    }
+  }
+
+  // Get props details for display
+  const boxProps = box.props || [];
+  const propsWithDetails = boxProps.map(packedProp => {
+    const prop = allProps?.find(p => p.id === packedProp.propId);
+    return {
+      ...packedProp,
+      propDetails: prop,
+    };
+  });
+
+  return (
+    <LinearGradient
+      colors={['#2B2E8C', '#3A4ED6', '#6C3A8C', '#3A8CC1', '#1A2A6C']}
+      locations={[0, 0.2, 0.5, 0.8, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
+      <Stack.Screen
+        options={{
+          title: box.name || 'Box Details',
+          headerStyle: { backgroundColor: 'transparent' },
+          headerTintColor: '#fff',
+        }}
+      />
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Box Details Section */}
+        <View style={[styles.card, { backgroundColor: 'rgba(31, 41, 55, 0.9)', borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
+          <View style={styles.cardHeader}>
+            <Feather name="package" size={24} color="#fff" />
+            <StyledText style={[styles.cardTitle, { color: currentThemeColors.textPrimary }]}>
+              Box Details
+            </StyledText>
+          </View>
+
+          <View style={styles.detailRow}>
+            <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Name:</StyledText>
+            <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+              {box.name || 'Unnamed Box'}
+            </StyledText>
+          </View>
+
+          {box.description && (
+            <View style={styles.detailRow}>
+              <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Description:</StyledText>
+              <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+                {box.description}
+              </StyledText>
+            </View>
+          )}
+
+          <View style={styles.detailRow}>
+            <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Status:</StyledText>
+            <View style={[styles.statusBadge, { backgroundColor: `${statusColor}20` }]}>
+              <Feather name={statusIcon} size={16} color={statusColor} />
+              <StyledText style={[styles.statusText, { color: statusColor }]}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </StyledText>
+            </View>
+          </View>
+
+          {showName && (
+            <View style={styles.detailRow}>
+              <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Show:</StyledText>
+              <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+                {showName}
+              </StyledText>
+            </View>
+          )}
+
+          {(box.actNumber > 0 || box.sceneNumber > 0) && (
+            <View style={styles.detailRow}>
+              <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Act/Scene:</StyledText>
+              <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+                Act {box.actNumber || 0}, Scene {box.sceneNumber || 0}
+              </StyledText>
+            </View>
+          )}
+
+          <View style={styles.detailRow}>
+            <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Total Weight:</StyledText>
+            <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+              {totalWeight.toFixed(2)} {box.weightUnit || 'kg'}
+              {box.isHeavy && (
+                <View style={[styles.heavyBadge, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                  <Feather name="alert-triangle" size={12} color="#FCD34D" />
+                  <Text style={[styles.heavyText, { color: '#FCD34D' }]}>Heavy</Text>
+                </View>
+              )}
+            </StyledText>
+          </View>
+
+          <View style={styles.detailRow}>
+            <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Items:</StyledText>
+            <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+              {propCount} item{propCount !== 1 ? 's' : ''}
+            </StyledText>
+          </View>
+
+          <View style={styles.detailRow}>
+            <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Last Updated:</StyledText>
+            <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+              {timeAgo}
+            </StyledText>
+          </View>
+
+          {box.containerType && (
+            <View style={styles.detailRow}>
+              <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Container Type:</StyledText>
+              <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+                {box.containerType}
+              </StyledText>
+            </View>
+          )}
+        </View>
+
+        {/* Current Location Section */}
+        <View style={[styles.card, { backgroundColor: 'rgba(31, 41, 55, 0.9)', borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
+          <View style={styles.cardHeader}>
+            <Feather name="map-pin" size={24} color="#fff" />
+            <StyledText style={[styles.cardTitle, { color: currentThemeColors.textPrimary }]}>
+              Current Location
+            </StyledText>
+          </View>
+
+          {parentBox ? (
+            <View style={styles.detailRow}>
+              <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Placed in:</StyledText>
+              <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+                {parentBox.name || `Box #${parentBox.id.substring(0, 8)}`}
+              </StyledText>
+            </View>
+          ) : (
+            <View style={styles.detailRow}>
+              <StyledText style={[styles.detailValue, { color: currentThemeColors.textSecondary, fontStyle: 'italic' }]}>
+                Not placed in another container
+              </StyledText>
+            </View>
+          )}
+
+          {/* Check if any props have location info */}
+          {propsWithDetails.some(p => p.propDetails?.location || p.propDetails?.currentLocation) && (
+            <View style={styles.sectionDivider} />
+          )}
+
+          {propsWithDetails
+            .filter(p => p.propDetails?.location || p.propDetails?.currentLocation)
+            .slice(0, 3)
+            .map((packedProp, idx) => (
+              <View key={idx} style={styles.detailRow}>
+                <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>
+                  {packedProp.name}:
+                </StyledText>
+                <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+                  {packedProp.propDetails?.currentLocation || packedProp.propDetails?.location || 'Unknown'}
+                </StyledText>
+              </View>
+            ))}
+        </View>
+
+        {/* Label Details Section */}
+        <View style={[styles.card, { backgroundColor: 'rgba(31, 41, 55, 0.9)', borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
+          <View style={styles.cardHeader}>
+            <Feather name="tag" size={24} color="#fff" />
+            <StyledText style={[styles.cardTitle, { color: currentThemeColors.textPrimary }]}>
+              Label Details
+            </StyledText>
+          </View>
+
+          {/* QR Code */}
+          <View style={styles.qrContainer}>
+            <Image
+              source={{ uri: makeQrCodeUrl(box.id) }}
+              style={styles.qrCode}
+              resizeMode="contain"
+            />
+            <StyledText style={[styles.qrLabel, { color: currentThemeColors.textSecondary }]}>
+              QR Code
+            </StyledText>
+          </View>
+
+          <View style={styles.detailRow}>
+            <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Box ID:</StyledText>
+            <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary, fontFamily: 'monospace' }]}>
+              {box.id}
+            </StyledText>
+          </View>
+
+          <View style={styles.detailRow}>
+            <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Public URL:</StyledText>
+            <StyledText style={[styles.detailValue, { color: '#93C5FD' }]}>
+              https://thepropslist.uk/c/{box.id}
+            </StyledText>
+          </View>
+
+          {/* Label Settings */}
+          {(box.labelIncludeFragile || box.labelIncludeThisWayUp || box.labelIncludeKeepDry || box.labelIncludeBatteries || box.labelHandlingNote) && (
+            <>
+              <View style={styles.sectionDivider} />
+              <StyledText style={[styles.sectionSubtitle, { color: currentThemeColors.textPrimary }]}>
+                Label Settings
+              </StyledText>
+
+              {box.labelIncludeFragile && (
+                <View style={styles.labelSettingRow}>
+                  <MaterialCommunityIcons name="glass-fragile" size={20} color="#FCD34D" />
+                  <StyledText style={[styles.labelSettingText, { color: currentThemeColors.textPrimary }]}>
+                    Fragile
+                  </StyledText>
+                </View>
+              )}
+
+              {box.labelIncludeThisWayUp && (
+                <View style={styles.labelSettingRow}>
+                  <MaterialCommunityIcons name="arrow-up-bold" size={20} color="#93C5FD" />
+                  <StyledText style={[styles.labelSettingText, { color: currentThemeColors.textPrimary }]}>
+                    This Way Up
+                  </StyledText>
+                </View>
+              )}
+
+              {box.labelIncludeKeepDry && (
+                <View style={styles.labelSettingRow}>
+                  <MaterialCommunityIcons name="water-off" size={20} color="#60A5FA" />
+                  <StyledText style={[styles.labelSettingText, { color: currentThemeColors.textPrimary }]}>
+                    Keep Dry
+                  </StyledText>
+                </View>
+              )}
+
+              {box.labelIncludeBatteries && (
+                <View style={styles.labelSettingRow}>
+                  <MaterialCommunityIcons name="battery-alert" size={20} color="#F87171" />
+                  <StyledText style={[styles.labelSettingText, { color: currentThemeColors.textPrimary }]}>
+                    Contains Batteries
+                  </StyledText>
+                </View>
+              )}
+
+              {box.labelHandlingNote && (
+                <View style={styles.detailRow}>
+                  <StyledText style={[styles.detailLabel, { color: currentThemeColors.textSecondary }]}>Handling Note:</StyledText>
+                  <StyledText style={[styles.detailValue, { color: currentThemeColors.textPrimary }]}>
+                    {box.labelHandlingNote}
+                  </StyledText>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+
+        {/* Contents Section */}
+        {boxProps.length > 0 && (
+          <View style={[styles.card, { backgroundColor: 'rgba(31, 41, 55, 0.9)', borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
+            <View style={styles.cardHeader}>
+              <Feather name="list" size={24} color="#fff" />
+              <StyledText style={[styles.cardTitle, { color: currentThemeColors.textPrimary }]}>
+                Contents ({boxProps.length} {boxProps.length === 1 ? 'item' : 'items'})
+              </StyledText>
+            </View>
+
+            {propsWithDetails.map((packedProp, idx) => (
+              <View key={idx} style={[styles.propItem, idx < propsWithDetails.length - 1 && styles.propItemBorder]}>
+                <View style={styles.propItemHeader}>
+                  <StyledText style={[styles.propItemName, { color: currentThemeColors.textPrimary }]}>
+                    {packedProp.name}
+                  </StyledText>
+                  <View style={styles.propItemBadges}>
+                    {packedProp.isFragile && (
+                      <View style={[styles.badge, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                        <Text style={[styles.badgeText, { color: '#FCD34D' }]}>Fragile</Text>
+                      </View>
+                    )}
+                    {packedProp.isSpare && (
+                      <View style={[styles.badge, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
+                        <Text style={[styles.badgeText, { color: '#93C5FD' }]}>Spare</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.propItemDetails}>
+                  <StyledText style={[styles.propItemDetail, { color: currentThemeColors.textSecondary }]}>
+                    Quantity: {packedProp.quantity || 1}
+                  </StyledText>
+                  {packedProp.weight > 0 && (
+                    <StyledText style={[styles.propItemDetail, { color: currentThemeColors.textSecondary }]}>
+                      Weight: {packedProp.weight} {packedProp.weightUnit || 'kg'}
+                    </StyledText>
+                  )}
+                  {packedProp.propDetails?.category && (
+                    <StyledText style={[styles.propItemDetail, { color: currentThemeColors.textSecondary }]}>
+                      Category: {packedProp.propDetails.category}
+                    </StyledText>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </LinearGradient>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  card: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginRight: 8,
+    minWidth: 100,
+  },
+  detailValue: {
+    fontSize: 14,
+    flex: 1,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  heavyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+    gap: 4,
+  },
+  heavyText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginVertical: 12,
+  },
+  sectionSubtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  qrContainer: {
+    alignItems: 'center',
+    marginVertical: 16,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+  },
+  qrCode: {
+    width: 200,
+    height: 200,
+    marginBottom: 8,
+  },
+  qrLabel: {
+    fontSize: 12,
+  },
+  labelSettingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  labelSettingText: {
+    fontSize: 14,
+  },
+  propItem: {
+    paddingVertical: 12,
+  },
+  propItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  propItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  propItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  propItemBadges: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  badge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  propItemDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  propItemDetail: {
+    fontSize: 12,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+    gap: 8,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+

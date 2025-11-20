@@ -61,7 +61,7 @@ const TodoView: React.FC<TodoViewProps> = ({
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const quickAddInputRef = useRef<TextInput>(null);
-  const [selectedCard, setSelectedCard] = useState<CardData | null>(null);
+  const [selectedCard, setSelectedCard] = useState<FlattenedCard | null>(null);
   const [isCardDetailVisible, setIsCardDetailVisible] = useState(false);
 
   // Flatten all cards with list information
@@ -435,7 +435,37 @@ const TodoView: React.FC<TodoViewProps> = ({
           availableLabels={availableLabels || []}
           allCards={selectedCard ? cards[selectedCard.listId] || [] : []}
           onNavigateToCard={(card) => {
-            setSelectedCard(card as CardData);
+            // Convert CardData to FlattenedCard by finding the matching card in flattenedCards
+            // or creating one with the current list information from selectedCard
+            let flattenedCard = flattenedCards.find(fc => fc.id === card.id);
+            
+            // If not found in flattenedCards, try to find which list it belongs to
+            if (!flattenedCard) {
+              for (const list of lists) {
+                const listCards = cards[list.id] || [];
+                if (listCards.some(c => c.id === card.id)) {
+                  flattenedCard = {
+                    ...card,
+                    listId: list.id,
+                    listName: list.title || list.name || 'Untitled List',
+                  };
+                  break;
+                }
+              }
+            }
+            
+            // Fallback: use selectedCard's list info if available
+            if (!flattenedCard && selectedCard) {
+              flattenedCard = {
+                ...card,
+                listId: selectedCard.listId,
+                listName: selectedCard.listName,
+              };
+            }
+            
+            if (flattenedCard) {
+              setSelectedCard(flattenedCard);
+            }
           }}
           onClose={handleCloseCardDetail}
           onUpdateCard={onUpdateCard}

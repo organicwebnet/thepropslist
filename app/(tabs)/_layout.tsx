@@ -51,6 +51,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="todos/index"
+        options={{
+          title: 'Taskboard',
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -83,12 +89,6 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="shopping/add"
-        options={{
-          tabBarButton: () => null,
-        }}
-      />
-      <Tabs.Screen
-        name="todos/index"
         options={{
           tabBarButton: () => null,
         }}

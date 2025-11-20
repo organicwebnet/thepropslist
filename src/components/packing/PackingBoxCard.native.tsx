@@ -105,7 +105,7 @@ export function PackingBoxCard({ box, onEdit, onDelete }: PackingBoxCardProps) {
       <View style={styles.cardContent}>
         <View style={styles.headerRow}>
           <TouchableOpacity 
-            onPress={() => router.navigate({ pathname: '/props_shared_details/[id]' as any, params: { id: box.id, showId: box.showId, entityType: 'box' }})} 
+            onPress={() => router.navigate({ pathname: '/(tabs)/packing/box/[id]' as any, params: { id: box.id, showId: box.showId }})} 
             style={styles.titleContainer}
           >
             <Text style={styles.titleText} numberOfLines={1}>{box.name ?? 'Unnamed Box'}</Text>

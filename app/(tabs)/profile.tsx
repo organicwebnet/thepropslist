@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator, Switch, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, ActivityIndicator, Switch, Image, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
@@ -1017,6 +1017,7 @@ const getStyles = (colors: typeof lightTheme.colors) => StyleSheet.create({
     backgroundColor: colors.card,
     padding: 16,
     borderRadius: 12,
+    ...(Platform.OS === 'android' && { minHeight: 56 }),
   },
   menuText: {
     flex: 1,
