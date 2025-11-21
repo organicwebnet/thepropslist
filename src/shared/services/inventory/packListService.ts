@@ -36,6 +36,11 @@ export class FirebaseError extends Error {
   }
 }
 
+import { ContainerComment, ContainerActivity } from '../../../shared/types/container';
+
+// Re-export for backward compatibility
+export type { ContainerComment, ContainerActivity };
+
 export interface PackingContainer {
   id: string;
   code?: string; // short human code for QR
@@ -64,6 +69,8 @@ export interface PackingContainer {
   labels: string[];
   status: 'empty' | 'partial' | 'full' | 'sealed';
   location?: string;
+  comments?: ContainerComment[];
+  activityLog?: ContainerActivity[];
   metadata: {
     createdAt: Date;
     updatedAt: Date;

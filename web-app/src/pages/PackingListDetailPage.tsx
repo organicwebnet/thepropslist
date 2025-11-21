@@ -13,11 +13,11 @@ const PackingListDetailPage: React.FC = () => {
   const { packListId } = useParams<{ packListId: string }>();
   const navigate = useNavigate();
   const [packList, setPackList] = useState<PackList | null>(null);
-  const [containers, setContainers] = useState<Array<{ id: string; name: string; type?: string; parentId?: string | null; description?: string; props: { propId: string; quantity: number }[]; dimensions?: { width: number; height: number; depth: number; unit: 'cm' | 'in' } }>>([]);
+  const [containers, setContainers] = useState<Array<{ id: string; name: string; type?: string; parentId?: string | null; description?: string; location?: string; props: { propId: string; quantity: number }[]; dimensions?: { width: number; height: number; depth: number; unit: 'cm' | 'in' } }>>([]);
   const [propsList, setPropsList] = useState<InventoryProp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [containerForm, setContainerForm] = useState<{ description?: string; type?: string; length?: string; width?: string; height?: string; unit?: 'cm' | 'in' }>({ description: '', type: '', length: '', width: '', height: '', unit: 'cm' });
+  const [containerForm, setContainerForm] = useState<{ description?: string; type?: string; length?: string; width?: string; height?: string; unit?: 'cm' | 'in'; location?: string }>({ description: '', type: '', length: '', width: '', height: '', unit: 'cm', location: '' });
   const [_formError, setFormError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -123,13 +123,14 @@ const PackingListDetailPage: React.FC = () => {
         type: containerForm.type || '',
         parentId: null,
         description: containerForm.description || '',
+        location: containerForm.location || '',
         dimensions: (parsedWidth && parsedHeight && parsedLength)
           ? { width: parsedWidth, height: parsedHeight, depth: parsedLength, unit: containerForm.unit || 'cm' }
           : undefined,
         props: [],
       },
     ]);
-    setContainerForm({ description: '', type: '', length: '', width: '', height: '', unit: 'cm' });
+    setContainerForm({ description: '', type: '', length: '', width: '', height: '', unit: 'cm', location: '' });
   };
 
   // Compute unpacked props (not in any container)
@@ -444,6 +445,17 @@ const PackingListDetailPage: React.FC = () => {
                     className="w-full px-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[80px] resize-none"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Location (optional)</label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={containerForm.location || ''}
+                    onChange={handleContainerFormChange}
+                    placeholder="e.g., Warehouse A, Room 101, Storage Unit 5"
+                    className="w-full px-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                  />
+                </div>
                 <button 
                   type="submit" 
                   className="w-full px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white font-medium transition-colors"
@@ -475,12 +487,25 @@ const PackingListDetailPage: React.FC = () => {
                           type="checkbox"
                           className="w-4 h-4 rounded border-white/20 bg-pb-darker/60 text-pb-primary focus:ring-pb-primary/50"
                           checked={!!selected[container.id]}
-                          onChange={(e) => setSelected(prev => ({ ...prev, [container.id]: e.target.checked }))}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            setSelected(prev => ({ ...prev, [container.id]: e.target.checked }));
+                          }}
+                          onClick={(e) => e.stopPropagation()}
                           title="Select for bulk actions"
                         />
-                        <div className="flex-1">
+                        <Link
+                          to={`/packing-lists/${packListId}/containers/${container.id}`}
+                          className="flex-1 cursor-pointer"
+                          onClick={(e) => {
+                            // Don't navigate if clicking on child elements
+                            if ((e.target as HTMLElement).closest('button, input, a[href]')) {
+                              e.preventDefault();
+                            }
+                          }}
+                        >
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-white">{container.name}</span>
+                            <span className="font-semibold text-white hover:text-pb-primary transition-colors">{container.name}</span>
                             {container.type && <span className="text-sm text-pb-gray/70">({container.type})</span>}
                           </div>
                           {container.parentId && (
@@ -493,17 +518,26 @@ const PackingListDetailPage: React.FC = () => {
                               </span>
                             </div>
                           )}
-                        </div>
-                        <div className="flex gap-2">
+                          {container.location && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+                                📍 {container.location}
+                              </span>
+                            </div>
+                          )}
+                        </Link>
+                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                           <Link
                             to={`/packing-lists/${packListId}/containers/${container.id}`}
                             className="px-3 py-1 text-xs bg-pb-primary/20 text-pb-primary rounded-lg border border-pb-primary/30 hover:bg-pb-primary/30 transition-colors"
+                            onClick={(e) => e.stopPropagation()}
                           >
                             Details & Label
                           </Link>
                           <button
                             className="px-3 py-1 text-xs bg-green-500/20 text-green-400 rounded-lg border border-green-500/30 hover:bg-green-500/30 transition-colors"
-                            onClick={async () => {
+                            onClick={async (e) => {
+                              e.stopPropagation();
                               if (!packListId) return;
                               try {
                                 const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
@@ -513,6 +547,7 @@ const PackingListDetailPage: React.FC = () => {
                                     name: container.name,
                                     type: container.type,
                                     description: container.description,
+                                    location: container.location,
                                     props: container.props,
                                     dimensions: container.dimensions,
                                     parentId: container.parentId || null,

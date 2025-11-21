@@ -2,6 +2,11 @@ import { WeightUnit } from '../shared/types/props';
 import { Prop } from '../shared/types/props';
 // import { PackedProp } from './packing'; // Assuming PackedProp is here or adjust import
 
+import { ContainerComment, ContainerActivity } from '../shared/types/container';
+
+// Re-export for backward compatibility
+export type { ContainerComment, ContainerActivity };
+
 export interface PackingBox {
   id: string;
   name: string;
@@ -33,6 +38,10 @@ export interface PackingBox {
   // Mobile-only field to align with container types used on web
   containerType?: string;
   isSpareBox?: boolean;  // Indicates this is a spare storage box (boxes starting with "A")
+  
+  // Comments and activity log
+  comments?: ContainerComment[];
+  activityLog?: ContainerActivity[];
 }
 
 export interface PackedProp {

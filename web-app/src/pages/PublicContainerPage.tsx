@@ -9,6 +9,7 @@ type ContainerDoc = {
   description?: string;
   props?: PackedProp[];
   status?: string;
+  location?: string;
 };
 
 export default function PublicContainerPage() {
@@ -48,6 +49,11 @@ export default function PublicContainerPage() {
         {box.description && <p className="muted">{box.description}</p>}
         <div className="muted" style={{ marginTop: 8 }}>GUID: <code>{box.id}</code></div>
         <div className="muted" style={{ marginTop: 8 }}>Status: {box.status || '—'}</div>
+        {box.location && (
+          <div className="muted" style={{ marginTop: 8 }}>
+            📍 Location: <strong>{box.location}</strong>
+          </div>
+        )}
 
         <h2 className="subtitle" style={{ marginTop: 16 }}>Contents</h2>
         {Array.isArray(box.props) && box.props.length > 0 ? (

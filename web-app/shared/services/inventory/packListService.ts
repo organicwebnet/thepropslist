@@ -34,6 +34,11 @@ export class FirebaseError extends Error {
   }
 }
 
+import { ContainerComment, ContainerActivity } from '../../../shared/types/container';
+
+// Re-export for backward compatibility
+export type { ContainerComment, ContainerActivity };
+
 export interface PackingContainer {
   id: string;
   type?: string;
@@ -62,6 +67,8 @@ export interface PackingContainer {
   labels: string[];
   status: 'empty' | 'partial' | 'full' | 'sealed';
   location?: string;
+  comments?: ContainerComment[];
+  activityLog?: ContainerActivity[];
   metadata: {
     createdAt: Date;
     updatedAt: Date;
@@ -340,7 +347,10 @@ export class DigitalPackListService implements PackListService {
   async updateContainer(
     packListId: string,
     containerId: string,
-    updates: Partial<Omit<PackingContainer, 'id' | 'metadata'>>
+    updates: Partial<Omit<PackingContainer, 'id' | 'metadata'>> & {
+      comments?: ContainerComment[];
+      activityLog?: ContainerActivity[];
+    }
   ): Promise<void> {
     const packList = await this.getPackList(packListId);
     const containerIndex = packList.containers.findIndex(c => c.id === containerId);

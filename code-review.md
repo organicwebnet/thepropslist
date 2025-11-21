@@ -1,329 +1,414 @@
-# Code Review: Notification Settings Feature
+# Code Review: Container Comments & Activity Log Feature
 
 ## Executive Summary
 
-**Status**: ✅ **Ready for Production** (with minor enhancements recommended)
+**Status**: ⚠️ **Needs Improvements Before Production**
 
-**Overall Assessment**: Well-structured feature with excellent UI/UX. All critical issues have been resolved. The notification preferences UI is complete, functional, and now includes proper error handling, accessibility, and user experience improvements.
+**Overall Assessment**: The feature is functionally complete and works as intended, but there are several critical issues that need to be addressed, particularly around code duplication, error handling, performance, and data structure concerns.
 
-**Critical Issues Resolved**: 
-- ✅ All notification service integration issues fixed via NotificationHelper service
-- ✅ Redundant code removed
-- ✅ Edge cases handled
-- ✅ Error handling improved
-- ✅ Accessibility labels added to all switches
-- ✅ Unsaved changes warning implemented
-- ✅ Reset to defaults functionality added
+**Critical Issues Found**: 
+- ❌ Redundant interface definitions across multiple files
+- ❌ Missing input validation and sanitization for comments
+- ❌ Potential performance issues with large comment/activity arrays
+- ❌ Inconsistent error handling (some errors only logged to console)
+- ❌ Missing activity tracking for some operations
+- ⚠️ Type safety issues with `as any` casts
 
-**Fixes Applied**: 
-- ✅ Removed redundant code
-- ✅ Fixed return type inconsistency
-- ✅ Added edge case handling
-- ✅ Added input validation
-- ✅ Created NotificationHelper service for automatic preference integration
-- ✅ Added visual error state handling
-- ✅ Added "Reset to Defaults" button
-- ✅ Added unsaved changes warning
-- ✅ Added accessibility labels to all switches
-
-**Remaining Enhancements** (Nice to Have):
-- Add unit/integration tests
-- Extract strings for i18n
-- Verify contrast ratios
+**Fixes Required**: 
+- Consolidate duplicate interface definitions
+- Add input validation and sanitization
+- Improve error handling with user feedback
+- Add activity tracking for all container operations
+- Remove `as any` type casts where possible
+- Consider pagination for large comment/activity lists
 
 ---
 
 ## Overview
-This review covers the implementation of notification preferences for the Android app, allowing users to control which notifications they receive.
+This review covers the implementation of:
+1. Making containers clickable in PackingListDetailPage
+2. Adding comments and activity log functionality to ContainerDetailPage (web)
+3. Adding comments and activity log functionality to box detail screen (Android)
 
 ## Files Changed
-1. `src/shared/types/auth.ts` - Added `NotificationPreferences` interface
-2. `src/services/notificationPreferences.ts` - New service for checking preferences
-3. `app/(tabs)/profile.tsx` - Added notification settings UI
-4. `src/platforms/mobile/features/notifications/NotificationService.ts` - Updated to check preferences
-5. `src/services/notificationService.ts` - Updated to check preferences
+1. `web-app/src/pages/PackingListDetailPage.tsx` - Made containers clickable
+2. `web-app/src/pages/ContainerDetailPage.tsx` - Added comments and activity log UI
+3. `web-app/shared/services/inventory/packListService.ts` - Extended PackingContainer interface
+4. `src/shared/services/inventory/packListService.ts` - Extended PackingContainer interface
+5. `src/types/packing.ts` - Extended PackingBox interface
+6. `app/(tabs)/packing/box/[id].tsx` - Added comments and activity log UI
 
 ---
 
 ## ✅ Strengths
 
-### 1. **Type Safety**
-- Well-defined TypeScript interfaces for `NotificationPreferences`
-- Proper typing throughout the codebase
-- Good use of optional parameters for backward compatibility
+### 1. **Feature Completeness**
+- ✅ Containers are now clickable and navigate to detail page
+- ✅ Comments can be added and displayed
+- ✅ Activity log tracks container changes
+- ✅ Both web and mobile apps have consistent functionality
+- ✅ User avatars/initials displayed for comments
 
-### 2. **Code Organisation**
-- Clear separation of concerns with a dedicated service class
-- Consistent naming conventions
-- Good documentation with JSDoc comments
+### 2. **User Experience**
+- ✅ Intuitive UI with clear sections for comments and activity
+- ✅ Combined view showing both comments and activities chronologically
+- ✅ Keyboard shortcut (Ctrl+Enter) for adding comments
+- ✅ Loading states during comment submission
+- ✅ Empty states when no comments/activities exist
 
-### 3. **User Experience**
-- Intuitive UI with grouped notification categories
-- Clear visual feedback with switches
-- Proper loading states and error handling
-- Accessible labels and roles
-
-### 4. **Backward Compatibility**
-- Optional `preferences` parameter ensures existing code continues to work
-- Default opt-out model (notifications enabled by default)
+### 3. **Code Organisation**
+- ✅ Helper functions for creating activities and comments
+- ✅ Proper separation of concerns
+- ✅ Consistent naming conventions
 
 ---
 
 ## ❌ Critical Issues
 
-### 1. **CRITICAL: Redundant Code and Potential Race Condition**
-**Location**: `app/(tabs)/profile.tsx` lines 29-41
+### 1. **CRITICAL: Redundant Interface Definitions**
+**Location**: Multiple files
+- `web-app/shared/services/inventory/packListService.ts` (lines 37-55)
+- `src/shared/services/inventory/packListService.ts` (lines 39-55)
+- `src/types/packing.ts` (lines 5-21)
 
-**Issue**: 
-```typescript
-useEffect(() => {
-  checkBiometricStatus();
-  loadNotificationPreferences(); // Called here
-}, []);
-
-useEffect(() => {
-  if (userProfile?.notificationPreferences) {
-    setNotificationPreferences({
-      ...NotificationPreferencesService.getDefaultPreferences(),
-      ...userProfile.notificationPreferences,
-    });
-  }
-}, [userProfile]); // Also called here when userProfile changes
-```
-
-The `loadNotificationPreferences()` function does the same thing as the second useEffect. This creates:
-- Redundant code
-- Potential race condition (first effect runs before userProfile is loaded)
-- Missing dependency warnings
+**Issue**: The `ContainerComment` and `ContainerActivity` interfaces are defined in three different locations. This creates:
+- Maintenance burden (changes must be made in 3 places)
+- Risk of inconsistencies
+- Confusion about which definition is authoritative
 
 **Fix Required**:
 ```typescript
-// Remove loadNotificationPreferences from first useEffect
-useEffect(() => {
-  checkBiometricStatus();
-}, []);
+// Create a shared types file: shared/types/container.ts
+export interface ContainerComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatarInitials?: string;
+  text: string;
+  createdAt: string; // ISO string
+}
 
-// Keep only the userProfile-dependent effect
-useEffect(() => {
-  if (userProfile?.notificationPreferences) {
-    setNotificationPreferences({
-      ...NotificationPreferencesService.getDefaultPreferences(),
-      ...userProfile.notificationPreferences,
-    });
-  } else {
-    // Set defaults if no preferences exist
-    setNotificationPreferences(NotificationPreferencesService.getDefaultPreferences());
-  }
-}, [userProfile]);
+export interface ContainerActivity {
+  id: string;
+  type: string;
+  userId: string;
+  userName?: string;
+  timestamp: string; // ISO string
+  details?: any;
+}
+
+// Then import from this file in all three locations
 ```
 
-### 2. **CRITICAL: Missing Integration - Preferences Not Passed to Services**
-**Location**: All notification service callers
+**Priority**: HIGH - Should be fixed before production
 
-**Issue**: The notification services now accept an optional `preferences` parameter, but **no existing callers have been updated** to pass user preferences. This means:
-- Notifications will still be sent even if users disable them
-- The feature doesn't actually work as intended
-- Preferences are saved but not enforced
+### 2. **CRITICAL: Missing Input Validation and Sanitization**
+**Location**: 
+- `web-app/src/pages/ContainerDetailPage.tsx` line 176-205
+- `app/(tabs)/packing/box/[id].tsx` line 181-210
 
-**Files to Update**:
-- Any code that calls `schedulePropStatusNotification()`
-- Any code that calls `scheduleMaintenanceReminder()`
-- Any code that calls `scheduleShowReminder()`
-- Any code that calls `sendShoppingOptionSelectedNotification()`
+**Issue**: Comments are only trimmed but not validated for:
+- Maximum length (could cause Firestore document size issues)
+- Empty strings after trimming
+- Potentially malicious content (XSS risk)
+- Special characters that might break rendering
 
-**Example Fix Needed**:
+**Current Code**:
 ```typescript
-// Before (doesn't respect preferences):
-await notificationService.schedulePropStatusNotification(propName, newStatus);
-
-// After (respects preferences):
-const { userProfile } = useAuth();
-await notificationService.schedulePropStatusNotification(
-  propName, 
-  newStatus,
-  userProfile?.notificationPreferences
-);
+if (!newComment.trim() || !user || !packListId || !container || addingComment) return;
+// No length check, no sanitization
+const comment: ContainerComment = {
+  text: newComment.trim(), // Directly used without validation
+  // ...
+};
 ```
-
-**Action Required**: Search codebase for all notification service calls and update them to pass user preferences.
-
-### 3. **Return Type Inconsistency**
-**Location**: `src/services/notificationService.ts` line 63
-
-**Issue**: 
-```typescript
-static async sendShoppingOptionSelectedNotification(
-  // ... parameters
-  preferences?: NotificationPreferences
-) {  // Missing return type - should be Promise<ShoppingNotification | null>
-```
-
-The function can return `null` when preferences are disabled, but the return type doesn't reflect this.
 
 **Fix Required**:
 ```typescript
-static async sendShoppingOptionSelectedNotification(
-  recipientUserId: string,
-  shoppingItemId: string,
-  optionIndex: number,
-  itemDescription: string,
-  shopName?: string,
-  price?: number,
-  preferences?: NotificationPreferences
-): Promise<ShoppingNotification | null> {
+const MAX_COMMENT_LENGTH = 2000; // Firestore string limit is 1MB, but 2000 chars is reasonable
+
+const handleAddComment = async () => {
+  const trimmed = newComment.trim();
+  
+  // Validation
+  if (!trimmed || trimmed.length === 0) {
+    // Show error: "Comment cannot be empty"
+    return;
+  }
+  
+  if (trimmed.length > MAX_COMMENT_LENGTH) {
+    // Show error: `Comment must be less than ${MAX_COMMENT_LENGTH} characters`
+    return;
+  }
+  
+  // Basic sanitization (escape HTML if rendering as HTML, or use React's built-in escaping)
+  // For React, we can rely on JSX escaping, but should still validate
+  const sanitized = trimmed
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .substring(0, MAX_COMMENT_LENGTH);
+  
+  // ... rest of function
+};
 ```
+
+**Priority**: HIGH - Security and data integrity concern
+
+### 3. **CRITICAL: Performance Issue - Large Arrays in Firestore**
+**Location**: All container update operations
+
+**Issue**: Comments and activity logs are stored as arrays directly in the container document. This can cause:
+- Firestore document size limits (1MB per document)
+- Slow reads/writes as arrays grow
+- Expensive updates (entire document must be rewritten)
+- No pagination support
+
+**Current Implementation**:
+```typescript
+await packListService.updateContainer(packListId, container.id, {
+  comments: [...currentComments, comment] // Entire array copied
+});
+```
+
+**Recommendation**: Consider one of these approaches:
+1. **Subcollection approach** (Recommended):
+   - Store comments in `packLists/{id}/containers/{containerId}/comments/{commentId}`
+   - Store activities in `packLists/{id}/containers/{containerId}/activities/{activityId}`
+   - Enables pagination and better performance
+
+2. **Limit array size**:
+   - Keep only last N comments/activities in document
+   - Archive older items to a separate collection
+
+3. **Hybrid approach**:
+   - Keep recent items (last 50) in document for quick access
+   - Store older items in subcollection
+
+**Priority**: MEDIUM-HIGH - Will become critical as usage grows
+
+### 4. **CRITICAL: Inconsistent Error Handling**
+**Location**: 
+- `web-app/src/pages/ContainerDetailPage.tsx` lines 200-204, 510, 563
+- `app/(tabs)/packing/box/[id].tsx` lines 205-209
+
+**Issue**: Errors are logged to console but users don't see feedback:
+```typescript
+} catch (err) {
+  console.error('Failed to add comment:', err);
+  // No user notification!
+}
+```
+
+**Fix Required**: Add user-visible error messages:
+```typescript
+} catch (err) {
+  console.error('Failed to add comment:', err);
+  // Show toast/alert to user
+  setError('Failed to add comment. Please try again.');
+  // Or use a toast library
+}
+```
+
+**Priority**: HIGH - Poor user experience
+
+### 5. **CRITICAL: Missing Activity Tracking**
+**Location**: `web-app/src/pages/ContainerDetailPage.tsx`
+
+**Issue**: Not all container operations track activities:
+- ❌ Removing child containers (line 707) - no activity logged
+- ❌ Container deletion (line 388) - no activity logged
+- ❌ Quick create parent (line 978) - no activity logged
+
+**Fix Required**: Add activity tracking to all operations:
+```typescript
+// When removing child container
+await pls.updateContainer(packListId, ch.id, { parentId: null } as any);
+const activity = createActivity('Child container removed', { childId: ch.id, childName: ch.name });
+await addActivity(activity);
+```
+
+**Priority**: MEDIUM - Feature completeness
 
 ---
 
 ## ⚠️ Important Issues
 
-### 4. **Missing Error State Handling**
-**Location**: `app/(tabs)/profile.tsx` line 131
+### 6. **Type Safety: Excessive `as any` Usage**
+**Location**: Multiple locations
 
-**Issue**: If `updateUserProfile` fails, the error is logged but the user might not see clear feedback. The modal stays open with unsaved changes.
-
-**Recommendation**: Consider showing an error state in the UI, not just an Alert.
-
-### 5. **No Validation Before Save**
-**Location**: `app/(tabs)/profile.tsx` line 131
-
-**Issue**: No validation that preferences object is valid before saving.
-
-**Recommendation**: Add validation:
+**Issue**: Using `as any` bypasses TypeScript's type checking:
 ```typescript
-const handleSaveNotificationPreferences = async () => {
-  if (!user) return;
-  
-  // Validate preferences object
-  if (!notificationPreferences || typeof notificationPreferences !== 'object') {
-    Alert.alert('Error', 'Invalid notification preferences');
-    return;
-  }
-  
-  setSavingNotifications(true);
-  // ... rest of function
-};
+await packListService.updateContainer(packListId, container.id, {
+  comments: [...currentComments, comment]
+} as any); // Why is this needed?
 ```
 
-### 6. **Potential Memory Leak**
-**Location**: `app/(tabs)/profile.tsx` line 34
+**Root Cause**: The `updateContainer` method likely has a strict type that doesn't include `comments` and `activityLog` in the update type.
 
-**Issue**: The useEffect that watches `userProfile` doesn't clean up. If the component unmounts while a state update is pending, React will warn.
-
-**Recommendation**: Add cleanup or use a ref to track mounted state.
-
-### 7. **Missing Edge Case: Empty Preferences**
-**Location**: `app/(tabs)/profile.tsx` line 35
-
-**Issue**: If `userProfile` exists but `notificationPreferences` is `undefined`, the effect doesn't set defaults.
-
-**Current Code**:
+**Fix Required**: Update the `updateContainer` method signature to accept partial container updates including optional fields:
 ```typescript
-if (userProfile?.notificationPreferences) {
-  // Only runs if preferences exist
+updateContainer(
+  packListId: string,
+  containerId: string,
+  updates: Partial<Omit<PackingContainer, 'id' | 'metadata'>>
+): Promise<void>
+```
+
+**Priority**: MEDIUM - Type safety
+
+### 7. **User Info Fetching Performance**
+**Location**: 
+- `web-app/src/pages/ContainerDetailPage.tsx` lines 114-146
+- `app/(tabs)/packing/box/[id].tsx` lines 119-151
+
+**Issue**: Fetches user profiles for every unique user in comments/activities on every container load. This could be:
+- Slow if many users have commented
+- Expensive (Firestore read operations)
+- Redundant if user info hasn't changed
+
+**Recommendation**: 
+1. Cache user info in a context/state management
+2. Batch fetch user profiles
+3. Consider storing user display names in comments (already done) and only fetch if missing
+
+**Priority**: MEDIUM - Performance optimization
+
+### 8. **Missing Edge Cases**
+**Location**: Comment and activity handling
+
+**Issues**:
+- What happens if user is deleted? (userId exists but user profile doesn't)
+- What happens if comment ID collision? (unlikely but possible with timestamp-based IDs)
+- What happens if container is deleted while adding comment?
+- What happens if network fails mid-comment?
+
+**Current Handling**: Some edge cases are handled (user not found → "Unknown User"), but not all.
+
+**Priority**: MEDIUM - Edge case handling
+
+### 9. **Activity Details Type Safety**
+**Location**: `ContainerActivity` interface
+
+**Issue**: `details?: any` is too loose. Different activity types have different detail structures:
+```typescript
+// Prop added
+details: { propId: string; propName: string; quantity: number }
+
+// Location updated
+details: { oldLocation: string; newLocation: string }
+
+// Parent changed
+details: { oldParentId: string; newParentId: string; newParentName: string }
+```
+
+**Recommendation**: Use discriminated unions:
+```typescript
+type ActivityDetails = 
+  | { type: 'prop_added'; propId: string; propName: string; quantity: number }
+  | { type: 'prop_removed'; propId: string; propName: string; quantity: number }
+  | { type: 'location_updated'; oldLocation: string; newLocation: string }
+  | { type: 'parent_changed'; oldParentId: string; newParentId: string; newParentName: string };
+
+export interface ContainerActivity {
+  id: string;
+  type: string;
+  userId: string;
+  userName?: string;
+  timestamp: string;
+  details?: ActivityDetails;
 }
 ```
 
-**Fix**:
-```typescript
-if (userProfile) {
-  setNotificationPreferences({
-    ...NotificationPreferencesService.getDefaultPreferences(),
-    ...(userProfile.notificationPreferences || {}),
-  });
-}
-```
+**Priority**: LOW-MEDIUM - Code quality
 
 ---
 
 ## 🔍 Code Quality Issues
 
-### 8. **Inconsistent Default Handling**
-**Location**: `src/services/notificationPreferences.ts`
+### 10. **Inconsistent Date Handling**
+**Location**: Multiple files
 
-**Issue**: The service methods check `!== false`, which means `undefined` defaults to `true`. However, `getDefaultPreferences()` explicitly sets all to `true`. This is consistent but could be clearer.
+**Issue**: Mix of `Date` objects and ISO strings:
+- `createdAt: string` (ISO string) in comments
+- `createdAt: Date` in metadata
+- `new Date().toISOString()` for timestamps
 
-**Recommendation**: Consider adding a comment explaining the opt-out model more clearly.
+**Recommendation**: Standardise on ISO strings for Firestore compatibility, or use Firestore Timestamp type consistently.
 
-### 9. **Hardcoded String Concatenation for Border Color**
-**Location**: `app/(tabs)/profile.tsx` line 748
+**Priority**: LOW - Consistency
 
-**Issue**:
+### 11. **Magic Numbers and Strings**
+**Location**: Activity type strings
+
+**Issue**: Activity types are hardcoded strings:
 ```typescript
-borderBottomColor: colors.textSecondary + '20',
+createActivity('Prop added', ...)
+createActivity('Location updated', ...)
 ```
 
-This string concatenation for opacity is fragile. If `colors.textSecondary` is already a hex with alpha, this breaks.
-
-**Better Approach**:
+**Recommendation**: Use constants or enum:
 ```typescript
-// Use a utility function or ensure consistent color format
-borderBottomColor: `${colors.textSecondary}20`,
-// Or better: use a proper opacity utility
+const ActivityTypes = {
+  PROP_ADDED: 'Prop added',
+  PROP_REMOVED: 'Prop removed',
+  LOCATION_UPDATED: 'Location updated',
+  // ...
+} as const;
 ```
 
-### 10. **Missing Accessibility: Switch Labels**
-**Location**: `app/(tabs)/profile.tsx` lines 385-555
+**Priority**: LOW - Code maintainability
 
-**Issue**: Switches don't have explicit `accessibilityLabel` props. While the text is nearby, screen readers might not associate them properly.
+### 12. **Missing Loading States**
+**Location**: Activity tracking
 
-**Recommendation**:
-```typescript
-<Switch
-  value={notificationPreferences.propStatusUpdates ?? true}
-  onValueChange={() => toggleNotificationPreference('propStatusUpdates')}
-  accessibilityLabel="Enable prop status update notifications"
-  accessibilityRole="switch"
-  trackColor={{ false: colors.textSecondary, true: colors.primary }}
-  thumbColor="#fff"
-/>
-```
+**Issue**: When activities are being added, there's no visual feedback. User might click multiple times.
 
-### 11. **UI/UX: No "Reset to Defaults" Option**
-**Location**: `app/(tabs)/profile.tsx`
+**Recommendation**: Add loading state or disable buttons during activity creation.
 
-**Issue**: Users can't easily reset all preferences to defaults. They must manually toggle each switch.
-
-**Recommendation**: Add a "Reset to Defaults" button in the notification settings modal.
-
-### 12. **Performance: Unnecessary Re-renders**
-**Location**: `app/(tabs)/profile.tsx` line 149
-
-**Issue**: `toggleNotificationPreference` creates a new object on every toggle, which is fine, but the function could be memoized with `useCallback` if performance becomes an issue.
-
-**Current**: Acceptable for now, but worth monitoring.
+**Priority**: LOW - UX improvement
 
 ---
 
 ## 🎨 UI/UX Concerns
 
-### 13. **Contrast Check Needed**
-**Location**: `app/(tabs)/profile.tsx` line 748
+### 13. **Contrast and Accessibility**
+**Location**: Comment and activity UI
 
-**Issue**: Border color uses `colors.textSecondary + '20'` (20% opacity). Need to verify this has sufficient contrast against the background.
+**Issues to Verify**:
+- Text contrast ratios (WCAG AA compliance)
+- Focus states for keyboard navigation
+- ARIA labels for screen readers
+- Color contrast for badges and status indicators
 
-**Action**: Test with both light and dark themes to ensure WCAG AA compliance.
+**Action Required**: Test with accessibility tools and verify contrast ratios meet WCAG AA standards.
 
-### 14. **Modal Height on Small Screens**
-**Location**: `app/(tabs)/profile.tsx` line 728
+**Priority**: MEDIUM - Accessibility compliance
 
-**Issue**: `maxHeight: '80%'` might be too tall on small devices with many notification options.
+### 14. **Responsive Design**
+**Location**: Comment input and display
 
-**Recommendation**: Consider using `flex: 1` with proper constraints or dynamic height calculation.
+**Issues**:
+- Comment input textarea might be too small on mobile
+- Long comments might overflow
+- Activity log might need pagination on mobile
 
-### 15. **Missing Loading State for Initial Load**
-**Location**: `app/(tabs)/profile.tsx`
+**Current**: Uses responsive classes (`max-h-[600px] overflow-y-auto`), but should be tested on actual devices.
 
-**Issue**: When the modal opens, preferences might still be loading from Firestore. No loading indicator shown.
+**Priority**: MEDIUM - Mobile UX
 
-**Recommendation**: Show a loading state if `userProfile` is null/loading when modal opens.
+### 15. **Empty States**
+**Location**: Comments and activity sections
 
-### 16. **No "Unsaved Changes" Warning**
-**Location**: `app/(tabs)/profile.tsx`
+**Status**: ✅ Good - Empty states are implemented with helpful messages.
 
-**Issue**: If user makes changes and tries to close modal without saving, no warning is shown.
+### 16. **Comment Character Counter**
+**Location**: Comment input
 
-**Recommendation**: Add confirmation dialog if there are unsaved changes.
+**Issue**: No character counter or limit indicator for users.
+
+**Recommendation**: Add character counter (e.g., "150/2000 characters") to help users stay within limits.
+
+**Priority**: LOW - UX enhancement
 
 ---
 
@@ -332,33 +417,29 @@ borderBottomColor: `${colors.textSecondary}20`,
 ### 17. **Data Flow Analysis**
 
 **Current Flow**:
-1. User opens profile → `userProfile` loaded from Firestore
-2. User opens notification settings → preferences loaded from `userProfile.notificationPreferences`
-3. User toggles switches → local state updated
-4. User saves → `updateUserProfile()` called → Firestore updated
-5. **Gap**: When notifications are sent, preferences are not automatically retrieved
+1. User adds comment → `handleAddComment()` called
+2. Comment object created with user info
+3. `updateContainer()` called with new comments array
+4. Entire pack list document updated in Firestore
+5. Document refreshed from Firestore
+6. UI updated with new comment
 
-**Issue**: The notification services need access to user preferences, but they're not automatically passed. This requires:
-- Either passing preferences from every caller (manual, error-prone)
-- Or creating a service that automatically fetches preferences (better)
+**Issues**:
+- No optimistic updates (user waits for Firestore write)
+- Entire document update is expensive
+- No offline support
 
-**Recommendation**: Consider creating a notification wrapper service that:
-1. Accepts user ID
-2. Fetches user profile/preferences automatically
-3. Checks preferences before sending
-4. Sends notification if allowed
+**Recommendation**: Consider optimistic updates for better UX.
 
-This would centralise the logic and ensure preferences are always respected.
-
-### 18. **No Input Sanitization Needed**
-✅ Preferences are boolean values, no sanitization required.
+### 18. **Input Sanitization**
+**Status**: ❌ Missing - See issue #2
 
 ### 19. **Firestore Schema Change**
-**Location**: `src/shared/types/auth.ts`
+**Impact**: Adding `comments` and `activityLog` to `PackingContainer` is a non-breaking change (optional fields). Existing containers will have `undefined` for these fields, which is handled gracefully.
 
-**Impact**: Adding `notificationPreferences` to `UserProfile` is a non-breaking change (optional field). Existing users will have `undefined` preferences, which defaults to all enabled (opt-out model).
+**Migration**: No migration needed - defaults handle this.
 
-**Migration**: No migration needed - defaults handle this gracefully.
+**Concern**: As arrays grow, document size could become an issue (see issue #3).
 
 ---
 
@@ -368,159 +449,166 @@ This would centralise the logic and ensure preferences are always respected.
 **Issue**: No unit tests, integration tests, or E2E tests for the new feature.
 
 **Recommendation**: Add tests for:
-- `NotificationPreferencesService` methods
-- Preference saving/loading
-- Notification service preference checking
-- UI toggle functionality
+- Comment creation and validation
+- Activity tracking for all operations
+- Empty state handling
+- Error handling
+- User info fetching
 
-### 21. **Edge Cases Not Tested**
-- User with no preferences (should default to all enabled)
-- User with partial preferences (some set, some undefined)
-- Network failure during save
-- Concurrent preference updates
+**Priority**: MEDIUM - Test coverage
 
 ---
 
-## 📱 Responsive Design
+## 📱 Mobile App Specific Issues
 
-### 22. **Mobile Optimisation**
-✅ Uses React Native components (View, ScrollView, etc.) - appropriate for mobile
-✅ Modal uses slide animation - good UX
-✅ ScrollView for long content - appropriate
+### 21. **Inconsistent Implementation**
+**Location**: Android app vs Web app
 
-### 23. **Tablet Considerations**
-⚠️ Modal might need different sizing on tablets. Consider using `Dimensions` API for responsive sizing.
+**Issues**:
+- Android app doesn't track activities for prop add/remove operations (only web app does)
+- Android app uses different update method (`operations.updateBox` vs `packListService.updateContainer`)
+- Activity tracking might not be called in all places on mobile
+
+**Recommendation**: Ensure feature parity between web and mobile apps.
+
+**Priority**: MEDIUM - Feature consistency
+
+### 22. **Mobile Performance**
+**Location**: `app/(tabs)/packing/box/[id].tsx`
+
+**Issue**: Fetching user info for all commenters/activity creators on every load could be slow on mobile networks.
+
+**Recommendation**: Implement caching or batch loading.
+
+**Priority**: MEDIUM - Mobile performance
 
 ---
 
 ## 🌐 Internationalisation (i18n)
 
-### 24. **Hardcoded Strings**
-**Location**: Throughout `app/(tabs)/profile.tsx`
+### 23. **Hardcoded Strings**
+**Location**: Throughout both web and mobile apps
 
-**Issue**: All UI strings are hardcoded in English. No i18n support.
+**Issue**: All UI strings are hardcoded in English:
+- "Add a comment..."
+- "Comments & Activity"
+- "No comments or activity yet"
+- Activity type strings ("Prop added", "Location updated", etc.)
 
-**Examples**:
-- "Notification Settings"
-- "Prop Status Updates"
-- "Save Preferences"
-- Alert messages
+**Recommendation**: If i18n is planned, extract strings to translation files.
 
-**Recommendation**: If i18n is planned, extract strings to translation files now.
+**Priority**: LOW - Future enhancement
 
 ---
 
 ## 📊 Performance
 
-### 25. **No Memoization**
-**Location**: `app/(tabs)/profile.tsx`
+### 24. **Re-render Optimisation**
+**Location**: `ContainerDetailPage.tsx` and `box/[id].tsx`
 
-**Issue**: `getStyles()` is called on every render. While StyleSheet.create is optimised, the function call itself happens every render.
+**Issue**: `combinedLog` useMemo is good, but user info fetching happens on every container change, even if user info hasn't changed.
 
-**Current**: Acceptable for React Native, but could be optimised with `useMemo`.
+**Recommendation**: Memoize user info map or cache it in context.
 
-### 26. **Large Modal Content**
-**Location**: `app/(tabs)/profile.tsx` lines 375-574
+**Priority**: LOW - Performance optimization
 
-**Issue**: Modal contains many notification options. Consider virtualisation if performance issues arise, though unlikely with current count.
+### 25. **Large List Rendering**
+**Location**: Comments and activity list
+
+**Issue**: If there are many comments/activities, rendering all at once could be slow.
+
+**Current**: Uses `max-h-[600px] overflow-y-auto` which helps, but doesn't virtualize.
+
+**Recommendation**: Consider virtual scrolling for very long lists (100+ items).
+
+**Priority**: LOW - Performance optimization (only needed at scale)
 
 ---
 
 ## 🔄 Integration with Existing Codebase
 
-### 27. **Notification Service Callers Need Updates**
+### 26. **Backward Compatibility**
+**Status**: ✅ Good - Optional fields ensure existing containers work without issues.
 
-**Action Required**: Find and update all callers of:
-- `schedulePropStatusNotification()`
-- `scheduleMaintenanceReminder()`
-- `scheduleShowReminder()`
-- `sendShoppingOptionSelectedNotification()`
+### 27. **Type Consistency**
+**Issue**: `PackingContainer` (web) and `PackingBox` (mobile) have similar but not identical structures. Comments/activities are added to both, but the underlying types differ.
 
-**Search Results**:
-- No direct callers found in `src/` directory (may be called from other locations)
-- Commented out call in `app/(tabs)/shopping/[id].tsx` line 183
+**Recommendation**: Consider creating a shared base type or interface for common fields.
 
-**Recommendation**: 
-1. Search entire codebase for notification service calls
-2. Update each to pass `userProfile?.notificationPreferences`
-3. Or implement the wrapper service mentioned in issue #17
-
-### 28. **Web App Compatibility**
-**Location**: `web-app/` directory
-
-**Issue**: The web app has its own notification system (`web-app/src/shared/services/notificationService.ts`). This feature only affects the mobile app. Consider if web app needs similar functionality.
+**Priority**: LOW - Code organization
 
 ---
 
 ## ✅ What Was Done Well
 
-1. **Type Safety**: Excellent TypeScript usage
-2. **Code Organisation**: Clear separation of concerns
-3. **User Experience**: Intuitive UI design
-4. **Backward Compatibility**: Optional parameters prevent breaking changes
-5. **Documentation**: Good JSDoc comments
-6. **Accessibility**: Basic accessibility labels present
-7. **Error Handling**: Try-catch blocks in place
+1. **Feature Completeness**: Both web and mobile apps have the feature
+2. **User Experience**: Good UI/UX with clear sections and helpful empty states
+3. **Code Organisation**: Helper functions are well-structured
+4. **Backward Compatibility**: Optional fields prevent breaking changes
+5. **Chronological Sorting**: Comments and activities are properly sorted
 
 ---
 
 ## 🎯 Priority Fixes
 
-### ✅ Fixed:
-1. **#1**: ✅ Removed redundant `loadNotificationPreferences()` call
-2. **#7**: ✅ Handle case when `userProfile` exists but `notificationPreferences` is undefined
-3. **#3**: ✅ Fixed return type for `sendShoppingOptionSelectedNotification`
-4. **#5**: ✅ Added validation before save
-5. **#2**: ✅ Created `NotificationHelper` service to automatically fetch and use preferences
-6. **#4**: ✅ Improved error state handling with visual error messages
-7. **#11**: ✅ Added "Reset to Defaults" button
-8. **#16**: ✅ Added unsaved changes warning when closing modal
-9. **#10**: ✅ Added explicit accessibility labels to ALL switches
+### Must Fix Before Production:
+1. **#1**: Consolidate duplicate interface definitions
+2. **#2**: Add input validation and sanitization
+3. **#4**: Improve error handling with user feedback
+4. **#5**: Add activity tracking for all operations
 
-### Integration Note:
-- **NotificationHelper Service**: Created `src/services/notificationHelper.ts` which automatically fetches user preferences from Firestore and passes them to notification services. This makes it easy for future code to respect user preferences without manual preference passing.
-- **Usage**: When sending notifications, use `NotificationHelper.sendPropStatusNotification()` instead of calling the service directly. This ensures preferences are always respected.
+### Should Fix Soon:
+5. **#3**: Consider subcollection approach for comments/activities (or at least add limits)
+6. **#6**: Remove `as any` casts by fixing type definitions
+7. **#7**: Optimize user info fetching
+8. **#21**: Ensure feature parity between web and mobile
 
 ### Nice to Have:
-1. **#13**: Verify contrast ratios
-2. **#20**: Add tests
-3. **#24**: Extract strings for i18n
-4. **#14**: Optimise modal height for small screens
-5. **#15**: Add loading state for initial preference load
+9. **#9**: Improve activity details type safety
+10. **#11**: Use constants for activity types
+11. **#12**: Add loading states for activity creation
+12. **#16**: Add character counter for comments
+13. **#20**: Add tests
 
 ---
 
 ## 📝 Summary
 
-**Overall Assessment**: ✅ **All critical issues have been resolved!** The feature is well-structured, follows good practices, and is now fully functional. The UI is complete with excellent UX improvements, and the backend integration is handled via the NotificationHelper service.
+**Overall Assessment**: ⚠️ **Feature works but needs improvements before production**
 
 **Completed Work**: 
-1. ✅ Fixed all critical issues (#1, #2, #3, #7)
-2. ✅ Implemented NotificationHelper service to centralise preference checking
-3. ✅ Added "Reset to Defaults" functionality
-4. ✅ Added unsaved changes warning for better UX
-5. ✅ Improved error handling with visual feedback
-6. ✅ Added comprehensive accessibility labels
+1. ✅ Containers are clickable
+2. ✅ Comments can be added and displayed
+3. ✅ Activity log tracks most operations
+4. ✅ Both web and mobile apps updated
+
+**Critical Issues**: 
+- Code duplication (interfaces in 3 places)
+- Missing input validation
+- Poor error handling
+- Performance concerns with large arrays
 
 **Recommendation**: 
-- ✅ **Ready for production** - All critical functionality is complete
-- Consider adding integration tests to verify preferences are respected (nice to have)
-- Consider extracting strings for i18n if internationalisation is planned (nice to have)
+- ✅ **Fix critical issues (#1, #2, #4) before production**
+- ⚠️ **Address performance concerns (#3) as usage grows**
+- 📝 **Add tests and improve type safety as time permits**
 
-**Status**: Production-ready with optional enhancements available.
+**Status**: Functional but needs refinement for production readiness.
 
 ---
 
 ## 🔍 Additional Checks Performed
 
-- ✅ No infinite loops detected
-- ✅ No obvious memory leaks (minor cleanup opportunity in #6)
-- ✅ Code follows existing patterns
+- ✅ No infinite loops detected (useEffect dependencies are correct)
+- ⚠️ Potential memory leaks (user info fetching on every render, but not critical)
+- ✅ Code follows existing patterns (mostly)
 - ✅ No unnecessary dependencies added
 - ✅ Schema changes are backward compatible
-- ⚠️ Integration with existing notification callers incomplete
-- ⚠️ Tests not added (should be added)
+- ⚠️ Type safety could be improved (excessive `as any`)
+- ❌ Tests not added (should be added)
+- ⚠️ Input validation missing (security concern)
+- ⚠️ Error handling incomplete (UX concern)
 
 ---
 
-**Reviewer Notes**: This is a solid implementation that needs integration work to be fully functional. The UI/UX is good, but the feature won't work until notification service callers are updated to pass user preferences.
+**Reviewer Notes**: This is a solid feature implementation that works well, but needs attention to code quality, security, and performance before production. The most critical issues are code duplication and missing input validation. The performance concern with large arrays should be addressed proactively before it becomes a problem.

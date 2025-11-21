@@ -32,6 +32,7 @@ interface ContainerDoc {
   description?: string;
   props?: PackedProp[];
   status?: string;
+  location?: string;
 }
 
 export default function PublicContainerPage() {
@@ -156,6 +157,12 @@ export default function PublicContainerPage() {
               <View style={styles.metaRow}>
                 <Text style={styles.metaLabel}>Status:</Text>
                 <Text style={styles.metaValue}>{box.status}</Text>
+              </View>
+            )}
+            {box.location && (
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>📍 Location:</Text>
+                <Text style={styles.metaValue}>{box.location}</Text>
               </View>
             )}
           </View>

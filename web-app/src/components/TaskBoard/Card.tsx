@@ -548,15 +548,15 @@ export const CardDetailModal: React.FC<{
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-end p-0">
       <div
-        className="relative rounded-l-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[96vh] min-h-[560px] lg:min-h-[700px] border-l border-t border-b border-white/10 w-full max-w-[1100px]"
+        className="relative rounded-l-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[100vh] min-h-[560px] lg:min-h-[700px] border-l border-t border-b border-white/10 w-full max-w-[1100px] h-full"
         style={{ background: cardColor, transition: 'background 0.3s' }}
       >
-        {/* Close (X) button top right of modal */}
-        <button className="absolute top-4 right-4 text-white text-2xl z-50 hover:bg-white/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors" onClick={onClose} aria-label="Close">×</button>
         {/* Left column */}
-        <div className="flex-1 min-w-0 lg:min-w-[360px] lg:max-w-[680px] p-5 sm:p-6 flex flex-col gap-4 rounded-l-2xl overflow-y-auto flex-shrink-0" style={{ maxHeight: '96vh' }}>
+        <div className="flex-1 min-w-0 lg:min-w-[360px] lg:max-w-[680px] p-5 sm:p-6 flex flex-col gap-4 rounded-l-2xl overflow-y-auto flex-shrink-0 relative" style={{ maxHeight: '100vh' }}>
+          {/* Close (X) button top right of left column (blue area) */}
+          <button className="absolute top-4 right-4 text-white text-2xl z-50 hover:bg-white/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors" onClick={onClose} aria-label="Close">×</button>
           {/* Hero image at top (full width, cropped height) */}
           {(images && images.length > 0) && (() => {
             const mainIdx = Math.max(0, images.findIndex(i => i.isMain));

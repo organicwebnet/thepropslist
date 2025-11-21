@@ -1,15 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Image as ImageIcon, ArrowLeft, Box, Package, Search, Plus, AlertCircle, Printer, Trash2 } from 'lucide-react';
+import { Image as ImageIcon, ArrowLeft, Box, Package, Search, Plus, AlertCircle, Printer, Trash2, MessageSquare, Activity } from 'lucide-react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
-import { DigitalPackListService, PackList, PackingContainer } from '../../shared/services/inventory/packListService';
+import { useWebAuth } from '../contexts/WebAuthContext';
+import { DigitalPackListService, PackList, PackingContainer, ContainerComment, ContainerActivity } from '../../shared/services/inventory/packListService';
 import { DigitalInventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService';
 import { getSymbolUrl, symbolLabel } from '../utils/transport';
 import SubFootnote from '../components/SubFootnote';
 
 const ContainerDetailPage: React.FC = () => {
   const { service } = useFirebase();
+  const { user, userProfile } = useWebAuth();
   const navigate = useNavigate();
   const { packListId, containerId } = useParams<{ packListId: string; containerId: string }>();
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,13 @@ const ContainerDetailPage: React.FC = () => {
   const [availableParents, setAvailableParents] = useState<PackingContainer[]>([]);
   const [savingParent, setSavingParent] = useState(false);
   const [updatingChild, setUpdatingChild] = useState<Record<string, boolean>>({});
+  const [editingLocation, setEditingLocation] = useState(false);
+  const [locationValue, setLocationValue] = useState<string>('');
+  const [savingLocation, setSavingLocation] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [addingComment, setAddingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [userInfoMap, setUserInfoMap] = useState<Map<string, { displayName: string; email?: string }>>(new Map());
 
   useEffect(() => {
     if (!packListId || !containerId) return;
@@ -43,6 +52,7 @@ const ContainerDetailPage: React.FC = () => {
         setPackList(pl);
         const c = (pl.containers || []).find((x) => x.id === containerId) || null;
         setContainer(c);
+        setLocationValue(c?.location || '');
         try {
           if (pl.showId) {
             const showDoc = await service.getDocument<any>('shows', pl.showId);
@@ -100,6 +110,145 @@ const ContainerDetailPage: React.FC = () => {
     if (!packList || !container) return;
     setAvailableParents((packList.containers || []).filter(c => c.id !== container.id));
   }, [packList, container]);
+
+  // Fetch user info for comments and activity log
+  useEffect(() => {
+    if (!container || !service) return;
+    const userIds = new Set<string>();
+    (container.comments || []).forEach(c => userIds.add(c.userId));
+    (container.activityLog || []).forEach(a => userIds.add(a.userId));
+    
+    if (userIds.size === 0) return;
+    
+    const fetchUserInfo = async () => {
+      const userMap = new Map<string, { displayName: string; email?: string }>();
+      await Promise.all(
+        Array.from(userIds).map(async (uid) => {
+          try {
+            const userDoc = await service.getDocument('userProfiles', uid);
+            if (userDoc && userDoc.data) {
+              userMap.set(uid, {
+                displayName: userDoc.data.displayName || userDoc.data.name || userDoc.data.email || 'Unknown User',
+                email: userDoc.data.email
+              });
+            } else {
+              userMap.set(uid, { displayName: 'Unknown User' });
+            }
+          } catch (error) {
+            console.error(`Error fetching user profile for ${uid}:`, error);
+            userMap.set(uid, { displayName: 'Unknown User' });
+          }
+        })
+      );
+      setUserInfoMap(userMap);
+    };
+    
+    fetchUserInfo();
+  }, [container, service]);
+
+  // Helper function to create activity log entry
+  const createActivity = (type: string, details?: any): ContainerActivity => {
+    const userName = userProfile?.displayName || user?.displayName || user?.email || 'Unknown User';
+    return {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      userId: user?.uid || '',
+      userName,
+      timestamp: new Date().toISOString(),
+      details
+    };
+  };
+
+  // Helper function to add activity and update container
+  const addActivity = async (activity: ContainerActivity) => {
+    if (!packListId || !container) return;
+    const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+    const currentActivities = container.activityLog || [];
+      await packListService.updateContainer(packListId, container.id, {
+        activityLog: [...currentActivities, activity]
+      } as Partial<Omit<PackingContainer, 'id' | 'metadata'>>);
+    const refreshed = await packListService.getPackList(packListId);
+    setPackList(refreshed);
+    const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+    setContainer(updated);
+  };
+
+  // Constants for validation
+  const MAX_COMMENT_LENGTH = 2000;
+
+  // Helper function to sanitize comment text
+  const sanitizeComment = (text: string): string => {
+    // Remove control characters and trim
+    return text
+      .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+      .trim();
+  };
+
+  // Helper function to add comment
+  const handleAddComment = async () => {
+    setCommentError(null);
+    
+    if (!user || !packListId || !container || addingComment) {
+      setCommentError('Unable to add comment. Please refresh the page.');
+      return;
+    }
+
+    const trimmed = sanitizeComment(newComment);
+    
+    // Validation
+    if (!trimmed || trimmed.length === 0) {
+      setCommentError('Comment cannot be empty.');
+      return;
+    }
+    
+    if (trimmed.length > MAX_COMMENT_LENGTH) {
+      setCommentError(`Comment must be less than ${MAX_COMMENT_LENGTH} characters. Currently ${trimmed.length} characters.`);
+      return;
+    }
+
+    setAddingComment(true);
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      const userName = userProfile?.displayName || user.displayName || user.email || 'Unknown User';
+      const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'U';
+      const comment: ContainerComment = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        userId: user.uid,
+        userName,
+        userAvatarInitials: userInitials,
+        text: trimmed.substring(0, MAX_COMMENT_LENGTH),
+        createdAt: new Date().toISOString()
+      };
+      const currentComments = container.comments || [];
+      await packListService.updateContainer(packListId, container.id, {
+        comments: [...currentComments, comment]
+      } as Partial<Omit<PackingContainer, 'id' | 'metadata'>>);
+      const refreshed = await packListService.getPackList(packListId);
+      setPackList(refreshed);
+      const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+      setContainer(updated);
+      setNewComment('');
+      setCommentError(null);
+    } catch (err) {
+      console.error('Failed to add comment:', err);
+      setCommentError('Failed to add comment. Please try again.');
+    } finally {
+      setAddingComment(false);
+    }
+  };
+
+  // Combined comments and activity log, sorted by date
+  const combinedLog = useMemo(() => {
+    if (!container) return [];
+    const items: Array<ContainerComment | ContainerActivity> = [];
+    (container.comments || []).forEach(c => items.push(c));
+    (container.activityLog || []).forEach(a => items.push(a));
+    return items.sort((a, b) => {
+      const dateA = (a as ContainerComment).createdAt || (a as ContainerActivity).timestamp;
+      const dateB = (b as ContainerComment).createdAt || (b as ContainerActivity).timestamp;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+  }, [container]);
 
   const findProp = (id: string) => propsList.find((p) => p.id === id);
   const getPropImageUrl = (prop?: InventoryProp): string => {
@@ -267,10 +416,19 @@ const ContainerDetailPage: React.FC = () => {
           <button
             className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors flex items-center gap-2"
             onClick={async () => {
-              if (!packListId || !containerId) return;
-              const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-              await serviceInst.removeContainer(packListId, containerId);
-              navigate(`/packing-lists/${packListId}`);
+              if (!packListId || !containerId || !container) return;
+              if (!confirm(`Are you sure you want to delete container "${container.name}"? This action cannot be undone.`)) {
+                return;
+              }
+              try {
+                const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                // Note: Activity log for deletion would be lost, but we could log it to the pack list if needed
+                await serviceInst.removeContainer(packListId, containerId);
+                navigate(`/packing-lists/${packListId}`);
+              } catch (err) {
+                console.error('Failed to delete container:', err);
+                alert('Failed to delete container. Please try again.');
+              }
             }}
           >
             <Trash2 className="w-4 h-4" />
@@ -308,11 +466,17 @@ const ContainerDetailPage: React.FC = () => {
                         setSavingParent(true);
                         try {
                           const pls = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                          const oldParentId = container.parentId;
                           await pls.updateContainer(packListId, container.id, { parentId: null });
                           const refreshed = await pls.getPackList(packListId);
                           setPackList(refreshed);
                           const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
                           setContainer(updated);
+                          // Track activity
+                          if (updated && oldParentId) {
+                            const activity = createActivity('Parent container removed', { oldParentId });
+                            await addActivity(activity);
+                          }
                         } finally {
                           setSavingParent(false);
                         }
@@ -336,6 +500,87 @@ const ContainerDetailPage: React.FC = () => {
                   <span className="px-3 py-1 rounded-lg bg-gray-500/20 text-gray-400 border border-gray-500/30">None</span>
                 )}
               </div>
+            </div>
+            {/* Location Section */}
+            <div className="bg-white/5 rounded-lg border border-white/10 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="font-medium text-white">Location</div>
+                <button
+                  className="px-3 py-1.5 text-sm rounded-lg bg-pb-primary/20 text-pb-primary border border-pb-primary/30 hover:bg-pb-primary/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={() => {
+                    setEditingLocation(true);
+                    setLocationValue(container.location || '');
+                  }}
+                  disabled={editingLocation || savingLocation}
+                >
+                  {editingLocation ? 'Editing...' : container.location ? 'Change' : 'Set location'}
+                </button>
+              </div>
+              {editingLocation ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={locationValue}
+                    onChange={(e) => setLocationValue(e.target.value)}
+                    placeholder="e.g., Warehouse A, Room 101, Storage Unit 5"
+                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1.5 text-sm rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={savingLocation}
+                      onClick={async () => {
+                        if (!packListId || !container) return;
+                        setSavingLocation(true);
+                        try {
+                          const pls = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                          const oldLocation = container.location;
+                          await pls.updateContainer(packListId, container.id, { location: locationValue || undefined });
+                          const refreshed = await pls.getPackList(packListId);
+                          setPackList(refreshed);
+                          const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+                          setContainer(updated);
+                          setLocationValue(updated?.location || '');
+                          setEditingLocation(false);
+                          // Track activity
+                          if (updated && oldLocation !== updated.location) {
+                            const activity = createActivity('Location updated', { oldLocation: oldLocation || 'None', newLocation: updated.location || 'None' });
+                            await addActivity(activity);
+                          }
+                        } catch (err) {
+                          console.error('Failed to update location:', err);
+                        } finally {
+                          setSavingLocation(false);
+                        }
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      className="px-3 py-1.5 text-sm rounded-lg bg-gray-600/20 text-gray-400 border border-gray-600/30 hover:bg-gray-600/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={savingLocation}
+                      onClick={() => {
+                        setEditingLocation(false);
+                        setLocationValue(container.location || '');
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-pb-gray/70">Current location:</span>
+                  {container.location ? (
+                    <span className="px-3 py-1 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30">
+                      📍 {container.location}
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-lg bg-gray-500/20 text-gray-400 border border-gray-500/30">Not set</span>
+                  )}
+                </div>
+              )}
             </div>
             {/* Container Info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -437,21 +682,27 @@ const ContainerDetailPage: React.FC = () => {
                       </div>
                       <button
                         className={`px-3 py-1.5 text-sm rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${removing[p.propId] ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        onClick={async () => {
-                          if (!packListId) return;
-                          setRemoving((prev) => ({ ...prev, [p.propId]: true }));
-                          try {
-                            const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                            await serviceInst.removePropFromContainer(packListId, container.id, p.propId);
-                            // When removed, set prop status to on-hold
-                            try { await service.updateDocument('props', p.propId, { status: 'on-hold', lastStatusUpdate: new Date().toISOString() }); } catch (err) { /* ignore */ }
-                            const refreshed = await serviceInst.getPackList(packListId);
-                            const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
-                            setContainer(updated);
-                          } finally {
-                            setRemoving((prev) => ({ ...prev, [p.propId]: false }));
-                          }
-                        }}
+                          onClick={async () => {
+                            if (!packListId) return;
+                            setRemoving((prev) => ({ ...prev, [p.propId]: true }));
+                            try {
+                              const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                              const prop = findProp(p.propId);
+                              await serviceInst.removePropFromContainer(packListId, container.id, p.propId);
+                              // When removed, set prop status to on-hold
+                              try { await service.updateDocument('props', p.propId, { status: 'on-hold', lastStatusUpdate: new Date().toISOString() }); } catch (err) { /* ignore */ }
+                              const refreshed = await serviceInst.getPackList(packListId);
+                              const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+                              setContainer(updated);
+                              // Track activity
+                              if (updated) {
+                                const activity = createActivity('Prop removed', { propId: p.propId, propName: prop?.name || 'Unknown prop', quantity: p.quantity });
+                                await addActivity(activity);
+                              }
+                            } finally {
+                              setRemoving((prev) => ({ ...prev, [p.propId]: false }));
+                            }
+                          }}
                         disabled={!!removing[p.propId]}
                       >
                         {removing[p.propId] ? 'Removing...' : 'Remove'}
@@ -495,9 +746,31 @@ const ContainerDetailPage: React.FC = () => {
                           setUpdatingChild(prev => ({ ...prev, [ch.id]: true }));
                           try {
                             const pls = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                            await pls.updateContainer(packListId, ch.id, { parentId: null } as any);
+                            await pls.updateContainer(packListId, ch.id, { parentId: null });
                             const refreshed = await pls.getPackList(packListId);
                             setPackList(refreshed);
+                            // Track activity on child container
+                            const childContainer = (refreshed.containers || []).find((x) => x.id === ch.id);
+                            if (childContainer) {
+                              const activity = createActivity('Child container removed from parent', { 
+                                childId: ch.id, 
+                                childName: ch.name,
+                                parentId: container.id,
+                                parentName: container.name
+                              });
+                              const currentActivities = childContainer.activityLog || [];
+                              await pls.updateContainer(packListId, ch.id, {
+                                activityLog: [...currentActivities, activity]
+                              } as Partial<Omit<PackingContainer, 'id' | 'metadata'>>);
+                            }
+                            // Also track on parent container
+                            if (container) {
+                              const activity = createActivity('Child container removed', { 
+                                childId: ch.id, 
+                                childName: ch.name 
+                              });
+                              await addActivity(activity);
+                            }
                           } finally {
                             setUpdatingChild(prev => ({ ...prev, [ch.id]: false }));
                           }
@@ -589,6 +862,11 @@ const ContainerDetailPage: React.FC = () => {
                                 const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
                                 setContainer(updated);
                                 setPackList(refreshed);
+                                // Track activity
+                                if (updated) {
+                                  const activity = createActivity('Prop added', { propId: p.id, propName: p.name, quantity: 1 });
+                                  await addActivity(activity);
+                                }
                               } finally {
                                 setAdding((prev) => ({ ...prev, [p.id]: false }));
                               }
@@ -604,6 +882,124 @@ const ContainerDetailPage: React.FC = () => {
               </div>
             </>
           )}
+        </div>
+
+        {/* Comments and Activity Log */}
+        <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-6 h-6 bg-purple-500/20 rounded-lg flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-purple-400" />
+            </div>
+            <h2 className="text-lg font-semibold text-white">Comments & Activity</h2>
+          </div>
+
+          {/* Add Comment Section */}
+          <div className="mb-6">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => {
+                    setNewComment(e.target.value);
+                    setCommentError(null);
+                  }}
+                  placeholder="Add a comment..."
+                  className={`w-full px-4 py-2 rounded-lg border bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 min-h-[80px] resize-none ${
+                    commentError 
+                      ? 'border-red-500/50 focus:ring-red-500/50' 
+                      : 'border-white/10 focus:ring-pb-primary/50'
+                  }`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      handleAddComment();
+                    }
+                  }}
+                />
+                <div className="flex items-center justify-between mt-1">
+                  <div className="flex-1">
+                    {commentError && (
+                      <p className="text-xs text-red-400 mt-1">{commentError}</p>
+                    )}
+                  </div>
+                  <p className={`text-xs ${newComment.length > MAX_COMMENT_LENGTH ? 'text-red-400' : 'text-pb-gray/50'}`}>
+                    {newComment.length}/{MAX_COMMENT_LENGTH}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleAddComment}
+                disabled={!newComment.trim() || addingComment || !!commentError}
+                className="px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 self-start"
+              >
+                {addingComment ? 'Adding...' : 'Add Comment'}
+              </button>
+            </div>
+            <p className="text-xs text-pb-gray/50 mt-2">Press Ctrl+Enter (or Cmd+Enter on Mac) to submit</p>
+          </div>
+
+          {/* Comments and Activity List */}
+          <div className="space-y-3 max-h-[600px] overflow-y-auto">
+            {combinedLog.length === 0 ? (
+              <div className="text-center py-8">
+                <MessageSquare className="w-12 h-12 text-pb-gray/50 mx-auto mb-3" />
+                <p className="text-pb-gray/70">No comments or activity yet</p>
+                <p className="text-pb-gray/50 text-sm">Add a comment above to get started</p>
+              </div>
+            ) : (
+              combinedLog.map((item) => {
+                const isComment = 'createdAt' in item;
+                const userInfo = userInfoMap.get(item.userId) || { displayName: item.userName || 'Unknown User' };
+                const initials = isComment ? (item.userAvatarInitials || userInfo.displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'U') : 'A';
+                const date = isComment ? item.createdAt : item.timestamp;
+                
+                return (
+                  <div key={item.id} className="bg-white/5 rounded-lg border border-white/10 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-pb-primary/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-semibold text-pb-primary">{initials}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-semibold text-white text-sm">
+                            {userInfo.displayName}
+                          </span>
+                          {!isComment && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-pb-primary/20 text-pb-primary border border-pb-primary/30">
+                              Activity
+                            </span>
+                          )}
+                          <span className="text-xs text-pb-gray/50">
+                            {new Date(date).toLocaleString()}
+                          </span>
+                        </div>
+                        {isComment ? (
+                          <p className="text-sm text-white/90 leading-relaxed">{item.text}</p>
+                        ) : (
+                          <div>
+                            <p className="text-sm text-pb-primary/90 leading-relaxed font-medium">{item.type}</p>
+                            {item.details && (
+                              <div className="text-xs text-pb-gray/70 mt-1 space-y-1">
+                                {typeof item.details === 'object' ? (
+                                  Object.entries(item.details).map(([key, value]) => (
+                                    <div key={key}>
+                                      <span className="font-medium">{key}:</span> {String(value)}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div>{String(item.details)}</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
         {/* Print Label Modal & Print Area */}
@@ -632,12 +1028,18 @@ const ContainerDetailPage: React.FC = () => {
                         setSavingParent(true);
                         try {
                           const pls = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                          const oldParentId = container.parentId;
                           await pls.updateContainer(packListId, container.id, { parentId: p.id });
                           const refreshed = await pls.getPackList(packListId);
                           setPackList(refreshed);
                           const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
                           setContainer(updated);
                           setParentSelecting(false);
+                          // Track activity
+                          if (updated) {
+                            const activity = createActivity('Parent container changed', { oldParentId: oldParentId || 'None', newParentId: p.id, newParentName: p.name });
+                            await addActivity(activity);
+                          }
                         } finally {
                           setSavingParent(false);
                         }

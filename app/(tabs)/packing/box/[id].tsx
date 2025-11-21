@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,16 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Image,
+  TextInput,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePacking } from '../../../../src/hooks/usePacking';
 import { useShows } from '../../../../src/contexts/ShowsContext';
 import { useProps } from '../../../../src/contexts/PropsContext';
-import type { PackingBox } from '../../../../src/types/packing';
+import { useAuth } from '../../../../src/contexts/AuthContext';
+import { useFirebase } from '../../../../src/contexts/FirebaseContext';
+import type { PackingBox, ContainerComment, ContainerActivity } from '../../../../src/types/packing';
 import LinearGradient from 'react-native-linear-gradient';
 import StyledText from '../../../../src/components/StyledText';
 import { useTheme } from '../../../../src/contexts/ThemeContext';
@@ -25,15 +28,21 @@ export default function BoxDetailsScreen() {
   const { id, showId } = useLocalSearchParams<{ id: string; showId: string }>();
   const { theme } = useTheme();
   const currentThemeColors = theme === 'light' ? lightTheme.colors : darkTheme.colors;
+  const { user, userProfile } = useAuth();
+  const { service } = useFirebase();
   
   const [box, setBox] = useState<PackingBox | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [parentBox, setParentBox] = useState<PackingBox | null>(null);
   const [showName, setShowName] = useState<string>('');
+  const [newComment, setNewComment] = useState('');
+  const [addingComment, setAddingComment] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+  const [userInfoMap, setUserInfoMap] = useState<Map<string, { displayName: string; email?: string }>>(new Map());
   
   // We'll get showId from box data if not provided, so use a placeholder for now
-  const { getDocument: getBoxById } = usePacking(showId);
+  const { getDocument: getBoxById, operations } = usePacking(showId);
   const { getShowById } = useShows();
   const { props: allProps } = useProps();
 
@@ -106,6 +115,145 @@ export default function BoxDetailsScreen() {
     loadBox();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, showId, getBoxById, getShowById]);
+
+  // Fetch user info for comments and activity log
+  useEffect(() => {
+    if (!box || !service) return;
+    const userIds = new Set<string>();
+    (box.comments || []).forEach(c => userIds.add(c.userId));
+    (box.activityLog || []).forEach(a => userIds.add(a.userId));
+    
+    if (userIds.size === 0) return;
+    
+    const fetchUserInfo = async () => {
+      const userMap = new Map<string, { displayName: string; email?: string }>();
+      await Promise.all(
+        Array.from(userIds).map(async (uid) => {
+          try {
+            const userDoc = await service.getDocument('userProfiles', uid);
+            if (userDoc && userDoc.data) {
+              userMap.set(uid, {
+                displayName: userDoc.data.displayName || userDoc.data.name || userDoc.data.email || 'Unknown User',
+                email: userDoc.data.email
+              });
+            } else {
+              userMap.set(uid, { displayName: 'Unknown User' });
+            }
+          } catch (error) {
+            console.error(`Error fetching user profile for ${uid}:`, error);
+            userMap.set(uid, { displayName: 'Unknown User' });
+          }
+        })
+      );
+      setUserInfoMap(userMap);
+    };
+    
+    fetchUserInfo();
+  }, [box, service]);
+
+  // Helper function to create activity log entry
+  const createActivity = (type: string, details?: any): ContainerActivity => {
+    const userName = userProfile?.displayName || user?.displayName || user?.email || 'Unknown User';
+    return {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type,
+      userId: user?.uid || '',
+      userName,
+      timestamp: new Date().toISOString(),
+      details
+    };
+  };
+
+  // Helper function to add activity and update box
+  const addActivity = async (activity: ContainerActivity) => {
+    if (!box) return;
+    const currentActivities = box.activityLog || [];
+    await operations.updateBox(box.id, {
+      activityLog: [...currentActivities, activity]
+    });
+    // Reload box to get updated data
+    const boxDoc = await getBoxById(box.id);
+    if (boxDoc && boxDoc.data) {
+      setBox({ ...boxDoc.data, id: boxDoc.id } as PackingBox);
+    }
+  };
+
+  // Constants for validation
+  const MAX_COMMENT_LENGTH = 2000;
+
+  // Helper function to sanitize comment text
+  const sanitizeComment = (text: string): string => {
+    // Remove control characters and trim
+    return text
+      .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+      .trim();
+  };
+
+  // Helper function to add comment
+  const handleAddComment = async () => {
+    setCommentError(null);
+    
+    if (!user || !box || addingComment) {
+      setCommentError('Unable to add comment. Please refresh the page.');
+      return;
+    }
+
+    const trimmed = sanitizeComment(newComment);
+    
+    // Validation
+    if (!trimmed || trimmed.length === 0) {
+      setCommentError('Comment cannot be empty.');
+      return;
+    }
+    
+    if (trimmed.length > MAX_COMMENT_LENGTH) {
+      setCommentError(`Comment must be less than ${MAX_COMMENT_LENGTH} characters. Currently ${trimmed.length} characters.`);
+      return;
+    }
+
+    setAddingComment(true);
+    try {
+      const userName = userProfile?.displayName || user.displayName || user.email || 'Unknown User';
+      const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'U';
+      const comment: ContainerComment = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        userId: user.uid,
+        userName,
+        userAvatarInitials: userInitials,
+        text: trimmed.substring(0, MAX_COMMENT_LENGTH),
+        createdAt: new Date().toISOString()
+      };
+      const currentComments = box.comments || [];
+      await operations.updateBox(box.id, {
+        comments: [...currentComments, comment]
+      });
+      setNewComment('');
+      setCommentError(null);
+      // Reload box to get updated data
+      const boxDoc = await getBoxById(box.id);
+      if (boxDoc && boxDoc.data) {
+        setBox({ ...boxDoc.data, id: boxDoc.id } as PackingBox);
+      }
+    } catch (err) {
+      console.error('Failed to add comment:', err);
+      setCommentError('Failed to add comment. Please try again.');
+    } finally {
+      setAddingComment(false);
+    }
+  };
+
+  // Combined comments and activity log, sorted by date
+  const combinedLog = useMemo(() => {
+    if (!box) return [];
+    const items: Array<ContainerComment | ContainerActivity> = [];
+    (box.comments || []).forEach(c => items.push(c));
+    (box.activityLog || []).forEach(a => items.push(a));
+    return items.sort((a, b) => {
+      const dateA = (a as ContainerComment).createdAt || (a as ContainerActivity).timestamp;
+      const dateB = (b as ContainerComment).createdAt || (b as ContainerActivity).timestamp;
+      return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
+  }, [box]);
 
   const makeQrCodeUrl = (boxId: string) => {
     const payload = JSON.stringify({ type: 'packingBox', id: boxId, showId: box?.showId || showId });
@@ -508,6 +656,134 @@ export default function BoxDetailsScreen() {
             ))}
           </View>
         )}
+
+        {/* Comments and Activity Log */}
+        <View style={[styles.card, { backgroundColor: 'rgba(31, 41, 55, 0.9)', borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
+          <View style={styles.cardHeader}>
+            <Feather name="message-square" size={24} color="#fff" />
+            <StyledText style={[styles.cardTitle, { color: currentThemeColors.textPrimary }]}>
+              Comments & Activity
+            </StyledText>
+          </View>
+
+          {/* Add Comment Section */}
+          <View style={styles.commentInputContainer}>
+            <TextInput
+              value={newComment}
+              onChangeText={(text) => {
+                setNewComment(text);
+                setCommentError(null);
+              }}
+              placeholder="Add a comment..."
+              placeholderTextColor={currentThemeColors.textSecondary}
+              multiline
+              maxLength={MAX_COMMENT_LENGTH}
+              style={[styles.commentInput, { 
+                color: currentThemeColors.textPrimary,
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderColor: commentError ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255, 255, 255, 0.1)'
+              }]}
+            />
+            {commentError && (
+              <StyledText style={[styles.errorText, { color: '#EF4444' }]}>
+                {commentError}
+              </StyledText>
+            )}
+            <View style={styles.commentFooter}>
+              <View style={{ flex: 1 }} />
+              <StyledText style={[styles.characterCount, { 
+                color: newComment.length > MAX_COMMENT_LENGTH ? '#EF4444' : currentThemeColors.textSecondary 
+              }]}>
+                {newComment.length}/{MAX_COMMENT_LENGTH}
+              </StyledText>
+            </View>
+            <TouchableOpacity
+              onPress={handleAddComment}
+              disabled={!newComment.trim() || addingComment || !!commentError}
+              style={[styles.addCommentButton, {
+                backgroundColor: addingComment ? 'rgba(59, 130, 246, 0.5)' : '#3B82F6',
+                opacity: (!newComment.trim() || addingComment || !!commentError) ? 0.6 : 1
+              }]}
+            >
+              {addingComment ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.addCommentButtonText}>Add Comment</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Comments and Activity List */}
+          <View style={styles.logContainer}>
+            {combinedLog.length === 0 ? (
+              <View style={styles.emptyLogContainer}>
+                <Feather name="message-square" size={48} color={currentThemeColors.textSecondary} />
+                <StyledText style={[styles.emptyLogText, { color: currentThemeColors.textSecondary }]}>
+                  No comments or activity yet
+                </StyledText>
+                <StyledText style={[styles.emptyLogSubtext, { color: currentThemeColors.textSecondary }]}>
+                  Add a comment above to get started
+                </StyledText>
+              </View>
+            ) : (
+              combinedLog.map((item) => {
+                const isComment = 'createdAt' in item;
+                const userInfo = userInfoMap.get(item.userId) || { displayName: item.userName || 'Unknown User' };
+                const initials = isComment ? (item.userAvatarInitials || userInfo.displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'U') : 'A';
+                const date = isComment ? item.createdAt : item.timestamp;
+                
+                return (
+                  <View key={item.id} style={[styles.logItem, { borderBottomColor: 'rgba(255, 255, 255, 0.1)' }]}>
+                    <View style={[styles.logAvatar, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
+                      <Text style={[styles.logAvatarText, { color: '#93C5FD' }]}>{initials}</Text>
+                    </View>
+                    <View style={styles.logContent}>
+                      <View style={styles.logHeader}>
+                        <StyledText style={[styles.logUserName, { color: currentThemeColors.textPrimary }]}>
+                          {userInfo.displayName}
+                        </StyledText>
+                        {!isComment && (
+                          <View style={[styles.activityBadge, { backgroundColor: 'rgba(59, 130, 246, 0.2)' }]}>
+                            <Text style={[styles.activityBadgeText, { color: '#93C5FD' }]}>Activity</Text>
+                          </View>
+                        )}
+                        <StyledText style={[styles.logDate, { color: currentThemeColors.textSecondary }]}>
+                          {formatDistanceToNow(new Date(date), { addSuffix: true })}
+                        </StyledText>
+                      </View>
+                      {isComment ? (
+                        <StyledText style={[styles.logText, { color: currentThemeColors.textPrimary }]}>
+                          {item.text}
+                        </StyledText>
+                      ) : (
+                        <View>
+                          <StyledText style={[styles.logActivityType, { color: '#93C5FD' }]}>
+                            {item.type}
+                          </StyledText>
+                          {item.details && (
+                            <View style={styles.logDetails}>
+                              {typeof item.details === 'object' ? (
+                                Object.entries(item.details).map(([key, value]) => (
+                                  <StyledText key={key} style={[styles.logDetailText, { color: currentThemeColors.textSecondary }]}>
+                                    {key}: {String(value)}
+                                  </StyledText>
+                                ))
+                              ) : (
+                                <StyledText style={[styles.logDetailText, { color: currentThemeColors.textSecondary }]}>
+                                  {String(item.details)}
+                                </StyledText>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </View>
       </ScrollView>
     </LinearGradient>
   );
@@ -683,6 +959,118 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  commentInputContainer: {
+    marginBottom: 16,
+  },
+  commentInput: {
+    minHeight: 80,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+    fontSize: 14,
+    textAlignVertical: 'top',
+  },
+  commentFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  characterCount: {
+    fontSize: 12,
+  },
+  errorText: {
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  addCommentButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addCommentButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  logContainer: {
+    maxHeight: 400,
+  },
+  emptyLogContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyLogText: {
+    fontSize: 16,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptyLogSubtext: {
+    fontSize: 12,
+  },
+  logItem: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  logAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  logAvatarText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  logContent: {
+    flex: 1,
+  },
+  logHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    flexWrap: 'wrap',
+  },
+  logUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  activityBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  activityBadgeText: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  logDate: {
+    fontSize: 11,
+    marginLeft: 'auto',
+  },
+  logText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  logActivityType: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  logDetails: {
+    marginTop: 4,
+  },
+  logDetailText: {
+    fontSize: 12,
+    marginBottom: 2,
   },
 });
 
