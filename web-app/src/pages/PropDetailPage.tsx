@@ -237,22 +237,8 @@ const PropDetailPage: React.FC = () => {
       <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-pb-darker/80 backdrop-blur-sm border-b border-pb-primary/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link 
-              to="/props" 
-              className="flex items-center gap-2 text-pb-gray hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Props
-            </Link>
-            <div className="w-12 h-12 rounded-md overflow-hidden bg-pb-gray flex items-center justify-center">
-              {mainImage ? (
-                <img src={mainImage} alt={prop.name} className="object-cover w-full h-full" />
-              ) : (
-                <ImageIcon className="w-6 h-6 text-white/50" />
-              )}
-            </div>
             <div>
-              <div className="text-white font-bold">{prop.name}</div>
+              <div className="text-2xl text-white font-bold">{prop.name}</div>
               <div className="flex flex-wrap gap-2 mt-1">
                 <span className="px-2 py-0.5 rounded-full text-xs bg-pb-primary/30 text-white">
                   {prop.category}
