@@ -15,7 +15,7 @@ import { usePacking } from '../../../../src/hooks/usePacking';
 import { useShows } from '../../../../src/contexts/ShowsContext';
 import { useProps } from '../../../../src/contexts/PropsContext';
 import { useAuth } from '../../../../src/contexts/AuthContext';
-import { useFirebase } from '../../../../src/contexts/FirebaseContext';
+import { useFirebase } from '../../../../src/platforms/mobile/contexts/FirebaseContext';
 import type { PackingBox, ContainerComment, ContainerActivity } from '../../../../src/types/packing';
 import LinearGradient from 'react-native-linear-gradient';
 import StyledText from '../../../../src/components/StyledText';
