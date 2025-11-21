@@ -548,9 +548,9 @@ export const CardDetailModal: React.FC<{
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'transparent', overflow: 'hidden' }}>
       <div
-        className="relative rounded-l-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[96vh] min-h-[560px] lg:min-h-[700px] border-l border-t border-b border-white/10 w-full max-w-[95vw] lg:max-w-[1200px]"
+        className="relative rounded-l-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[96vh] min-h-[560px] lg:min-h-[700px] border-l border-t border-b border-white/10 w-full max-w-[98vw] lg:max-w-[1400px]"
         style={{ background: cardColor, transition: 'background 0.3s' }}
       >
         {/* Left column */}
@@ -867,7 +867,7 @@ export const CardDetailModal: React.FC<{
           <div className="flex gap-2.5 items-center mt-1 mb-1">
             <span className="text-gray-200 text-sm font-medium">Card color:</span>
             <div className="flex gap-2">
-              {["#27ae60", "#f1c40f", "#e67e22", "#e74c3c", "#8e44ad", "#2980b9", "#374151"].map(color => (
+              {["#2d5f3f", "#8b7a3a", "#8b5a3a", "#8b4a3a", "#5a3d5a", "#3d5a6b", "#374151"].map(color => (
                 <button
                   key={color}
                   className={`w-8 h-8 rounded-full border-2 shadow-md hover:scale-110 transition-all ${
@@ -1050,7 +1050,7 @@ export const CardDetailModal: React.FC<{
           )}
         </div>
         {/* Right column: Comments and Activity */}
-        <div className="w-full lg:w-[340px] flex flex-col p-5 sm:p-6 gap-4 bg-pb-darker/90 border-l-0 lg:border-l border-white/10 flex-shrink-0 relative" style={{ maxHeight: '96vh', overflowY: 'auto' }}>
+        <div className="w-full lg:w-[340px] flex flex-col p-5 sm:p-6 gap-4 bg-pb-darker/90 border-l-0 lg:border-l border-white/10 flex-shrink-0 relative overflow-hidden" style={{ maxHeight: '96vh', overflowY: 'auto' }}>
           {/* Close (X) button top right of comments panel */}
           <button className="absolute top-4 right-4 text-white text-2xl z-50 hover:bg-white/10 rounded-full w-8 h-8 flex items-center justify-center transition-colors" onClick={onClose} aria-label="Close">×</button>
           <div className="font-semibold text-white text-lg mb-1">Comments and activity</div>
