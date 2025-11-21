@@ -548,9 +548,9 @@ export const CardDetailModal: React.FC<{
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent p-2">
       <div
-        className="relative rounded-l-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[96vh] min-h-[560px] lg:min-h-[700px] border-l border-t border-b border-white/10 w-full max-w-[1100px]"
+        className="relative rounded-l-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden max-h-[96vh] min-h-[560px] lg:min-h-[700px] border-l border-t border-b border-white/10 w-full max-w-[95vw] lg:max-w-[1200px]"
         style={{ background: cardColor, transition: 'background 0.3s' }}
       >
         {/* Left column */}
