@@ -688,6 +688,37 @@ export const CardDetailModal: React.FC<{
                   setMentionSearchTextTitle(typedText);
                   setMentionSuggestionsTitle(usersList);
                 }}>Mention User</button>
+                <button className="w-full text-left py-1 hover:bg-gray-100 px-2" onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = titleRef.current?.selectionStart || title.length;
+                  const textBeforeCursor = title.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  
+                  // Remove @ from text
+                  if (mentionMatch) {
+                    const beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                    const textAfterCursor = title.substring(cursorPos);
+                    setTitle(beforeMention + textAfterCursor);
+                  } else if (title.endsWith('@')) {
+                    setTitle(title.slice(0, -1));
+                  }
+                  
+                  setShowMentionMenuTitle(false);
+                  // Open the date picker
+                  setShowDates(true);
+                  // Set the current dueDate value in the picker format if it exists
+                  if (dueDate) {
+                    const date = new Date(dueDate);
+                    if (!isNaN(date.getTime())) {
+                      const year = date.getFullYear();
+                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                      const day = String(date.getDate()).padStart(2, '0');
+                      const hours = String(date.getHours()).padStart(2, '0');
+                      const minutes = String(date.getMinutes()).padStart(2, '0');
+                      // Note: The date picker input will handle this automatically
+                    }
+                  }
+                }}>Due Date/Time</button>
               </div>
             )}
             {showMentionSearchTitle && (

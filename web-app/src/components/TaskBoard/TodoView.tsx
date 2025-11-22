@@ -87,7 +87,7 @@ interface TodoViewProps {
   boardId: string;
   lists: ListData[];
   cards: Record<string, CardData[]>; // listId -> cards
-  onAddCard: (listId: string, title: string, assignedTo?: string[]) => void;
+  onAddCard: (listId: string, title: string, assignedTo?: string[], dueDate?: string) => void;
   onUpdateCard: (cardId: string, updates: Partial<CardData>) => void;
   onDeleteCard: (cardId: string) => void;
   selectedCardId?: string | null;
@@ -130,6 +130,9 @@ const TodoView: React.FC<TodoViewProps> = ({
   const [mentionSearchText, setMentionSearchText] = useState('');
   const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([]);
   const [pendingAssignments, setPendingAssignments] = useState<string[]>([]); // Store user IDs to assign when card is created
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDateTime, setSelectedDateTime] = useState('');
+  const [pendingDueDate, setPendingDueDate] = useState<string | null>(null); // Store due date to set when card is created
   
   const { propsList, containersList, usersList } = useMentionData();
 
@@ -254,11 +257,13 @@ const TodoView: React.FC<TodoViewProps> = ({
       const textToSave = quickAddTextRawRef.current.trim() || displayText;
       // Pass pending assignments - always pass an array (empty if no assignments)
       const assignmentsToPass = pendingAssignments.length > 0 ? [...pendingAssignments] : [];
-      console.log('Adding card with assignments:', { assignmentsToPass, pendingAssignments, textToSave });
-      await onAddCard(defaultListId, textToSave, assignmentsToPass);
+      const dueDateToPass = pendingDueDate || undefined;
+      console.log('Adding card with assignments:', { assignmentsToPass, pendingAssignments, textToSave, dueDateToPass });
+      await onAddCard(defaultListId, textToSave, assignmentsToPass, dueDateToPass);
       setQuickAddTextDisplay("");
       quickAddTextRawRef.current = '';
       setPendingAssignments([]); // Clear pending assignments
+      setPendingDueDate(null); // Clear pending due date
       // Re-focus input for rapid entry
       setTimeout(() => quickAddInputRef.current?.focus(), 0);
     } catch (error) {
@@ -513,6 +518,39 @@ const TodoView: React.FC<TodoViewProps> = ({
               >
                 Mention User
               </button>
+              <button 
+                className="w-full text-left py-1 hover:bg-gray-100 px-2"
+                onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddTextDisplay.length;
+                  const textBeforeCursor = quickAddTextDisplay.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  
+                  // Remove @ from text
+                  if (mentionMatch) {
+                    const beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                    const textAfterCursor = quickAddTextDisplay.substring(cursorPos);
+                    setQuickAddTextDisplay(beforeMention + textAfterCursor);
+                    quickAddTextRawRef.current = beforeMention + textAfterCursor;
+                  } else if (quickAddTextDisplay.endsWith('@')) {
+                    setQuickAddTextDisplay(quickAddTextDisplay.slice(0, -1));
+                    quickAddTextRawRef.current = quickAddTextDisplay.slice(0, -1);
+                  }
+                  
+                  setShowMentionMenu(false);
+                  setShowDatePicker(true);
+                  // Set default to current date/time
+                  const now = new Date();
+                  const year = now.getFullYear();
+                  const month = String(now.getMonth() + 1).padStart(2, '0');
+                  const day = String(now.getDate()).padStart(2, '0');
+                  const hours = String(now.getHours()).padStart(2, '0');
+                  const minutes = String(now.getMinutes()).padStart(2, '0');
+                  setSelectedDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+                }}
+              >
+                Due Date/Time
+              </button>
             </div>
           )}
           {showMentionSearch && (
@@ -640,6 +678,107 @@ const TodoView: React.FC<TodoViewProps> = ({
                     {i.name}
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+          {showDatePicker && (
+            <div 
+              className="absolute -top-40 left-0 bg-[#1f2937] text-white rounded border border-white/10 p-3 z-50 w-64 sm:w-72"
+              role="dialog"
+              aria-label="Select due date and time"
+            >
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-sm text-gray-300">Due Date & Time</div>
+                <button
+                  onClick={() => {
+                    setShowDatePicker(false);
+                    setSelectedDateTime('');
+                    quickAddInputRef.current?.focus();
+                  }}
+                  className="text-gray-400 hover:text-white px-1"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              <input
+                type="datetime-local"
+                className="w-full rounded bg-[#111827] border border-white/10 px-2 py-1 text-white mb-2 focus:outline-none focus:ring-2 focus:ring-pb-primary"
+                value={selectedDateTime}
+                onChange={e => setSelectedDateTime(e.target.value)}
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  className="flex-1 px-3 py-1.5 rounded bg-pb-primary hover:bg-pb-secondary text-white text-sm transition-colors"
+                  onClick={() => {
+                    if (!selectedDateTime) {
+                      setShowDatePicker(false);
+                      quickAddInputRef.current?.focus();
+                      return;
+                    }
+                    
+                    // Convert datetime-local format to ISO string for storage
+                    const date = new Date(selectedDateTime);
+                    const isoString = date.toISOString();
+                    
+                    // Store the due date to be set when the card is created
+                    setPendingDueDate(isoString);
+                    
+                    // Format the date/time for display in the input
+                    const formattedDate = date.toLocaleString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true
+                    });
+                    
+                    // Insert formatted date into text at cursor position
+                    const currentDisplay = quickAddTextDisplay;
+                    const cursorPos = quickAddInputRef.current?.selectionStart || currentDisplay.length;
+                    const textBeforeCursor = currentDisplay.substring(0, cursorPos);
+                    const textAfterCursor = currentDisplay.substring(cursorPos);
+                    
+                    // Remove @ if it exists
+                    const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                    let beforeMention = textBeforeCursor;
+                    if (mentionMatch) {
+                      beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                    } else if (textBeforeCursor.endsWith('@')) {
+                      beforeMention = textBeforeCursor.slice(0, -1);
+                    }
+                    
+                    const newDisplayText = beforeMention + formattedDate + ' ' + textAfterCursor;
+                    setQuickAddTextDisplay(newDisplayText);
+                    quickAddTextRawRef.current = newDisplayText;
+                    
+                    setShowDatePicker(false);
+                    setSelectedDateTime('');
+                    
+                    // Return focus to input and set cursor position
+                    setTimeout(() => {
+                      if (quickAddInputRef.current) {
+                        const newPos = beforeMention.length + formattedDate.length + 1;
+                        quickAddInputRef.current.setSelectionRange(newPos, newPos);
+                        quickAddInputRef.current.focus();
+                      }
+                    }, 0);
+                  }}
+                >
+                  Insert
+                </button>
+                <button
+                  className="px-3 py-1.5 rounded bg-gray-600 hover:bg-gray-700 text-white text-sm transition-colors"
+                  onClick={() => {
+                    setShowDatePicker(false);
+                    setSelectedDateTime('');
+                    quickAddInputRef.current?.focus();
+                  }}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}

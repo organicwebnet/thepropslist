@@ -10,7 +10,7 @@ import { logger } from "../../utils/logger";
 interface ListColumnProps {
   list: ListData;
   cards: CardData[];
-  onAddCard: (listId: string, title: string) => void;
+  onAddCard: (listId: string, title: string, assignedTo?: string[], dueDate?: string) => void;
   onUpdateCard: (cardId: string, updates: Partial<CardData>) => void;
   onDeleteCard: (cardId: string) => void;
   dndId: string;
@@ -32,6 +32,9 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
   const [showMentionSearch, setShowMentionSearch] = useState(false);
   const [mentionSearchText, setMentionSearchText] = useState('');
   const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDateTime, setSelectedDateTime] = useState('');
+  const [pendingDueDate, setPendingDueDate] = useState<string | null>(null); // Store due date to set when card is created
   
   // Use cached mention data
   const { propsList, containersList, usersList } = useMentionData();
@@ -50,8 +53,10 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
     
     try {
       setIsAddingCard(true);
-      await onAddCard(list.id, newCardTitle);
+      const dueDateToPass = pendingDueDate || undefined;
+      await onAddCard(list.id, newCardTitle, undefined, dueDateToPass);
       setNewCardTitle("");
+      setPendingDueDate(null); // Clear pending due date
       setAddingCard(true);
       // Re-focus the input for rapid card entry
       setTimeout(() => newCardInputRef.current?.focus(), 0);
@@ -242,6 +247,38 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
                   >
                     User
                   </button>
+                  <button 
+                    className="w-full text-left py-1 hover:bg-gray-100 px-2 focus:bg-gray-100 focus:outline-none"
+                    role="menuitem"
+                    onClick={() => {
+                      // Extract any text typed after @
+                      const cursorPos = newCardInputRef.current?.selectionStart || newCardTitle.length;
+                      const textBeforeCursor = newCardTitle.substring(0, cursorPos);
+                      const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                      
+                      // Remove @ from text
+                      if (mentionMatch) {
+                        const beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                        const textAfterCursor = newCardTitle.substring(cursorPos);
+                        setNewCardTitle(beforeMention + textAfterCursor);
+                      } else if (newCardTitle.endsWith('@')) {
+                        setNewCardTitle(newCardTitle.slice(0, -1));
+                      }
+                      
+                      setShowMentionMenu(false);
+                      setShowDatePicker(true);
+                      // Set default to current date/time
+                      const now = new Date();
+                      const year = now.getFullYear();
+                      const month = String(now.getMonth() + 1).padStart(2, '0');
+                      const day = String(now.getDate()).padStart(2, '0');
+                      const hours = String(now.getHours()).padStart(2, '0');
+                      const minutes = String(now.getMinutes()).padStart(2, '0');
+                      setSelectedDateTime(`${year}-${month}-${day}T${hours}:${minutes}`);
+                    }}
+                  >
+                    Due Date/Time
+                  </button>
                 </div>
               )}
               {showMentionSearch && (
@@ -312,6 +349,106 @@ const ListColumn: React.FC<ListColumnProps> = ({ list, cards, onAddCard, onUpdat
                         {i.name}
                       </button>
                     ))}
+                  </div>
+                </div>
+              )}
+              {showDatePicker && (
+                <div 
+                  className="absolute -top-40 left-0 bg-[#1f2937] text-white rounded border border-white/10 p-3 z-50 w-64 sm:w-72"
+                  role="dialog"
+                  aria-label="Select due date and time"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="text-sm text-gray-300">Due Date & Time</div>
+                    <button
+                      onClick={() => {
+                        setShowDatePicker(false);
+                        setSelectedDateTime('');
+                        newCardInputRef.current?.focus();
+                      }}
+                      className="text-gray-400 hover:text-white px-1"
+                      aria-label="Close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <input
+                    type="datetime-local"
+                    className="w-full rounded bg-[#111827] border border-white/10 px-2 py-1 text-white mb-2 focus:outline-none focus:ring-2 focus:ring-pb-primary"
+                    value={selectedDateTime}
+                    onChange={e => setSelectedDateTime(e.target.value)}
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      className="flex-1 px-3 py-1.5 rounded bg-pb-primary hover:bg-pb-secondary text-white text-sm transition-colors"
+                      onClick={() => {
+                        if (!selectedDateTime) {
+                          setShowDatePicker(false);
+                          newCardInputRef.current?.focus();
+                          return;
+                        }
+                        
+                        // Convert datetime-local format to ISO string for storage
+                        const date = new Date(selectedDateTime);
+                        const isoString = date.toISOString();
+                        
+                        // Store the due date to be set when the card is created
+                        setPendingDueDate(isoString);
+                        
+                        // Format the date/time for display in the input
+                        const formattedDate = date.toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        });
+                        
+                        // Insert formatted date into text at cursor position
+                        const currentDisplay = newCardTitle;
+                        const cursorPos = newCardInputRef.current?.selectionStart || currentDisplay.length;
+                        const textBeforeCursor = currentDisplay.substring(0, cursorPos);
+                        const textAfterCursor = currentDisplay.substring(cursorPos);
+                        
+                        // Remove @ if it exists
+                        const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                        let beforeMention = textBeforeCursor;
+                        if (mentionMatch) {
+                          beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                        } else if (textBeforeCursor.endsWith('@')) {
+                          beforeMention = textBeforeCursor.slice(0, -1);
+                        }
+                        
+                        const newDisplayText = beforeMention + formattedDate + ' ' + textAfterCursor;
+                        setNewCardTitle(newDisplayText);
+                        
+                        setShowDatePicker(false);
+                        setSelectedDateTime('');
+                        
+                        // Return focus to input and set cursor position
+                        setTimeout(() => {
+                          if (newCardInputRef.current) {
+                            const newPos = beforeMention.length + formattedDate.length + 1;
+                            newCardInputRef.current.setSelectionRange(newPos, newPos);
+                            newCardInputRef.current.focus();
+                          }
+                        }, 0);
+                      }}
+                    >
+                      Insert
+                    </button>
+                    <button
+                      className="px-3 py-1.5 rounded bg-gray-600 hover:bg-gray-700 text-white text-sm transition-colors"
+                      onClick={() => {
+                        setShowDatePicker(false);
+                        setSelectedDateTime('');
+                        newCardInputRef.current?.focus();
+                      }}
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
               )}

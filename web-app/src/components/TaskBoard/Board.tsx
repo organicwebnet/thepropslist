@@ -181,7 +181,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
   }, [lists]);
 
   // Add card handler
-  const addCard = async (listId: string, title: string, assignedTo?: string[]) => {
+  const addCard = async (listId: string, title: string, assignedTo?: string[], dueDate?: string) => {
     const validation = validateCardTitle(title);
     if (!validation.isValid) {
       setError(validation.error || 'Invalid card title');
@@ -197,8 +197,8 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
       const order = (cards[listId]?.length || 0);
       // Ensure assignedTo is always an array
       const assignedToArray = Array.isArray(assignedTo) ? assignedTo : (assignedTo ? [assignedTo] : []);
-      console.log('Creating card with assignments:', { assignedTo, assignedToArray, listId, title });
-      const newCard = {
+      console.log('Creating card with assignments:', { assignedTo, assignedToArray, listId, title, dueDate });
+      const newCard: any = {
         title: validation.sanitizedValue!,
         description: '',
         createdAt: new Date().toISOString(),
@@ -206,6 +206,11 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
         assignedTo: assignedToArray, // Use provided assignments or empty array
         // Add more fields as needed
       };
+      
+      // Add dueDate if provided
+      if (dueDate) {
+        newCard.dueDate = dueDate;
+      }
       
       console.log('New card object:', newCard);
       const cardRef = await service.addDocument(`todo_boards/${boardId}/lists/${listId}/cards`, newCard);
