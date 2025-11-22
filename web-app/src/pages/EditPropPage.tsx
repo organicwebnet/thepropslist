@@ -100,10 +100,12 @@ const EditPropPage: React.FC = () => {
     }
   };
 
-  // Autofocus name on mount
+  // Autofocus name on mount (only once when form is first loaded)
+  const hasFocusedName = useRef(false);
   useEffect(() => { 
-    if (!loading && form) {
+    if (!loading && form && !hasFocusedName.current) {
       nameInputRef.current?.focus(); 
+      hasFocusedName.current = true;
     }
   }, [loading, form]);
 
@@ -228,10 +230,24 @@ const EditPropPage: React.FC = () => {
         payload.lastStatusUpdate = new Date().toISOString();
       }
 
-      await firebaseService.updateDocument('props', id, payload);
+      // Remove undefined values to prevent Firestore errors
+      const cleanPayload: any = {};
+      Object.keys(payload).forEach(key => {
+        if (payload[key] !== undefined) {
+          cleanPayload[key] = payload[key];
+        }
+      });
+
+      // Add updatedAt timestamp
+      cleanPayload.updatedAt = new Date().toISOString();
+
+      console.log('Updating prop with payload:', cleanPayload);
+      await firebaseService.updateDocument('props', id, cleanPayload);
       setSaving(false);
-      navigate(`/props/${id}`);
+      // Navigate with timestamp to force PropDetailPage to reload
+      navigate(`/props/${id}?refresh=${Date.now()}`, { replace: true });
     } catch (err: any) {
+      console.error('Error updating prop:', err);
       setError(err.message || 'Failed to update prop.');
       setSaving(false);
     }

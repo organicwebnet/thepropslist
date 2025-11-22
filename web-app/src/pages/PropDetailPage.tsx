@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
 import { Prop } from '../types/props';
@@ -51,6 +51,7 @@ type SectionId = 'overview' | 'dimensions' | 'identification' | 'usage' | 'purch
 
 const PropDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { service } = useFirebase();
   const { user } = useWebAuth();
   const [prop, setProp] = useState<Prop | null>(null);
@@ -104,7 +105,7 @@ const PropDetailPage: React.FC = () => {
     };
 
     loadProp();
-  }, [id, service]);
+  }, [id, service, location.pathname, location.search]); // Reload when navigating to this page (search params change on refresh)
 
   useEffect(() => {
     const hash = (window.location.hash || '').replace('#', '') as SectionId;

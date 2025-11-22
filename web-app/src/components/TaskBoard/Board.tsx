@@ -181,7 +181,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
   }, [lists]);
 
   // Add card handler
-  const addCard = async (listId: string, title: string) => {
+  const addCard = async (listId: string, title: string, assignedTo?: string[]) => {
     const validation = validateCardTitle(title);
     if (!validation.isValid) {
       setError(validation.error || 'Invalid card title');
@@ -195,16 +195,47 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
       // Parse mentions from title - @ mentions are just mentions, not assignments
       // Mentions will be handled separately for notifications (if needed)
       const order = (cards[listId]?.length || 0);
+      // Ensure assignedTo is always an array
+      const assignedToArray = Array.isArray(assignedTo) ? assignedTo : (assignedTo ? [assignedTo] : []);
+      console.log('Creating card with assignments:', { assignedTo, assignedToArray, listId, title });
       const newCard = {
         title: validation.sanitizedValue!,
         description: '',
         createdAt: new Date().toISOString(),
         order,
-        assignedTo: [], // Only assign via "Assign to" button, not @ mentions
+        assignedTo: assignedToArray, // Use provided assignments or empty array
         // Add more fields as needed
       };
       
-      await service.addDocument(`todo_boards/${boardId}/lists/${listId}/cards`, newCard);
+      console.log('New card object:', newCard);
+      const cardRef = await service.addDocument(`todo_boards/${boardId}/lists/${listId}/cards`, newCard);
+      console.log('Card created with ID:', cardRef.id);
+      
+      // Send notifications to assigned users if this is a new assignment
+      if (assignedToArray.length > 0 && board?.showId) {
+        const cardTitle = validation.sanitizedValue || 'Untitled Task';
+        console.log('Sending notifications to assigned users:', assignedToArray);
+        for (const assignedUserId of assignedToArray) {
+          // Send notification to all assigned users, including the user who created the task
+          // This ensures users get notified when they assign themselves to a task
+          try {
+            await service.addDocument('notifications', {
+              userId: assignedUserId,
+              type: 'task_assigned',
+              title: 'Task Assigned',
+              message: `You have been assigned to task: ${cardTitle}`,
+              boardId,
+              cardId: cardRef.id,
+              showId: board.showId,
+              createdAt: new Date().toISOString(),
+              read: false,
+              assignedBy: user?.uid || null
+            });
+          } catch (notifErr) {
+            console.error('Failed to send assignment notification:', notifErr);
+          }
+        }
+      }
       
       // The listener will update state
     } catch (err) {

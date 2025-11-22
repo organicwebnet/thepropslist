@@ -49,36 +49,60 @@ export const MentionDataProvider: React.FC<MentionDataProviderProps> = ({ childr
       setLoading(true);
       setError(null);
 
-      // Build query options for props - filter by current show if available
+      // Build query options for props and pack lists - filter by current show if available
       const propsQueryOptions = currentShowId 
+        ? { where: [['showId', '==', currentShowId] as [string, any, any]] }
+        : undefined;
+      
+      const packListsQueryOptions = currentShowId 
         ? { where: [['showId', '==', currentShowId] as [string, any, any]] }
         : undefined;
 
       // Only load data that the user has permission to access
-      const [props, containers, users] = await Promise.allSettled([
+      const [props, packLists, users] = await Promise.allSettled([
         service.getDocuments<{ name?: string; showId?: string }>('props', propsQueryOptions).catch(() => []),
-        service.getDocuments<{ name?: string }>('packing_boxes').catch(() => []),
+        service.getDocuments<{ showId?: string; containers?: Array<{ id?: string; name?: string }> }>('packLists', packListsQueryOptions).catch(() => []),
         service.getDocuments<{ displayName?: string; name?: string; email?: string }>('userProfiles').catch(() => [])
       ]);
 
       const propsData = props.status === 'fulfilled' ? props.value : [];
-      const containersData = containers.status === 'fulfilled' ? containers.value : [];
+      const packListsData = packLists.status === 'fulfilled' ? packLists.value : [];
       const usersData = users.status === 'fulfilled' ? users.value : [];
 
       // Filter props by showId if currentShowId is set (additional client-side filter for safety)
       const filteredPropsData = currentShowId 
         ? propsData.filter(d => d.data?.showId === currentShowId)
         : propsData;
+      
+      // Extract containers from pack lists and filter by showId
+      const allContainers: Array<{ id: string; name: string }> = [];
+      packListsData.forEach(packListDoc => {
+        const packListData = packListDoc.data;
+        // Additional client-side filter for safety
+        if (currentShowId && packListData?.showId !== currentShowId) {
+          return;
+        }
+        // Extract containers from this pack list
+        if (Array.isArray(packListData?.containers)) {
+          packListData.containers.forEach((container: any) => {
+            if (container && container.name) {
+              // Use container.id if available, otherwise generate a unique ID
+              const containerId = container.id || `${packListDoc.id}_${container.name}`;
+              allContainers.push({
+                id: containerId,
+                name: container.name || 'Unnamed Container'
+              });
+            }
+          });
+        }
+      });
 
       setPropsList(filteredPropsData.map(d => ({ 
         id: d.id, 
         name: d.data?.name || 'Prop' 
       })));
 
-      setContainersList(containersData.map(d => ({ 
-        id: d.id, 
-        name: d.data?.name || 'Box' 
-      })));
+      setContainersList(allContainers);
 
       setUsersList(usersData.map(d => ({ 
         id: d.id, 

@@ -17,6 +17,7 @@ type MappingKey =
   | 'tags'
   | 'location'
   | 'status'
+  | 'source'
   | 'imageUrl';
 
 const SUGGESTED: Partial<Record<MappingKey, string[]>> = {
@@ -30,6 +31,7 @@ const SUGGESTED: Partial<Record<MappingKey, string[]>> = {
   tags: ['tags', 'labels', 'keywords'],
   location: ['location', 'loc', 'store', 'box'],
   status: ['status', 'state'],
+  source: ['source', 'origin', 'acquired'],
   imageUrl: ['image', 'imageurl', 'photo', 'img'],
 };
 
@@ -151,6 +153,12 @@ const ImportPropsPage: React.FC = () => {
       .filter(Boolean);
     const rawImage = get(row, 'imageUrl') || undefined;
     const imageUrl = isValidImageUrl(rawImage) ? rawImage : undefined;
+    
+    // Validate and set source field (required)
+    const validSources = ['bought', 'made', 'rented', 'borrowed', 'owned', 'created', 'hired'];
+    const rawSource = (get(row, 'source') || '').toLowerCase().trim();
+    const source = validSources.includes(rawSource) ? rawSource : 'bought';
+    
     return {
       userId: user?.uid || '',
       showId: currentShowId || '',
@@ -159,6 +167,7 @@ const ImportPropsPage: React.FC = () => {
       category: get(row, 'category') || 'Other',
       quantity: Number.isFinite(qty) && qty > 0 ? qty : 1,
       price: Number.isFinite(price) ? price : 0,
+      source,
       act: Number.isFinite(act) ? act : undefined,
       scene: Number.isFinite(scene) ? scene : undefined,
       tags,
@@ -172,7 +181,7 @@ const ImportPropsPage: React.FC = () => {
 
   const copyAiPrompt = async () => {
     const prompt = `You are a data cleanup assistant. Reformat the following props list into a clean CSV with these exact headers in this order:
-name,description,category,quantity,price,act,scene,tags,location,status,imageUrl
+name,description,category,quantity,price,act,scene,tags,location,status,source,imageUrl
 
 Rules:
 - Keep one prop per row; quote fields that contain commas.
@@ -181,6 +190,7 @@ Rules:
 - category should be one of: Furniture, Decoration, Costume, Weapon, Food/Drink, Book/Paper, Electronics, Musical Instrument, Hand Prop, Set Dressing, Special Effects, Lighting, Other (or leave empty if unsure).
 - tags: separate multiple tags with commas.
 - status (optional) examples: available_in_storage, in_transit, under_maintenance.
+- source (optional) should be one of: bought, made, rented, borrowed, owned, created, hired. Defaults to 'bought' if not provided.
 - act/scene should be numbers if present.
 
 Output only the CSV (no commentary).`;
@@ -324,7 +334,7 @@ Output only the CSV (no commentary).`;
                   <div className="flex items-center gap-3 flex-wrap">
                     <a
                       className="text-pb-primary underline hover:text-pb-accent flex items-center gap-1 text-sm"
-                      href={`data:text/csv;charset=utf-8,${encodeURIComponent('name,description,category,quantity,price,act,scene,tags,location,status,imageUrl\nChair,,Furniture,1,0,,,stage left,available_in_storage,')}`}
+                      href={`data:text/csv;charset=utf-8,${encodeURIComponent('name,description,category,quantity,price,act,scene,tags,location,status,source,imageUrl\nChair,,Furniture,1,0,,,stage left,available_in_storage,bought,')}`}
                       download="props-template.csv"
                     >
                       <Download className="w-4 h-4" />
@@ -347,7 +357,7 @@ Output only the CSV (no commentary).`;
                 <div className="bg-pb-darker/60 backdrop-blur-sm rounded-xl p-6 border border-pb-primary/20">
                   <h2 className="text-xl font-semibold text-white mb-4">Map Columns</h2>
                   <div className="grid grid-cols-1 gap-3">
-                    {(['name','description','category','quantity','price','act','scene','tags','location','status','imageUrl'] as MappingKey[]).map((k) => (
+                    {(['name','description','category','quantity','price','act','scene','tags','location','status','source','imageUrl'] as MappingKey[]).map((k) => (
                       <div key={k} className="flex items-center gap-3">
                         <label className="w-32 text-sm font-medium text-pb-gray capitalize">
                           {k.replace(/([A-Z])/g, ' $1')}

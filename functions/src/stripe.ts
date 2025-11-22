@@ -131,10 +131,31 @@ export const createCheckoutSession = onCall(async (request) => {
 
     // Add promotion code if provided
     if (discountCode) {
-      sessionParams.allow_promotion_codes = true;
-      sessionParams.discounts = [{
-        promotion_code: discountCode,
-      }];
+      // Look up the discount code in Firestore to get the Stripe promotion code ID
+      const discountCodesRef = db.collection('discountCodes');
+      const discountQuery = await discountCodesRef
+        .where('code', '==', discountCode.toUpperCase().trim())
+        .limit(1)
+        .get();
+      
+      if (!discountQuery.empty) {
+        const discountData = discountQuery.docs[0].data();
+        const promotionCodeId = discountData.stripePromotionCodeId;
+        
+        if (promotionCodeId) {
+          sessionParams.discounts = [{
+            promotion_code: promotionCodeId,
+          }];
+        } else {
+          console.warn(`Discount code ${discountCode} found but no Stripe promotion code ID`);
+          // Fallback: allow promotion codes in checkout (user can enter manually)
+          sessionParams.allow_promotion_codes = true;
+        }
+      } else {
+        console.warn(`Discount code ${discountCode} not found in Firestore`);
+        // Fallback: allow promotion codes in checkout (user can enter manually)
+        sessionParams.allow_promotion_codes = true;
+      }
     }
 
     const session = await getStripe().checkout.sessions.create(sessionParams);
@@ -337,3 +358,109 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     currentPeriodEnd: null,
   });
 }
+
+/**
+ * Create a Stripe coupon
+ * Used by the discount codes service to create coupons in Stripe
+ */
+export const createStripeCoupon = onCall(async (request) => {
+  try {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    // Check if user is admin
+    const user = request.auth;
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    const userData = userDoc.data();
+
+    if (!userData?.role || !['admin', 'god'].includes(userData.role)) {
+      throw new HttpsError('permission-denied', 'Admin access required');
+    }
+
+    const { id, name, percent_off, amount_off, currency, max_redemptions, redeem_by } = request.data;
+
+    if (!id || (!percent_off && !amount_off)) {
+      throw new HttpsError('invalid-argument', 'Coupon ID and discount value are required');
+    }
+
+    const couponParams: Stripe.CouponCreateParams = {
+      id: id.toUpperCase(),
+      name: name || id,
+    };
+
+    if (percent_off !== undefined) {
+      couponParams.percent_off = percent_off;
+    } else if (amount_off !== undefined) {
+      couponParams.amount_off = amount_off;
+      couponParams.currency = currency || 'usd';
+    }
+
+    if (max_redemptions !== undefined) {
+      couponParams.max_redemptions = max_redemptions;
+    }
+
+    if (redeem_by !== undefined) {
+      couponParams.redeem_by = redeem_by;
+    }
+
+    const coupon = await getStripe().coupons.create(couponParams);
+
+    return { couponId: coupon.id };
+  } catch (error) {
+    console.error('Error creating Stripe coupon:', error);
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    if (error instanceof Stripe.errors.StripeError) {
+      throw new HttpsError('invalid-argument', error.message);
+    }
+    throw new HttpsError('internal', 'Failed to create Stripe coupon');
+  }
+});
+
+/**
+ * Create a Stripe promotion code
+ * Used by the discount codes service to create promotion codes in Stripe
+ */
+export const createStripePromotionCode = onCall(async (request) => {
+  try {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    // Check if user is admin
+    const user = request.auth;
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    const userData = userDoc.data();
+
+    if (!userData?.role || !['admin', 'god'].includes(userData.role)) {
+      throw new HttpsError('permission-denied', 'Admin access required');
+    }
+
+    const { coupon, code, active } = request.data;
+
+    if (!coupon || !code) {
+      throw new HttpsError('invalid-argument', 'Coupon ID and promotion code are required');
+    }
+
+    const promotionCodeParams: Stripe.PromotionCodeCreateParams = {
+      coupon: coupon,
+      code: code.toUpperCase(),
+      active: active !== false, // Default to true
+    };
+
+    const promotionCode = await getStripe().promotionCodes.create(promotionCodeParams);
+
+    return { promotionCodeId: promotionCode.id };
+  } catch (error) {
+    console.error('Error creating Stripe promotion code:', error);
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    if (error instanceof Stripe.errors.StripeError) {
+      throw new HttpsError('invalid-argument', error.message);
+    }
+    throw new HttpsError('internal', 'Failed to create Stripe promotion code');
+  }
+});

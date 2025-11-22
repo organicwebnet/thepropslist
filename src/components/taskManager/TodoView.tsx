@@ -18,6 +18,14 @@ import CardDetailPanel from './CardDetailPanel';
 import SwipeableTaskItem from './SwipeableTaskItem';
 import { formatDueDate as formatDueDateUtil, isPastDate } from '../../utils/taskHelpers';
 
+// Helper: convert markdown mentions to display text (for editing in input field)
+// Converts [@Name](type:id) to just Name (without @ symbol)
+function markdownToDisplayText(text: string): string {
+  if (!text) return '';
+  // Replace [@Name](type:id) with just Name (no @ symbol)
+  return text.replace(/\[@([^\]]+)\]\((?:prop|container|user):[^)]*\)/g, '$1');
+}
+
 interface TodoViewProps {
   boardId: string;
   lists: ListData[];
@@ -57,7 +65,8 @@ const TodoView: React.FC<TodoViewProps> = ({
   const colors = themeName === 'dark' ? darkTheme.colors : lightTheme.colors;
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('due_date');
-  const [quickAddText, setQuickAddText] = useState('');
+  const [quickAddTextDisplay, setQuickAddTextDisplay] = useState(''); // Display format (what user sees)
+  const quickAddTextRawRef = useRef<string>(''); // Store raw markdown format (preserved)
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const quickAddInputRef = useRef<TextInput>(null);
@@ -73,7 +82,7 @@ const TodoView: React.FC<TodoViewProps> = ({
         result.push({
           ...card,
           listId: list.id,
-          listName: list.title || list.name || 'Untitled List',
+          listName: list.name || 'Untitled List',
         });
       });
     });
@@ -168,14 +177,15 @@ const TodoView: React.FC<TodoViewProps> = ({
   // Get first list ID for quick add (or "Inbox" if exists)
   const getDefaultListId = (): string | null => {
     const inboxList = lists.find(l => 
-      (l.title || l.name || '').toLowerCase() === 'inbox'
+      (l.name || '').toLowerCase() === 'inbox'
     );
     if (inboxList) return inboxList.id;
     return lists.length > 0 ? lists[0].id : null;
   };
 
   const handleQuickAdd = async () => {
-    if (!quickAddText.trim() || isAddingCard) return;
+    const displayText = quickAddTextDisplay.trim();
+    if (!displayText || isAddingCard) return;
     
     const defaultListId = getDefaultListId();
     if (!defaultListId) {
@@ -186,8 +196,7 @@ const TodoView: React.FC<TodoViewProps> = ({
     }
 
     // Validate input length
-    const trimmedText = quickAddText.trim();
-    if (trimmedText.length > 200) {
+    if (displayText.length > 200) {
       const errorMsg = 'Task title must be 200 characters or less';
       setError(errorMsg);
       setTimeout(() => setError(null), 5000);
@@ -197,8 +206,11 @@ const TodoView: React.FC<TodoViewProps> = ({
     try {
       setIsAddingCard(true);
       setError(null);
-      await onAddCard(defaultListId, trimmedText);
-      setQuickAddText('');
+      // Use raw markdown if available, otherwise use display text
+      const textToSave = quickAddTextRawRef.current.trim() || displayText;
+      await onAddCard(defaultListId, textToSave);
+      setQuickAddTextDisplay('');
+      quickAddTextRawRef.current = '';
       // Re-focus input for rapid entry
       setTimeout(() => quickAddInputRef.current?.focus(), 100);
     } catch (error) {
@@ -308,8 +320,21 @@ const TodoView: React.FC<TodoViewProps> = ({
               ]}
               placeholder="Add a task..."
               placeholderTextColor={colors.placeholder}
-              value={quickAddText}
-              onChangeText={setQuickAddText}
+              value={quickAddTextDisplay}
+              onChangeText={(text) => {
+                // Check if text contains markdown format
+                if (text.includes('[@') && text.includes('](')) {
+                  // Markdown detected - preserve it and convert to display format (just the name, no @)
+                  quickAddTextRawRef.current = text;
+                  const displayFormat = markdownToDisplayText(text);
+                  setQuickAddTextDisplay(displayFormat);
+                } else {
+                  // User is typing display format (plain text)
+                  setQuickAddTextDisplay(text);
+                  // Clear the raw ref when user types plain text (they're not using markdown)
+                  quickAddTextRawRef.current = '';
+                }
+              }}
               onSubmitEditing={handleQuickAdd}
               returnKeyType="done"
               editable={!isAddingCard}
@@ -322,7 +347,7 @@ const TodoView: React.FC<TodoViewProps> = ({
               />
             )}
           </View>
-          {quickAddText.trim() && (
+          {quickAddTextDisplay.trim() && (
             <Text style={[styles.hintText, { color: colors.textSecondary }]}>
               Press Enter to add task
             </Text>
@@ -447,7 +472,7 @@ const TodoView: React.FC<TodoViewProps> = ({
                   flattenedCard = {
                     ...card,
                     listId: list.id,
-                    listName: list.title || list.name || 'Untitled List',
+                    listName: list.name || 'Untitled List',
                   };
                   break;
                 }
@@ -468,12 +493,22 @@ const TodoView: React.FC<TodoViewProps> = ({
             }
           }}
           onClose={handleCloseCardDetail}
-          onUpdateCard={onUpdateCard}
-          onDeleteCard={(cardId) => {
+          onUpdateCard={async (cardId: string, listId: string, updates: Partial<CardData>) => {
+            // Adapt the signature: CardDetailPanel expects (cardId, listId, updates)
+            // but our onUpdateCard expects (cardId, updates)
+            // If listId is in updates, it's already there; otherwise use the provided listId
+            const finalUpdates = { ...updates };
+            if (updates.listId === undefined && listId) {
+              finalUpdates.listId = listId as any;
+            }
+            await onUpdateCard(cardId, finalUpdates);
+          }}
+          onDeleteCard={async (listId: string, cardId: string): Promise<void> => {
+            // CardDetailPanel passes listId, but parent's onDeleteCard doesn't need it
             onDeleteCard(cardId);
             handleCloseCardDetail();
           }}
-          onMoveCard={async (cardId, targetListId) => {
+          onMoveCard={async (cardId: string, originalListId: string, targetListId: string) => {
             // Move card to different list
             await onUpdateCard(cardId, { listId: targetListId });
           }}

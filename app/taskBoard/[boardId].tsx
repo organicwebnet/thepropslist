@@ -113,7 +113,8 @@ const TaskBoardDetailScreen = () => {
   const [fabOpen, setFabOpen] = useState(false);
 
   // --- View Mode State ---
-  const [viewMode, setViewMode] = useState<'kanban' | 'todo'>('kanban');
+  // Always use todo view (Microsoft Todo style) for Android app
+  const [viewMode, setViewMode] = useState<'kanban' | 'todo'>('todo');
 
   // --- Detail Panel State ---
   const selectedCard = useMemo(() => {
@@ -899,17 +900,7 @@ const TaskBoardDetailScreen = () => {
                   {show?.name || board?.name || 'Task Board'}
                 </DefaultText>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  {/* View Mode Toggle */}
-                  <Pressable
-                    onPress={() => setViewMode(viewMode === 'kanban' ? 'todo' : 'kanban')}
-                    style={{ padding: 8 }}
-                  >
-                    <Ionicons
-                      name={viewMode === 'kanban' ? 'list' : 'grid'}
-                      size={24}
-                      color="#FFFFFF"
-                    />
-                  </Pressable>
+                  {/* View Mode Toggle - Hidden for Android (always showing todo view) */}
                   {syncingFromNetwork && (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   )}

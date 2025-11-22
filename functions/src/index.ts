@@ -44,5 +44,7 @@ export {
   createCheckoutSession,
   createBillingPortalSession,
   getSubscriptionStats,
-  stripeWebhook
+  stripeWebhook,
+  createStripeCoupon,
+  createStripePromotionCode
 } from './stripe';

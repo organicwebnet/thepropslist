@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Image as ImageIcon, ArrowLeft, Box, Package, Search, Plus, AlertCircle, Printer, Trash2, MessageSquare, Activity } from 'lucide-react';
+import { Image as ImageIcon, ArrowLeft, Box, Package, Search, Plus, AlertCircle, Printer, Trash2, MessageSquare, ExternalLink, Copy } from 'lucide-react';
 import DashboardLayout from '../PropsBibleHomepage';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { useWebAuth } from '../contexts/WebAuthContext';
@@ -8,6 +8,8 @@ import { DigitalPackListService, PackList, PackingContainer, ContainerComment, C
 import { DigitalInventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService';
 import { getSymbolUrl, symbolLabel } from '../utils/transport';
 import SubFootnote from '../components/SubFootnote';
+import { useContextMenu } from '../hooks/useContextMenu';
+import { ContextMenu, ContextMenuItem } from '../components/ContextMenu';
 
 const ContainerDetailPage: React.FC = () => {
   const { service } = useFirebase();
@@ -37,10 +39,18 @@ const ContainerDetailPage: React.FC = () => {
   const [editingLocation, setEditingLocation] = useState(false);
   const [locationValue, setLocationValue] = useState<string>('');
   const [savingLocation, setSavingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState('');
   const [addingComment, setAddingComment] = useState(false);
   const [commentError, setCommentError] = useState<string | null>(null);
   const [userInfoMap, setUserInfoMap] = useState<Map<string, { displayName: string; email?: string }>>(new Map());
+  const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
+  
+  // Contextual menu for prop items
+  const propContextMenu = useContextMenu({
+    longPressDelay: 500,
+    onClose: () => setSelectedPropId(null),
+  });
 
   useEffect(() => {
     if (!packListId || !containerId) return;
@@ -160,16 +170,18 @@ const ContainerDetailPage: React.FC = () => {
   };
 
   // Helper function to add activity and update container
-  const addActivity = async (activity: ContainerActivity) => {
-    if (!packListId || !container) return;
+  // containerOverride: optional container to use instead of state (fixes race condition with async state updates)
+  const addActivity = async (activity: ContainerActivity, containerOverride?: PackingContainer | null) => {
+    const containerToUse = containerOverride ?? container;
+    if (!packListId || !containerToUse) return;
     const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-    const currentActivities = container.activityLog || [];
-      await packListService.updateContainer(packListId, container.id, {
+    const currentActivities = containerToUse.activityLog || [];
+      await packListService.updateContainer(packListId, containerToUse.id, {
         activityLog: [...currentActivities, activity]
       } as Partial<Omit<PackingContainer, 'id' | 'metadata'>>);
     const refreshed = await packListService.getPackList(packListId);
     setPackList(refreshed);
-    const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+    const updated = (refreshed.containers || []).find((x) => x.id === containerToUse.id) || null;
     setContainer(updated);
   };
 
@@ -251,6 +263,61 @@ const ContainerDetailPage: React.FC = () => {
   }, [container]);
 
   const findProp = (id: string) => propsList.find((p) => p.id === id);
+  
+  // Shared function to remove prop from container
+  const handleRemovePropFromContainer = useCallback(async (propId: string) => {
+    if (!packListId || !container) return;
+    
+    setRemoving((prev) => ({ ...prev, [propId]: true }));
+    try {
+      const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      const propToRemove = findProp(propId);
+      await serviceInst.removePropFromContainer(packListId, container.id, propId);
+      // When removed, set prop status to on-hold
+      try { 
+        await service.updateDocument('props', propId, { status: 'on-hold', lastStatusUpdate: new Date().toISOString() }); 
+      } catch (err) { 
+        console.warn('Failed to update prop status:', err);
+      }
+      const refreshed = await serviceInst.getPackList(packListId);
+      const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
+      setContainer(updated);
+      setPackList(refreshed);
+      // Track activity
+      if (updated) {
+        const activity = createActivity('Prop removed', { 
+          propId, 
+          propName: propToRemove?.name || 'Unknown prop', 
+          quantity: container.props.find(p => p.propId === propId)?.quantity || 1 
+        });
+        await addActivity(activity, updated);
+      }
+    } catch (err) {
+      console.error('Failed to remove prop from container:', err);
+      alert('Failed to remove prop from container. Please try again.');
+    } finally {
+      setRemoving((prev) => ({ ...prev, [propId]: false }));
+    }
+  }, [packListId, container, service, createActivity, addActivity]);
+
+  // Memoized handlers for each prop item to prevent recreation on every render
+  const getPropContextMenuHandlers = useCallback((propId: string) => {
+    return {
+      onContextMenu: (e: React.MouseEvent) => {
+        e.preventDefault();
+        setSelectedPropId(propId);
+        propContextMenu.handleContextMenu(e);
+      },
+      onTouchStart: (e: React.TouchEvent) => {
+        setSelectedPropId(propId);
+        propContextMenu.longPressHandlers.onTouchStart(e);
+      },
+      onTouchMove: propContextMenu.longPressHandlers.onTouchMove,
+      onTouchEnd: propContextMenu.longPressHandlers.onTouchEnd,
+      onTouchCancel: propContextMenu.longPressHandlers.onTouchCancel,
+    };
+  }, [propContextMenu]);
+  
   const getPropImageUrl = (prop?: InventoryProp): string => {
     if (!prop) return '';
     const imagesAny = prop.images as unknown as any[] | undefined;
@@ -422,7 +489,22 @@ const ContainerDetailPage: React.FC = () => {
               }
               try {
                 const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                // Note: Activity log for deletion would be lost, but we could log it to the pack list if needed
+                // Track activity on parent container before deletion (if parent exists)
+                if (container.parentId && packList) {
+                  const parentContainer = (packList.containers || []).find((c) => c.id === container.parentId);
+                  if (parentContainer) {
+                    const activity = createActivity('Child container deleted', {
+                      childId: container.id,
+                      childName: container.name,
+                      parentId: container.parentId,
+                      parentName: parentContainer.name
+                    });
+                    const currentActivities = parentContainer.activityLog || [];
+                    await serviceInst.updateContainer(packListId, container.parentId, {
+                      activityLog: [...currentActivities, activity]
+                    } as Partial<Omit<PackingContainer, 'id' | 'metadata'>>);
+                  }
+                }
                 await serviceInst.removeContainer(packListId, containerId);
                 navigate(`/packing-lists/${packListId}`);
               } catch (err) {
@@ -475,7 +557,7 @@ const ContainerDetailPage: React.FC = () => {
                           // Track activity
                           if (updated && oldParentId) {
                             const activity = createActivity('Parent container removed', { oldParentId });
-                            await addActivity(activity);
+                            await addActivity(activity, updated);
                           }
                         } finally {
                           setSavingParent(false);
@@ -518,6 +600,11 @@ const ContainerDetailPage: React.FC = () => {
               </div>
               {editingLocation ? (
                 <div className="space-y-2">
+                  {locationError && (
+                    <div className="px-3 py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-sm">
+                      {locationError}
+                    </div>
+                  )}
                   <input
                     type="text"
                     value={locationValue}
@@ -546,10 +633,12 @@ const ContainerDetailPage: React.FC = () => {
                           // Track activity
                           if (updated && oldLocation !== updated.location) {
                             const activity = createActivity('Location updated', { oldLocation: oldLocation || 'None', newLocation: updated.location || 'None' });
-                            await addActivity(activity);
+                            await addActivity(activity, updated);
                           }
                         } catch (err) {
                           console.error('Failed to update location:', err);
+                          setLocationError('Failed to update location. Please try again.');
+                          setTimeout(() => setLocationError(null), 5000);
                         } finally {
                           setSavingLocation(false);
                         }
@@ -655,8 +744,15 @@ const ContainerDetailPage: React.FC = () => {
               {container.props.map((p) => {
                 const prop = findProp(p.propId);
                 const img = getPropImageUrl(prop);
+                
+                const handlers = getPropContextMenuHandlers(p.propId);
+                
                 return (
-                  <div key={p.propId} className="bg-white/5 rounded-lg border border-white/10 p-4">
+                  <div
+                    key={p.propId}
+                    className="bg-white/5 rounded-lg border border-white/10 p-4"
+                    {...handlers}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         {img ? (
@@ -682,27 +778,7 @@ const ContainerDetailPage: React.FC = () => {
                       </div>
                       <button
                         className={`px-3 py-1.5 text-sm rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${removing[p.propId] ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          onClick={async () => {
-                            if (!packListId) return;
-                            setRemoving((prev) => ({ ...prev, [p.propId]: true }));
-                            try {
-                              const serviceInst = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                              const prop = findProp(p.propId);
-                              await serviceInst.removePropFromContainer(packListId, container.id, p.propId);
-                              // When removed, set prop status to on-hold
-                              try { await service.updateDocument('props', p.propId, { status: 'on-hold', lastStatusUpdate: new Date().toISOString() }); } catch (err) { /* ignore */ }
-                              const refreshed = await serviceInst.getPackList(packListId);
-                              const updated = (refreshed.containers || []).find((x) => x.id === container.id) || null;
-                              setContainer(updated);
-                              // Track activity
-                              if (updated) {
-                                const activity = createActivity('Prop removed', { propId: p.propId, propName: prop?.name || 'Unknown prop', quantity: p.quantity });
-                                await addActivity(activity);
-                              }
-                            } finally {
-                              setRemoving((prev) => ({ ...prev, [p.propId]: false }));
-                            }
-                          }}
+                        onClick={() => handleRemovePropFromContainer(p.propId)}
                         disabled={!!removing[p.propId]}
                       >
                         {removing[p.propId] ? 'Removing...' : 'Remove'}
@@ -714,6 +790,70 @@ const ContainerDetailPage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Context Menu for Prop Items */}
+        {selectedPropId && (() => {
+          const p = container.props.find(p => p.propId === selectedPropId);
+          // Edge case: prop was deleted while menu is open
+          if (!p) {
+            propContextMenu.handleClose();
+            return null;
+          }
+          const prop = findProp(p.propId);
+          
+          const handleCopyPropName = async () => {
+            if (!prop?.name) return;
+            try {
+              await navigator.clipboard.writeText(prop.name);
+              // Could add toast notification here for better UX
+            } catch (err) {
+              console.error('Failed to copy to clipboard:', err);
+              alert('Failed to copy prop name to clipboard. Please try again.');
+            }
+          };
+
+          const handleViewProp = () => {
+            if (!prop?.id) return;
+            try {
+              navigate(`/props/${prop.id}`);
+            } catch (err) {
+              console.error('Failed to navigate to prop:', err);
+              alert('Failed to open prop page. Please try again.');
+            }
+          };
+
+          const menuItems: ContextMenuItem[] = [
+            {
+              label: 'View Prop',
+              icon: <ExternalLink className="w-4 h-4" />,
+              onClick: handleViewProp,
+              disabled: !prop?.id,
+            },
+            {
+              label: 'Copy Name',
+              icon: <Copy className="w-4 h-4" />,
+              onClick: handleCopyPropName,
+              disabled: !prop?.name,
+            },
+            { separator: true },
+            {
+              label: 'Remove from Container',
+              icon: <Trash2 className="w-4 h-4" />,
+              onClick: () => handleRemovePropFromContainer(p.propId),
+              disabled: !!removing[p.propId],
+              danger: true,
+            },
+          ];
+
+          return (
+            <ContextMenu
+              isOpen={propContextMenu.isOpen}
+              position={propContextMenu.position}
+              items={menuItems}
+              onClose={propContextMenu.handleClose}
+            />
+          );
+        })()}
 
         {childContainers.length > 0 && (
           <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6 mb-6">
@@ -764,12 +904,14 @@ const ContainerDetailPage: React.FC = () => {
                               } as Partial<Omit<PackingContainer, 'id' | 'metadata'>>);
                             }
                             // Also track on parent container
-                            if (container) {
+                            // Use refreshed parent container to avoid race condition with async state update
+                            const refreshedParent = (refreshed.containers || []).find((x) => x.id === container.id);
+                            if (refreshedParent) {
                               const activity = createActivity('Child container removed', { 
                                 childId: ch.id, 
                                 childName: ch.name 
                               });
-                              await addActivity(activity);
+                              await addActivity(activity, refreshedParent);
                             }
                           } finally {
                             setUpdatingChild(prev => ({ ...prev, [ch.id]: false }));
@@ -865,7 +1007,7 @@ const ContainerDetailPage: React.FC = () => {
                                 // Track activity
                                 if (updated) {
                                   const activity = createActivity('Prop added', { propId: p.id, propName: p.name, quantity: 1 });
-                                  await addActivity(activity);
+                                  await addActivity(activity, updated);
                                 }
                               } finally {
                                 setAdding((prev) => ({ ...prev, [p.id]: false }));
@@ -950,7 +1092,7 @@ const ContainerDetailPage: React.FC = () => {
               combinedLog.map((item) => {
                 const isComment = 'createdAt' in item;
                 const userInfo = userInfoMap.get(item.userId) || { displayName: item.userName || 'Unknown User' };
-                const initials = isComment ? (item.userAvatarInitials || userInfo.displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'U') : 'A';
+                const initials = isComment ? (item.userAvatarInitials || userInfo.displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || 'U') : 'A';
                 const date = isComment ? item.createdAt : item.timestamp;
                 
                 return (
@@ -1038,7 +1180,7 @@ const ContainerDetailPage: React.FC = () => {
                           // Track activity
                           if (updated) {
                             const activity = createActivity('Parent container changed', { oldParentId: oldParentId || 'None', newParentId: p.id, newParentName: p.name });
-                            await addActivity(activity);
+                            await addActivity(activity, updated);
                           }
                         } finally {
                           setSavingParent(false);
@@ -1072,12 +1214,26 @@ const ContainerDetailPage: React.FC = () => {
                           } as any);
                           const refreshed = await pls.getPackList(packListId);
                           setPackList(refreshed);
+                          const newParent = (refreshed.containers || []).find((c) => c.id === newId);
                           await pls.updateContainer(packListId, container.id, { parentId: newId });
                           const refreshed2 = await pls.getPackList(packListId);
                           setPackList(refreshed2);
                           const updated = (refreshed2.containers || []).find((x) => x.id === container.id) || null;
                           setContainer(updated);
+                          // Track activity for parent creation and assignment
+                          // Pass updated container to avoid race condition with async state update
+                          if (updated) {
+                            const activity = createActivity('Parent container created and assigned', {
+                              parentId: newId,
+                              parentName: newParent?.name || 'New parent',
+                              parentType: t
+                            });
+                            await addActivity(activity, updated);
+                          }
                           setParentSelecting(false);
+                        } catch (err) {
+                          console.error('Failed to create parent container:', err);
+                          alert('Failed to create parent container. Please try again.');
                         } finally {
                           setSavingParent(false);
                         }

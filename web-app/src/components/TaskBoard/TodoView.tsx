@@ -7,6 +7,14 @@ import { Calendar, Filter, SortAsc, Plus } from "lucide-react";
 import { logger } from "../../utils/logger";
 import { formatDueDate as formatDueDateUtil, isPastDate } from "../../utils/taskHelpers";
 
+// Helper: convert markdown mentions to display text (for editing in input field)
+// Converts [@Name](type:id) to just Name (without @ symbol)
+function markdownToDisplayText(text: string): string {
+  if (!text) return '';
+  // Replace [@Name](type:id) with just Name (no @ symbol)
+  return text.replace(/\[@([^\]]+)\]\((?:prop|container|user):[^)]*\)/g, '$1');
+}
+
 // Helper: render text with @-mention links (for both title and description)
 function renderTextWithLinks(text: string) {
   if (!text) return null;
@@ -79,7 +87,7 @@ interface TodoViewProps {
   boardId: string;
   lists: ListData[];
   cards: Record<string, CardData[]>; // listId -> cards
-  onAddCard: (listId: string, title: string) => void;
+  onAddCard: (listId: string, title: string, assignedTo?: string[]) => void;
   onUpdateCard: (cardId: string, updates: Partial<CardData>) => void;
   onDeleteCard: (cardId: string) => void;
   selectedCardId?: string | null;
@@ -109,17 +117,19 @@ const TodoView: React.FC<TodoViewProps> = ({
   const { user } = useFirebase();
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('due_date');
-  const [quickAddText, setQuickAddText] = useState("");
+  const [quickAddTextDisplay, setQuickAddTextDisplay] = useState(""); // Display format (what user sees)
+  const quickAddTextRawRef = useRef<string>(''); // Store raw markdown format (preserved)
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const quickAddInputRef = useRef<HTMLInputElement>(null);
 
   // @mention state for quick add
   const [showMentionMenu, setShowMentionMenu] = useState(false);
-  const [mentionType, setMentionType] = useState<'prop' | 'container' | 'user' | null>(null);
+  const [mentionType, setMentionType] = useState<'prop' | 'container' | 'user' | 'assign_user' | null>(null);
   const [showMentionSearch, setShowMentionSearch] = useState(false);
   const [mentionSearchText, setMentionSearchText] = useState('');
   const [mentionSuggestions, setMentionSuggestions] = useState<any[]>([]);
+  const [pendingAssignments, setPendingAssignments] = useState<string[]>([]); // Store user IDs to assign when card is created
   
   const { propsList, containersList, usersList } = useMentionData();
 
@@ -217,7 +227,8 @@ const TodoView: React.FC<TodoViewProps> = ({
   };
 
   const handleQuickAdd = async () => {
-    if (!quickAddText.trim() || isAddingCard) return;
+    const displayText = quickAddTextDisplay.trim();
+    if (!displayText || isAddingCard) return;
     
     const defaultListId = getDefaultListId();
     if (!defaultListId) {
@@ -229,8 +240,7 @@ const TodoView: React.FC<TodoViewProps> = ({
     }
 
     // Validate input length
-    const trimmedText = quickAddText.trim();
-    if (trimmedText.length > 200) {
+    if (displayText.length > 200) {
       const errorMsg = 'Task title must be 200 characters or less';
       setError(errorMsg);
       setTimeout(() => setError(null), 5000);
@@ -240,8 +250,15 @@ const TodoView: React.FC<TodoViewProps> = ({
     try {
       setIsAddingCard(true);
       setError(null);
-      await onAddCard(defaultListId, trimmedText);
-      setQuickAddText("");
+      // Use raw markdown if available, otherwise use display text
+      const textToSave = quickAddTextRawRef.current.trim() || displayText;
+      // Pass pending assignments - always pass an array (empty if no assignments)
+      const assignmentsToPass = pendingAssignments.length > 0 ? [...pendingAssignments] : [];
+      console.log('Adding card with assignments:', { assignmentsToPass, pendingAssignments, textToSave });
+      await onAddCard(defaultListId, textToSave, assignmentsToPass);
+      setQuickAddTextDisplay("");
+      quickAddTextRawRef.current = '';
+      setPendingAssignments([]); // Clear pending assignments
       // Re-focus input for rapid entry
       setTimeout(() => quickAddInputRef.current?.focus(), 0);
     } catch (error) {
@@ -304,10 +321,22 @@ const TodoView: React.FC<TodoViewProps> = ({
             <input
               ref={quickAddInputRef}
               type="text"
-              value={quickAddText}
+              value={quickAddTextDisplay}
               onChange={e => {
                 const newValue = e.target.value;
-                setQuickAddText(newValue);
+                
+                // Check if text contains markdown format
+                if (newValue.includes('[@') && newValue.includes('](')) {
+                  // Markdown detected - preserve it and convert to display format (just the name, no @)
+                  quickAddTextRawRef.current = newValue;
+                  const displayFormat = markdownToDisplayText(newValue);
+                  setQuickAddTextDisplay(displayFormat);
+                } else {
+                  // User is typing display format (plain text)
+                  setQuickAddTextDisplay(newValue);
+                  // Clear the raw ref when user types plain text (they're not using markdown)
+                  quickAddTextRawRef.current = '';
+                }
                 
                 // Auto-detect mentions as user types
                 const cursorPos = e.target.selectionStart || 0;
@@ -335,7 +364,8 @@ const TodoView: React.FC<TodoViewProps> = ({
                   handleQuickAdd();
                 }
                 if (e.key === 'Escape') {
-                  setQuickAddText("");
+                  setQuickAddTextDisplay("");
+                  quickAddTextRawRef.current = '';
                 }
                 if (e.key === '@') {
                   setShowMentionMenu(true);
@@ -356,23 +386,55 @@ const TodoView: React.FC<TodoViewProps> = ({
               </div>
             )}
           </div>
-          {quickAddText.trim() && (
+          {quickAddTextDisplay.trim() && (
             <div className="mt-2 text-xs text-pb-gray/70 px-1">
               Press <kbd className="px-1.5 py-0.5 bg-pb-darker/60 rounded text-pb-primary">Enter</kbd> to add task, <kbd className="px-1.5 py-0.5 bg-pb-darker/60 rounded text-pb-primary">Esc</kbd> to cancel
+              {pendingAssignments.length > 0 && (
+                <span className="ml-2 text-pb-success">
+                  • {pendingAssignments.length} user{pendingAssignments.length > 1 ? 's' : ''} will be assigned
+                </span>
+              )}
             </div>
           )}
           {showMentionMenu && (
             <div 
-              className="absolute -top-28 left-0 bg-white text-black rounded shadow p-2 z-50 w-48 sm:w-56"
+              className="absolute -top-40 left-0 bg-white text-black rounded shadow p-2 z-50 w-48 sm:w-56"
               role="menu"
             >
-              <div className="font-semibold mb-1">Mention Type</div>
+              <div className="flex justify-between items-center mb-1">
+                <div className="font-semibold">Mention Type</div>
+                <button
+                  onClick={() => {
+                    setShowMentionMenu(false);
+                    setMentionType(null);
+                    // Remove @ from text if it exists
+                    const currentText = quickAddTextDisplay;
+                    const cursorPos = quickAddInputRef.current?.selectionStart || currentText.length;
+                    const textBeforeCursor = currentText.substring(0, cursorPos);
+                    const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                    if (mentionMatch) {
+                      const beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                      const textAfterCursor = currentText.substring(cursorPos);
+                      setQuickAddTextDisplay(beforeMention + textAfterCursor);
+                      quickAddTextRawRef.current = beforeMention + textAfterCursor;
+                    } else if (currentText.endsWith('@')) {
+                      setQuickAddTextDisplay(currentText.slice(0, -1));
+                      quickAddTextRawRef.current = currentText.slice(0, -1);
+                    }
+                    quickAddInputRef.current?.focus();
+                  }}
+                  className="text-gray-500 hover:text-gray-700 px-1"
+                  aria-label="Close menu"
+                >
+                  ✕
+                </button>
+              </div>
               <button 
                 className="w-full text-left py-1 hover:bg-gray-100 px-2"
                 onClick={() => {
                   // Extract any text typed after @
-                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddText.length;
-                  const textBeforeCursor = quickAddText.substring(0, cursorPos);
+                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddTextDisplay.length;
+                  const textBeforeCursor = quickAddTextDisplay.substring(0, cursorPos);
                   const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
                   const typedText = mentionMatch ? mentionMatch[1].trim() : '';
                   
@@ -389,8 +451,8 @@ const TodoView: React.FC<TodoViewProps> = ({
                 className="w-full text-left py-1 hover:bg-gray-100 px-2"
                 onClick={() => {
                   // Extract any text typed after @
-                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddText.length;
-                  const textBeforeCursor = quickAddText.substring(0, cursorPos);
+                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddTextDisplay.length;
+                  const textBeforeCursor = quickAddTextDisplay.substring(0, cursorPos);
                   const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
                   const typedText = mentionMatch ? mentionMatch[1].trim() : '';
                   
@@ -398,6 +460,7 @@ const TodoView: React.FC<TodoViewProps> = ({
                   setShowMentionMenu(false);
                   setShowMentionSearch(true);
                   setMentionSearchText(typedText);
+                  // For containers, show all (no search input - just list)
                   setMentionSuggestions(containersList);
                 }}
               >
@@ -407,8 +470,37 @@ const TodoView: React.FC<TodoViewProps> = ({
                 className="w-full text-left py-1 hover:bg-gray-100 px-2"
                 onClick={() => {
                   // Extract any text typed after @
-                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddText.length;
-                  const textBeforeCursor = quickAddText.substring(0, cursorPos);
+                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddTextDisplay.length;
+                  const textBeforeCursor = quickAddTextDisplay.substring(0, cursorPos);
+                  const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                  const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+                  
+                  // Remove @ from text
+                  if (mentionMatch) {
+                    const beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                    const textAfterCursor = quickAddTextDisplay.substring(cursorPos);
+                    setQuickAddTextDisplay(beforeMention + textAfterCursor);
+                    quickAddTextRawRef.current = beforeMention + textAfterCursor;
+                  } else if (quickAddTextDisplay.endsWith('@')) {
+                    setQuickAddTextDisplay(quickAddTextDisplay.slice(0, -1));
+                    quickAddTextRawRef.current = quickAddTextDisplay.slice(0, -1);
+                  }
+                  
+                  setMentionType('assign_user');
+                  setShowMentionMenu(false);
+                  setShowMentionSearch(true);
+                  setMentionSearchText(typedText);
+                  setMentionSuggestions(usersList);
+                }}
+              >
+                Assign to User
+              </button>
+              <button 
+                className="w-full text-left py-1 hover:bg-gray-100 px-2"
+                onClick={() => {
+                  // Extract any text typed after @
+                  const cursorPos = quickAddInputRef.current?.selectionStart || quickAddTextDisplay.length;
+                  const textBeforeCursor = quickAddTextDisplay.substring(0, cursorPos);
                   const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
                   const typedText = mentionMatch ? mentionMatch[1].trim() : '';
                   
@@ -419,7 +511,7 @@ const TodoView: React.FC<TodoViewProps> = ({
                   setMentionSuggestions(usersList);
                 }}
               >
-                User
+                Mention User
               </button>
             </div>
           )}
@@ -427,31 +519,122 @@ const TodoView: React.FC<TodoViewProps> = ({
             <div 
               className="absolute -top-40 left-0 bg-[#1f2937] text-white rounded border border-white/10 p-3 z-50 w-64 sm:w-72"
             >
-              <div className="text-sm text-gray-300 mb-2">Search {mentionType}</div>
-              <input
-                className="w-full rounded bg-[#111827] border border-white/10 px-2 py-1 text-white mb-2 focus:outline-none focus:ring-2 focus:ring-pb-primary"
-                placeholder={`Type to search ${mentionType}...`}
-                value={mentionSearchText}
-                onChange={e => setMentionSearchText(e.target.value)}
-              />
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-sm text-gray-300">
+                  {mentionType === 'container' ? 'Select Container' : mentionType === 'assign_user' ? 'Assign to User' : `Search ${mentionType}`}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowMentionSearch(false);
+                    setMentionType(null);
+                    setMentionSearchText('');
+                    quickAddInputRef.current?.focus();
+                  }}
+                  className="text-gray-400 hover:text-white px-1"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              {mentionType !== 'container' && (
+                <input
+                  className="w-full rounded bg-[#111827] border border-white/10 px-2 py-1 text-white mb-2 focus:outline-none focus:ring-2 focus:ring-pb-primary"
+                  placeholder={`Type to search ${mentionType === 'assign_user' ? 'user' : mentionType}...`}
+                  value={mentionSearchText}
+                  onChange={e => setMentionSearchText(e.target.value)}
+                  autoFocus
+                />
+              )}
               <div className="max-h-40 overflow-auto space-y-1">
-                {mentionSuggestions.filter(i => (i.name || '').toLowerCase().includes(mentionSearchText.toLowerCase())).map(i => (
+                {(mentionType === 'container' 
+                  ? mentionSuggestions 
+                  : mentionSuggestions.filter(i => (i.name || '').toLowerCase().includes(mentionSearchText.toLowerCase()))
+                ).map(i => (
                   <button 
                     key={i.id} 
                     className="block w-full text-left px-2 py-1 rounded hover:bg-white/10"
                     onClick={() => {
+                      if (mentionType === 'assign_user') {
+                        // For assignment, store the user ID and don't insert text
+                        console.log('Assigning user:', { userId: i.id, userName: i.name, currentAssignments: pendingAssignments });
+                        setPendingAssignments(prev => {
+                          if (prev.includes(i.id)) {
+                            console.log('User already assigned, skipping');
+                            return prev;
+                          }
+                          const updated = [...prev, i.id];
+                          console.log('Updated assignments:', updated);
+                          return updated;
+                        });
+                        setShowMentionSearch(false);
+                        setMentionType(null);
+                        setMentionSearchText('');
+                        quickAddInputRef.current?.focus();
+                        return;
+                      }
+                      
                       // Use markdown format for props and containers to handle multi-word names properly
                       // Use plain @ for users
-                      const text = mentionType === 'user' 
+                      const markdownText = mentionType === 'user' 
                         ? `@${i.name}` 
                         : `[@${i.name}](${mentionType}:${i.id})`;
-                      setQuickAddText(prev => {
-                        const t = prev || '';
-                        const base = t.endsWith('@') ? t.slice(0, -1).trimEnd() : t.trimEnd();
-                        return (base ? base + ' ' : '') + text + ' ';
-                      });
+                      
+                      // Get current display text and cursor position
+                      const currentDisplay = quickAddTextDisplay;
+                      const cursorPos = quickAddInputRef.current?.selectionStart || currentDisplay.length;
+                      const textBeforeCursor = currentDisplay.substring(0, cursorPos);
+                      const textAfterCursor = currentDisplay.substring(cursorPos);
+                      
+                      // Find the @ mention that was being typed (look backwards from cursor)
+                      const mentionMatch = textBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                      
+                      let newDisplayText: string;
+                      let newRawText: string;
+                      
+                      if (mentionMatch) {
+                        // Replace the typed mention with just the name (no @, no markdown)
+                        const beforeMention = textBeforeCursor.substring(0, textBeforeCursor.length - mentionMatch[0].length);
+                        const displayName = i.name; // Just the name
+                        newDisplayText = beforeMention + displayName + ' ' + textAfterCursor;
+                        
+                        // For raw text, replace @typedText with the markdown format
+                        // We need to find the corresponding position in the raw text
+                        // Since display and raw might differ, we'll reconstruct from the display text position
+                        const rawTextBefore = quickAddTextRawRef.current || currentDisplay;
+                        const rawCursorPos = Math.min(cursorPos, rawTextBefore.length);
+                        const rawTextBeforeCursor = rawTextBefore.substring(0, rawCursorPos);
+                        const rawTextAfterCursor = rawTextBefore.substring(rawCursorPos);
+                        const rawMentionMatch = rawTextBeforeCursor.match(/@([A-Za-z0-9\s]*)$/);
+                        
+                        if (rawMentionMatch) {
+                          const rawBeforeMention = rawTextBeforeCursor.substring(0, rawTextBeforeCursor.length - rawMentionMatch[0].length);
+                          newRawText = rawBeforeMention + markdownText + ' ' + rawTextAfterCursor;
+                        } else {
+                          // Fallback: use display text structure
+                          newRawText = beforeMention + markdownText + ' ' + textAfterCursor;
+                        }
+                      } else {
+                        // Fallback: just append if we can't find the mention
+                        const base = currentDisplay.endsWith('@') ? currentDisplay.slice(0, -1).trimEnd() : currentDisplay.trimEnd();
+                        newDisplayText = (base ? base + ' ' : '') + i.name + ' ';
+                        
+                        // Store markdown in ref
+                        const rawBase = (quickAddTextRawRef.current || currentDisplay).endsWith('@') 
+                          ? (quickAddTextRawRef.current || currentDisplay).slice(0, -1).trimEnd() 
+                          : (quickAddTextRawRef.current || currentDisplay).trimEnd();
+                        newRawText = (rawBase ? rawBase + ' ' : '') + markdownText + ' ';
+                      }
+                      
+                      // Update both display and raw
+                      setQuickAddTextDisplay(newDisplayText);
+                      quickAddTextRawRef.current = newRawText;
+                      
                       setShowMentionSearch(false);
                       setMentionType(null);
+                      setMentionSearchText('');
+                      
+                      // Return focus to input
+                      setTimeout(() => quickAddInputRef.current?.focus(), 0);
                     }}
                   >
                     {i.name}

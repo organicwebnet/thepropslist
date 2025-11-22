@@ -733,8 +733,17 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const handleDescriptionChange = (text: string) => {
         setEditedDescription(text);
         
+        // Close mention menu if space, period, or comma is typed (similar to web-app behavior)
+        if (showMentionMenu && !showPropSearch && !showUserSearch && !showContainerSearch) {
+            if (text.endsWith(' ') || text.endsWith('.') || text.endsWith(',')) {
+                setShowMentionMenu(false);
+                setMentionTarget(null);
+                return;
+            }
+        }
+        
         // Enhanced mention detection - check for @user, @prop, @box patterns and quick-create @P:Name
-        if (!showMentionMenu && !showPropSearch) {
+        if (!showMentionMenu && !showPropSearch && !showUserSearch && !showContainerSearch) {
             const quickCreateMatch = text.match(/@P:([^\n]+)$/);
             if (quickCreateMatch && quickCreateMatch[1].trim()) {
                 const name = quickCreateMatch[1].trim();
@@ -775,9 +784,14 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     };
 
     const handleSelectProp = () => {
+        // Extract any text typed after @ (similar to web-app behavior)
+        const currentText = mentionTarget === 'title' ? editedTitle : editedDescription;
+        const mentionMatch = currentText.match(/@([A-Za-z0-9\s]*)$/);
+        const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+        
         setShowMentionMenu(false);
         setShowPropSearch(true);
-        setPropSearchText('');
+        setPropSearchText(typedText);
         setPropSuggestions(allProps); // Show all props initially
     };
 
@@ -794,11 +808,25 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const handleSelectPropFromList = (prop: {id: string, name: string}) => {
         const propLink = `[@${prop.name}](prop:${prop.id})`;
         if (mentionTarget === 'title') {
-            const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + propLink + ' ' : editedTitle + ' ' + propLink + ' ';
-            setEditedTitle(newTitle);
+            // Replace @[typed text] with the prop link (similar to web-app behavior)
+            const mentionMatch = editedTitle.match(/@([A-Za-z0-9\s]*)$/);
+            if (mentionMatch) {
+                const beforeMention = editedTitle.substring(0, editedTitle.length - mentionMatch[0].length);
+                setEditedTitle(beforeMention + propLink + ' ');
+            } else {
+                const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + propLink + ' ' : editedTitle + ' ' + propLink + ' ';
+                setEditedTitle(newTitle);
+            }
         } else {
-            const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + propLink + ' ' : editedDescription + ' ' + propLink + ' ';
-            setEditedDescription(newDescription);
+            // Replace @[typed text] with the prop link (similar to web-app behavior)
+            const mentionMatch = editedDescription.match(/@([A-Za-z0-9\s]*)$/);
+            if (mentionMatch) {
+                const beforeMention = editedDescription.substring(0, editedDescription.length - mentionMatch[0].length);
+                setEditedDescription(beforeMention + propLink + ' ');
+            } else {
+                const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + propLink + ' ' : editedDescription + ' ' + propLink + ' ';
+                setEditedDescription(newDescription);
+            }
         }
         
         // Close everything
@@ -811,10 +839,42 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
 
     // User search handlers
     const handleSelectUser = () => {
+        // Extract any text typed after @ (similar to web-app behavior)
+        const currentText = mentionTarget === 'title' ? editedTitle : editedDescription;
+        const mentionMatch = currentText.match(/@([A-Za-z0-9\s]*)$/);
+        const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+        
         setShowMentionMenu(false);
         setShowUserSearch(true);
-        setUserSearchText('');
+        setUserSearchText(typedText);
         setUserSuggestions(allShowMembers || []);
+    };
+
+    // Assign to user handler - opens member picker to assign users to the card
+    const handleAssignToUser = () => {
+        const currentTarget = mentionTarget; // Store before clearing
+        setShowMentionMenu(false);
+        setMentionTarget(null);
+        // Remove the @ from the text if it exists
+        if (currentTarget === 'title') {
+            const mentionMatch = editedTitle.match(/@([A-Za-z0-9\s]*)$/);
+            if (mentionMatch) {
+                const beforeMention = editedTitle.substring(0, editedTitle.length - mentionMatch[0].length);
+                setEditedTitle(beforeMention);
+            } else if (editedTitle.endsWith('@')) {
+                setEditedTitle(editedTitle.slice(0, -1));
+            }
+        } else if (currentTarget === 'description') {
+            const mentionMatch = editedDescription.match(/@([A-Za-z0-9\s]*)$/);
+            if (mentionMatch) {
+                const beforeMention = editedDescription.substring(0, editedDescription.length - mentionMatch[0].length);
+                setEditedDescription(beforeMention);
+            } else if (editedDescription.endsWith('@')) {
+                setEditedDescription(editedDescription.slice(0, -1));
+            }
+        }
+        // Open the member picker
+        setShowMemberPickerModal(true);
     };
 
     const handleUserSearchChange = (searchText: string) => {
@@ -828,11 +888,25 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
     const handleSelectUserFromList = (user: MemberData) => {
         const userMention = `@${user.name}`;
         if (mentionTarget === 'title') {
-            const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + userMention + ' ' : editedTitle + ' ' + userMention + ' ';
-            setEditedTitle(newTitle);
+            // Replace @[typed text] with the user mention (similar to web-app behavior)
+            const mentionMatch = editedTitle.match(/@([A-Za-z0-9\s]*)$/);
+            if (mentionMatch) {
+                const beforeMention = editedTitle.substring(0, editedTitle.length - mentionMatch[0].length);
+                setEditedTitle(beforeMention + userMention + ' ');
+            } else {
+                const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + userMention + ' ' : editedTitle + ' ' + userMention + ' ';
+                setEditedTitle(newTitle);
+            }
         } else {
-            const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + userMention + ' ' : editedDescription + ' ' + userMention + ' ';
-            setEditedDescription(newDescription);
+            // Replace @[typed text] with the user mention (similar to web-app behavior)
+            const mentionMatch = editedDescription.match(/@([A-Za-z0-9\s]*)$/);
+            if (mentionMatch) {
+                const beforeMention = editedDescription.substring(0, editedDescription.length - mentionMatch[0].length);
+                setEditedDescription(beforeMention + userMention + ' ');
+            } else {
+                const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + userMention + ' ' : editedDescription + ' ' + userMention + ' ';
+                setEditedDescription(newDescription);
+            }
         }
         
         // Close everything
@@ -843,30 +917,42 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
         setMentionTarget(null);
     };
 
-    // Container search handlers
+    // Container list handlers (changed from search to list)
     const handleSelectContainer = () => {
+        // Extract any text typed after @ (similar to web-app behavior)
+        const currentText = mentionTarget === 'title' ? editedTitle : editedDescription;
+        const mentionMatch = currentText.match(/@([A-Za-z0-9\s]*)$/);
+        const typedText = mentionMatch ? mentionMatch[1].trim() : '';
+        
         setShowMentionMenu(false);
         setShowContainerSearch(true);
-        setContainerSearchText('');
+        setContainerSearchText(''); // Clear search text - we're showing a list, not searching
+        // Show all containers (already filtered by showId when loaded)
         setContainerSuggestions(allContainers);
-    };
-
-    const handleContainerSearchChange = (searchText: string) => {
-        setContainerSearchText(searchText);
-        const filtered = (allContainers || []).filter((container: {id: string, name: string}) => 
-            container?.name?.toLowerCase().includes(searchText.toLowerCase())
-        );
-        setContainerSuggestions(filtered);
     };
 
     const handleSelectContainerFromList = (container: {id: string, name: string}) => {
         const containerRef = `[@${container.name}](container:${container.id})`;
         if (mentionTarget === 'title') {
-            const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + containerRef + ' ' : editedTitle + ' ' + containerRef + ' ';
-            setEditedTitle(newTitle);
+            // Replace @[typed text] with the container link (similar to web-app behavior)
+            const mentionMatch = editedTitle.match(/@([A-Za-z0-9\s]*)$/);
+            if (mentionMatch) {
+                const beforeMention = editedTitle.substring(0, editedTitle.length - mentionMatch[0].length);
+                setEditedTitle(beforeMention + containerRef + ' ');
+            } else {
+                const newTitle = editedTitle.endsWith('@') ? editedTitle.slice(0, -1) + containerRef + ' ' : editedTitle + ' ' + containerRef + ' ';
+                setEditedTitle(newTitle);
+            }
         } else {
-            const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + containerRef + ' ' : editedDescription + ' ' + containerRef + ' ';
-            setEditedDescription(newDescription);
+            // Replace @[typed text] with the container link (similar to web-app behavior)
+            const mentionMatch = editedDescription.match(/@([A-Za-z0-9\s]*)$/);
+            if (mentionMatch) {
+                const beforeMention = editedDescription.substring(0, editedDescription.length - mentionMatch[0].length);
+                setEditedDescription(beforeMention + containerRef + ' ');
+            } else {
+                const newDescription = editedDescription.endsWith('@') ? editedDescription.slice(0, -1) + containerRef + ' ' : editedDescription + ' ' + containerRef + ' ';
+                setEditedDescription(newDescription);
+            }
         }
         
         // Close everything
@@ -1438,6 +1524,16 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                 {editingTitleState ? (
                                     <TextInput style={[styles.input, { color: '#fff', fontWeight: 'bold', fontSize: 20, lineHeight: 26, width: '100%' }]} value={editedTitle} onChangeText={(text) => {
                                         setEditedTitle(text);
+                                        
+                                        // Close mention menu if space, period, or comma is typed (similar to web-app behavior)
+                                        if (showMentionMenu && !showPropSearch && !showUserSearch && !showContainerSearch) {
+                                            if (text.endsWith(' ') || text.endsWith('.') || text.endsWith(',')) {
+                                                setShowMentionMenu(false);
+                                                setMentionTarget(null);
+                                                return;
+                                            }
+                                        }
+                                        
                                         // Quick-create @P:Name inside title
                                         const quickCreateMatch = text.match(/@P:([^\n]+)$/);
                                         if (quickCreateMatch && quickCreateMatch[1].trim()) {
@@ -1452,7 +1548,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                             })();
                                             return;
                                         }
-                                        if (!showMentionMenu && !showPropSearch) {
+                                        if (!showMentionMenu && !showPropSearch && !showUserSearch && !showContainerSearch) {
                                             if (text.endsWith('@user ') || text.endsWith('@user')) {
                                                 setMentionTarget('title');
                                                 setShowUserSearch(true);
@@ -1599,9 +1695,18 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                             }}
                                             onPress={(e) => e.stopPropagation()}
                                         >
-                                            <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#000', marginBottom: 12 }}>
-                                                Mention Type
-                                            </Text>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                                <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#000' }}>
+                                                    Mention Type
+                                                </Text>
+                                                <Pressable
+                                                    onPress={closeMentionSystem}
+                                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                    style={{ padding: 4 }}
+                                                >
+                                                    <Ionicons name="close" size={24} color="#666" />
+                                                </Pressable>
+                                            </View>
                                             <Pressable
                                                 onPress={handleSelectProp}
                                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1631,6 +1736,20 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                                 <Text style={{ fontSize: 16, color: '#000', fontWeight: '500' }}>Box/Container</Text>
                                             </Pressable>
                                             <Pressable
+                                                onPress={handleAssignToUser}
+                                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                                style={({ pressed }) => ({ 
+                                                    padding: 16, 
+                                                    borderBottomWidth: 1, 
+                                                    borderBottomColor: '#eee',
+                                                    backgroundColor: pressed ? '#f5f5f5' : 'transparent',
+                                                    borderRadius: 8,
+                                                    marginBottom: 4
+                                                })}
+                                            >
+                                                <Text style={{ fontSize: 16, color: '#000', fontWeight: '500' }}>Assign to User</Text>
+                                            </Pressable>
+                                            <Pressable
                                                 onPress={handleSelectUser}
                                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                                 style={({ pressed }) => ({ 
@@ -1639,7 +1758,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                                     borderRadius: 8
                                                 })}
                                             >
-                                                <Text style={{ fontSize: 16, color: '#000', fontWeight: '500' }}>User</Text>
+                                                <Text style={{ fontSize: 16, color: '#000', fontWeight: '500' }}>Mention User</Text>
                                             </Pressable>
                                         </Pressable>
                                     </Pressable>
@@ -1806,7 +1925,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                 </View>
                             )}
                             
-                            {/* Container Search Interface */}
+                            {/* Container List Interface (changed from search to list) */}
                             {showContainerSearch && (
                                 <View style={{
                                     marginTop: 8,
@@ -1819,7 +1938,7 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                                         <Ionicons name="archive" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
                                         <Text style={{ color: '#9CA3AF', fontSize: 14, flex: 1 }}>
-                                            Search Containers:
+                                            Select Container:
                                         </Text>
                                         <Pressable 
                                             onPress={closeMentionSystem} 
@@ -1829,35 +1948,17 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                             <Ionicons name="close" size={20} color="#9CA3AF" />
                                         </Pressable>
                                     </View>
-                                    <TextInput
-                                        style={{
-                                            backgroundColor: '#2D3748',
-                                            borderRadius: 4,
-                                            paddingHorizontal: 12,
-                                            paddingVertical: 8,
-                                            color: '#fff',
-                                            fontSize: 14,
-                                            borderWidth: 1,
-                                            borderColor: 'rgba(255,255,255,0.1)',
-                                            marginBottom: 8
-                                        }}
-                                        placeholder="Type to search containers..."
-                                        placeholderTextColor="#9CA3AF"
-                                        value={containerSearchText}
-                                        onChangeText={handleContainerSearchChange}
-                                        autoFocus
-                                    />
                                     
-                                    {/* Container Suggestions */}
-                                    {containerSuggestions.length > 0 && (
+                                    {/* Container List (all containers for the show, no search) */}
+                                    {containerSuggestions.length > 0 ? (
                                         <View style={{
                                             backgroundColor: '#2D3748',
                                             borderRadius: 4,
                                             borderWidth: 1,
                                             borderColor: 'rgba(255,255,255,0.1)',
-                                            maxHeight: 150
+                                            maxHeight: 200
                                         }}>
-                                            <ScrollView style={{ maxHeight: 150 }}>
+                                            <ScrollView style={{ maxHeight: 200 }}>
                                                 {containerSuggestions.map((container) => (
                                                     <Pressable
                                                         key={container.id}
@@ -1881,6 +1982,12 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                                     </Pressable>
                                                 ))}
                                             </ScrollView>
+                                        </View>
+                                    ) : (
+                                        <View style={{ padding: 16, alignItems: 'center' }}>
+                                            <Text style={{ color: '#9CA3AF', fontSize: 14 }}>
+                                                No containers found for this show
+                                            </Text>
                                         </View>
                                     )}
                                 </View>
