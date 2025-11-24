@@ -75,6 +75,9 @@ const ProfilePage: React.FC = () => {
   // Use shared role options for consistency
   const roleOptions = ROLE_OPTIONS;
 
+  // Track when we're uploading to prevent state overwrite
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  
   // Initialize form data when userProfile loads
   useEffect(() => {
     if (userProfile) {
@@ -82,9 +85,13 @@ const ProfilePage: React.FC = () => {
       setEmail(userProfile.email || user?.email || '');
       setPhoneNumber(userProfile.phoneNumber || '');
       setRole(userProfile.role || 'propmaker');
-      setPhotoURL(userProfile.photoURL || '');
+      // Only update photoURL from userProfile if we're not currently uploading
+      // This prevents overwriting the local state during upload
+      if (!isUploadingPhoto) {
+        setPhotoURL(userProfile.photoURL || '');
+      }
     }
-  }, [userProfile, user]);
+  }, [userProfile, user, isUploadingPhoto]);
 
   // Load pricing configuration
   useEffect(() => {
@@ -233,6 +240,7 @@ const ProfilePage: React.FC = () => {
     }
     
     setSaving(true);
+    setIsUploadingPhoto(true);
     clearMessages();
     
     try {
@@ -254,8 +262,21 @@ const ProfilePage: React.FC = () => {
       
       await uploadBytes(storageRef, file, metadata);
       const url = await getDownloadURL(storageRef);
-      setPhotoURL(url);
+      
+      // Add cache-busting parameter to ensure image refreshes in Avatar component
+      const urlWithCacheBust = `${url}?t=${Date.now()}`;
+      
+      // Update local state immediately for instant UI feedback
+      setPhotoURL(urlWithCacheBust);
+      
+      // Update user profile in Firestore (store original URL without cache-bust)
       await updateUserProfile({ photoURL: url });
+      
+      // Wait a moment for the profile to update, then allow useEffect to sync
+      setTimeout(() => {
+        setIsUploadingPhoto(false);
+      }, 1000);
+      
       setSuccess('Profile photo updated successfully!');
     } catch (err: any) {
       console.error('Error uploading profile photo:', err);
@@ -263,6 +284,7 @@ const ProfilePage: React.FC = () => {
       setError(`Failed to upload photo: ${errorMessage}`);
     } finally {
       setSaving(false);
+      setIsUploadingPhoto(false);
       // Reset file input to allow selecting the same file again
       if (fileInputRef.current) {
         fileInputRef.current.value = '';

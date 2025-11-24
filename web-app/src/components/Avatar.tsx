@@ -36,7 +36,11 @@ export default function Avatar({
   className = '' 
 }: AvatarProps) {
   const [imageError, setImageError] = React.useState(false);
-  const [imageLoaded, setImageLoaded] = React.useState(false);
+
+  // Reset image error state when src changes
+  React.useEffect(() => {
+    setImageError(false);
+  }, [src]);
 
   // Generate initials from name
   const getInitials = (name: string) => {
@@ -64,14 +68,13 @@ export default function Avatar({
   const sizeClass = sizeClasses[size];
 
   // If we have a valid src and no error, show the image
-  if (src && !imageError && imageLoaded) {
+  if (src && !imageError) {
     return (
       <img
         src={src}
         alt={alt}
         className={`${sizeClass} rounded-full object-cover ${className}`}
         onError={() => setImageError(true)}
-        onLoad={() => setImageLoaded(true)}
       />
     );
   }
