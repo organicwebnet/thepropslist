@@ -208,15 +208,27 @@ const ProfilePage: React.FC = () => {
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user) {
+      // Reset file input if no file selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
     
     if (!file.type.match('image.*')) {
       setError('Please select an image file');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
     
     if (file.size > 5 * 1024 * 1024) {
       setError('Image size should be less than 5MB');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
       return;
     }
     
@@ -224,16 +236,37 @@ const ProfilePage: React.FC = () => {
     clearMessages();
     
     try {
+      // Check if storage is available
+      if (!storage) {
+        throw new Error('Storage service is not available. Please refresh the page and try again.');
+      }
+      
       const storageRef = ref(storage, `profile_images/${user.uid}`);
-      await uploadBytes(storageRef, file);
+      
+      // Upload with metadata
+      const metadata = {
+        contentType: file.type,
+        customMetadata: {
+          'uploaded-by': 'profile-page',
+          'original-name': file.name
+        }
+      };
+      
+      await uploadBytes(storageRef, file, metadata);
       const url = await getDownloadURL(storageRef);
       setPhotoURL(url);
       await updateUserProfile({ photoURL: url });
       setSuccess('Profile photo updated successfully!');
     } catch (err: any) {
-      setError('Failed to upload photo');
+      console.error('Error uploading profile photo:', err);
+      const errorMessage = err?.message || err?.code || 'Unknown error';
+      setError(`Failed to upload photo: ${errorMessage}`);
     } finally {
       setSaving(false);
+      // Reset file input to allow selecting the same file again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -444,11 +477,12 @@ const ProfilePage: React.FC = () => {
               />
               <button
                 type="button"
-                  className="absolute bottom-0 right-0 bg-pb-primary text-white rounded-full p-2 shadow hover:bg-pb-secondary transition-colors"
+                className="absolute bottom-0 right-0 bg-pb-primary text-white rounded-full p-2 shadow hover:bg-pb-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => fileInputRef.current?.click()}
                 title="Change photo"
+                disabled={saving}
               >
-                  <Camera className="w-4 h-4" />
+                <Camera className="w-4 h-4" />
               </button>
               <input
                 type="file"
