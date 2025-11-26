@@ -6,8 +6,6 @@ import {
   Eye, 
   EyeOff, 
   Plus, 
-  Edit, 
-  Save, 
   X,
   CheckCircle,
   RefreshCw
@@ -20,7 +18,8 @@ import {
   PermissionCategory,
   getJobRolesByHierarchy,
   validateRolePermissions,
-  createCustomJobRole
+  createCustomJobRole,
+  PERMISSION_DESCRIPTIONS
 } from '../core/permissions/jobRoles';
 import { usePermissions } from '../hooks/usePermissions';
 import { useFirebase } from '../contexts/FirebaseContext';
@@ -30,13 +29,14 @@ const RoleManagementPage: React.FC = () => {
   const { isGod } = usePermissions();
   const { service: firebaseService } = useFirebase();
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const [editingRole, setEditingRole] = useState<string | null>(null);
   const [showPermissionMatrix, setShowPermissionMatrix] = useState(false);
   const [showCreateRole, setShowCreateRole] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [roles, setRoles] = useState(JOB_ROLES);
   const [isLoading, setIsLoading] = useState(false);
+  const [savingRole, setSavingRole] = useState<string | null>(null);
+  const [hoveredPermission, setHoveredPermission] = useState<SystemAction | null>(null);
 
   // New role creation state
   const [newRole, setNewRole] = useState({
@@ -46,9 +46,6 @@ const RoleManagementPage: React.FC = () => {
     category: 'technical' as JobRole['category'],
     permissions: [] as SystemAction[]
   });
-
-  // Permission editing state
-  const [editingPermissions, setEditingPermissions] = useState<SystemAction[]>([]);
 
   // Load roles from database
   const loadRoles = async () => {
@@ -109,61 +106,51 @@ const RoleManagementPage: React.FC = () => {
     return matchesCategory && matchesSearch;
   });
 
-  const handleEditRole = (roleId: string) => {
+  const handleTogglePermission = async (roleId: string, action: SystemAction) => {
     const role = roles.find(r => r.id === roleId);
-    if (role && role.isCustomizable) {
-      setEditingRole(roleId);
-      setEditingPermissions([...role.permissions]);
-    }
-  };
+    if (!role || !role.isCustomizable) return;
 
-  const handleSaveRole = async (roleId: string) => {
-    const validation = validateRolePermissions(editingPermissions);
+    // Toggle the permission
+    const currentPermissions = role.permissions || [];
+    const newPermissions = currentPermissions.includes(action)
+      ? currentPermissions.filter(p => p !== action)
+      : [...currentPermissions, action];
+
+    // Validate the new permissions
+    const validation = validateRolePermissions(newPermissions);
     if (!validation.isValid) {
-      alert(`Cannot save role: ${validation.errors.join(', ')}`);
+      alert(`Cannot toggle permission: ${validation.errors.join(', ')}`);
       return;
     }
 
+    // Show warnings but allow to proceed
     if (validation.warnings.length > 0) {
-      const proceed = confirm(`Warnings: ${validation.warnings.join(', ')}\n\nContinue?`);
-      if (!proceed) return;
+      console.warn('Permission warnings:', validation.warnings);
     }
 
     try {
-      setIsLoading(true);
+      setSavingRole(roleId);
       
-      // Find the current role
-      const currentRole = roles.find(role => role.id === roleId);
-      if (!currentRole) {
-        alert('Role not found');
-        return;
-      }
-
       // Update the role with new permissions
       const updatedRole = {
-        ...currentRole,
-        permissions: editingPermissions,
+        ...role,
+        permissions: newPermissions,
         lastModified: new Date(),
-        version: (currentRole.version || 1) + 1
+        version: (role.version || 1) + 1
       };
 
       // Save to database
       await firebaseService.updateDocument('jobRoles', roleId, updatedRole);
       
       // Update local state
-      setRoles(prev => prev.map(role => 
-        role.id === roleId ? updatedRole : role
+      setRoles(prev => prev.map(r => 
+        r.id === roleId ? updatedRole : r
       ));
-
-      setEditingRole(null);
-      setEditingPermissions([]);
-      
-      alert('Role permissions saved successfully!');
     } catch (error) {
       console.error('Error saving role:', error);
-      alert('Failed to save role permissions');
+      alert('Failed to save permission change');
     } finally {
-      setIsLoading(false);
+      setSavingRole(null);
     }
   };
 
@@ -224,44 +211,28 @@ const RoleManagementPage: React.FC = () => {
           ? prev.permissions.filter(p => p !== action)
           : [...prev.permissions, action]
       }));
-    } else {
-      setEditingPermissions(prev =>
-        prev.includes(action)
-          ? prev.filter(p => p !== action)
-          : [...prev, action]
-      );
     }
   };
 
   const toggleCategoryPermissions = (category: PermissionCategory, isNewRole: boolean = false) => {
-    const currentPermissions = isNewRole ? newRole.permissions : editingPermissions;
-    const hasAllCategoryPermissions = category.actions.every(action => 
-      currentPermissions.includes(action)
-    );
+    if (isNewRole) {
+      const currentPermissions = newRole.permissions;
+      const hasAllCategoryPermissions = category.actions.every(action => 
+        currentPermissions.includes(action)
+      );
 
-    if (hasAllCategoryPermissions) {
-      // Remove all category permissions
-      if (isNewRole) {
+      if (hasAllCategoryPermissions) {
+        // Remove all category permissions
         setNewRole(prev => ({
           ...prev,
           permissions: prev.permissions.filter(p => !category.actions.includes(p))
         }));
       } else {
-        setEditingPermissions(prev => 
-          prev.filter(p => !category.actions.includes(p))
-        );
-      }
-    } else {
-      // Add all category permissions
-      if (isNewRole) {
+        // Add all category permissions
         setNewRole(prev => ({
           ...prev,
           permissions: [...new Set([...prev.permissions, ...category.actions])]
         }));
-      } else {
-        setEditingPermissions(prev => 
-          [...new Set([...prev, ...category.actions])]
-        );
       }
     }
   };
@@ -403,15 +374,6 @@ const RoleManagementPage: React.FC = () => {
                   </div>
                 </div>
                 
-                {role.isCustomizable && (
-                  <button
-                    onClick={() => handleEditRole(role.id)}
-                    className="p-2 hover:bg-pb-primary/20 rounded-lg transition-colors"
-                    title="Edit role permissions"
-                  >
-                    <Edit className="w-4 h-4 text-pb-primary" />
-                  </button>
-                )}
               </div>
 
               <p className="text-gray-300 text-sm mb-4">{role.description}</p>
@@ -441,175 +403,136 @@ const RoleManagementPage: React.FC = () => {
           ))}
         </div>
 
-        {/* Role Details Modal */}
-        {selectedRole && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-pb-darker border border-pb-border rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">
-                  {roles.find(r => r.id === selectedRole)?.displayName} Details
-                </h2>
+        {/* Role Details/Edit Modal */}
+        {selectedRole && (() => {
+          const role = roles.find(r => r.id === selectedRole);
+          if (!role) return null;
+          const rolePermissions = role.permissions || [];
+          const isCustomizable = role.isCustomizable;
+
+          return (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-pb-darker border border-pb-border rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-2xl relative">
+                {/* Sticky Close Button */}
                 <button
                   onClick={() => setSelectedRole(null)}
-                  className="p-2 hover:bg-pb-primary/20 rounded-lg transition-colors"
+                  className="absolute top-4 right-4 z-10 p-2 hover:bg-pb-primary/20 rounded-lg transition-colors bg-pb-darker/80 backdrop-blur-sm border border-pb-border"
+                  title="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
-              </div>
 
-              <div className="space-y-6">
-                {PERMISSION_CATEGORIES.map(category => {
-                  const rolePermissions = roles.find(r => r.id === selectedRole)?.permissions || [];
-                  const categoryPermissions = category.actions.filter(action => 
-                    rolePermissions.includes(action)
-                  );
+                <div className="flex items-center justify-between mb-6 pr-10">
+                  <h2 className="text-2xl font-bold">
+                    {role.displayName} {isCustomizable ? 'Permissions' : 'Details'}
+                  </h2>
+                  {savingRole === selectedRole && (
+                    <div className="flex items-center gap-2 text-sm text-green-400">
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Saving...</span>
+                    </div>
+                  )}
+                </div>
 
-                  return (
-                    <div key={category.id} className="bg-pb-darker/30 border border-pb-border rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg">{category.icon}</span>
-                        <h3 className="text-lg font-bold">{category.name}</h3>
-                        <span className="text-sm text-gray-400">
-                          ({categoryPermissions.length}/{category.actions.length})
-                        </span>
-                      </div>
-                      <p className="text-gray-400 text-sm mb-3">{category.description}</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {category.actions.map(action => (
-                          <div
-                            key={action}
-                            className={`flex items-center gap-2 p-2 rounded ${
-                              rolePermissions.includes(action)
-                                ? 'bg-green-600/20 text-green-400'
-                                : 'bg-gray-600/20 text-gray-400'
-                            }`}
-                          >
-                            {rolePermissions.includes(action) ? (
-                              <CheckCircle className="w-4 h-4" />
-                            ) : (
-                              <div className="w-4 h-4 rounded-full border border-gray-400" />
-                            )}
-                            <span className="text-sm">
-                              {action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                <div className="space-y-6">
+                  {PERMISSION_CATEGORIES.map(category => {
+                    const categoryPermissions = category.actions.filter(action => 
+                      rolePermissions.includes(action)
+                    );
+                    const hasAllCategoryPermissions = category.actions.every(action => 
+                      rolePermissions.includes(action)
+                    );
+                    const hasSomeCategoryPermissions = category.actions.some(action => 
+                      rolePermissions.includes(action)
+                    );
+
+                    return (
+                      <div key={category.id} className="bg-pb-darker/30 border border-pb-border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{category.icon}</span>
+                            <h3 className="text-lg font-bold">{category.name}</h3>
+                            <span className="text-sm text-gray-400">
+                              ({categoryPermissions.length}/{category.actions.length})
                             </span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Edit Role Modal */}
-        {editingRole && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-pb-darker border border-pb-border rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">
-                  Edit {roles.find(r => r.id === editingRole)?.displayName} Permissions
-                </h2>
-                <button
-                  onClick={() => setEditingRole(null)}
-                  className="p-2 hover:bg-pb-primary/20 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {PERMISSION_CATEGORIES.map(category => {
-                  const hasAllCategoryPermissions = category.actions.every(action => 
-                    editingPermissions.includes(action)
-                  );
-                  const hasSomeCategoryPermissions = category.actions.some(action => 
-                    editingPermissions.includes(action)
-                  );
-
-                  return (
-                    <div key={category.id} className="bg-pb-darker/30 border border-pb-border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{category.icon}</span>
-                          <h3 className="text-lg font-bold">{category.name}</h3>
                         </div>
-                        <button
-                          onClick={() => toggleCategoryPermissions(category)}
-                          className={`px-3 py-1 rounded text-sm transition-colors ${
-                            hasAllCategoryPermissions
-                              ? 'bg-green-600/20 text-green-400 border border-green-600/30'
-                              : hasSomeCategoryPermissions
-                              ? 'bg-yellow-600/20 text-yellow-400 border border-yellow-600/30'
-                              : 'bg-gray-600/20 text-gray-400 border border-gray-600/30'
-                          }`}
-                        >
-                          {hasAllCategoryPermissions ? 'All' : hasSomeCategoryPermissions ? 'Some' : 'None'}
-                        </button>
-                      </div>
-                      <p className="text-gray-400 text-sm mb-3">{category.description}</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {category.actions.map(action => (
-                          <label
-                            key={action}
-                            className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-pb-primary/10 transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={editingPermissions.includes(action)}
-                              onChange={() => togglePermission(action)}
-                              className="w-4 h-4 text-pb-primary bg-pb-input border-pb-border rounded focus:ring-pb-primary"
-                            />
-                            <span className="text-sm">
-                              {action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                        <p className="text-gray-400 text-sm mb-3">{category.description}</p>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {category.actions.map(action => {
+                            const isEnabled = rolePermissions.includes(action);
+                            const description = PERMISSION_DESCRIPTIONS[action] || 'No description available.';
 
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={() => handleSaveRole(editingRole)}
-                  disabled={isLoading}
-                  className="px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
-                >
-                  {isLoading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button
-                  onClick={() => setEditingRole(null)}
-                  className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
+                            return (
+                              <div
+                                key={action}
+                                className={`relative group flex items-center gap-2 p-2 rounded transition-colors ${
+                                  isCustomizable
+                                    ? 'cursor-pointer hover:bg-pb-primary/10'
+                                    : ''
+                                } ${
+                                  isEnabled
+                                    ? 'bg-green-600/20 text-green-400'
+                                    : 'bg-gray-600/20 text-gray-400'
+                                }`}
+                                onClick={() => isCustomizable && handleTogglePermission(selectedRole, action)}
+                                onMouseEnter={() => setHoveredPermission(action)}
+                                onMouseLeave={() => setHoveredPermission(null)}
+                              >
+                                {isEnabled ? (
+                                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                                ) : (
+                                  <div className="w-4 h-4 rounded-full border border-gray-400 flex-shrink-0" />
+                                )}
+                                <span className="text-sm flex-1">
+                                  {action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </span>
+                                
+                                {/* Tooltip */}
+                                {hoveredPermission === action && (
+                                  <div className="absolute left-full ml-2 top-0 z-50 w-64 p-3 text-sm bg-pb-darker border border-pb-border rounded-lg shadow-xl pointer-events-none">
+                                    <div className="font-semibold mb-1 text-pb-primary">
+                                      {action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                    </div>
+                                    <div className="text-gray-300 text-xs leading-relaxed">
+                                      {description}
+                                    </div>
+                                    {isCustomizable && (
+                                      <div className="mt-2 pt-2 border-t border-pb-border text-xs text-gray-400">
+                                        Click to {isEnabled ? 'disable' : 'enable'} this permission
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Create Role Modal */}
         {showCreateRole && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-pb-darker border border-pb-border rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-pb-darker border border-pb-border rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-2xl relative">
+              {/* Sticky Close Button */}
+              <button
+                onClick={() => setShowCreateRole(false)}
+                className="absolute top-4 right-4 z-10 p-2 hover:bg-pb-primary/20 rounded-lg transition-colors bg-pb-darker/80 backdrop-blur-sm border border-pb-border"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center justify-between mb-6 pr-10">
                 <h2 className="text-2xl font-bold">Create New Role</h2>
-                <button
-                  onClick={() => setShowCreateRole(false)}
-                  className="p-2 hover:bg-pb-primary/20 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
               </div>
 
               <div className="space-y-6">
@@ -698,22 +621,41 @@ const RoleManagementPage: React.FC = () => {
                           <p className="text-gray-400 text-sm mb-3">{category.description}</p>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {category.actions.map(action => (
-                              <label
-                                key={action}
-                                className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-pb-primary/10 transition-colors"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={newRole.permissions.includes(action)}
-                                  onChange={() => togglePermission(action, true)}
-                                  className="w-4 h-4 text-pb-primary bg-pb-input border-pb-border rounded focus:ring-pb-primary"
-                                />
-                                <span className="text-sm">
-                                  {action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </span>
-                              </label>
-                            ))}
+                            {category.actions.map(action => {
+                              const isEnabled = newRole.permissions.includes(action);
+                              const description = PERMISSION_DESCRIPTIONS[action] || 'No description available.';
+
+                              return (
+                                <label
+                                  key={action}
+                                  className="relative group flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-pb-primary/10 transition-colors"
+                                  onMouseEnter={() => setHoveredPermission(action)}
+                                  onMouseLeave={() => setHoveredPermission(null)}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isEnabled}
+                                    onChange={() => togglePermission(action, true)}
+                                    className="w-4 h-4 text-pb-primary bg-pb-input border-pb-border rounded focus:ring-pb-primary"
+                                  />
+                                  <span className="text-sm flex-1">
+                                    {action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                  </span>
+                                  
+                                  {/* Tooltip */}
+                                  {hoveredPermission === action && (
+                                    <div className="absolute left-full ml-2 top-0 z-50 w-64 p-3 text-sm bg-pb-darker border border-pb-border rounded-lg shadow-xl pointer-events-none">
+                                      <div className="font-semibold mb-1 text-pb-primary">
+                                        {action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                      </div>
+                                      <div className="text-gray-300 text-xs leading-relaxed">
+                                        {description}
+                                      </div>
+                                    </div>
+                                  )}
+                                </label>
+                              );
+                            })}
                           </div>
                         </div>
                       );

@@ -1155,3 +1155,146 @@ export function compareRoles(roleId1: string, roleId2: string): {
     role2Only
   };
 }
+
+// ============================================================================
+// PERMISSION DESCRIPTIONS FOR TOOLTIPS
+// ============================================================================
+
+/**
+ * Detailed descriptions for each permission to help users understand what they do
+ */
+export const PERMISSION_DESCRIPTIONS: Record<SystemAction, string> = {
+  // User & Team Management
+  [SystemAction.MANAGE_ALL_USERS]: 'Full access to create, edit, and delete user accounts across the entire system. This is a high-level administrative permission.',
+  [SystemAction.ASSIGN_SYSTEM_ROLES]: 'Ability to assign system-level roles (like God/Admin) to users. Use with caution as this grants significant privileges.',
+  [SystemAction.VIEW_USER_PROFILES]: 'View user profile information including contact details, roles, and activity history.',
+  [SystemAction.DELETE_USERS]: 'Permanently delete user accounts from the system. This action cannot be undone.',
+  [SystemAction.SUSPEND_USERS]: 'Temporarily suspend user accounts, preventing them from accessing the system while preserving their data.',
+  [SystemAction.ACTIVATE_USERS]: 'Reactivate previously suspended user accounts, restoring their access to the system.',
+  [SystemAction.INVITE_TEAM_MEMBERS]: 'Send invitations to new team members to join a specific show or project.',
+  [SystemAction.REMOVE_TEAM_MEMBERS]: 'Remove team members from a show or project, revoking their access to that specific show.',
+  [SystemAction.ASSIGN_JOB_ROLES]: 'Assign job-specific roles (like Props Maker, Designer) to team members within a show.',
+  [SystemAction.VIEW_TEAM_MEMBERS]: 'View the list of team members and their assigned roles for a show.',
+  [SystemAction.MANAGE_TEAM_PERMISSIONS]: 'Modify permissions for team members, controlling what actions they can perform within a show.',
+  
+  // Show Management
+  [SystemAction.CREATE_SHOWS]: 'Create new shows or productions in the system. This is typically reserved for supervisors and managers.',
+  [SystemAction.EDIT_SHOW_DETAILS]: 'Modify show information such as name, description, dates, and other show-specific settings.',
+  [SystemAction.DELETE_SHOWS]: 'Permanently delete shows from the system. This will also delete all associated props, tasks, and data.',
+  [SystemAction.ARCHIVE_SHOWS]: 'Archive completed shows, moving them out of active view while preserving all data for historical reference.',
+  [SystemAction.RESTORE_SHOWS]: 'Restore archived shows back to active status, making them accessible again.',
+  [SystemAction.VIEW_SHOWS]: 'View show information and details. This is a basic permission required to access show data.',
+  [SystemAction.MANAGE_SHOW_SETTINGS]: 'Modify advanced show settings including preferences, configurations, and system options.',
+  [SystemAction.MANAGE_SHOW_PERMISSIONS]: 'Control which permissions are available to different roles within a specific show.',
+  [SystemAction.MANAGE_SHOW_BUDGET]: 'View and modify budget information, track expenses, and manage financial aspects of a show.',
+  [SystemAction.MANAGE_SHOW_SCHEDULE]: 'Create and edit show schedules, rehearsal times, and performance dates.',
+  
+  // Props Management
+  [SystemAction.CREATE_PROPS]: 'Create new prop entries in the system with all relevant details and specifications.',
+  [SystemAction.EDIT_PROP_DESIGN]: 'Modify prop design information including visual specifications, drawings, and design notes.',
+  [SystemAction.EDIT_PROP_SPECIFICATIONS]: 'Update technical specifications for props such as requirements and constraints.',
+  [SystemAction.EDIT_PROP_MATERIALS]: 'Modify the materials list and material requirements for props.',
+  [SystemAction.EDIT_PROP_DIMENSIONS]: 'Update dimensional information including length, width, height, and weight of props.',
+  [SystemAction.EDIT_PROP_NOTES]: 'Add or modify notes and additional information about props.',
+  [SystemAction.APPROVE_PROPS]: 'Approve props for production use, marking them as ready and meeting quality standards.',
+  [SystemAction.REJECT_PROPS]: 'Reject props that do not meet requirements, sending them back for revision.',
+  [SystemAction.MARK_PROPS_IN_PROGRESS]: 'Update prop status to indicate work is currently being performed on them.',
+  [SystemAction.MARK_PROPS_COMPLETE]: 'Mark props as completed and ready for use in the show.',
+  [SystemAction.MARK_PROPS_DAMAGED]: 'Record that props have been damaged, triggering repair workflows and documentation.',
+  [SystemAction.MARK_PROPS_LOST]: 'Mark props as lost, updating inventory and potentially triggering replacement processes.',
+  [SystemAction.ASSIGN_PROPS_TO_SCENES]: 'Assign props to specific scenes in the show, tracking which props are needed where.',
+  [SystemAction.ASSIGN_PROPS_TO_ACTORS]: 'Assign props to specific actors, tracking who is responsible for each prop.',
+  [SystemAction.TRACK_PROP_LOCATION]: 'Update and track the current physical location of props throughout the production.',
+  [SystemAction.MANAGE_PROP_INVENTORY]: 'Manage prop inventory, including quantities, stock levels, and inventory organization.',
+  [SystemAction.VIEW_ALL_PROPS]: 'View all props in the system, regardless of assignment or ownership.',
+  [SystemAction.VIEW_ASSIGNED_PROPS]: 'View only props that have been assigned to you or your team.',
+  [SystemAction.VIEW_PROP_HISTORY]: 'Access historical information about props including past status changes and modifications.',
+  [SystemAction.VIEW_PROP_COSTS]: 'View cost information and pricing details for props, including purchase and rental costs.',
+  [SystemAction.DELETE_PROPS]: 'Permanently delete props from the system. This action cannot be undone.',
+  [SystemAction.ARCHIVE_PROPS]: 'Archive props that are no longer needed, removing them from active view while preserving data.',
+  
+  // Board Management
+  [SystemAction.CREATE_BOARDS]: 'Create new task boards for organizing and managing work items.',
+  [SystemAction.EDIT_BOARD_DETAILS]: 'Modify board information including name, description, and board settings.',
+  [SystemAction.DELETE_BOARDS]: 'Permanently delete boards and all associated tasks.',
+  [SystemAction.ARCHIVE_BOARDS]: 'Archive boards that are no longer active, preserving data for reference.',
+  [SystemAction.VIEW_BOARDS]: 'View boards and their contents. Basic permission to access board information.',
+  [SystemAction.MANAGE_BOARD_LAYOUT]: 'Modify board layout, columns, and visual organization of tasks.',
+  [SystemAction.MANAGE_BOARD_CATEGORIES]: 'Create and manage categories for organizing tasks within boards.',
+  [SystemAction.MANAGE_BOARD_MEMBERS]: 'Add or remove members from boards, controlling who can access and work on them.',
+  [SystemAction.MANAGE_BOARD_PERMISSIONS]: 'Control permissions for board members, determining what actions they can perform.',
+  
+  // Packing & Logistics
+  [SystemAction.CREATE_PACKING_BOXES]: 'Create new packing boxes for organizing props during transport or storage.',
+  [SystemAction.EDIT_PACKING_BOXES]: 'Modify packing box information including contents and labels.',
+  [SystemAction.DELETE_PACKING_BOXES]: 'Delete packing boxes from the system.',
+  [SystemAction.VIEW_PACKING_BOXES]: 'View packing boxes and their contents.',
+  [SystemAction.MANAGE_PACKING_LISTS]: 'Create and manage packing lists for shows, tracking what needs to be packed.',
+  [SystemAction.ASSIGN_PROPS_TO_BOXES]: 'Assign props to specific packing boxes for organization and tracking.',
+  [SystemAction.TRACK_PACKING_STATUS]: 'Update and track the packing status of boxes (packed, in transit, received, etc.).',
+  [SystemAction.MANAGE_SHIPPING_LABELS]: 'Create and manage shipping labels for packing boxes.',
+  
+  // Shopping & Procurement
+  [SystemAction.CREATE_SHOPPING_ITEMS]: 'Add items to shopping lists for purchasing materials and supplies.',
+  [SystemAction.EDIT_SHOPPING_ITEMS]: 'Modify shopping list items including quantities, descriptions, and specifications.',
+  [SystemAction.DELETE_SHOPPING_ITEMS]: 'Remove items from shopping lists.',
+  [SystemAction.VIEW_SHOPPING_ITEMS]: 'View shopping lists and items that need to be purchased.',
+  [SystemAction.REQUEST_SHOPPING_ITEMS]: 'Submit requests for items to be added to shopping lists, requiring approval.',
+  [SystemAction.APPROVE_SHOPPING_REQUESTS]: 'Approve shopping requests, allowing items to be purchased.',
+  [SystemAction.REJECT_SHOPPING_REQUESTS]: 'Reject shopping requests that are not approved for purchase.',
+  [SystemAction.MARK_ITEMS_ORDERED]: 'Mark shopping items as ordered, tracking the procurement process.',
+  [SystemAction.MARK_ITEMS_RECEIVED]: 'Mark shopping items as received, updating inventory and completing the purchase cycle.',
+  [SystemAction.MANAGE_BUDGET]: 'View and modify budget allocations, track spending, and manage financial resources.',
+  [SystemAction.VIEW_BUDGET_DETAILS]: 'View budget information and spending details without the ability to modify.',
+  [SystemAction.APPROVE_EXPENSES]: 'Approve expense requests and purchases, authorizing payment.',
+  [SystemAction.TRACK_COSTS]: 'Record and track costs associated with props, materials, and purchases.',
+  [SystemAction.MANAGE_VENDORS]: 'Add, edit, and manage vendor information and contact details.',
+  [SystemAction.VIEW_VENDOR_INFO]: 'View vendor information including contact details and pricing.',
+  [SystemAction.COMPARE_VENDOR_PRICES]: 'Compare prices from different vendors to make purchasing decisions.',
+  
+  // Task Management
+  [SystemAction.CREATE_TASKS]: 'Create new tasks and work items for team members.',
+  [SystemAction.EDIT_TASKS]: 'Modify task details including descriptions, assignments, and requirements.',
+  [SystemAction.DELETE_TASKS]: 'Delete tasks from the system.',
+  [SystemAction.ASSIGN_TASKS]: 'Assign tasks to team members, distributing work across the team.',
+  [SystemAction.REASSIGN_TASKS]: 'Reassign tasks to different team members when needed.',
+  [SystemAction.VIEW_TASKS]: 'View tasks and their current status. Basic permission to see task information.',
+  [SystemAction.VIEW_ASSIGNED_TASKS]: 'View only tasks that have been assigned to you.',
+  [SystemAction.COMPLETE_TASKS]: 'Mark tasks as completed, updating their status in the system.',
+  [SystemAction.MARK_TASKS_IN_PROGRESS]: 'Update task status to indicate work has begun.',
+  [SystemAction.MARK_TASKS_BLOCKED]: 'Mark tasks as blocked, indicating they cannot proceed due to dependencies or issues.',
+  [SystemAction.SET_TASK_PRIORITY]: 'Set priority levels for tasks (high, medium, low) to help with scheduling.',
+  [SystemAction.SET_TASK_DEADLINES]: 'Set deadlines and due dates for tasks.',
+  [SystemAction.MANAGE_TASK_DEPENDENCIES]: 'Define relationships between tasks, indicating which tasks must be completed before others.',
+  
+  // System Administration
+  [SystemAction.VIEW_SYSTEM_LOGS]: 'Access system logs and diagnostic information for troubleshooting.',
+  [SystemAction.MANAGE_SYSTEM_SETTINGS]: 'Modify system-wide settings and configurations. This is a high-level administrative permission.',
+  [SystemAction.ACCESS_ADMIN_PANEL]: 'Access the administrative panel with system management tools.',
+  [SystemAction.VIEW_SUBSCRIBER_STATS]: 'View statistics about system usage, subscribers, and activity metrics.',
+  [SystemAction.MANAGE_SYSTEM_MAINTENANCE]: 'Schedule and manage system maintenance windows and updates.',
+  [SystemAction.VIEW_BILLING]: 'View billing information and subscription details.',
+  [SystemAction.MANAGE_SUBSCRIPTIONS]: 'Manage subscription plans, upgrades, and billing settings.',
+  [SystemAction.PURCHASE_ADDONS]: 'Purchase additional features and add-ons for the system.',
+  [SystemAction.VIEW_USAGE_STATS]: 'View usage statistics and analytics for the system.',
+  
+  // Data & Reporting
+  [SystemAction.EXPORT_DATA]: 'Export data from the system in various formats (CSV, JSON, etc.) for backup or analysis.',
+  [SystemAction.IMPORT_DATA]: 'Import data into the system from external sources.',
+  [SystemAction.GENERATE_REPORTS]: 'Create and generate reports on props, tasks, costs, and other system data.',
+  [SystemAction.VIEW_PROP_REPORTS]: 'View reports specifically related to props and prop management.',
+  [SystemAction.VIEW_COST_REPORTS]: 'View financial reports including costs, budgets, and spending analysis.',
+  [SystemAction.VIEW_TASK_REPORTS]: 'View reports on task completion, productivity, and team performance.',
+  [SystemAction.VIEW_TEAM_REPORTS]: 'View reports on team activity, member contributions, and collaboration metrics.',
+  
+  // Communication & Notifications
+  [SystemAction.SEND_NOTIFICATIONS]: 'Send notifications to team members about updates, changes, or important information.',
+  [SystemAction.MANAGE_ANNOUNCEMENTS]: 'Create and manage system-wide announcements for all users.',
+  [SystemAction.VIEW_FEEDBACK]: 'View feedback and comments from team members.',
+  [SystemAction.SEND_TEAM_MESSAGES]: 'Send messages to team members or teams for communication and coordination.',
+  
+  // Audit & Compliance
+  [SystemAction.VIEW_AUDIT_LOGS]: 'View audit logs tracking all system changes and user actions for compliance and security.',
+  [SystemAction.TRACK_CHANGES]: 'Track and view history of changes made to props, tasks, and other system entities.',
+  [SystemAction.VIEW_PERMISSION_HISTORY]: 'View historical changes to user permissions and role assignments.'
+};
