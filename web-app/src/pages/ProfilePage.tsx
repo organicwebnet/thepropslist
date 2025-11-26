@@ -491,7 +491,6 @@ const ProfilePage: React.FC = () => {
         const missing: string[] = [];
         if (!userProfile?.displayName) missing.push('display name');
         if (!userProfile?.photoURL) missing.push('profile photo');
-        if (!userProfile?.organizations || userProfile.organizations.length === 0) missing.push('organization');
         const incomplete = missing.length > 0;
         
         return incomplete ? (

@@ -134,7 +134,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               const missing: string[] = [];
               if (!userProfile?.displayName) missing.push('name');
               if (!userProfile?.photoURL) missing.push('photo');
-              if (!userProfile?.organizations || userProfile.organizations.length === 0) missing.push('org');
               const incomplete = missing.length > 0;
               return incomplete ? (
                 <span

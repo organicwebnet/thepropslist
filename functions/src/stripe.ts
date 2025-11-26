@@ -28,8 +28,14 @@ function getStripe(): Stripe {
  */
 export const getPricingConfig = onCall(async (request) => {
   try {
-    // Get price IDs from Firebase config
-    const config = functions.config().stripe;
+    // Get price IDs from Firebase config (handle case where config doesn't exist)
+    let config: any = {};
+    try {
+      config = functions.config().stripe || {};
+    } catch (configError) {
+      console.warn('Stripe config not found, using empty price IDs:', configError);
+      config = {};
+    }
     
     // Create pricing config with actual price IDs
     const pricingConfig = {
@@ -40,7 +46,7 @@ export const getPricingConfig = onCall(async (request) => {
             ...plan,
             priceId: {
               monthly: config.plan_starter_price || '',
-              yearly: '' // Add yearly price ID if available
+              yearly: config.plan_starter_price_yearly || '' // Add yearly price ID if available
             }
           };
         } else if (plan.id === 'standard') {
@@ -48,7 +54,7 @@ export const getPricingConfig = onCall(async (request) => {
             ...plan,
             priceId: {
               monthly: config.plan_standard_price || '',
-              yearly: '' // Add yearly price ID if available
+              yearly: config.plan_standard_price_yearly || '' // Add yearly price ID if available
             }
           };
         } else if (plan.id === 'pro') {
@@ -56,7 +62,7 @@ export const getPricingConfig = onCall(async (request) => {
             ...plan,
             priceId: {
               monthly: config.plan_pro_price || '',
-              yearly: '' // Add yearly price ID if available
+              yearly: config.plan_pro_price_yearly || '' // Add yearly price ID if available
             }
           };
         }
@@ -67,7 +73,8 @@ export const getPricingConfig = onCall(async (request) => {
     return pricingConfig;
   } catch (error) {
     console.error('Error getting pricing config:', error);
-    throw new HttpsError('internal', 'Failed to get pricing configuration');
+    // Return default config instead of throwing error - allows app to function without Stripe config
+    return DEFAULT_PRICING_CONFIG;
   }
 });
 
