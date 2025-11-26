@@ -222,46 +222,77 @@ export const getSubscriptionStats = onCall(async (request) => {
 
     // Check if user is admin
     const user = request.auth;
-    const userDoc = await db.collection('users').doc(user.uid).get();
-    const userData = userDoc.data();
+    // Check both collections for role (userProfiles is primary, users is fallback)
+    let userDoc = await db.collection('userProfiles').doc(user.uid).get();
+    let userData = userDoc.data();
+    
+    // Fallback to 'users' collection if not found in 'userProfiles'
+    if (!userData) {
+      userDoc = await db.collection('users').doc(user.uid).get();
+      userData = userDoc.data();
+    }
 
     if (!userData?.role || !['admin', 'god'].includes(userData.role)) {
       throw new HttpsError('permission-denied', 'Admin access required');
     }
 
-    // Get basic stats
-    const stats = {
-      totalUsers: 0,
-      activeSubscriptions: 0,
-      totalRevenue: 0,
-      plans: {
-        free: 0,
-        starter: 0,
-        standard: 0,
-        pro: 0,
-      }
+    // Initialize stats with the format expected by the frontend
+    const byPlan: Record<string, number> = {
+      free: 0,
+      starter: 0,
+      standard: 0,
+      pro: 0,
+    };
+    const byStatus: Record<string, number> = {
+      active: 0,
+      trialing: 0,
+      canceled: 0,
+      past_due: 0,
+      unpaid: 0,
+      inactive: 0,
+      unknown: 0,
     };
 
-    // Count users by subscription plan
+    // Count users by subscription plan and status
+    // Check both collections to get all users
+    const userProfilesSnapshot = await db.collection('userProfiles').get();
     const usersSnapshot = await db.collection('users').get();
+    
+    // Combine both collections, avoiding duplicates by UID
+    const userMap = new Map<string, any>();
+    
+    userProfilesSnapshot.forEach(doc => {
+      userMap.set(doc.id, doc.data());
+    });
+    
     usersSnapshot.forEach(doc => {
-      const data = doc.data();
-      stats.totalUsers++;
-      
-      if (data.subscriptionPlan) {
-        const plan = data.subscriptionPlan as keyof typeof stats.plans;
-        if (plan && plan in stats.plans) {
-          stats.plans[plan] = (stats.plans[plan] || 0) + 1;
-        }
-        if (data.subscriptionPlan !== 'free') {
-          stats.activeSubscriptions++;
-        }
-      } else {
-        stats.plans.free++;
+      // Only add if not already in map (userProfiles takes precedence)
+      if (!userMap.has(doc.id)) {
+        userMap.set(doc.id, doc.data());
       }
     });
+    
+    const allUsers = Array.from(userMap.values());
+    let total = 0;
+    
+    allUsers.forEach(data => {
+      total++;
+      
+      // Count by plan (check both subscriptionPlan and plan fields)
+      const plan = data.subscriptionPlan || data.plan || 'free';
+      byPlan[plan] = (byPlan[plan] || 0) + 1;
+      
+      // Count by status
+      const status = data.subscriptionStatus || 'unknown';
+      byStatus[status] = (byStatus[status] || 0) + 1;
+    });
 
-    return stats;
+    // Return format expected by frontend
+    return {
+      total,
+      byPlan,
+      byStatus,
+    };
   } catch (error) {
     console.error('Error getting subscription stats:', error);
     if (error instanceof HttpsError) {
