@@ -74,11 +74,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/', color: '#60a5fa' }, // Blue
     { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards', color: '#10b981' }, // Green
     { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props', color: '#34d399' }, // Emerald
-    { icon: FileText, text: 'Import Props', subtext: 'CSV import', link: '/props?import=1', color: '#fbbf24' }, // Amber
-    { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export', color: '#fb923c' }, // Orange
-    { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists', color: '#a78bfa' }, // Violet
     { icon: Theater, text: 'Show Management', subtext: 'Manage productions, venues, and team members', link: '/shows', color: '#ec4899' }, // Pink
     { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping', color: '#f59e0b' }, // Yellow
+    { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists', color: '#a78bfa' }, // Violet
+    { icon: FileText, text: 'Import Props', subtext: 'CSV import', link: '/props?import=1', color: '#fbbf24' }, // Amber
+    { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export', color: '#fb923c' }, // Orange
     { icon: HelpCircle, text: 'Help', subtext: 'Documentation and support', link: '/help', color: '#8b5cf6' }, // Purple
   ] as Array<{ icon: any; text: string; subtext: string; link?: string; color: string }>;
   if (userProfile?.role === 'god') {
