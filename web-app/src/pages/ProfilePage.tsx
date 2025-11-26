@@ -93,7 +93,7 @@ const ProfilePage: React.FC = () => {
     }
   }, [userProfile, user, isUploadingPhoto]);
 
-  // Load pricing configuration
+  // Load pricing configuration (without showing errors on load)
   useEffect(() => {
     const loadPricingConfig = async () => {
       setPricingLoading(true);
@@ -102,17 +102,10 @@ const ProfilePage: React.FC = () => {
         const config = await stripeService.getPricingConfig();
         console.log('Pricing config loaded:', config);
         setPricingConfig(config.plans);
-        
-        // Check if we have any plans with price IDs
-        const plansWithPrices = config.plans.filter(plan => plan.priceId.monthly || plan.priceId.yearly);
-        console.log('Plans with prices:', plansWithPrices.length);
-        
-        if (plansWithPrices.length === 0) {
-          setSubscriptionError('No pricing plans configured in Stripe. Please set up products and prices in your Stripe dashboard.');
-        }
+        // Don't show error on initial load - only show when user tries to perform subscription actions
       } catch (error) {
         console.error('Failed to load pricing config:', error);
-        setSubscriptionError('Failed to load pricing information. Please check your Stripe configuration.');
+        // Don't show error on initial load - only show when user tries to perform subscription actions
       } finally {
         setPricingLoading(false);
       }
@@ -325,6 +318,24 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleManageSubscription = async () => {
+    // Don't show error for exempt users - they don't need to manage subscriptions
+    if (status === 'exempt') {
+      return;
+    }
+
+    // Check if pricing is configured before attempting to open billing portal
+    try {
+      const config = await stripeService.getPricingConfig();
+      const plansWithPrices = config.plans.filter(plan => plan.priceId.monthly || plan.priceId.yearly);
+      if (plansWithPrices.length === 0) {
+        setSubscriptionError('No pricing plans configured in Stripe. Please set up products and prices in your Stripe dashboard.');
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to check pricing config:', error);
+      // Continue anyway - let the billing portal handle the error
+    }
+
     try {
       setBillingLoading(true);
       setSubscriptionError(null);
@@ -474,6 +485,37 @@ const ProfilePage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Profile Completion Message */}
+      {activeTab === 'profile' && (() => {
+        const missing: string[] = [];
+        if (!userProfile?.displayName) missing.push('display name');
+        if (!userProfile?.photoURL) missing.push('profile photo');
+        if (!userProfile?.organizations || userProfile.organizations.length === 0) missing.push('organization');
+        const incomplete = missing.length > 0;
+        
+        return incomplete ? (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-6 p-4 bg-amber-500/20 border border-amber-500/30 rounded-lg"
+          >
+            <div className="flex items-start">
+              <AlertTriangle className="w-5 h-5 text-amber-400 mr-3 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-amber-400 font-semibold mb-1">Complete Your Profile</h3>
+                <p className="text-amber-300 text-sm">
+                  Your profile is incomplete. Please add your {missing.join(', ')} to complete your profile.
+                </p>
+                <p className="text-amber-300/80 text-xs mt-2">
+                  This is why you see the yellow indicator dot on your profile avatar in the navigation bar.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        ) : null;
+      })()}
 
       {/* Profile Details Tab */}
       {activeTab === 'profile' && (
@@ -761,6 +803,12 @@ const ProfilePage: React.FC = () => {
               
               <button
                 onClick={async () => {
+                  // Don't show error for exempt users - they don't need to view plans
+                  if (status === 'exempt') {
+                    setShowPricingModal(true);
+                    return;
+                  }
+
                   // Refresh pricing data to ensure we have the latest from Stripe
                   try {
                     setPricingLoading(true);
@@ -790,7 +838,7 @@ const ProfilePage: React.FC = () => {
               </button>
             </div>
             
-            {subscriptionError && (
+            {subscriptionError && status !== 'exempt' && (
               <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
                 {subscriptionError}
               </div>
