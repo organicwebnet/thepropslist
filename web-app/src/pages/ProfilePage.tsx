@@ -318,8 +318,11 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleManageSubscription = async () => {
-    // Don't show error for exempt users - they don't need to manage subscriptions
+    // Inform exempt users that they don't need to manage subscriptions
     if (status === 'exempt') {
+      setSuccess('You have an exempt subscription status and do not need to manage billing. Your account has unlimited access.');
+      // Clear the message after 5 seconds
+      setTimeout(() => setSuccess(null), 5000);
       return;
     }
 
@@ -1002,31 +1005,31 @@ const ProfilePage: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-pb-darker rounded-2xl border border-pb-primary/20 p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-pb-darker rounded-2xl border border-pb-primary/20 p-4 max-w-[95vw] w-full"
               role="dialog"
               aria-modal="true"
               aria-labelledby="pricing-modal-title"
               aria-describedby="pricing-modal-description"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 id="pricing-modal-title" className="text-2xl font-semibold text-white">Choose Your Plan</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 id="pricing-modal-title" className="text-xl font-semibold text-white">Choose Your Plan</h3>
                 <button
                   onClick={() => setShowPricingModal(false)}
                   className="text-pb-gray hover:text-white"
                   aria-label="Close pricing modal"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <p id="pricing-modal-description" className="text-pb-gray mb-6">
+              <p id="pricing-modal-description" className="text-sm text-pb-gray mb-3">
                 Select a subscription plan that fits your production needs. All plans include core features with different limits and support levels.
               </p>
 
               {/* Discount Code Input */}
-              <div className="mb-6">
+              <div className="mb-3">
                 <label 
                   htmlFor="discount-code-input"
-                  className="block text-sm font-medium text-pb-gray mb-2"
+                  className="block text-xs font-medium text-pb-gray mb-1"
                 >
                   Have a discount code?
                 </label>
@@ -1065,8 +1068,8 @@ const ProfilePage: React.FC = () => {
                     />
                   )}
                 </div>
-                <div id="discount-code-help" className="text-xs text-pb-gray mt-1">
-                  Enter your discount code to apply savings to your subscription
+                <div id="discount-code-help" className="text-xs text-pb-gray mt-0.5">
+                  Enter your discount code to apply savings
                 </div>
                 <div 
                   id="discount-code-status"
@@ -1095,7 +1098,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                   {pricingConfig.map((planData) => {
                     const PlanIcon = getPlanIcon(planData.id);
                     const hasPriceId = planData.priceId.monthly || planData.priceId.yearly;
@@ -1103,7 +1106,7 @@ const ProfilePage: React.FC = () => {
                     return (
                       <div
                         key={planData.id}
-                        className={`relative rounded-xl p-6 border-2 transition-all ${
+                        className={`relative rounded-xl p-4 border-2 transition-all ${
                           planData.popular
                             ? 'border-pb-primary bg-pb-primary/10'
                             : 'border-pb-gray/30 bg-pb-darker/50'
@@ -1113,31 +1116,31 @@ const ProfilePage: React.FC = () => {
                         aria-describedby={`plan-${planData.id}-description`}
                       >
                         {planData.popular && (
-                          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                            <span className="bg-pb-primary text-white px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+                          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                            <span className="bg-pb-primary text-white px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap">
                               Most Popular
                             </span>
                           </div>
                         )}
                         
-                        <div className="text-center mb-4">
-                          <div className={`w-12 h-12 ${planData.color} rounded-lg flex items-center justify-center mx-auto mb-3`}>
-                            <PlanIcon className="w-6 h-6 text-white" />
+                        <div className="text-center mb-3">
+                          <div className={`w-10 h-10 ${planData.color} rounded-lg flex items-center justify-center mx-auto mb-2`}>
+                            <PlanIcon className="w-5 h-5 text-white" />
                           </div>
-                          <h4 id={`plan-${planData.id}-title`} className="text-xl font-semibold text-white">{planData.name}</h4>
-                          <p id={`plan-${planData.id}-description`} className="text-sm text-pb-gray mb-2">{planData.description}</p>
-                          <div className="mt-2">
-                            <span className="text-3xl font-bold text-white">£{planData.price.monthly}</span>
-                            <span className="text-pb-gray">/month</span>
+                          <h4 id={`plan-${planData.id}-title`} className="text-lg font-semibold text-white">{planData.name}</h4>
+                          <p id={`plan-${planData.id}-description`} className="text-xs text-pb-gray mb-1.5">{planData.description}</p>
+                          <div className="mt-1.5">
+                            <span className="text-2xl font-bold text-white">£{planData.price.monthly}</span>
+                            <span className="text-pb-gray text-sm">/month</span>
                           </div>
                           {planData.price.yearly > 0 && planData.price.monthly > 0 && (() => {
                             const { savings, discountPercent } = calculateDiscount(planData.price.monthly, planData.price.yearly);
                             return (
-                              <div className="text-sm text-pb-gray">
+                              <div className="text-xs text-pb-gray">
                                 or £{planData.price.yearly}/year 
                                 {savings > 0 && (
                                   <span className="text-green-400 font-medium">
-                                    {' '}(save ${savings} - {discountPercent}% off)
+                                    {' '}(save £{savings} - {discountPercent}% off)
                                   </span>
                                 )}
                               </div>
@@ -1145,16 +1148,16 @@ const ProfilePage: React.FC = () => {
                           })()}
                         </div>
                         
-                        <ul className="space-y-2 mb-6">
+                        <ul className="space-y-1.5 mb-4">
                           {planData.features.map((feature, index) => (
-                            <li key={index} className="flex items-center text-sm text-pb-gray">
-                              <CheckCircle className="w-4 h-4 text-green-400 mr-2 flex-shrink-0" />
+                            <li key={index} className="flex items-center text-xs text-pb-gray">
+                              <CheckCircle className="w-3.5 h-3.5 text-green-400 mr-1.5 flex-shrink-0" />
                               {feature}
                             </li>
                           ))}
                         </ul>
                         
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {planData.priceId.monthly && (
                             <button
                               onClick={() => {
@@ -1162,7 +1165,7 @@ const ProfilePage: React.FC = () => {
                                 setShowPricingModal(false);
                               }}
                               disabled={planData.id === plan || checkoutLoading}
-                              className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                              className={`w-full py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                                 planData.id === plan || checkoutLoading
                                   ? 'bg-pb-gray/30 text-pb-gray cursor-not-allowed'
                                   : planData.popular
@@ -1185,7 +1188,7 @@ const ProfilePage: React.FC = () => {
                                 setShowPricingModal(false);
                               }}
                               disabled={planData.id === plan || checkoutLoading}
-                              className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
+                              className={`w-full py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                                 planData.id === plan || checkoutLoading
                                   ? 'bg-pb-gray/30 text-pb-gray cursor-not-allowed'
                                   : 'border border-green-500 text-green-400 hover:bg-green-500 hover:text-white'
@@ -1205,7 +1208,7 @@ const ProfilePage: React.FC = () => {
                           )}
                           
                           {!hasPriceId && (
-                            <div className="w-full py-2 px-4 rounded-lg bg-pb-gray/20 text-pb-gray text-center">
+                            <div className="w-full py-1.5 px-3 rounded-lg bg-pb-gray/20 text-pb-gray text-center text-sm">
                               Not Available
                             </div>
                           )}
