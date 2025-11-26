@@ -28,7 +28,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
   const insets = useSafeAreaInsets();
   
   // Define the order of tabs
-  const tabOrder = ['index', 'props/index', 'shows/index', 'packing', 'todos/index', 'help', 'profile'];
+  const tabOrder = ['index', 'todos/index', 'props/index', 'shows/index', 'packing', 'help', 'profile'];
   
   // Filter and sort to only show the main tabs in the correct order
   const visibleRoutes = state.routes

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, usePathname } from 'expo-router';
-import { Box, Calendar, Package } from 'lucide-react'; // Assuming lucide-react is used
+import { Box, Calendar, Package, Home } from 'lucide-react'; // Assuming lucide-react is used
 
 const Sidebar = () => {
   const pathname = usePathname(); // Get current path
@@ -21,6 +21,20 @@ const Sidebar = () => {
       </div>
       <nav className="flex-grow space-y-1">
         <Link
+          href="/"
+          className={`${baseLinkClasses} ${isActive('/') ? activeLinkClasses : inactiveLinkClasses}`}
+        >
+          <Home className={iconClasses} />
+          Home
+        </Link>
+        <Link
+          href="/todos" // Points to the new Task Boards tab
+          className={`${baseLinkClasses} ${isActive('/todos') ? activeLinkClasses : inactiveLinkClasses}`}
+        >
+          <Package className={iconClasses} /> {/* Using Package icon for now */}
+          Task Boards
+        </Link>
+        <Link
           href="/props"
           className={`${baseLinkClasses} ${isActive('/props') ? activeLinkClasses : inactiveLinkClasses}`}
         >
@@ -40,13 +54,6 @@ const Sidebar = () => {
         >
           <Package className={iconClasses} />
           Packing
-        </Link>
-        <Link
-          href="/todos" // Points to the new Task Boards tab
-          className={`${baseLinkClasses} ${isActive('/todos') ? activeLinkClasses : inactiveLinkClasses}`}
-        >
-          <Package className={iconClasses} /> {/* Using Package icon for now */}
-          Task Boards
         </Link>
         {/* Add other navigation items here using the same pattern */}
       </nav>

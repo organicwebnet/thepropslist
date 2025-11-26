@@ -33,6 +33,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="todos/index"
+        options={{
+          title: 'Taskboard',
+        }}
+      />
+      <Tabs.Screen
         name="props/index"
         options={{
           title: 'Props',
@@ -48,12 +54,6 @@ export default function TabLayout() {
         name="packing"
         options={{
           title: 'Packing',
-        }}
-      />
-      <Tabs.Screen
-        name="todos/index"
-        options={{
-          title: 'Taskboard',
         }}
       />
       <Tabs.Screen
