@@ -13,7 +13,7 @@ interface PropLifecycleProps {
   currentStatus: PropLifecycleStatus;
   maintenanceHistory: MaintenanceRecord[];
   statusHistory: PropStatusUpdate[];
-  onStatusUpdate: (newStatus: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[]) => Promise<void>;
+  onStatusUpdate: (newStatus: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[], damageVideos?: File[]) => Promise<void>;
   onMaintenanceRecordAdd: (record: Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>) => Promise<void>;
   show?: Show;
   nextInspectionDue?: string;

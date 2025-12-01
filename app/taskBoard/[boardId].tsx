@@ -129,6 +129,29 @@ const TaskBoardDetailScreen = () => {
 
   const { props: allProps } = useProps(board?.showId);
 
+  // Filter cards to only show tasks for the current show
+  // Cards with propId must have a prop that belongs to the current show
+  // Cards without propId are fine (they belong to the board which has the correct showId)
+  const filteredCardsForShow = useMemo(() => {
+    if (!board?.showId) return cards;
+    
+    const filtered: Record<string, CardData[]> = {};
+    const propIds = new Set(allProps.map(p => p.id));
+    
+    Object.keys(cards).forEach(listId => {
+      filtered[listId] = cards[listId].filter(card => {
+        // If card has a propId, it must be in the current show's props
+        if (card.propId) {
+          return propIds.has(card.propId);
+        }
+        // Cards without propId belong to the board, so they're fine
+        return true;
+      });
+    });
+    
+    return filtered;
+  }, [cards, allProps, board?.showId]);
+
   // Initialize OfflineSyncManager (mobile only)
   const offlineSyncManager = firebaseService?.firestore ? OfflineSyncManager.getInstance(firebaseService.firestore) : null;
   useEffect(() => {
@@ -958,7 +981,7 @@ const TaskBoardDetailScreen = () => {
               <TodoView
                 boardId={boardId!}
                 lists={orderedLists}
-                cards={cards}
+                cards={filteredCardsForShow}
                 onAddCard={handleAddCardFromList}
                 onUpdateCard={handleUpdateCard}
                 onDeleteCard={handleDeleteCard}
@@ -976,7 +999,7 @@ const TaskBoardDetailScreen = () => {
                 {orderedLists.map((list) => {
                 if (!list) return null;
                 
-                const allCards = cards[list.id] || [];
+                const allCards = filteredCardsForShow[list.id] || [];
                 
                 const filteredCards = allCards.filter(card => {
                   // Find matching standard list using name variations

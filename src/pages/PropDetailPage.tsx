@@ -55,10 +55,10 @@ export default function PropDetailPage() {
 
   const [activeTab, setActiveTab] = useState<'details' | 'statusUpdates' | 'maintenanceRecords'>('details');
 
-  const handleStatusUpdate = async (status: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[]) => {
+  const handleStatusUpdate = async (status: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[], damageVideos?: File[]) => {
     if (!id || !lifecycle?.updatePropStatus) return;
     try {
-      await lifecycle.updatePropStatus(status, notes);
+      await lifecycle.updatePropStatus(status, notes, damageImages, damageVideos);
       const propDoc = await service.getDocument<Prop>('props', id);
       if (propDoc && propDoc.data) {
         setProp({ ...propDoc.data, id: propDoc.id });

@@ -154,6 +154,7 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
     status: string,
     notes?: string,
     images?: File[], // Assuming File type for web, adjust for native if needed
+    videos?: File[],
     reason?: string
   ): Promise<void> => {
     if (!propId || !currentUser || !service?.addDocument || !service?.updateDocument) {
@@ -182,22 +183,35 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
         throw new Error(validation.error || 'Invalid status transition');
       }
 
-      // Image upload logic (simplified, assuming web API)
-      const imageUrls = images?.length
-        ? await Promise.all(images.map(async (image) => {
-            // This upload logic is web-specific and needs abstraction or platform-specific implementation
-            // For now, keeping it as a placeholder.
-            const formData = new FormData();
-            formData.append('file', image);
-            const response = await fetch(`/api/upload?path=props/${propId}/status`, {
-              method: 'POST',
-              body: formData,
-            });
-            if (!response.ok) throw new Error('Failed to upload image: ' + response.statusText);
-            const { url } = await response.json();
-            return url as string;
-          }))
-        : undefined;
+      // Upload images and videos using Firebase Storage
+      const imageUrls: string[] = [];
+      const videoUrls: string[] = [];
+      
+      if (images && images.length > 0) {
+        for (const image of images) {
+          try {
+            const storagePath = `props/${propId}/status/images/${Date.now()}-${image.name}`;
+            const url = await service.uploadFile(storagePath, image);
+            imageUrls.push(url);
+          } catch (error) {
+            console.warn('Failed to upload image:', error);
+            // Continue with other uploads even if one fails
+          }
+        }
+      }
+
+      if (videos && videos.length > 0) {
+        for (const video of videos) {
+          try {
+            const storagePath = `props/${propId}/status/videos/${Date.now()}-${video.name}`;
+            const url = await service.uploadFile(storagePath, video);
+            videoUrls.push(url);
+          } catch (error) {
+            console.warn('Failed to upload video:', error);
+            // Continue with other uploads even if one fails
+          }
+        }
+      }
 
       // Get data cleanup updates
       const cleanupUpdates = PropStatusService.getDataCleanupUpdates(newStatus);
@@ -221,9 +235,12 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
         firebaseService: service as any,
       });
 
-      // Add damage images if provided
-      if (imageUrls && imageUrls.length > 0) {
+      // Add damage images and videos if provided
+      if (imageUrls.length > 0) {
         (statusUpdate as any).damageImageUrls = imageUrls;
+      }
+      if (videoUrls.length > 0) {
+        (statusUpdate as any).damageVideoUrls = videoUrls;
       }
 
       const statusHistoryDoc = await service.addDocument(`props/${propId}/statusHistory`, statusUpdate);
@@ -237,6 +254,8 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
           updatedBy: currentUser.uid,
           notes,
           reason,
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+          videoUrls: videoUrls.length > 0 ? videoUrls : undefined,
           firebaseService: service as any,
         });
 

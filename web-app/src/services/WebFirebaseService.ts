@@ -274,15 +274,17 @@ export class WebFirebaseService extends BaseFirebaseService implements FirebaseS
         fileToUpload = file;
       }
 
-      // Basic file validation
-      if (!fileToUpload.type.startsWith('image/')) {
-        throw new Error('Invalid file type. Only images are allowed.');
+      // Basic file validation - allow images and videos
+      const isImage = fileToUpload.type.startsWith('image/');
+      const isVideo = fileToUpload.type.startsWith('video/');
+      if (!isImage && !isVideo) {
+        throw new Error('Invalid file type. Only images and videos are allowed.');
       }
 
-      // File size validation (5MB)
-      const maxFileSize = 5 * 1024 * 1024;
+      // File size validation (5MB for images, 50MB for videos)
+      const maxFileSize = isImage ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
       if (fileToUpload.size > maxFileSize) {
-        throw new Error('File exceeds maximum size of 5MB.');
+        throw new Error(`File exceeds maximum size of ${isImage ? '5MB' : '50MB'}.`);
       }
 
       // Create storage reference

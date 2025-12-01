@@ -7,14 +7,14 @@ import {
   PropStatusUpdate as PropStatusUpdateType
 } from '../../types/lifecycle';
 import { WysiwygEditor } from '../WysiwygEditor';
-import { AlertTriangle, Clock, RefreshCcw, Camera, Upload, X, Image } from 'lucide-react';
+import { AlertTriangle, Clock, RefreshCcw, Camera, Upload, X, Image, Video } from 'lucide-react';
 import { HelpTooltip } from '../HelpTooltip';
 import { useFirebase } from '../../platforms/mobile/contexts/FirebaseContext';
 import { UserPicker } from '../UserPicker';
 
 interface PropStatusUpdateProps {
   currentStatus: PropLifecycleStatus;
-  onStatusUpdate: (newStatus: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[]) => Promise<void>;
+  onStatusUpdate: (newStatus: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[], damageVideos?: File[]) => Promise<void>;
   disabled?: boolean;
   showManagerEmail?: string;
   propsSupervisorEmail?: string;
@@ -33,12 +33,15 @@ export function PropStatusUpdate({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notifyTeam, setNotifyTeam] = useState(false);
   const [damageImages, setDamageImages] = useState<File[]>([]);
+  const [damageVideos, setDamageVideos] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [videoPreviews, setVideoPreviews] = useState<string[]>([]);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [repairDetails, setRepairDetails] = useState('');
   const [repairDeadline, setRepairDeadline] = useState('');
   const [estimatedReturnDate, setEstimatedReturnDate] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +71,7 @@ export function PropStatusUpdate({
           combinedNotes += `\n\nRepair Deadline: ${repairDeadline}`;
         }
         if (estimatedReturnDate) {
-          combinedNotes += `\nEstimated Return Date: ${estimatedReturnDate}`;
+          combinedNotes += `\n\nEstimated Return Date: ${estimatedReturnDate}`;
         }
       }
       
@@ -76,11 +79,14 @@ export function PropStatusUpdate({
         newStatus,
         combinedNotes || '',
         notifyTeam,
-        damageImages.length > 0 ? damageImages : undefined
+        damageImages.length > 0 ? damageImages : undefined,
+        damageVideos.length > 0 ? damageVideos : undefined
       );
       setNotes('');
       setDamageImages([]);
+      setDamageVideos([]);
       setImagePreviews([]);
+      setVideoPreviews([]);
       // Don't reset status as we want to show the new current status
       setAssignedTo([]);
       setRepairDetails('');
@@ -95,12 +101,23 @@ export function PropStatusUpdate({
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newImages = Array.from(e.target.files);
+      const newImages = Array.from(e.target.files).filter(file => file.type.startsWith('image/'));
       setDamageImages([...damageImages, ...newImages]);
 
       // Create image previews
       const newPreviews = newImages.map(file => URL.createObjectURL(file));
       setImagePreviews([...imagePreviews, ...newPreviews]);
+    }
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newVideos = Array.from(e.target.files).filter(file => file.type.startsWith('video/'));
+      setDamageVideos([...damageVideos, ...newVideos]);
+
+      // Create video previews
+      const newPreviews = newVideos.map(file => URL.createObjectURL(file));
+      setVideoPreviews([...videoPreviews, ...newPreviews]);
     }
   };
 
@@ -113,6 +130,17 @@ export function PropStatusUpdate({
     URL.revokeObjectURL(newPreviews[index]); // Clean up the URL
     newPreviews.splice(index, 1);
     setImagePreviews(newPreviews);
+  };
+
+  const removeVideo = (index: number) => {
+    const newVideos = [...damageVideos];
+    newVideos.splice(index, 1);
+    setDamageVideos(newVideos);
+
+    const newPreviews = [...videoPreviews];
+    URL.revokeObjectURL(newPreviews[index]); // Clean up the URL
+    newPreviews.splice(index, 1);
+    setVideoPreviews(newPreviews);
   };
 
   // Determine if we should show the image upload section
@@ -157,7 +185,7 @@ export function PropStatusUpdate({
     damaged_awaiting_replacement: { assignment: true, repair: true, imageUpload: true, notes: true },
     missing: { notes: true },
     in_transit: { notes: true },
-    under_maintenance: { assignment: true, repair: true, notes: true },
+    under_maintenance: { assignment: true, repair: true, imageUpload: true, notes: true },
     loaned_out: { notes: true },
     on_hold: { notes: true },
     under_review: { notes: true },
@@ -292,48 +320,99 @@ export function PropStatusUpdate({
           </div>
         </div>
       )}
-      {/* Image Upload Section - only show for damage-related statuses */}
-      {showImageUpload && (
-        <div className="p-4 rounded-lg bg-[var(--bg-secondary)] space-y-3">
-          <div className="flex justify-between items-center">
-            <label className="block text-sm font-medium text-[var(--text-secondary)] flex items-center gap-2">
-              Damage Documentation
-              <HelpTooltip content="Upload images of the damage for documentation and insurance purposes." />
+      {/* Media Upload Section - only show for repair/maintenance statuses */}
+      {showRepair && (
+        <div className="p-4 rounded-lg bg-[var(--bg-secondary)] space-y-4 border-2 border-orange-500/30">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <label className="block text-sm font-semibold text-[var(--text-secondary)]">
+              Documentation (Photos & Videos)
             </label>
-            <button
-              type="button"
-              className="flex items-center gap-1 px-3 py-1 bg-[var(--highlight-color)] text-white rounded-md hover:bg-[var(--highlight-color-dark)]"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSubmitting || disabled}
-            >
-              <Upload className="h-4 w-4" /> Upload
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleImageUpload}
-              disabled={isSubmitting || disabled}
-            />
+            <HelpTooltip content="Upload photos and videos of the problem to help the props team understand what needs to be fixed. These will be included in the task created for the props supervisor." />
           </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <button
+                type="button"
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--highlight-color)] text-white rounded-md hover:bg-[var(--highlight-color-dark)] disabled:opacity-50"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting || disabled}
+              >
+                <Image className="h-4 w-4" /> Add Photos
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={isSubmitting || disabled}
+              />
+            </div>
+            <div>
+              <button
+                type="button"
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--highlight-color)] text-white rounded-md hover:bg-[var(--highlight-color-dark)] disabled:opacity-50"
+                onClick={() => videoInputRef.current?.click()}
+                disabled={isSubmitting || disabled}
+              >
+                <Video className="h-4 w-4" /> Add Videos
+              </button>
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                multiple
+                className="hidden"
+                onChange={handleVideoUpload}
+                disabled={isSubmitting || disabled}
+              />
+            </div>
+          </div>
+
           {/* Image previews */}
           {imagePreviews.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {imagePreviews.map((src, idx) => (
-                <div key={idx} className="relative group">
-                  <img src={src} alt="Damage Preview" className="w-24 h-24 object-cover rounded-md" />
-                  <button
-                    type="button"
-                    className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => removeImage(idx)}
-                    disabled={isSubmitting || disabled}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
+            <div>
+              <label className="block text-xs text-[var(--text-secondary)] mb-1">Photos ({imagePreviews.length})</label>
+              <div className="flex flex-wrap gap-2">
+                {imagePreviews.map((src, idx) => (
+                  <div key={idx} className="relative group">
+                    <img src={src} alt="Damage Preview" className="w-24 h-24 object-cover rounded-md border border-gray-600" />
+                    <button
+                      type="button"
+                      className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeImage(idx)}
+                      disabled={isSubmitting || disabled}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Video previews */}
+          {videoPreviews.length > 0 && (
+            <div>
+              <label className="block text-xs text-[var(--text-secondary)] mb-1">Videos ({videoPreviews.length})</label>
+              <div className="flex flex-wrap gap-2">
+                {videoPreviews.map((src, idx) => (
+                  <div key={idx} className="relative group">
+                    <video src={src} className="w-24 h-24 object-cover rounded-md border border-gray-600" />
+                    <button
+                      type="button"
+                      className="absolute top-1 right-1 bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => removeVideo(idx)}
+                      disabled={isSubmitting || disabled}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -46,6 +46,8 @@ export interface StatusUpdateOptions {
   relatedTaskId?: string;
   relatedIncidentId?: string;
   notifyTeam?: boolean;
+  imageUrls?: string[];
+  videoUrls?: string[];
   firebaseService: FirebaseService;
 }
 
@@ -242,7 +244,7 @@ export class PropStatusService {
   static async handleAutomatedWorkflows(
     options: StatusUpdateOptions
   ): Promise<{ taskCreated?: string }> {
-    const { prop, newStatus, updatedBy, notes, firebaseService } = options;
+    const { prop, newStatus, updatedBy, notes, imageUrls, videoUrls, firebaseService } = options;
     const result: { taskCreated?: string } = {};
 
     try {
@@ -351,6 +353,22 @@ export class PropStatusService {
                 if (notes) {
                   taskDescription += `\n**Issue Description:**\n${notes}\n`;
                 }
+                
+                // Add media URLs if provided
+                if (imageUrls && imageUrls.length > 0) {
+                  taskDescription += `\n**Photos (${imageUrls.length}):**\n`;
+                  imageUrls.forEach((url, idx) => {
+                    taskDescription += `${idx + 1}. ${url}\n`;
+                  });
+                }
+                
+                if (videoUrls && videoUrls.length > 0) {
+                  taskDescription += `\n**Videos (${videoUrls.length}):**\n`;
+                  videoUrls.forEach((url, idx) => {
+                    taskDescription += `${idx + 1}. ${url}\n`;
+                  });
+                }
+                
                 taskDescription += `\n**Next Steps:**\n`;
                 taskDescription += `1. Review the prop and assess what needs to be fixed\n`;
                 taskDescription += `2. Assign this task to a maker to action the repair/maintenance\n`;
