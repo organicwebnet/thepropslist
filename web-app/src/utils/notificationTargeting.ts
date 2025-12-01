@@ -162,6 +162,30 @@ export const SHOPPING_NOTIFICATION_MATRIX: Record<NotificationType, {
     channels: ['in_app']
   },
 
+  // Maintenance and Repair Workflow Notifications
+  prop_needs_repair: {
+    targetRoles: ['props_supervisor'],
+    priority: 'high',
+    channels: ['push', 'in_app', 'email']
+  },
+  prop_needs_maintenance: {
+    targetRoles: ['props_supervisor'],
+    priority: 'medium',
+    channels: ['push', 'in_app']
+  },
+  repair_assigned_to_maker: {
+    targetRoles: ['propmaker', 'senior-propmaker'],
+    priority: 'high',
+    channels: ['push', 'in_app'],
+    includeAssigned: true
+  },
+  maintenance_assigned_to_maker: {
+    targetRoles: ['propmaker', 'senior-propmaker'],
+    priority: 'medium',
+    channels: ['push', 'in_app'],
+    includeAssigned: true
+  },
+
   // Subscription-related notifications
   subscription_expiring_soon: {
     targetRoles: [], // User-specific, not role-based

@@ -48,6 +48,7 @@ import type { Prop } from '../../shared/types/props'; // For prop suggestions
 import type { PackingBox } from '../../types/packing'; // For container suggestions
 import { useAuth } from '../../contexts/AuthContext'; // ADD THIS LINE
 import LinearGradient from 'react-native-linear-gradient';
+import { TaskCompletionService } from '../../shared/services/TaskCompletionService';
 
 // WYSIWYG and HTML rendering commented out for now
 // import Editor from 'react-simple-wysiwyg';
@@ -1504,12 +1505,23 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                         const updatedActivity = [...(internalCard.activity || []), activity];
                                         await onUpdateCard(internalCard.id, internalCard.listId, { completed: newCompleted, activity: updatedActivity });
                                         setInternalCard(prev => prev ? { ...prev, completed: newCompleted, activity: updatedActivity } : null);
-                                        // --- Prop status sync ---
+                                        // --- Prop status sync and maintenance history logging ---
                                         if (newCompleted && internalCard.propId && service) {
                                             try {
+                                                // Update prop status
                                                 await service.updateDocument('props', internalCard.propId, { status: 'repaired_back_in_show' });
+                                                
+                                                // Log completed task to prop maintenance history
+                                                const updatedCard = { ...internalCard, completed: true, status: 'done' as const };
+                                                if (TaskCompletionService.shouldLogTaskCompletion(updatedCard, true, false)) {
+                                                    await TaskCompletionService.logCompletedTaskToProp({
+                                                        card: updatedCard,
+                                                        completedBy: currentUser?.uid || 'unknown',
+                                                        firebaseService: service,
+                                                    });
+                                                }
                                             } catch (err) {
-                                                console.error('Failed to update prop status from card completion:', err);
+                                                console.error('Failed to update prop status or log maintenance history from card completion:', err);
                                             }
                                         }
                                     }

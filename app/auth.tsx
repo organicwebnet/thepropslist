@@ -5,6 +5,7 @@ import { useAuth } from '../src/contexts/AuthContext';
 import { Redirect } from 'expo-router';
 import { BiometricService } from '../src/services/biometric';
 import { useFirebase } from '../src/platforms/mobile/contexts/FirebaseContext';
+import NetInfo from '@react-native-community/netinfo';
 
 export default function AuthScreen() {
   const { user, status } = useAuth();
@@ -65,18 +66,32 @@ export default function AuthScreen() {
         // If user is not signed in, check for stored credentials and attempt biometric sign-in
         // NOTE: We only auto-prompt once. If user cancels or it fails, show the login form with button
         else if (!user && status === 'out') {
+          // Check network connectivity first
+          const networkState = await NetInfo.fetch();
+          const isOnline = networkState.isConnected ?? false;
+          
           const hasStoredCredentials = await BiometricService.hasStoredCredentials();
           const isBiometricEnabled = await BiometricService.isBiometricEnabled();
           
           // Only auto-prompt if we haven't already attempted and user has credentials
           // This prevents duplicate prompts when AuthForm also shows biometric button
           // Also check isSigningInRef to prevent race conditions during rapid auth state changes
-          if (hasStoredCredentials && isBiometricEnabled && isInitialized && firebaseService && !hasAttemptedAutoPrompt.current && !isSigningInRef.current) {
+          // IMPORTANT: Skip sign-in attempt if offline - Firebase Auth requires network for new sign-ins
+          if (hasStoredCredentials && isBiometricEnabled && isInitialized && firebaseService && !hasAttemptedAutoPrompt.current && !isSigningInRef.current && isOnline) {
             isSigningInRef.current = true; // Guard against race conditions
             hasAttemptedAutoPrompt.current = true; // Mark that we've attempted
             setAttemptingBiometricSignIn(true);
             
+            let signInTimeout: NodeJS.Timeout | null = null;
             try {
+              // Add timeout for sign-in attempt to prevent infinite loading
+              signInTimeout = setTimeout(() => {
+                console.warn('Sign-in attempt timed out');
+                isSigningInRef.current = false;
+                setAttemptingBiometricSignIn(false);
+                setBiometricOk(false);
+              }, 15000); // 15 second timeout
+              
               const result = await BiometricService.authenticateAndGetCredentials('Sign in to The Props List');
               
               if (result.success && result.credentials) {
@@ -91,8 +106,19 @@ export default function AuthScreen() {
                   setBiometricOk(true);
                 } catch (signInError: any) {
                   console.error('Biometric sign-in failed:', signInError);
-                  // Clear invalid credentials
-                  await BiometricService.clearStoredCredentials();
+                  
+                  // Check if error is network-related
+                  const isNetworkError = signInError?.code === 'auth/network-request-failed' || 
+                                        signInError?.message?.toLowerCase().includes('network') ||
+                                        signInError?.message?.toLowerCase().includes('offline');
+                  
+                  if (isNetworkError) {
+                    // Network error - don't clear credentials, just show login screen
+                    console.warn('Sign-in failed due to network error. User can try again when online.');
+                  } else {
+                    // Other errors - clear invalid credentials
+                    await BiometricService.clearStoredCredentials();
+                  }
                   setBiometricOk(false);
                 }
               } else if (result.errorCode === 'USER_CANCELLED') {
@@ -103,13 +129,19 @@ export default function AuthScreen() {
                 // Other errors - show login screen
                 setBiometricOk(false);
               }
+            } catch (error) {
+              console.error('Error during biometric sign-in process:', error);
+              setBiometricOk(false);
             } finally {
-              // Always reset the signing in flag and loading state
+              // Always clear timeout and reset the signing in flag and loading state
+              if (signInTimeout) {
+                clearTimeout(signInTimeout);
+              }
               isSigningInRef.current = false;
               setAttemptingBiometricSignIn(false);
             }
           } else {
-            // No stored credentials or biometric not enabled - show login screen
+            // No stored credentials, biometric not enabled, or offline - show login screen
             setBiometricOk(true);
           }
         }

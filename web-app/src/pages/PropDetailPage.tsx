@@ -13,6 +13,7 @@ import DashboardLayout from '../PropsBibleHomepage';
 import { getQuantityBreakdown, checkLowInventory, normalizePropQuantities, shouldUseSparesLogic } from '../utils/propQuantityUtils';
 import { SpareManagement } from '../components/SpareManagement';
 import { logger } from '../utils/logger';
+import { PropStatusService } from '@root/shared/services/PropStatusService';
 
 type SectionProps = { 
   id: string; 
@@ -137,7 +138,7 @@ const PropDetailPage: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (newStatus: PropLifecycleStatus) => {
+  const handleStatusChange = async (newStatus: PropLifecycleStatus, notes?: string, reason?: string) => {
     if (!id || !service || !prop || !user) {
       throw new Error('Missing required data to update status');
     }
@@ -148,26 +149,84 @@ const PropDetailPage: React.FC = () => {
     }
 
     try {
-      // Update the prop status
+      // Validate status transition
+      const validation = PropStatusService.validateStatusTransition(previousStatus, newStatus, false);
+      if (!validation.valid) {
+        alert(validation.error || 'Invalid status transition');
+        return;
+      }
+
+      if (validation.warning) {
+        console.warn(validation.warning);
+      }
+
+      // Get data cleanup updates
+      const cleanupUpdates = PropStatusService.getDataCleanupUpdates(newStatus);
+
+      // Update the prop status with cleanup
       await service.updateDocument('props', id, {
         status: newStatus,
         lastStatusUpdate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        ...cleanupUpdates,
       });
 
-      // Create status history entry
-      const statusUpdate = {
+      // Create enhanced status history entry (cast prop to shared type)
+      const statusUpdate = PropStatusService.createStatusHistoryEntry({
+        prop: prop as any, // Type compatibility between web-app and shared types
         previousStatus,
         newStatus,
         updatedBy: user.uid,
-        date: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
+        notes,
+        reason,
+        firebaseService: service as any, // Type compatibility
+      });
 
-      await service.addDocument(`props/${id}/statusHistory`, statusUpdate);
+      const statusHistoryDoc = await service.addDocument(`props/${id}/statusHistory`, statusUpdate);
+
+      // Handle automated workflows (e.g., auto-create tasks for damaged/missing props)
+      let relatedTaskId: string | undefined;
+      try {
+        const workflowResult = await PropStatusService.handleAutomatedWorkflows({
+          prop: prop as any, // Type compatibility
+          previousStatus,
+          newStatus,
+          updatedBy: user.uid,
+          notes,
+          firebaseService: service as any, // Type compatibility
+        });
+
+        relatedTaskId = workflowResult.taskCreated;
+
+        // Update status history with related task ID if one was created
+        if (relatedTaskId && statusHistoryDoc?.id) {
+          await service.updateDocument(`props/${id}/statusHistory`, statusHistoryDoc.id, {
+            relatedTaskId,
+          });
+        }
+      } catch (workflowErr) {
+        // Log but don't fail the status update if workflows fail
+        logger.firebaseError('Error in automated workflows', workflowErr);
+      }
+
+      // Send notifications to team members
+      try {
+        await PropStatusService.sendStatusChangeNotifications({
+          prop: prop as any, // Type compatibility
+          previousStatus,
+          newStatus,
+          updatedBy: user.uid,
+          notes,
+          firebaseService: service as any, // Type compatibility
+          notifyTeam: true,
+        });
+      } catch (notifErr) {
+        // Log but don't fail the status update if notifications fail
+        logger.firebaseError('Error sending notifications', notifErr);
+      }
 
       // Update local state
-      setProp(prev => prev ? { ...prev, status: newStatus, lastStatusUpdate: new Date().toISOString() } : null);
+      setProp(prev => prev ? { ...prev, status: newStatus as any, lastStatusUpdate: new Date().toISOString(), ...cleanupUpdates } : null);
       
       // Reload status history to include the new update
       try {

@@ -35,6 +35,9 @@ export function PropStatusUpdate({
   const [damageImages, setDamageImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
+  const [repairDetails, setRepairDetails] = useState('');
+  const [repairDeadline, setRepairDeadline] = useState('');
+  const [estimatedReturnDate, setEstimatedReturnDate] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,11 +48,33 @@ export function PropStatusUpdate({
       alert('Please assign at least one user for this status.');
       return;
     }
+    // Validation: encourage repair details for repair/maintenance statuses
+    if (showRepair && !repairDetails.trim()) {
+      const proceed = confirm('No repair details provided. The props supervisor will need to determine what needs fixing. Continue anyway?');
+      if (!proceed) return;
+    }
     setIsSubmitting(true);
     try {
+      // Combine notes and repair details for comprehensive information
+      let combinedNotes = notes.trim();
+      if (repairDetails.trim()) {
+        if (combinedNotes) {
+          combinedNotes += '\n\n--- Repair/Maintenance Details ---\n';
+        } else {
+          combinedNotes = '--- Repair/Maintenance Details ---\n';
+        }
+        combinedNotes += repairDetails.trim();
+        if (repairDeadline) {
+          combinedNotes += `\n\nRepair Deadline: ${repairDeadline}`;
+        }
+        if (estimatedReturnDate) {
+          combinedNotes += `\nEstimated Return Date: ${estimatedReturnDate}`;
+        }
+      }
+      
       await onStatusUpdate(
         newStatus,
-        notes.trim() || '',
+        combinedNotes || '',
         notifyTeam,
         damageImages.length > 0 ? damageImages : undefined
       );
@@ -58,6 +83,9 @@ export function PropStatusUpdate({
       setImagePreviews([]);
       // Don't reset status as we want to show the new current status
       setAssignedTo([]);
+      setRepairDetails('');
+      setRepairDeadline('');
+      setEstimatedReturnDate('');
     } catch (error) {
       alert('Failed to update prop status. Please try again.');
     } finally {
@@ -214,22 +242,53 @@ export function PropStatusUpdate({
       )}
       {/* Repair fields for repair/maintenance statuses */}
       {showRepair && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Repair Deadline</label>
-            <input
-              type="date"
-              className="w-full bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2"
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2 flex items-center gap-2">
+              What needs to be fixed?
+              <HelpTooltip content="Describe the issue, damage, or maintenance required. This information will be included in the task created for the props supervisor and maker." />
+            </label>
+            <textarea
+              value={repairDetails}
+              onChange={(e) => setRepairDetails(e.target.value)}
+              className="w-full bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2 min-h-[100px]"
+              placeholder="Describe what needs to be fixed, repaired, or maintained. Include details about damage, issues, or required maintenance work..."
               disabled={isSubmitting || disabled}
             />
+            {showRepair && !repairDetails.trim() && (
+              <p className="text-xs text-yellow-500 mt-1 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Please describe what needs to be fixed to help the props supervisor and maker understand the issue.
+              </p>
+            )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Estimated Return Date</label>
-            <input
-              type="date"
-              className="w-full bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2"
-              disabled={isSubmitting || disabled}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2 flex items-center gap-2">
+                Repair Deadline
+                <HelpTooltip content="The deadline by which the repair/maintenance must be completed." />
+              </label>
+              <input
+                type="date"
+                value={repairDeadline}
+                onChange={(e) => setRepairDeadline(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2"
+                disabled={isSubmitting || disabled}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2 flex items-center gap-2">
+                Estimated Return Date
+                <HelpTooltip content="When the prop is expected to be returned to active use after repair/maintenance." />
+              </label>
+              <input
+                type="date"
+                value={estimatedReturnDate}
+                onChange={(e) => setEstimatedReturnDate(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2"
+                disabled={isSubmitting || disabled}
+              />
+            </div>
           </div>
         </div>
       )}

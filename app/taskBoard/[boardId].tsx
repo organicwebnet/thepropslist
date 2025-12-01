@@ -33,6 +33,7 @@ import { useProps } from '../../src/hooks/useProps';
 import { OfflineSyncManager } from '../../src/platforms/mobile/features/offline/OfflineSyncManager';
 import type { Prop } from '../../src/shared/types/props';
 import { SyncStatusBar } from '../../src/components/SyncStatusBar';
+import { TaskCompletionService } from '../../src/shared/services/TaskCompletionService';
 
 const LIST_WIDTH = 280;
 const LIST_SPACING = 16;
@@ -494,6 +495,31 @@ const TaskBoardDetailScreen = () => {
     async (cardId: string, listId: string, updates: Partial<CardData>) => {
       if (!boardId) return;
       try {
+        // Check if task is being marked as completed and log to prop maintenance history
+        const currentCard = cards[listId]?.find(card => card.id === cardId);
+        if (currentCard && (updates.completed === true || updates.status === 'done')) {
+          const wasCompleted = currentCard.completed || currentCard.status === 'done';
+          const isNowCompleted = updates.completed === true || updates.status === 'done';
+          
+          // Only log when transitioning from incomplete to complete
+          if (!wasCompleted && isNowCompleted && currentCard.propId) {
+            try {
+              // Create updated card data for logging
+              const updatedCard = { ...currentCard, ...updates, completed: true, status: 'done' as const };
+              if (TaskCompletionService.shouldLogTaskCompletion(updatedCard, true, false)) {
+                await TaskCompletionService.logCompletedTaskToProp({
+                  card: updatedCard,
+                  completedBy: user?.uid || 'unknown',
+                  firebaseService: firebaseService,
+                });
+              }
+            } catch (logError) {
+              // Log error but don't fail the card update
+              console.warn('Failed to log completed task to prop maintenance history:', logError);
+            }
+          }
+        }
+        
         if (offlineSyncManager) {
           await offlineSyncManager.queueOperation('update', `todo_boards/${boardId}/lists/${listId}/cards`, { ...updates, id: cardId });
         } else {
@@ -504,7 +530,7 @@ const TaskBoardDetailScreen = () => {
         Alert.alert('Error', 'Could not update card details.');
       }
     },
-    [boardId, firebaseService, offlineSyncManager],
+    [boardId, firebaseService, offlineSyncManager, cards, user],
   );
 
   const handleDeleteCard = useCallback(

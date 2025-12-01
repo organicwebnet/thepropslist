@@ -3,9 +3,10 @@ import { serverTimestamp, Timestamp as FirebaseTimestamp } from 'firebase/firest
 import { useFirebase } from '../platforms/mobile/contexts/FirebaseContext';
 import { User } from 'firebase/auth';
 import { Prop } from '../shared/types/props.ts';
-import type { PropStatusUpdate, MaintenanceRecord } from '../types/lifecycle.ts';
+import type { PropStatusUpdate, MaintenanceRecord, PropLifecycleStatus } from '../types/lifecycle.ts';
 import { lifecycleStatusLabels } from '../types/lifecycle.ts';
 import { FirebaseDocument, QueryOptions } from '../shared/services/firebase/types.ts';
+import { PropStatusService } from '../shared/services/PropStatusService';
 
 // Local interface matching Firestore data for status history
 // This matches PropStatusUpdate from lifecycle types
@@ -152,7 +153,8 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
   const updatePropStatus = async (
     status: string,
     notes?: string,
-    images?: File[] // Assuming File type for web, adjust for native if needed
+    images?: File[], // Assuming File type for web, adjust for native if needed
+    reason?: string
   ): Promise<void> => {
     if (!propId || !currentUser || !service?.addDocument || !service?.updateDocument) {
       throw new Error('PropId, currentUser, and Firebase service (addDocument and updateDocument) are required.');
@@ -170,7 +172,15 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
       if (!propDoc || !propDoc.data) {
         throw new Error('Prop not found');
       }
-      const previousStatus = propDoc.data.status || 'confirmed';
+      const prop = { ...propDoc.data, id: propId } as Prop;
+      const previousStatus = (prop.status || 'confirmed') as PropLifecycleStatus;
+      const newStatus = status as PropLifecycleStatus;
+
+      // Validate status transition
+      const validation = PropStatusService.validateStatusTransition(previousStatus, newStatus, false);
+      if (!validation.valid) {
+        throw new Error(validation.error || 'Invalid status transition');
+      }
 
       // Image upload logic (simplified, assuming web API)
       const imageUrls = images?.length
@@ -189,25 +199,71 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
           }))
         : undefined;
 
-      // Update prop document status (CRITICAL FIX)
+      // Get data cleanup updates
+      const cleanupUpdates = PropStatusService.getDataCleanupUpdates(newStatus);
+
+      // Update prop document status with cleanup
       await service.updateDocument('props', propId, {
         status,
         lastStatusUpdate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        ...cleanupUpdates,
       });
 
-      // Create status history entry with previousStatus for tracking
-      const statusUpdate = {
+      // Create enhanced status history entry
+      const statusUpdate = PropStatusService.createStatusHistoryEntry({
+        prop,
         previousStatus,
-        newStatus: status,
+        newStatus,
         updatedBy: currentUser.uid,
-        date: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
         notes,
-        ...(imageUrls && imageUrls.length > 0 && { damageImageUrls: imageUrls }),
-      };
+        reason,
+        firebaseService: service as any,
+      });
 
-      await service.addDocument(`props/${propId}/statusHistory`, statusUpdate);
+      // Add damage images if provided
+      if (imageUrls && imageUrls.length > 0) {
+        (statusUpdate as any).damageImageUrls = imageUrls;
+      }
+
+      const statusHistoryDoc = await service.addDocument(`props/${propId}/statusHistory`, statusUpdate);
+
+      // Handle automated workflows
+      try {
+        const workflowResult = await PropStatusService.handleAutomatedWorkflows({
+          prop,
+          previousStatus,
+          newStatus,
+          updatedBy: currentUser.uid,
+          notes,
+          reason,
+          firebaseService: service as any,
+        });
+
+        // Update status history with related task ID if one was created
+        if (workflowResult.taskCreated && statusHistoryDoc?.id) {
+          await service.updateDocument(`props/${propId}/statusHistory`, statusHistoryDoc.id, {
+            relatedTaskId: workflowResult.taskCreated,
+          });
+        }
+      } catch (workflowErr) {
+        console.warn('Error in automated workflows:', workflowErr);
+      }
+
+      // Send notifications
+      try {
+        await PropStatusService.sendStatusChangeNotifications({
+          prop,
+          previousStatus,
+          newStatus,
+          updatedBy: currentUser.uid,
+          notes,
+          firebaseService: service as any,
+          notifyTeam: true,
+        });
+      } catch (notifErr) {
+        console.warn('Error sending notifications:', notifErr);
+      }
 
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to update status');

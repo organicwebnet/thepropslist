@@ -15,6 +15,7 @@ import { FontProvider } from '../src/contexts/FontContext';
 import { ShowsProvider } from '../src/contexts/ShowsContext';
 import { PropsProvider } from '../src/contexts/PropsContext';
 import { IssueLoggerWidget } from '../src/components/IssueLoggerWidget';
+import { SyncStatusBar } from '../src/components/SyncStatusBar';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -65,6 +66,7 @@ export default function RootLayout() {
                     <IssueLoggerWidget
                       enabled={__DEV__}
                     />
+                    <SyncStatusBar />
                     <StatusBar style="light" backgroundColor="#18181b" translucent={false} />
                   </PropsProvider>
                 </ShowsProvider>

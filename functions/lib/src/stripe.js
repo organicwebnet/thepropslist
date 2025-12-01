@@ -39,7 +39,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.stripeWebhook = exports.getSubscriptionStats = exports.createBillingPortalSession = exports.createCheckoutSession = exports.getPricingConfig = void 0;
+exports.createStripePromotionCode = exports.createStripeCoupon = exports.stripeWebhook = exports.getSubscriptionStats = exports.createBillingPortalSession = exports.createCheckoutSession = exports.getPricingConfig = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-admin/firestore");
 const functions = __importStar(require("firebase-functions"));
@@ -61,8 +61,15 @@ function getStripe() {
  */
 exports.getPricingConfig = (0, https_1.onCall)(async (request) => {
     try {
-        // Get price IDs from Firebase config
-        const config = functions.config().stripe;
+        // Get price IDs from Firebase config (handle case where config doesn't exist)
+        let config = {};
+        try {
+            config = functions.config().stripe || {};
+        }
+        catch (configError) {
+            console.warn('Stripe config not found, using empty price IDs:', configError);
+            config = {};
+        }
         // Create pricing config with actual price IDs
         const pricingConfig = {
             ...pricing_1.DEFAULT_PRICING_CONFIG,
@@ -72,7 +79,7 @@ exports.getPricingConfig = (0, https_1.onCall)(async (request) => {
                         ...plan,
                         priceId: {
                             monthly: config.plan_starter_price || '',
-                            yearly: '' // Add yearly price ID if available
+                            yearly: config.plan_starter_price_yearly || '' // Add yearly price ID if available
                         }
                     };
                 }
@@ -81,7 +88,7 @@ exports.getPricingConfig = (0, https_1.onCall)(async (request) => {
                         ...plan,
                         priceId: {
                             monthly: config.plan_standard_price || '',
-                            yearly: '' // Add yearly price ID if available
+                            yearly: config.plan_standard_price_yearly || '' // Add yearly price ID if available
                         }
                     };
                 }
@@ -90,7 +97,7 @@ exports.getPricingConfig = (0, https_1.onCall)(async (request) => {
                         ...plan,
                         priceId: {
                             monthly: config.plan_pro_price || '',
-                            yearly: '' // Add yearly price ID if available
+                            yearly: config.plan_pro_price_yearly || '' // Add yearly price ID if available
                         }
                     };
                 }
@@ -101,7 +108,8 @@ exports.getPricingConfig = (0, https_1.onCall)(async (request) => {
     }
     catch (error) {
         console.error('Error getting pricing config:', error);
-        throw new https_1.HttpsError('internal', 'Failed to get pricing configuration');
+        // Return default config instead of throwing error - allows app to function without Stripe config
+        return pricing_1.DEFAULT_PRICING_CONFIG;
     }
 });
 /**
@@ -156,10 +164,31 @@ exports.createCheckoutSession = (0, https_1.onCall)(async (request) => {
         };
         // Add promotion code if provided
         if (discountCode) {
-            sessionParams.allow_promotion_codes = true;
-            sessionParams.discounts = [{
-                    promotion_code: discountCode,
-                }];
+            // Look up the discount code in Firestore to get the Stripe promotion code ID
+            const discountCodesRef = db.collection('discountCodes');
+            const discountQuery = await discountCodesRef
+                .where('code', '==', discountCode.toUpperCase().trim())
+                .limit(1)
+                .get();
+            if (!discountQuery.empty) {
+                const discountData = discountQuery.docs[0].data();
+                const promotionCodeId = discountData.stripePromotionCodeId;
+                if (promotionCodeId) {
+                    sessionParams.discounts = [{
+                            promotion_code: promotionCodeId,
+                        }];
+                }
+                else {
+                    console.warn(`Discount code ${discountCode} found but no Stripe promotion code ID`);
+                    // Fallback: allow promotion codes in checkout (user can enter manually)
+                    sessionParams.allow_promotion_codes = true;
+                }
+            }
+            else {
+                console.warn(`Discount code ${discountCode} not found in Firestore`);
+                // Fallback: allow promotion codes in checkout (user can enter manually)
+                sessionParams.allow_promotion_codes = true;
+            }
         }
         const session = await getStripe().checkout.sessions.create(sessionParams);
         return { url: session.url };
@@ -212,42 +241,65 @@ exports.getSubscriptionStats = (0, https_1.onCall)(async (request) => {
         }
         // Check if user is admin
         const user = request.auth;
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
+        // Check both collections for role (userProfiles is primary, users is fallback)
+        let userDoc = await db.collection('userProfiles').doc(user.uid).get();
+        let userData = userDoc.data();
+        // Fallback to 'users' collection if not found in 'userProfiles'
+        if (!userData) {
+            userDoc = await db.collection('users').doc(user.uid).get();
+            userData = userDoc.data();
+        }
         if (!userData?.role || !['admin', 'god'].includes(userData.role)) {
             throw new https_1.HttpsError('permission-denied', 'Admin access required');
         }
-        // Get basic stats
-        const stats = {
-            totalUsers: 0,
-            activeSubscriptions: 0,
-            totalRevenue: 0,
-            plans: {
-                free: 0,
-                starter: 0,
-                standard: 0,
-                pro: 0,
-            }
+        // Initialize stats with the format expected by the frontend
+        const byPlan = {
+            free: 0,
+            starter: 0,
+            standard: 0,
+            pro: 0,
         };
-        // Count users by subscription plan
+        const byStatus = {
+            active: 0,
+            trialing: 0,
+            canceled: 0,
+            past_due: 0,
+            unpaid: 0,
+            inactive: 0,
+            unknown: 0,
+        };
+        // Count users by subscription plan and status
+        // Check both collections to get all users
+        const userProfilesSnapshot = await db.collection('userProfiles').get();
         const usersSnapshot = await db.collection('users').get();
+        // Combine both collections, avoiding duplicates by UID
+        const userMap = new Map();
+        userProfilesSnapshot.forEach(doc => {
+            userMap.set(doc.id, doc.data());
+        });
         usersSnapshot.forEach(doc => {
-            const data = doc.data();
-            stats.totalUsers++;
-            if (data.subscriptionPlan) {
-                const plan = data.subscriptionPlan;
-                if (plan && plan in stats.plans) {
-                    stats.plans[plan] = (stats.plans[plan] || 0) + 1;
-                }
-                if (data.subscriptionPlan !== 'free') {
-                    stats.activeSubscriptions++;
-                }
-            }
-            else {
-                stats.plans.free++;
+            // Only add if not already in map (userProfiles takes precedence)
+            if (!userMap.has(doc.id)) {
+                userMap.set(doc.id, doc.data());
             }
         });
-        return stats;
+        const allUsers = Array.from(userMap.values());
+        let total = 0;
+        allUsers.forEach(data => {
+            total++;
+            // Count by plan (check both subscriptionPlan and plan fields)
+            const plan = data.subscriptionPlan || data.plan || 'free';
+            byPlan[plan] = (byPlan[plan] || 0) + 1;
+            // Count by status
+            const status = data.subscriptionStatus || 'unknown';
+            byStatus[status] = (byStatus[status] || 0) + 1;
+        });
+        // Return format expected by frontend
+        return {
+            total,
+            byPlan,
+            byStatus,
+        };
     }
     catch (error) {
         console.error('Error getting subscription stats:', error);
@@ -338,3 +390,93 @@ async function handleSubscriptionDeleted(subscription) {
         currentPeriodEnd: null,
     });
 }
+/**
+ * Create a Stripe coupon
+ * Used by the discount codes service to create coupons in Stripe
+ */
+exports.createStripeCoupon = (0, https_1.onCall)(async (request) => {
+    try {
+        if (!request.auth) {
+            throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+        }
+        // Check if user is admin
+        const user = request.auth;
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        const userData = userDoc.data();
+        if (!userData?.role || !['admin', 'god'].includes(userData.role)) {
+            throw new https_1.HttpsError('permission-denied', 'Admin access required');
+        }
+        const { id, name, percent_off, amount_off, currency, max_redemptions, redeem_by } = request.data;
+        if (!id || (!percent_off && !amount_off)) {
+            throw new https_1.HttpsError('invalid-argument', 'Coupon ID and discount value are required');
+        }
+        const couponParams = {
+            id: id.toUpperCase(),
+            name: name || id,
+        };
+        if (percent_off !== undefined) {
+            couponParams.percent_off = percent_off;
+        }
+        else if (amount_off !== undefined) {
+            couponParams.amount_off = amount_off;
+            couponParams.currency = currency || 'usd';
+        }
+        if (max_redemptions !== undefined) {
+            couponParams.max_redemptions = max_redemptions;
+        }
+        if (redeem_by !== undefined) {
+            couponParams.redeem_by = redeem_by;
+        }
+        const coupon = await getStripe().coupons.create(couponParams);
+        return { couponId: coupon.id };
+    }
+    catch (error) {
+        console.error('Error creating Stripe coupon:', error);
+        if (error instanceof https_1.HttpsError) {
+            throw error;
+        }
+        if (error instanceof stripe_1.default.errors.StripeError) {
+            throw new https_1.HttpsError('invalid-argument', error.message);
+        }
+        throw new https_1.HttpsError('internal', 'Failed to create Stripe coupon');
+    }
+});
+/**
+ * Create a Stripe promotion code
+ * Used by the discount codes service to create promotion codes in Stripe
+ */
+exports.createStripePromotionCode = (0, https_1.onCall)(async (request) => {
+    try {
+        if (!request.auth) {
+            throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
+        }
+        // Check if user is admin
+        const user = request.auth;
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        const userData = userDoc.data();
+        if (!userData?.role || !['admin', 'god'].includes(userData.role)) {
+            throw new https_1.HttpsError('permission-denied', 'Admin access required');
+        }
+        const { coupon, code, active } = request.data;
+        if (!coupon || !code) {
+            throw new https_1.HttpsError('invalid-argument', 'Coupon ID and promotion code are required');
+        }
+        const promotionCodeParams = {
+            coupon: coupon,
+            code: code.toUpperCase(),
+            active: active !== false, // Default to true
+        };
+        const promotionCode = await getStripe().promotionCodes.create(promotionCodeParams);
+        return { promotionCodeId: promotionCode.id };
+    }
+    catch (error) {
+        console.error('Error creating Stripe promotion code:', error);
+        if (error instanceof https_1.HttpsError) {
+            throw error;
+        }
+        if (error instanceof stripe_1.default.errors.StripeError) {
+            throw new https_1.HttpsError('invalid-argument', error.message);
+        }
+        throw new https_1.HttpsError('internal', 'Failed to create Stripe promotion code');
+    }
+});

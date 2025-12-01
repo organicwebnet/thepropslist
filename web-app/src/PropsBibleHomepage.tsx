@@ -86,7 +86,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     navItems.push({ icon: Shield, text: 'Role Management', subtext: 'Manage job roles and permissions', link: '/admin/roles', color: '#3b82f6' }); // Blue
     navItems.push({ icon: TestTube, text: 'Permission Tests', subtext: 'Test permission system functionality', link: '/admin/permission-tests', color: '#ef4444' }); // Red
     navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers', color: '#14b8a6' }); // Teal
-    navItems.push({ icon: FileText, text: 'Admin Debug', subtext: 'Debug admin functionality', link: '/admin/debug', color: '#6366f1' }); // Indigo
   }
 
   return (

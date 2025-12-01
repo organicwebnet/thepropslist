@@ -19,7 +19,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.stripeWebhook = exports.getSubscriptionStats = exports.createBillingPortalSession = exports.createCheckoutSession = exports.getPricingConfig = exports.decrementPropCounts = exports.decrementBoardCounts = exports.decrementShowCounts = exports.updatePropCounts = exports.updateBoardCounts = exports.updateResourceCounts = exports.checkSubscriptionLimits = exports.validateTeamInvitation = exports.validatePropCreation = exports.validateBoardCreation = exports.validateShowCreation = exports.sendCustomPasswordResetEmailV3 = exports.submitContactForm = void 0;
+exports.createStripePromotionCode = exports.createStripeCoupon = exports.stripeWebhook = exports.getSubscriptionStats = exports.createBillingPortalSession = exports.createCheckoutSession = exports.getPricingConfig = exports.decrementPropCounts = exports.decrementBoardCounts = exports.decrementShowCounts = exports.updatePropCounts = exports.updateBoardCounts = exports.updateResourceCounts = exports.checkSubscriptionLimits = exports.validateTeamInvitation = exports.validatePropCreation = exports.validateBoardCreation = exports.validateShowCreation = exports.sendCustomPasswordResetEmailV3 = exports.submitContactForm = void 0;
 // Import existing functions
 __exportStar(require("./contact"), exports);
 __exportStar(require("./password-reset-simple"), exports);
@@ -54,3 +54,5 @@ Object.defineProperty(exports, "createCheckoutSession", { enumerable: true, get:
 Object.defineProperty(exports, "createBillingPortalSession", { enumerable: true, get: function () { return stripe_1.createBillingPortalSession; } });
 Object.defineProperty(exports, "getSubscriptionStats", { enumerable: true, get: function () { return stripe_1.getSubscriptionStats; } });
 Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return stripe_1.stripeWebhook; } });
+Object.defineProperty(exports, "createStripeCoupon", { enumerable: true, get: function () { return stripe_1.createStripeCoupon; } });
+Object.defineProperty(exports, "createStripePromotionCode", { enumerable: true, get: function () { return stripe_1.createStripePromotionCode; } });

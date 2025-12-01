@@ -55,6 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       // Corrected to fetch from 'userProfiles' to match firestore.rules
+      // Firestore offline persistence should handle offline scenarios automatically
       const profileDoc = await firebaseService.getDocument<UserProfile>('userProfiles', userId);
       
       if (profileDoc && profileDoc.data) {
@@ -73,13 +74,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           permissions: DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER],
         };
         // Use setDocument to create the profile with the user's UID as the document ID
-        await firebaseService.setDocument('userProfiles', userId, newProfile);
-        setUserProfile({ ...newProfile, id: userId });
-        setPermissions(newProfile.permissions || {});
+        // This will work offline with Firestore persistence - writes are queued when offline
+        try {
+          await firebaseService.setDocument('userProfiles', userId, newProfile);
+          setUserProfile({ ...newProfile, id: userId });
+          setPermissions(newProfile.permissions || {});
+        } catch (createError: any) {
+          // If offline, Firestore will queue the write, but we can still set local state
+          // to allow the app to function
+          console.warn('Profile creation may be queued (offline):', createError);
+          setUserProfile({ ...newProfile, id: userId });
+          setPermissions(newProfile.permissions || {});
+        }
       }
     } catch (e: any) {
-      setError(new Error("Failed to fetch user profile: " + e.message));
-      setUserProfile(null);
+      // Handle errors gracefully - don't block app functionality for network errors
+      const isNetworkError = e?.message?.toLowerCase().includes('network') || 
+                            e?.message?.toLowerCase().includes('offline') ||
+                            e?.code === 'unavailable' ||
+                            e?.code === 'deadline-exceeded';
+      
+      if (!isNetworkError) {
+        setError(new Error("Failed to fetch user profile: " + e.message));
+      } else {
+        console.warn('User profile fetch failed (likely offline), using minimal profile');
+      }
+      // Set minimal profile to allow app to function offline
+      setUserProfile({
+        id: userId,
+        email: user?.email || '',
+        displayName: user?.displayName || 'User',
+        role: UserRole.VIEWER,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        permissions: DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {},
+      });
       setPermissions(DEFAULT_ROLE_PERMISSIONS[UserRole.VIEWER] || {});
     }
   }, [firebaseService, user]);

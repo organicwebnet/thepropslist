@@ -14,6 +14,7 @@ import { PropCard } from './components/PropCard';
 import { PropsListSkeleton } from './components/LoadingSkeleton';
 import { StatusDropdown } from './components/StatusDropdown';
 import { PropLifecycleStatus } from '../../src/types/lifecycle';
+import { PropStatusService } from '../../src/shared/services/PropStatusService';
 // Simplified loader removed per design request
 import { usePropListLoading } from './hooks/useImageLoading';
 import { SpareInventoryAlerts } from './components/SpareInventoryAlerts';
@@ -258,8 +259,10 @@ const PropsListPage: React.FC = () => {
 
     setIsBulkUpdating(true);
     try {
-      const batch = firebaseService.batch();
       const updates: Promise<void>[] = [];
+      // Store notification/workflow operations to execute AFTER database updates complete
+      const notificationOperations: Array<() => Promise<void>> = [];
+      const workflowOperations: Array<() => Promise<{ taskCreated?: string }>> = [];
 
       for (const propId of selectedProps) {
         const prop = props.find(p => p.id === propId);
@@ -267,31 +270,77 @@ const PropsListPage: React.FC = () => {
 
         const previousStatus = prop.status as PropLifecycleStatus;
         
-        // Update prop status
+        // Skip if status hasn't changed
+        if (previousStatus === newStatus) continue;
+
+        // Get data cleanup updates
+        const cleanupUpdates = PropStatusService.getDataCleanupUpdates(newStatus);
+        
+        // Update prop status with cleanup
         updates.push(
           firebaseService.updateDocument('props', propId, {
             status: newStatus,
             lastStatusUpdate: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            ...cleanupUpdates,
           })
         );
 
-        // Create status history entry
-        const statusUpdate = {
+        // Create enhanced status history entry
+        const statusUpdate = PropStatusService.createStatusHistoryEntry({
+          prop,
           previousStatus,
           newStatus,
           updatedBy: user.uid,
-          date: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        };
+          firebaseService: firebaseService as any,
+        });
 
         updates.push(
           firebaseService.addDocument(`props/${propId}/statusHistory`, statusUpdate)
             .then(() => {}) // Convert to void
         );
+
+        // Store notification operation to execute AFTER database updates complete
+        notificationOperations.push(() =>
+          PropStatusService.sendStatusChangeNotifications({
+            prop: prop as any, // Type compatibility between web-app and shared types
+            previousStatus,
+            newStatus,
+            updatedBy: user.uid,
+            firebaseService: firebaseService as any,
+            notifyTeam: true,
+          }).catch(err => {
+            console.warn(`Failed to send notification for prop ${propId}:`, err);
+          })
+        );
+
+        // Store workflow operation to execute AFTER database updates complete
+        workflowOperations.push(() =>
+          PropStatusService.handleAutomatedWorkflows({
+            prop: prop as any, // Type compatibility between web-app and shared types
+            previousStatus,
+            newStatus,
+            updatedBy: user.uid,
+            firebaseService: firebaseService as any,
+          }).catch(err => {
+            console.warn(`Failed to run workflows for prop ${propId}:`, err);
+            return { taskCreated: undefined };
+          })
+        );
       }
 
+      // Execute all database updates FIRST
       await Promise.all(updates);
+      
+      // NOW execute notifications and workflows AFTER database is in consistent state
+      // Execute in background (don't wait) but only after updates complete
+      const notificationPromises = notificationOperations.map(op => op());
+      const workflowPromises = workflowOperations.map(op => op());
+      
+      Promise.all([...notificationPromises, ...workflowPromises]).catch(err => {
+        console.warn('Some notifications or workflows failed:', err);
+      });
+
       setSelectedProps(new Set());
     } catch (err) {
       console.error('Error updating props status:', err);

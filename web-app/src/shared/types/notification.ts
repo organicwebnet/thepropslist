@@ -21,6 +21,11 @@ export type NotificationType =
   | 'shopping_material_request'    // Material request from maker
   | 'shopping_material_approved'   // Material request approved
   | 'shopping_task_linked'         // Material linked to task board
+  // Maintenance and Repair Workflow Notifications
+  | 'prop_needs_repair'            // Prop marked as needing repair - notify supervisor
+  | 'prop_needs_maintenance'       // Prop marked as needing maintenance - notify supervisor
+  | 'repair_assigned_to_maker'     // Repair task assigned to maker
+  | 'maintenance_assigned_to_maker' // Maintenance task assigned to maker
   // Subscription-related notifications
   | 'subscription_expiring_soon'   // Subscription expiring in 7 days
   | 'subscription_expiring_today'  // Subscription expiring today

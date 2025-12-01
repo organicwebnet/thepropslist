@@ -13,6 +13,7 @@ import type { Prop } from '../../src/shared/types/props';
 import { PropLifecycleStatus, lifecycleStatusLabels, PropStatusUpdate } from '../../src/types/lifecycle';
 import { useProps } from '../../src/contexts/PropsContext';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { PropStatusService } from '../../src/shared/services/PropStatusService';
 
 // Define the types of actions the user can take
 type CheckInOutAction = 
@@ -237,30 +238,83 @@ export default function CheckInOutScreen() {
     if (!scannedProp || !selectedNewStatus || !firebaseService?.updateDocument || !user) return;
     setIsProcessing(true);
     try {
-        const previousStatus = scannedProp.status;
-        const statusUpdate = generateStatusUpdateRecord(previousStatus, selectedNewStatus, statusUpdateNotes);
+        const previousStatus = scannedProp.status as PropLifecycleStatus;
+        
+        // Validate status transition
+        const validation = PropStatusService.validateStatusTransition(previousStatus, selectedNewStatus, false);
+        if (!validation.valid) {
+            Alert.alert('Invalid Transition', validation.error || 'Cannot change to this status');
+            setIsProcessing(false);
+            return;
+        }
+
+        // Get data cleanup updates
+        const cleanupUpdates = PropStatusService.getDataCleanupUpdates(selectedNewStatus);
+        
+        // Create enhanced status history entry
+        const statusUpdateData = PropStatusService.createStatusHistoryEntry({
+            prop: scannedProp,
+            previousStatus,
+            newStatus: selectedNewStatus,
+            updatedBy: user.uid,
+            notes: statusUpdateNotes,
+            firebaseService: firebaseService as any,
+        });
+
+        // Convert to PropStatusUpdate format for array storage
+        const statusUpdate: PropStatusUpdate = {
+            id: Date.now().toString(),
+            ...statusUpdateData,
+        };
         
         let updates: Partial<Prop> = {
             status: selectedNewStatus,
             statusNotes: statusUpdateNotes,
             statusHistory: FirebaseFirestoreTypes.FieldValue.arrayUnion(statusUpdate) as any,
+            lastStatusUpdate: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            ...cleanupUpdates,
         };
 
-        if (selectedNewStatus === 'available_in_storage') {
-            updates.checkedOutDetails = undefined; 
-        } else if (selectedNewStatus === 'checked_out') {
-            updates.assignment = undefined; 
-        } else if (['missing', 'cut', 'ready_for_disposal'].includes(selectedNewStatus)) {
-            updates.assignment = undefined;
-            updates.checkedOutDetails = undefined;
+        await firebaseService.updateDocument('props', scannedProp.id, updates);
+
+        // Handle automated workflows
+        try {
+            await PropStatusService.handleAutomatedWorkflows({
+                prop: scannedProp,
+                previousStatus,
+                newStatus: selectedNewStatus,
+                updatedBy: user.uid,
+                notes: statusUpdateNotes,
+                firebaseService: firebaseService as any,
+            });
+        } catch (workflowErr) {
+            console.warn('Error in automated workflows:', workflowErr);
         }
 
-        await firebaseService.updateDocument('props', scannedProp.id, updates);
+        // Send notifications
+        try {
+            await PropStatusService.sendStatusChangeNotifications({
+                prop: scannedProp,
+                previousStatus,
+                newStatus: selectedNewStatus,
+                updatedBy: user.uid,
+                notes: statusUpdateNotes,
+                firebaseService: firebaseService as any,
+                notifyTeam: true,
+            });
+        } catch (notifErr) {
+            console.warn('Error sending notifications:', notifErr);
+        }
+
         const updatedLocalStatusHistory = [...(scannedProp.statusHistory || []), statusUpdate];
         updatePropLocally(scannedProp.id, { ...updates, statusHistory: updatedLocalStatusHistory });
         Alert.alert('Success', `Prop "${scannedProp.name}" status updated to ${lifecycleStatusLabels[selectedNewStatus]}.`);
         resetAll();
-    } catch (e: any) { setError(`Status update failed: ${e.message}`); }
+    } catch (e: any) { 
+        setError(`Status update failed: ${e.message}`);
+        Alert.alert('Error', `Status update failed: ${e.message}`);
+    }
     setIsProcessing(false);
   }
 

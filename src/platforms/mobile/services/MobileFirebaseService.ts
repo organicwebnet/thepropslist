@@ -46,10 +46,20 @@ export class MobileFirebaseService extends BaseFirebaseService implements Fireba
       this._offlineSync = new MobileOfflineSync(this.firestore);
       
       // Enable offline persistence
+      // Note: React Native Firebase enables persistence by default, but we set it explicitly
       try {
         this.firestore.settings({ persistence: true });
       } catch (error) {
         console.warn('Firestore persistence already enabled or not available:', error);
+      }
+      
+      // Enable offline sync to ensure queued operations sync when network is restored
+      try {
+        await this._offlineSync.enableSync();
+        console.log('Offline sync enabled successfully');
+      } catch (syncError) {
+        console.warn('Failed to enable offline sync (may already be enabled):', syncError);
+        // Don't fail initialization if sync enable fails - Firestore native persistence will still work
       }
       
       this._isInitialized = true;

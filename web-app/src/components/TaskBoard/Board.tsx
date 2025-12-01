@@ -11,6 +11,7 @@ import { logger } from "../../utils/logger";
 import { validateCardTitle, validateCardDescription } from "../../utils/validation";
 import type { BoardViewMode } from "../../hooks/useBoardPreferences";
 import { NotificationService } from "../../shared/services/notificationService";
+import { TaskCompletionService } from "../../shared/services/TaskCompletionService";
 
 // Parse mentions in a text and normalize to {type,id,label}
 function parseMentions(text: string) {
@@ -330,6 +331,29 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
               }
               logger.taskBoardError('Failed to send task assignment notification', notificationError);
             }
+          }
+        }
+      }
+      
+      // Check if task is being marked as completed and log to prop maintenance history
+      const currentCard = cards[listId]?.find(card => card.id === cardId);
+      if (currentCard && (updates.completed === true || updates.status === 'done')) {
+        const wasCompleted = currentCard.completed || currentCard.status === 'done';
+        const isNowCompleted = updates.completed === true || updates.status === 'done';
+        
+        // Only log when transitioning from incomplete to complete
+        if (!wasCompleted && isNowCompleted && currentCard.propId) {
+          try {
+            // Create updated card data for logging
+            const updatedCard = { ...currentCard, ...updates, completed: true, status: 'done' as const };
+            await TaskCompletionService.logCompletedTaskToProp({
+              card: updatedCard,
+              completedBy: user?.uid || 'unknown',
+              firebaseService: service,
+            });
+          } catch (logError) {
+            // Log error but don't fail the card update
+            console.warn('Failed to log completed task to prop maintenance history:', logError);
           }
         }
       }

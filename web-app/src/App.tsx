@@ -52,7 +52,6 @@ const SubscriberStatsPage = lazy(() => import('./pages/SubscriberStatsPage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
 const RoleManagementPage = lazy(() => import('./pages/RoleManagementPage'));
 const PermissionSystemTestPage = lazy(() => import('./pages/PermissionSystemTestPage'));
-const AdminDebugPage = lazy(() => import('./pages/AdminDebugPage'));
 // const SubscriptionTest = lazy(() => import('../../src/components/__tests__/SubscriptionTest'));
 const JoinInvitePage = lazy(() => import('./pages/JoinInvitePage'));
 const IssueLoggerTest = lazy(() => import('./components/IssueLoggerTest'));
@@ -99,7 +98,6 @@ function App() {
           <Route path="/admin/users" element={<ProtectedRoute><UserManagementPage /></ProtectedRoute>} />
           <Route path="/admin/roles" element={<ProtectedRoute><RoleManagementPage /></ProtectedRoute>} />
           <Route path="/admin/permission-tests" element={<ProtectedRoute><PermissionSystemTestPage /></ProtectedRoute>} />
-          <Route path="/admin/debug" element={<ProtectedRoute><AdminDebugPage /></ProtectedRoute>} />
           <Route path="/test/issue-logger" element={<ProtectedRoute><IssueLoggerTest /></ProtectedRoute>} />
           {/* <Route path="/test/subscription" element={<ProtectedRoute><SubscriptionTest /></ProtectedRoute>} /> */}
           <Route path="/boards" element={<ProtectedRoute><BoardsPage /></ProtectedRoute>} />

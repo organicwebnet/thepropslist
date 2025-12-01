@@ -11,6 +11,8 @@ import { Filters } from '../../../types/props';
 import { Prop } from '../../../shared/types/props';
 import { PropLifecycleStatus, lifecycleStatusLabels } from '../../../types/lifecycle';
 import { FirebaseDocument } from '../../../shared/services/firebase/types';
+import { PropStatusService } from '../../../shared/services/PropStatusService';
+import { doc as fbDoc, writeBatch as rnWriteBatch } from '@react-native-firebase/firestore';
 import { Stack, useRouter } from 'expo-router';
 import { useShows } from '../../../contexts/ShowsContext';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -198,8 +200,13 @@ export function PropsListScreen() {
 
     setIsBulkUpdating(true);
     try {
-      const batch = service.batch();
+      // Use firestore instance directly to create batch (for proper typing)
+      const firestore = service.getFirestoreReactNativeInstance();
+      const batch = rnWriteBatch(firestore);
       const updates: Promise<void>[] = [];
+      // Store notification/workflow operations to execute AFTER database updates complete
+      const notificationOperations: Array<() => Promise<void>> = [];
+      const workflowOperations: Array<() => Promise<{ taskCreated?: string }>> = [];
 
       for (const propId of selectedProps) {
         const prop = filteredProps.find(p => p.id === propId);
@@ -207,29 +214,76 @@ export function PropsListScreen() {
 
         const previousStatus = prop.status as PropLifecycleStatus;
         
-        // Update prop status
-        batch.updateDocument('props', propId, {
+        // Skip if status hasn't changed
+        if (previousStatus === newStatus) continue;
+
+        // Get data cleanup updates
+        const cleanupUpdates = PropStatusService.getDataCleanupUpdates(newStatus);
+        
+        // Update prop status with cleanup (get doc ref and use batch.update)
+        const propRef = fbDoc(firestore, 'props', propId);
+        batch.update(propRef, {
           status: newStatus,
           lastStatusUpdate: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
+          ...cleanupUpdates,
         });
 
-        // Create status history entry
-        const statusUpdate = {
+        // Create enhanced status history entry
+        const statusUpdate = PropStatusService.createStatusHistoryEntry({
+          prop,
           previousStatus,
           newStatus,
           updatedBy: user.uid,
-          date: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        };
+          firebaseService: service as any,
+        });
 
         updates.push(
           service.addDocument(`props/${propId}/statusHistory`, statusUpdate)
+            .then(() => {}) // Convert to void
+        );
+
+        // Store notification operation to execute AFTER database updates complete
+        notificationOperations.push(() =>
+          PropStatusService.sendStatusChangeNotifications({
+            prop: prop as any, // Type compatibility
+            previousStatus,
+            newStatus,
+            updatedBy: user.uid,
+            firebaseService: service as any,
+            notifyTeam: true,
+          }).catch(err => {
+            console.warn(`Failed to send notification for prop ${propId}:`, err);
+          })
+        );
+
+        // Store workflow operation to execute AFTER database updates complete
+        workflowOperations.push(() =>
+          PropStatusService.handleAutomatedWorkflows({
+            prop: prop as any, // Type compatibility
+            previousStatus,
+            newStatus,
+            updatedBy: user.uid,
+            firebaseService: service as any,
+          }).catch(err => {
+            console.warn(`Failed to run workflows for prop ${propId}:`, err);
+            return { taskCreated: undefined };
+          })
         );
       }
 
+      // Execute all database updates FIRST (batch commit + status history)
       await batch.commit();
       await Promise.all(updates);
+
+      // NOW execute notifications and workflows AFTER database is in consistent state
+      // Execute in background (don't wait) but only after updates complete
+      const notificationPromises = notificationOperations.map(op => op());
+      const workflowPromises = workflowOperations.map(op => op());
+      
+      Promise.all([...notificationPromises, ...workflowPromises]).catch(err => {
+        console.warn('Some notifications or workflows failed:', err);
+      });
 
       Alert.alert('Success', `Updated status for ${selectedProps.size} prop(s)`);
       setSelectedProps(new Set());

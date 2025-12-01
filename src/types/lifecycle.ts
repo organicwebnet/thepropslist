@@ -108,6 +108,13 @@ export interface MaintenanceRecord {
   createdBy: string;
   estimatedReturnDate?: string; // When the prop is expected to be returned from repair
   repairDeadline?: string; // The deadline by which the prop must be fixed
+  // Task information (when created from a completed task)
+  relatedTaskId?: string; // ID of the task that was completed
+  taskTitle?: string; // Title of the completed task
+  taskDescription?: string; // Description from the completed task
+  taskAssignedTo?: string[]; // Users who were assigned to the task
+  taskCompletedAt?: string; // When the task was completed
+  taskCompletedBy?: string; // User who completed the task
 }
 
 /**
@@ -120,6 +127,9 @@ export interface PropStatusUpdate {
   newStatus: PropLifecycleStatus;
   updatedBy: string;
   notes?: string;
+  reason?: string; // Reason for the status change
+  relatedTaskId?: string; // ID of related task (e.g., auto-created repair task)
+  relatedIncidentId?: string; // ID of related incident
   notified?: string[]; // IDs or emails of notified team members
   createdAt: string;
   damageImageUrls?: string[]; // URLs of damage documentation images
