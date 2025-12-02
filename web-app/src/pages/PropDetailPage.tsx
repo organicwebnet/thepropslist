@@ -342,7 +342,9 @@ const PropDetailPage: React.FC = () => {
             {prop.status && (
               <StatusDropdown
                 currentStatus={prop.status as PropLifecycleStatus}
-                onStatusChange={handleStatusChange}
+                onStatusChange={async (newStatus, notes) => {
+                  await handleStatusChange(newStatus, notes);
+                }}
                 size="sm"
                 disabled={false}
               />

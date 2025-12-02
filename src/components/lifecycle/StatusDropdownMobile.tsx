@@ -22,9 +22,12 @@ export const StatusDropdownMobile: React.FC<StatusDropdownMobileProps> = ({
   const [showCutContainerModal, setShowCutContainerModal] = useState(false);
   const [showDeliveryDateModal, setShowDeliveryDateModal] = useState(false);
   const [showReplacementReasonModal, setShowReplacementReasonModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [cutContainerInput, setCutContainerInput] = useState('');
   const [deliveryDateInput, setDeliveryDateInput] = useState('');
   const [replacementReasonInput, setReplacementReasonInput] = useState('');
+  const [detailsNotesInput, setDetailsNotesInput] = useState('');
+  const [repairDetailsInput, setRepairDetailsInput] = useState('');
   const [pendingStatus, setPendingStatus] = useState<PropLifecycleStatus | null>(null);
   const [localStatus, setLocalStatus] = useState<PropLifecycleStatus>(currentStatus);
 
@@ -63,6 +66,22 @@ export const StatusDropdownMobile: React.FC<StatusDropdownMobileProps> = ({
       return;
     }
 
+    // Handle statuses that require details (repair, damage, maintenance, etc.)
+    const statusesRequiringDetails: PropLifecycleStatus[] = [
+      'damaged_awaiting_repair',
+      'damaged_awaiting_replacement',
+      'out_for_repair',
+      'under_maintenance',
+      'needs_modifying'
+    ];
+    
+    if (statusesRequiringDetails.includes(newStatus)) {
+      setPendingStatus(newStatus);
+      setShowModal(false);
+      setShowDetailsModal(true);
+      return;
+    }
+
     // For other statuses, proceed directly
     await proceedWithStatusChange(newStatus);
   };
@@ -77,9 +96,12 @@ export const StatusDropdownMobile: React.FC<StatusDropdownMobileProps> = ({
       setShowCutContainerModal(false);
       setShowDeliveryDateModal(false);
       setShowReplacementReasonModal(false);
+      setShowDetailsModal(false);
       setCutContainerInput('');
       setDeliveryDateInput('');
       setReplacementReasonInput('');
+      setDetailsNotesInput('');
+      setRepairDetailsInput('');
       setPendingStatus(null);
     } catch (error: any) {
       // Check if it's a validation error (user-friendly message) or other error
@@ -450,6 +472,134 @@ export const StatusDropdownMobile: React.FC<StatusDropdownMobileProps> = ({
                 onPress={() => {
                   setShowReplacementReasonModal(false);
                   setReplacementReasonInput('');
+                  setPendingStatus(null);
+                }}
+                accessibilityLabel="Cancel"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Details Modal for Statuses Requiring Details */}
+      <Modal
+        visible={showDetailsModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowDetailsModal(false);
+          setDetailsNotesInput('');
+          setRepairDetailsInput('');
+          setPendingStatus(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.actionModalContent, { maxHeight: '80%' }]}>
+            <Text style={styles.actionModalTitle}>
+              {pendingStatus ? lifecycleStatusLabels[pendingStatus] : 'Status Update'} - Details Required
+            </Text>
+            <Text style={styles.actionModalText}>
+              Please provide details about this status change. This information helps track the prop's condition and history.
+            </Text>
+            
+            <Text style={[styles.actionModalText, { marginTop: 12, marginBottom: 8, fontWeight: '600' }]}>
+              Notes (optional):
+            </Text>
+            <TextInput
+              style={[styles.textInput, { minHeight: 80 }]}
+              value={detailsNotesInput}
+              onChangeText={setDetailsNotesInput}
+              placeholder="Enter any notes about this status change..."
+              placeholderTextColor="#888"
+              autoFocus
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              accessibilityLabel="Status change notes input"
+              accessibilityHint="Enter any notes about this status change"
+            />
+
+            {(pendingStatus === 'damaged_awaiting_repair' || 
+              pendingStatus === 'out_for_repair' || 
+              pendingStatus === 'under_maintenance' ||
+              pendingStatus === 'needs_modifying') && (
+              <>
+                <Text style={[styles.actionModalText, { marginTop: 12, marginBottom: 8, fontWeight: '600' }]}>
+                  Repair/Maintenance Details (recommended):
+                </Text>
+                <TextInput
+                  style={[styles.textInput, { minHeight: 100 }]}
+                  value={repairDetailsInput}
+                  onChangeText={setRepairDetailsInput}
+                  placeholder="Describe what needs to be repaired or maintained..."
+                  placeholderTextColor="#888"
+                  multiline
+                  numberOfLines={5}
+                  textAlignVertical="top"
+                  accessibilityLabel="Repair details input"
+                  accessibilityHint="Describe what needs to be repaired or maintained"
+                />
+              </>
+            )}
+
+            <View style={styles.actionButtonContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.confirmButton]}
+                onPress={() => {
+                  // Combine notes and repair details
+                  let combinedNotes = detailsNotesInput.trim();
+                  if (repairDetailsInput.trim()) {
+                    if (combinedNotes) {
+                      combinedNotes += '\n\n--- Repair/Maintenance Details ---\n';
+                    } else {
+                      combinedNotes = '--- Repair/Maintenance Details ---\n';
+                    }
+                    combinedNotes += repairDetailsInput.trim();
+                  }
+                  
+                  const status = pendingStatus;
+                  if (!status) {
+                    Alert.alert('Error', 'Status not set. Please try again.');
+                    return;
+                  }
+
+                  // Warn if no details provided for repair-related statuses
+                  if (!combinedNotes.trim() && 
+                      (status === 'damaged_awaiting_repair' || 
+                       status === 'out_for_repair' || 
+                       status === 'under_maintenance')) {
+                    Alert.alert(
+                      'No Details Provided',
+                      'No repair details provided. The props supervisor will need to determine what needs fixing. Continue anyway?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Continue',
+                          onPress: () => {
+                            proceedWithStatusChange(status, { notes: combinedNotes || '' });
+                          }
+                        }
+                      ]
+                    );
+                    return;
+                  }
+
+                  proceedWithStatusChange(status, { notes: combinedNotes || '' });
+                }}
+                accessibilityLabel="Confirm status change"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Confirm</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowDetailsModal(false);
+                  setDetailsNotesInput('');
+                  setRepairDetailsInput('');
                   setPendingStatus(null);
                 }}
                 accessibilityLabel="Cancel"

@@ -20,9 +20,9 @@ import {
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useFirebase } from '../../../src/platforms/mobile/contexts/FirebaseContext';
-import type { Prop } from '../../../src/shared/types/props';
-import { AppGradient } from '../../../src/components/AppGradient';
+import { useFirebase } from '@platforms/mobile/contexts/FirebaseContext';
+import type { Prop } from '@shared/types/props';
+import { AppGradient } from '@components/AppGradient';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

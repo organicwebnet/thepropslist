@@ -10,8 +10,21 @@ module.exports = function (api) {
       [
         'module-resolver',
         {
+          root: ['./'],
           alias: {
             'lucide-react': 'lucide-react-native',
+            '@': './src',
+            '@shared': './src/shared',
+            '@components': './src/components',
+            '@screens': './src/screens',
+            '@utils': './src/utils',
+            '@assets': './assets',
+            '@platforms': './src/platforms',
+            '@contexts': './src/contexts',
+            '@hooks': './src/hooks',
+            '@services': './src/services',
+            '@config': './src/config',
+            '@types': './src/types',
           },
         },
       ],

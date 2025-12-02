@@ -66,3 +66,35 @@ web-app/test-results/ui-flows-Props-Bible-Web-A-3d032-load-within-acceptable-tim
 web-app/test-results/ui-flows-Props-Bible-Web-A-3d1cb-support-keyboard-navigation/error-context.md
 web-app/test-results/ui-flows-Props-Bible-Web-A-4dfdf-uld-have-proper-ARIA-labels/error-context.md
 web-app/test-results/ui-flows-Props-Bible-Web-A-c1d8d-d-show-forgot-password-form/error-context.md
+[33mtag v1.0.3-android-testing[m
+Tagger: organicwebnet <organicwebnet@gmail.com>
+Date:   Tue Dec 2 13:12:10 2025 +0000
+
+Release v1.0.3: Android App Testing Release
+
+This release includes all maintenance workflow enhancements:
+- Enhanced maintenance form with photo and video upload support
+- Automatic prop status transitions based on task assignments
+- Improved status transition validation with user-friendly error messages
+- Maintenance record edit/delete functionality
+- Enhanced task completion with proper status transitions
+- Delivery list widget for props on order
+- Prop status auto-revert functionality
+- Fixed status transitions (under_maintenance/being_modified -> available_in_storage)
+- Added needs_modifying status for props requiring modification
+- Better error handling for upload failures
+
+Android App Testing Focus:
+- Verify maintenance form appears with photo/video upload
+- Test automatic status updates when tasks assigned to makers
+- Verify proper status transitions on task completion
+- Test maintenance record edit/delete functionality
+- Verify media URLs included in task descriptions
+- Test status transition validation error messages
+- Verify all features work correctly on Android mobile app
+
+[33mcommit 7013bdec78f776426f78db7170919387809ebcfe[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;33mtag: [m[1;33mv1.0.3-android-testing[m[33m)[m
+Author: organicwebnet <organicwebnet@gmail.com>
+Date:   Tue Dec 2 13:11:58 2025 +0000
+
+    chore: Update signup component
