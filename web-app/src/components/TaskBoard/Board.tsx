@@ -333,6 +333,63 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
             }
           }
         }
+        
+        // Check if task is assigned to a maker and update prop status accordingly
+        if (currentCard?.propId && board?.showId && newAssignedTo.length > 0) {
+          try {
+            // Get show to check team roles
+            const showDoc = await service.getDocument('shows', board.showId);
+            if (showDoc?.data?.team) {
+              const team = showDoc.data.team;
+              // Check if any assigned user is a maker (prop_maker, props_carpenter, or similar)
+              const assignedMakers = newAssignedTo.filter((userId: string) => {
+                const role = team[userId];
+                return role === 'prop_maker' || role === 'props_carpenter' || role === 'propmaker' || 
+                       role === 'senior-propmaker' || role?.toLowerCase().includes('maker');
+              });
+              
+              if (assignedMakers.length > 0) {
+                // Get current prop status
+                const propDoc = await service.getDocument('props', currentCard.propId);
+                if (propDoc?.data) {
+                  const currentPropStatus = propDoc.data.status;
+                  let newStatus: string | null = null;
+                  
+                  // Update status based on current status
+                  // Note: Only transition if the transition is valid according to STATUS_TRANSITIONS
+                  // damaged_awaiting_repair cannot transition to out_for_repair (invalid transition)
+                  // needs_modifying can transition to being_modified (valid transition)
+                  if (currentPropStatus === 'needs_modifying') {
+                    newStatus = 'being_modified';
+                  }
+                  
+                  if (newStatus) {
+                    // Update prop status
+                    await service.updateDocument('props', currentCard.propId, {
+                      status: newStatus,
+                      lastStatusUpdate: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    });
+                    
+                    // Create status history entry
+                    await service.addDocument(`props/${currentCard.propId}/statusHistory`, {
+                      previousStatus: currentPropStatus,
+                      newStatus: newStatus,
+                      updatedBy: user?.uid || 'system',
+                      date: new Date().toISOString(),
+                      createdAt: new Date().toISOString(),
+                      notes: `Status automatically updated when task assigned to maker`,
+                      relatedTaskId: cardId,
+                    });
+                  }
+                }
+              }
+            }
+          } catch (statusUpdateError) {
+            // Log error but don't fail the card update
+            console.warn('Failed to update prop status when assigned to maker:', statusUpdateError);
+          }
+        }
       }
       
       // Check if task is being marked as completed and log to prop maintenance history
@@ -351,6 +408,48 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
               completedBy: user?.uid || 'unknown',
               firebaseService: service,
             });
+            
+            // Update prop status when repair/maintenance task is completed
+            // Use valid transitions according to STATUS_TRANSITIONS rules
+            if (TaskCompletionService.isRepairMaintenanceTask(updatedCard)) {
+              try {
+                const propDoc = await service.getDocument('props', currentCard.propId);
+                if (propDoc?.data) {
+                  const currentStatus = propDoc.data.status;
+                  let newStatus: string | null = null;
+                  
+                  // Determine the correct new status based on current status and valid transitions
+                  if (currentStatus === 'out_for_repair' || currentStatus === 'damaged_awaiting_repair') {
+                    // These can transition to repaired_back_in_show
+                    newStatus = 'repaired_back_in_show';
+                  } else if (currentStatus === 'under_maintenance' || currentStatus === 'being_modified') {
+                    // These must transition to available_in_storage (not repaired_back_in_show)
+                    newStatus = 'available_in_storage';
+                  }
+                  
+                  if (newStatus) {
+                    await service.updateDocument('props', currentCard.propId, {
+                      status: newStatus,
+                      lastStatusUpdate: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    });
+                    
+                    // Create status history entry
+                    await service.addDocument(`props/${currentCard.propId}/statusHistory`, {
+                      previousStatus: currentStatus,
+                      newStatus: newStatus,
+                      updatedBy: user?.uid || 'system',
+                      date: new Date().toISOString(),
+                      createdAt: new Date().toISOString(),
+                      notes: `Status automatically updated when repair/maintenance task completed`,
+                      relatedTaskId: cardId,
+                    });
+                  }
+                }
+              } catch (statusError) {
+                console.warn('Failed to update prop status when repair/maintenance task completed:', statusError);
+              }
+            }
           } catch (logError) {
             // Log error but don't fail the card update
             console.warn('Failed to log completed task to prop maintenance history:', logError);

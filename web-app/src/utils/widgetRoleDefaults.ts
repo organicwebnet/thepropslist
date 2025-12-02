@@ -25,6 +25,7 @@ export function getRoleBasedWidgetDefaults(role: string): WidgetPreferences {
           'task-planning-assistant',
           'upcoming-deadlines',
           'cut-props-packing',
+          'delivery-list',
           'props-needing-work',
           'shopping-approval-needed',
         ],

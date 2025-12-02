@@ -300,6 +300,7 @@ export interface Prop {
   estimatedDeliveryDate?: string; // ISO date string for expected delivery
   courier?: string; // Name of the courier
   trackingNumber?: string; // Tracking number for the delivery
+  cutPropsStorageContainer?: string; // Storage container location for cut props
 
   // Transit handling flags for shipping symbols (mirrors PropFormData)
   fragile?: boolean;

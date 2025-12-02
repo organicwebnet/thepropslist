@@ -1508,20 +1508,57 @@ const CardDetailPanel: React.FC<CardDetailPanelProps> = ({
                                         // --- Prop status sync and maintenance history logging ---
                                         if (newCompleted && internalCard.propId && service) {
                                             try {
-                                                // Update prop status
-                                                await service.updateDocument('props', internalCard.propId, { status: 'repaired_back_in_show' });
-                                                
                                                 // Log completed task to prop maintenance history
-                                                const updatedCard = { ...internalCard, completed: true, status: 'done' as const };
-                                                if (TaskCompletionService.shouldLogTaskCompletion(updatedCard, true, false)) {
-                                                    await TaskCompletionService.logCompletedTaskToProp({
-                                                        card: updatedCard,
-                                                        completedBy: currentUser?.uid || 'unknown',
-                                                        firebaseService: service,
-                                                    });
+                                                const updatedCard = { ...internalCard, completed: true } as CardData;
+                                                await TaskCompletionService.logCompletedTaskToProp({
+                                                    card: updatedCard,
+                                                    completedBy: currentUser?.uid || 'unknown',
+                                                    firebaseService: service,
+                                                });
+                                                
+                                                // Update prop status when repair/maintenance task is completed
+                                                // Use valid transitions according to STATUS_TRANSITIONS rules
+                                                if (TaskCompletionService.isRepairMaintenanceTask(updatedCard)) {
+                                                    try {
+                                                        const propDoc = await service.getDocument('props', internalCard.propId);
+                                                        if (propDoc?.data) {
+                                                            const currentStatus = propDoc.data.status;
+                                                            let newStatus: string | null = null;
+                                                            
+                                                            // Determine the correct new status based on current status and valid transitions
+                                                            if (currentStatus === 'out_for_repair' || currentStatus === 'damaged_awaiting_repair') {
+                                                                // These can transition to repaired_back_in_show
+                                                                newStatus = 'repaired_back_in_show';
+                                                            } else if (currentStatus === 'under_maintenance' || currentStatus === 'being_modified') {
+                                                                // These must transition to available_in_storage (not repaired_back_in_show)
+                                                                newStatus = 'available_in_storage';
+                                                            }
+                                                            
+                                                            if (newStatus) {
+                                                                await service.updateDocument('props', internalCard.propId, {
+                                                                    status: newStatus,
+                                                                    lastStatusUpdate: new Date().toISOString(),
+                                                                    updatedAt: new Date().toISOString(),
+                                                                });
+                                                                
+                                                                // Create status history entry
+                                                                await service.addDocument(`props/${internalCard.propId}/statusHistory`, {
+                                                                    previousStatus: currentStatus,
+                                                                    newStatus: newStatus,
+                                                                    updatedBy: currentUser?.uid || 'system',
+                                                                    date: new Date().toISOString(),
+                                                                    createdAt: new Date().toISOString(),
+                                                                    notes: `Status automatically updated when repair/maintenance task completed`,
+                                                                    relatedTaskId: internalCard.id,
+                                                                });
+                                                            }
+                                                        }
+                                                    } catch (statusError) {
+                                                        console.warn('Failed to update prop status when repair/maintenance task completed:', statusError);
+                                                    }
                                                 }
                                             } catch (err) {
-                                                console.error('Failed to update prop status or log maintenance history from card completion:', err);
+                                                console.error('Failed to log maintenance history from card completion:', err);
                                             }
                                         }
                                     }

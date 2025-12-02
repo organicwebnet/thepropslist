@@ -14,6 +14,7 @@ import { UserPicker } from '../UserPicker';
 
 interface PropStatusUpdateProps {
   currentStatus: PropLifecycleStatus;
+  propId?: string; // Optional propId for updating additional fields
   onStatusUpdate: (newStatus: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[], damageVideos?: File[]) => Promise<void>;
   disabled?: boolean;
   showManagerEmail?: string;
@@ -22,6 +23,7 @@ interface PropStatusUpdateProps {
 
 export function PropStatusUpdate({ 
   currentStatus, 
+  propId,
   onStatusUpdate, 
   disabled = false,
   showManagerEmail,
@@ -40,12 +42,53 @@ export function PropStatusUpdate({
   const [repairDetails, setRepairDetails] = useState('');
   const [repairDeadline, setRepairDeadline] = useState('');
   const [estimatedReturnDate, setEstimatedReturnDate] = useState('');
+  const [cutPropsStorageContainer, setCutPropsStorageContainer] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
+  const [showMissingModal, setShowMissingModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  // Use refs to store current values for immediate access (React state updates are async)
+  const cutPropsStorageContainerRef = useRef<string>('');
+  const deliveryDateRef = useRef<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStatus || newStatus === currentStatus) return;
+    
+    // Handle missing prop - show modal first
+    if (newStatus === 'missing') {
+      setShowMissingModal(true);
+      return;
+    }
+    
+    // Validation: require storage container for cut props
+    // Check both ref and state (ref is source of truth, state is for UI)
+    const currentContainer = cutPropsStorageContainerRef.current || cutPropsStorageContainer;
+    if (newStatus === 'cut' && !currentContainer.trim()) {
+      const container = prompt('Please enter the storage container location for this cut prop:');
+      if (!container || !container.trim()) {
+        alert('Storage container location is required for cut props.');
+        return;
+      }
+      const trimmedContainer = container.trim();
+      cutPropsStorageContainerRef.current = trimmedContainer; // Update ref immediately
+      setCutPropsStorageContainer(trimmedContainer); // Update state for UI
+    }
+    
+    // Validation: require delivery date for on_order
+    // Check both ref and state (ref is source of truth, state is for UI)
+    const currentDeliveryDate = deliveryDateRef.current || deliveryDate;
+    if (newStatus === 'on_order' && !currentDeliveryDate) {
+      const date = prompt('Please enter the expected delivery date (YYYY-MM-DD):');
+      if (!date || !date.trim()) {
+        alert('Delivery date is required for props on order.');
+        return;
+      }
+      const trimmedDate = date.trim();
+      deliveryDateRef.current = trimmedDate; // Update ref immediately
+      setDeliveryDate(trimmedDate); // Update state for UI
+    }
+    
     // Validation: require assignment for statuses that need it
     if (showAssignment && (!assignedTo || assignedTo.length === 0)) {
       alert('Please assign at least one user for this status.');
@@ -67,6 +110,7 @@ export function PropStatusUpdate({
           combinedNotes = '--- Repair/Maintenance Details ---\n';
         }
         combinedNotes += repairDetails.trim();
+        // Both dates use two newlines for consistent spacing
         if (repairDeadline) {
           combinedNotes += `\n\nRepair Deadline: ${repairDeadline}`;
         }
@@ -82,6 +126,25 @@ export function PropStatusUpdate({
         damageImages.length > 0 ? damageImages : undefined,
         damageVideos.length > 0 ? damageVideos : undefined
       );
+      
+      // Update additional fields if needed
+      // Use refs to get current values (state updates are async, refs are immediate)
+      if (propId && service?.updateDocument) {
+        const updates: any = {};
+        const currentContainer = cutPropsStorageContainerRef.current || cutPropsStorageContainer;
+        const currentDeliveryDate = deliveryDateRef.current || deliveryDate;
+        
+        if (newStatus === 'cut' && currentContainer) {
+          updates.cutPropsStorageContainer = currentContainer;
+        }
+        if (newStatus === 'on_order' && currentDeliveryDate) {
+          updates.estimatedDeliveryDate = new Date(currentDeliveryDate).toISOString();
+        }
+        if (Object.keys(updates).length > 0) {
+          await service.updateDocument('props', propId, updates);
+        }
+      }
+      
       setNotes('');
       setDamageImages([]);
       setDamageVideos([]);
@@ -92,6 +155,11 @@ export function PropStatusUpdate({
       setRepairDetails('');
       setRepairDeadline('');
       setEstimatedReturnDate('');
+      setCutPropsStorageContainer('');
+      setDeliveryDate('');
+      // Clear refs as well
+      cutPropsStorageContainerRef.current = '';
+      deliveryDateRef.current = '';
     } catch (error) {
       alert('Failed to update prop status. Please try again.');
     } finally {
@@ -190,6 +258,7 @@ export function PropStatusUpdate({
     on_hold: { notes: true },
     under_review: { notes: true },
     being_modified: { notes: true },
+    needs_modifying: { assignment: true, repair: true, imageUpload: true, notes: true },
     backup: { notes: true },
     temporarily_retired: { notes: true },
     ready_for_disposal: { notes: true },
@@ -247,9 +316,11 @@ export function PropStatusUpdate({
           disabled={isSubmitting || disabled}
         >
           <option value="">Select New Status</option>
-          {Object.entries(lifecycleStatusLabels).map(([value, label]) => (
-            <option key={value} value={value}>{String(label)}</option>
-          ))}
+          {Object.entries(lifecycleStatusLabels)
+            .filter(([value]) => value !== 'to_buy' && value !== 'checked_out') // Hide system statuses
+            .map(([value, label]) => (
+              <option key={value} value={value}>{String(label)}</option>
+            ))}
         </select>
         {/* Only render tooltip if newStatus is a valid key */}
         {newStatus && lifecycleStatusPriority[newStatus] && (
@@ -417,6 +488,55 @@ export function PropStatusUpdate({
           )}
         </div>
       )}
+      {/* Cut props storage container field */}
+      {newStatus === 'cut' && (
+        <div>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+            Storage Container Location *
+          </label>
+          <input
+            type="text"
+            value={cutPropsStorageContainer}
+            onChange={(e) => {
+              const value = e.target.value;
+              cutPropsStorageContainerRef.current = value; // Update ref immediately
+              setCutPropsStorageContainer(value); // Update state for UI
+            }}
+            className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2"
+            placeholder="Enter storage container location (e.g., Container A, Box 3)"
+            disabled={disabled || isSubmitting}
+            required
+          />
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            Please put this cut prop in the specified storage container.
+          </p>
+        </div>
+      )}
+
+      {/* Delivery date field for on_order */}
+      {newStatus === 'on_order' && (
+        <div>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+            Expected Delivery Date *
+          </label>
+          <input
+            type="date"
+            value={deliveryDate}
+            onChange={(e) => {
+              const value = e.target.value;
+              deliveryDateRef.current = value; // Update ref immediately
+              setDeliveryDate(value); // Update state for UI
+            }}
+            className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2"
+            disabled={disabled || isSubmitting}
+            required
+          />
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            This prop will be added to the delivery list.
+          </p>
+        </div>
+      )}
+
       {/* Notes field for statuses that require it */}
       {showNotes && (
         <div>
@@ -480,6 +600,83 @@ export function PropStatusUpdate({
           </>
         )}
       </button>
+
+      {/* Missing Prop Modal */}
+      {showMissingModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--bg-primary)] rounded-lg p-6 max-w-md w-full mx-4 border border-[var(--border-color)]">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+              Missing Prop - Action Required
+            </h3>
+            <p className="text-[var(--text-secondary)] mb-6">
+              This prop has been marked as missing. What action should be taken?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowMissingModal(false);
+                  // Set status to cut
+                  const finalStatus: PropLifecycleStatus = 'cut';
+                  setNewStatus(finalStatus);
+                  // Prompt for storage container if not set
+                  const currentContainer = cutPropsStorageContainerRef.current || cutPropsStorageContainer;
+                  if (!currentContainer.trim()) {
+                    const container = prompt('Please enter the storage container location for this cut prop:');
+                    if (!container || !container.trim()) {
+                      alert('Storage container location is required for cut props.');
+                      return;
+                    }
+                    const trimmedContainer = container.trim();
+                    cutPropsStorageContainerRef.current = trimmedContainer; // Update ref immediately
+                    setCutPropsStorageContainer(trimmedContainer); // Update state for UI
+                  }
+                  // Trigger submit - ref will have the value immediately
+                  const form = document.querySelector('form');
+                  if (form) {
+                    form.requestSubmit();
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Cut from Show
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowMissingModal(false);
+                  // Set status to damaged_awaiting_replacement
+                  const finalStatus: PropLifecycleStatus = 'damaged_awaiting_replacement';
+                  setNewStatus(finalStatus);
+                  // Prompt for reason
+                  const reason = prompt('Please provide the reason for replacement:');
+                  if (reason && reason.trim()) {
+                    setNotes(prev => prev ? `${prev}\n\nReason for replacement: ${reason.trim()}` : `Reason for replacement: ${reason.trim()}`);
+                  }
+                  // Trigger submit
+                  const form = document.querySelector('form');
+                  if (form) {
+                    form.requestSubmit();
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Needs Replacement
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMissingModal(false);
+                  setNewStatus(currentStatus); // Reset to current status
+                }}
+                className="px-4 py-2 bg-[var(--bg-secondary)] hover:bg-[var(--bg-secondary)]/80 text-[var(--text-primary)] font-medium rounded-lg transition-colors border border-[var(--border-color)]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 } 

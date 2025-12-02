@@ -15,6 +15,8 @@ interface PropLifecycleProps {
   statusHistory: PropStatusUpdate[];
   onStatusUpdate: (newStatus: PropLifecycleStatus, notes: string, notifyTeam: boolean, damageImages?: File[], damageVideos?: File[]) => Promise<void>;
   onMaintenanceRecordAdd: (record: Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>) => Promise<void>;
+  onMaintenanceRecordUpdate?: (recordId: string, record: Partial<Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>>) => Promise<void>;
+  onMaintenanceRecordDelete?: (recordId: string) => Promise<void>;
   show?: Show;
   nextInspectionDue?: string;
   lastInspectionDate?: string;
@@ -37,6 +39,8 @@ export function PropLifecycle({
   statusHistory,
   onStatusUpdate,
   onMaintenanceRecordAdd,
+  onMaintenanceRecordUpdate,
+  onMaintenanceRecordDelete,
   show,
   nextInspectionDue,
   lastInspectionDate,
@@ -282,6 +286,7 @@ export function PropLifecycle({
           <>
             <PropStatusUpdateComponent
               currentStatus={currentStatus}
+              propId={propId}
               onStatusUpdate={onStatusUpdate}
               showManagerEmail={show?.stageManagerEmail}
               propsSupervisorEmail={show?.propsSupervisorEmail}
@@ -293,7 +298,12 @@ export function PropLifecycle({
         {activeTab === 'maintenance' && (
           <>
             <MaintenanceRecordForm onSubmit={onMaintenanceRecordAdd} />
-            <MaintenanceHistory records={maintenanceHistory} />
+            <MaintenanceHistory 
+              records={maintenanceHistory} 
+              onEdit={onMaintenanceRecordUpdate}
+              onDelete={onMaintenanceRecordDelete}
+              currentUserId={userId}
+            />
           </>
         )}
       </div>

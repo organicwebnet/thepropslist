@@ -11,6 +11,7 @@ export * from './password-reset-fixed';
 export * from './pricing';
 export * from './subscriptionValidation';
 export * from './stripe';
+export * from './propStatusAutoRevert';
 
 // Re-export for easier imports
 export {

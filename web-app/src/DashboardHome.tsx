@@ -22,6 +22,7 @@ import { CutPropsPackingWidget } from './components/DashboardWidgets/CutPropsPac
 import { PropsNeedingWorkWidget } from './components/DashboardWidgets/PropsNeedingWorkWidget';
 import { ShoppingApprovalWidget } from './components/DashboardWidgets/ShoppingApprovalWidget';
 import { NotificationsWidget } from './components/DashboardWidgets/NotificationsWidget';
+import { DeliveryListWidget } from './components/DashboardWidgets/DeliveryListWidget';
 import { WidgetSettingsModal } from './components/DashboardWidgets/WidgetSettingsModal';
 import { useWidgetPreferences } from './hooks/useWidgetPreferences';
 
@@ -351,6 +352,14 @@ const DashboardHome: React.FC = () => {
                     props={props}
                   />
                 );
+              case 'delivery-list':
+                return (
+                  <DeliveryListWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    props={props}
+                  />
+                );
               case 'props-needing-work':
                 return (
                   <PropsNeedingWorkWidget
@@ -390,6 +399,7 @@ const DashboardHome: React.FC = () => {
           !isWidgetEnabled('task-planning-assistant') &&
           !isWidgetEnabled('taskboard-activity-summary') &&
           !isWidgetEnabled('cut-props-packing') &&
+          !isWidgetEnabled('delivery-list') &&
           !isWidgetEnabled('props-needing-work') &&
           !isWidgetEnabled('shopping-approval-needed') &&
           !isWidgetEnabled('notifications') && (

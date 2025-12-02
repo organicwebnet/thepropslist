@@ -187,14 +187,30 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
       const imageUrls: string[] = [];
       const videoUrls: string[] = [];
       
+      // Helper to check if value is a File object (web) vs string URI (mobile)
+      const isFileObject = (file: any): file is File => {
+        return file instanceof File || (typeof file === 'object' && file !== null && 'name' in file && 'type' in file && 'size' in file);
+      };
+      
       if (images && images.length > 0) {
         for (const image of images) {
           try {
-            const storagePath = `props/${propId}/status/images/${Date.now()}-${image.name}`;
-            const url = await service.uploadFile(storagePath, image);
-            imageUrls.push(url);
-          } catch (error) {
-            console.warn('Failed to upload image:', error);
+            if (isFileObject(image)) {
+              // File object (web) - try to upload
+              const storagePath = `props/${propId}/status/images/${Date.now()}-${image.name}`;
+              const url = await service.uploadFile(storagePath, image as any);
+              imageUrls.push(url);
+            } else if (typeof image === 'string') {
+              // String URI (mobile)
+              const fileName = image.split('/').pop() || `image-${Date.now()}`;
+              const storagePath = `props/${propId}/status/images/${Date.now()}-${fileName}`;
+              const url = await service.uploadFile(storagePath, image);
+              imageUrls.push(url);
+            }
+          } catch (error: any) {
+            // Log but don't fail - file upload errors shouldn't block status updates
+            const errorMsg = error?.message || 'Unknown upload error';
+            console.warn('Failed to upload image (continuing with status update):', errorMsg);
             // Continue with other uploads even if one fails
           }
         }
@@ -203,11 +219,22 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
       if (videos && videos.length > 0) {
         for (const video of videos) {
           try {
-            const storagePath = `props/${propId}/status/videos/${Date.now()}-${video.name}`;
-            const url = await service.uploadFile(storagePath, video);
-            videoUrls.push(url);
-          } catch (error) {
-            console.warn('Failed to upload video:', error);
+            if (isFileObject(video)) {
+              // File object (web) - try to upload
+              const storagePath = `props/${propId}/status/videos/${Date.now()}-${video.name}`;
+              const url = await service.uploadFile(storagePath, video as any);
+              videoUrls.push(url);
+            } else if (typeof video === 'string') {
+              // String URI (mobile)
+              const fileName = video.split('/').pop() || `video-${Date.now()}`;
+              const storagePath = `props/${propId}/status/videos/${Date.now()}-${fileName}`;
+              const url = await service.uploadFile(storagePath, video);
+              videoUrls.push(url);
+            }
+          } catch (error: any) {
+            // Log but don't fail - file upload errors shouldn't block status updates
+            const errorMsg = error?.message || 'Unknown upload error';
+            console.warn('Failed to upload video (continuing with status update):', errorMsg);
             // Continue with other uploads even if one fails
           }
         }
@@ -321,6 +348,51 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
     }
   };
 
+  const updateMaintenanceRecord = async (
+    recordId: string,
+    recordData: Partial<Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>>,
+  ): Promise<void> => {
+    if (!propId || !currentUser || !service?.updateDocument) {
+      throw new Error('PropId, currentUser, and Firebase service (updateDocument) are required.');
+    }
+    try {
+      // Convert date strings to ISO strings if provided
+      const updateData: any = { ...recordData };
+      if (updateData.date && typeof updateData.date === 'string') {
+        updateData.date = new Date(updateData.date).toISOString();
+      }
+      if (updateData.estimatedReturnDate && typeof updateData.estimatedReturnDate === 'string') {
+        updateData.estimatedReturnDate = new Date(updateData.estimatedReturnDate).toISOString();
+      }
+      if (updateData.repairDeadline && typeof updateData.repairDeadline === 'string') {
+        updateData.repairDeadline = new Date(updateData.repairDeadline).toISOString();
+      }
+
+      await service.updateDocument(
+        `props/${propId}/maintenanceHistory`,
+        recordId,
+        updateData
+      );
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to update maintenance record');
+      setError(error);
+      throw error;
+    }
+  };
+
+  const deleteMaintenanceRecord = async (recordId: string): Promise<void> => {
+    if (!propId || !currentUser || !service?.deleteDocument) {
+      throw new Error('PropId, currentUser, and Firebase service (deleteDocument) are required.');
+    }
+    try {
+      await service.deleteDocument(`props/${propId}/maintenanceHistory`, recordId);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to delete maintenance record');
+      setError(error);
+      throw error;
+    }
+  };
+
   return {
     statusHistory,
     maintenanceHistory,
@@ -328,5 +400,7 @@ export function usePropLifecycle({ propId, currentUser }: UsePropLifecycleProps)
     error,
     updatePropStatus,
     addMaintenanceRecord,
+    updateMaintenanceRecord,
+    deleteMaintenanceRecord,
   };
 } 

@@ -56,6 +56,10 @@ const WIDGET_DESCRIPTIONS: Record<WidgetId, { name: string; description: string 
     name: 'Notifications',
     description: 'Latest notifications and updates',
   },
+  'delivery-list': {
+    name: 'Delivery List',
+    description: 'Props on order with expected delivery dates',
+  },
 };
 
 // Sortable Widget Item Component

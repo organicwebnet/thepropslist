@@ -5,6 +5,7 @@
  */
 
 import type { PropLifecycleStatus } from '../../types/lifecycle';
+import { lifecycleStatusLabels } from '../../types/lifecycle';
 import type { Prop } from '../types/props';
 import { NotificationHelper } from '../../services/notificationHelper';
 import type { FirebaseService } from '../services/firebase/types';
@@ -24,12 +25,13 @@ const STATUS_TRANSITIONS: Record<PropLifecycleStatus, PropLifecycleStatus[]> = {
   'damaged_awaiting_repair': ['repaired_back_in_show', 'damaged_awaiting_replacement'],
   'damaged_awaiting_replacement': ['on_order', 'to_buy'],
   'repaired_back_in_show': ['available_in_storage', 'in_use_on_set'],
-  'missing': ['available_in_storage', 'under_review'],
+  'missing': ['available_in_storage', 'under_review', 'cut', 'damaged_awaiting_replacement'],
   'in_transit': ['available_in_storage', 'checked_out'],
   'loaned_out': ['available_in_storage'],
   'on_hold': ['available_in_storage', 'under_review'],
   'under_review': ['available_in_storage', 'confirmed', 'cut'],
   'being_modified': ['available_in_storage', 'under_maintenance'],
+  'needs_modifying': ['being_modified', 'cut', 'damaged_awaiting_repair'],
   'backup': ['available_in_storage', 'confirmed'],
   'temporarily_retired': ['available_in_storage', 'ready_for_disposal'],
   'ready_for_disposal': ['cut'],
@@ -80,9 +82,29 @@ export class PropStatusService {
     const allowedTransitions = STATUS_TRANSITIONS[previousStatus] || [];
     
     if (!allowedTransitions.includes(newStatus)) {
+      // Get user-friendly labels for statuses
+      const previousLabel = lifecycleStatusLabels[previousStatus] || previousStatus;
+      const newLabel = lifecycleStatusLabels[newStatus] || newStatus;
+      const allowedLabels = allowedTransitions.map(status => lifecycleStatusLabels[status] || status);
+      
+      // Create a helpful error message
+      let errorMessage = `Cannot change status from "${previousLabel}" to "${newLabel}".\n\n`;
+      
+      // Provide specific guidance for common invalid transitions
+      if (previousStatus === 'out_for_repair' && newStatus === 'confirmed') {
+        errorMessage += `To mark this prop as confirmed in the show, you must first change the status to "Repaired - Back in Show" when the repair is complete. Then you can change it to "Confirmed in Show".\n\n`;
+      } else if (previousStatus === 'out_for_repair') {
+        errorMessage += `When a prop is out for repair, you can only change it to:\n• Repaired - Back in Show (when repair is complete)\n• Damaged - Awaiting Repair (if additional damage is found)\n\n`;
+      } else {
+        errorMessage += `Valid options from "${previousLabel}" are:\n`;
+        allowedLabels.forEach((label, index) => {
+          errorMessage += `${index + 1}. ${label}\n`;
+        });
+      }
+      
       return {
         valid: false,
-        error: `Invalid status transition: Cannot change from "${previousStatus}" to "${newStatus}". Allowed transitions: ${allowedTransitions.join(', ')}`
+        error: errorMessage.trim()
       };
     }
 

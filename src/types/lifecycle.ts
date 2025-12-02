@@ -21,14 +21,15 @@ export type PropLifecycleStatus =
   | 'on_hold'             // Set aside
   | 'under_review'        // Being assessed
   | 'being_modified'      // Being customized/modified
+  | 'needs_modifying'     // Needs modification (before being assigned to maker)
   | 'backup'              // Backup/alternate prop
   | 'temporarily_retired' // Stored for future use
   | 'ready_for_disposal'  // Ready for recycling/disposal
   | 'repaired_back_in_show' // Repaired and returned to the show
   // New statuses for check-in/out and active use
   | 'available_in_storage' // In its assigned box/location, ready for use
-  | 'checked_out'          // Checked out to actor/scene, not in storage loc
-  | 'in_use_on_set'        // Actively on set/stage
+  | 'checked_out'          // Checked out to actor/scene, not in storage loc (system status - hidden from dropdown)
+  | 'in_use_on_set'        // Actively on set/stage (Set Dressing)
   | 'on_order'            // Newly added for props that are ordered but not yet received
   | 'to_buy'               // Needs to be purchased
 
@@ -48,6 +49,7 @@ export const lifecycleStatusLabels: Record<PropLifecycleStatus, string> = {
   on_hold: 'On Hold',
   under_review: 'Under Review',
   being_modified: 'Being Modified',
+  needs_modifying: 'Needs Modifying',
   backup: 'Backup/Alternate',
   temporarily_retired: 'Temporarily Retired',
   ready_for_disposal: 'Ready for Disposal',
@@ -55,7 +57,7 @@ export const lifecycleStatusLabels: Record<PropLifecycleStatus, string> = {
   // New labels
   available_in_storage: 'Available in Storage',
   checked_out: 'Checked Out',
-  in_use_on_set: 'In Use on Set',
+  in_use_on_set: 'Set Dressing',
   on_order: 'On Order',
   to_buy: 'To Buy'
 };
@@ -77,6 +79,7 @@ export const lifecycleStatusPriority: Record<PropLifecycleStatus, StatusPriority
   in_transit: 'medium',
   loaned_out: 'medium',
   being_modified: 'medium',
+  needs_modifying: 'medium',
   under_review: 'low',
   on_hold: 'low',
   backup: 'low',

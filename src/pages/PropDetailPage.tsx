@@ -65,7 +65,32 @@ export default function PropDetailPage() {
       }
       setIsAddingStatus(false);
     } catch (err: any) {
-      setError(`Failed to update prop status: ${err.message}`);
+      const errorMessage = err.message || 'Unknown error occurred';
+      // Only show error state if it's a critical error (validation, not found, etc.)
+      // File upload errors are non-critical and shouldn't block status updates
+      const isCriticalError = !errorMessage.includes('upload') && 
+                              !errorMessage.includes('Failed to upload');
+      
+      if (isCriticalError) {
+        setError(`Failed to update prop status: ${errorMessage}`);
+        // Show Alert for better UX on Android - especially for validation errors
+        const isValidationError = errorMessage.includes('Cannot change status from') || 
+                                  errorMessage.includes('Valid options from');
+        Alert.alert(
+          isValidationError ? 'Invalid Status Change' : 'Status Update Failed',
+          errorMessage,
+          [{ text: 'OK' }]
+        );
+      } else {
+        // For non-critical errors (like file upload failures), just log them
+        console.warn('Non-critical error during status update:', errorMessage);
+        // Still refresh the prop to show the updated status
+        const propDoc = await service.getDocument<Prop>('props', id);
+        if (propDoc && propDoc.data) {
+          setProp({ ...propDoc.data, id: propDoc.id });
+        }
+        setIsAddingStatus(false);
+      }
     }
   };
 
@@ -81,6 +106,36 @@ export default function PropDetailPage() {
     } catch (err: any) {
       console.error('Error adding maintenance record:', err);
       setError(`Failed to add maintenance record: ${err.message}`);
+    }
+  };
+
+  const handleUpdateMaintenanceRecord = async (recordId: string, record: Partial<Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>>) => {
+    if (!id || !lifecycle?.updateMaintenanceRecord) return;
+    try {
+      await lifecycle.updateMaintenanceRecord(recordId, record);
+      const propDoc = await service.getDocument<Prop>('props', id);
+      if (propDoc && propDoc.data) {
+        setProp({ ...propDoc.data, id: propDoc.id });
+      }
+    } catch (err: any) {
+      console.error('Error updating maintenance record:', err);
+      setError(`Failed to update maintenance record: ${err.message}`);
+      throw err;
+    }
+  };
+
+  const handleDeleteMaintenanceRecord = async (recordId: string) => {
+    if (!id || !lifecycle?.deleteMaintenanceRecord) return;
+    try {
+      await lifecycle.deleteMaintenanceRecord(recordId);
+      const propDoc = await service.getDocument<Prop>('props', id);
+      if (propDoc && propDoc.data) {
+        setProp({ ...propDoc.data, id: propDoc.id });
+      }
+    } catch (err: any) {
+      console.error('Error deleting maintenance record:', err);
+      setError(`Failed to delete maintenance record: ${err.message}`);
+      throw err;
     }
   };
 
@@ -322,6 +377,7 @@ export default function PropDetailPage() {
     return (
       <PropStatusUpdate
         currentStatus={prop.status}
+        propId={id}
         onStatusUpdate={handleStatusUpdate}
       />
     );
@@ -743,7 +799,12 @@ export default function PropDetailPage() {
               
               <div className="mt-8">
                 <h3 className="text-lg font-medium text-[var(--text-primary)] mb-4">Maintenance History</h3>
-                <MaintenanceHistory records={prop.maintenanceHistory || []} />
+                <MaintenanceHistory 
+                  records={prop.maintenanceHistory || []} 
+                  onEdit={handleUpdateMaintenanceRecord}
+                  onDelete={handleDeleteMaintenanceRecord}
+                  currentUserId={user?.uid}
+                />
               </div>
             </div>
           )}
@@ -821,8 +882,39 @@ export default function PropDetailPage() {
           <View style={styles.statusDropdownContainerMobile}>
             <StatusDropdownMobile
               currentStatus={prop.status || 'confirmed'}
-              onStatusChange={async (newStatus) => {
-                await handleStatusUpdate(newStatus, '', false);
+              propId={id}
+              onStatusChange={async (newStatus, additionalData) => {
+                // Update additional fields if needed
+                if (id && service?.updateDocument && additionalData) {
+                  try {
+                    const updates: Partial<Pick<Prop, 'cutPropsStorageContainer' | 'estimatedDeliveryDate'>> = {};
+                    if (additionalData.cutPropsStorageContainer) {
+                      updates.cutPropsStorageContainer = additionalData.cutPropsStorageContainer;
+                    }
+                    if (additionalData.estimatedDeliveryDate) {
+                      // Validate date before converting
+                      const dateObj = new Date(additionalData.estimatedDeliveryDate);
+                      if (!isNaN(dateObj.getTime())) {
+                        updates.estimatedDeliveryDate = dateObj.toISOString();
+                      } else {
+                        Alert.alert('Invalid Date', 'The delivery date provided is invalid. Status will be updated but delivery date will not be saved.');
+                      }
+                    }
+                    if (Object.keys(updates).length > 0) {
+                      await service.updateDocument('props', id, updates);
+                    }
+                  } catch (error: any) {
+                    // Log error but don't prevent status update
+                    console.error('Failed to update additional prop fields:', error);
+                    Alert.alert(
+                      'Warning',
+                      'Status was updated but some additional information could not be saved. Please try updating the prop manually.'
+                    );
+                  }
+                }
+                // Combine notes if provided
+                const notes = additionalData?.notes || '';
+                await handleStatusUpdate(newStatus, notes, false);
               }}
               disabled={!hasPermission(Permission.EDIT_PROPS)}
             />

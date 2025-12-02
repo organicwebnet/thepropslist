@@ -5,20 +5,33 @@ import { Wrench, RefreshCcw, Calendar, Clock, AlertTriangle, HelpCircle, Edit2 }
 
 interface MaintenanceRecordFormProps {
   onSubmit: (record: Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>) => Promise<void>;
+  onUpdate?: (recordId: string, record: Partial<Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>>) => Promise<void>;
+  initialData?: MaintenanceRecord;
   disabled?: boolean;
+  onCancel?: () => void;
 }
 
-export function MaintenanceRecordForm({ onSubmit, disabled = false }: MaintenanceRecordFormProps) {
+export function MaintenanceRecordForm({ onSubmit, onUpdate, initialData, disabled = false, onCancel }: MaintenanceRecordFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showTypeHelp, setShowTypeHelp] = useState(false);
+  const isEditMode = !!initialData;
+  
+  // Format date for input (YYYY-MM-DD)
+  const formatDateForInput = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
+
   const [formData, setFormData] = useState<Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>>({
-    date: new Date().toISOString().split('T')[0], // This will be auto-set to current date on submission
-    type: 'maintenance',
-    description: '',
-    performedBy: '',
-    notes: '',
-    estimatedReturnDate: undefined,
-    repairDeadline: undefined
+    date: initialData ? formatDateForInput(initialData.date) : new Date().toISOString().split('T')[0],
+    type: initialData?.type || 'maintenance',
+    description: initialData?.description || '',
+    performedBy: initialData?.performedBy || '',
+    notes: initialData?.notes || '',
+    cost: initialData?.cost,
+    estimatedReturnDate: initialData?.estimatedReturnDate ? formatDateForInput(initialData.estimatedReturnDate) : undefined,
+    repairDeadline: initialData?.repairDeadline ? formatDateForInput(initialData.repairDeadline) : undefined
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,26 +39,44 @@ export function MaintenanceRecordForm({ onSubmit, disabled = false }: Maintenanc
     setIsSubmitting(true);
     
     try {
-      // Set the date to current date automatically
-      const currentDate = new Date().toISOString().split('T')[0];
-      
-      await onSubmit({
-        ...formData,
-        date: currentDate // Automatically timestamp when submitted
-      });
-      
-      // Reset form
-      setFormData({
-        date: currentDate,
-        type: 'maintenance',
-        description: '',
-        performedBy: '',
-        notes: '',
-        estimatedReturnDate: undefined,
-        repairDeadline: undefined
-      });
+      if (isEditMode && initialData && onUpdate) {
+        // Update mode
+        const updateData: Partial<Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>> = {
+          type: formData.type,
+          description: formData.description,
+          performedBy: formData.performedBy,
+          notes: formData.notes,
+          cost: formData.cost,
+          estimatedReturnDate: formData.estimatedReturnDate,
+          repairDeadline: formData.repairDeadline,
+        };
+        await onUpdate(initialData.id, updateData);
+        if (onCancel) {
+          onCancel();
+        }
+      } else {
+        // Create mode - Set the date to current date automatically
+        const currentDate = new Date().toISOString().split('T')[0];
+        
+        await onSubmit({
+          ...formData,
+          date: currentDate // Automatically timestamp when submitted
+        });
+        
+        // Reset form
+        setFormData({
+          date: currentDate,
+          type: 'maintenance',
+          description: '',
+          performedBy: '',
+          notes: '',
+          cost: undefined,
+          estimatedReturnDate: undefined,
+          repairDeadline: undefined
+        });
+      }
     } catch (error) {
-      alert('Failed to add maintenance record. Please try again.');
+      alert(isEditMode ? 'Failed to update maintenance record. Please try again.' : 'Failed to add maintenance record. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -93,20 +124,25 @@ export function MaintenanceRecordForm({ onSubmit, disabled = false }: Maintenanc
           </select>
         </div>
         
-        <div>
-          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
-            Performed By
-          </label>
-          <input
-            type="text"
-            value={formData.performedBy}
-            onChange={(e) => setFormData({ ...formData, performedBy: e.target.value })}
-            className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2"
-            placeholder="Name of person/company"
-            disabled={disabled || isSubmitting}
-            required
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+          Performed By
+        </label>
+        <input
+          type="text"
+          value={formData.performedBy}
+          onChange={(e) => setFormData({ ...formData, performedBy: e.target.value })}
+          className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2"
+          placeholder="Name of person/company"
+          disabled={disabled || isSubmitting || isEditMode}
+          required
+        />
+        {isEditMode && (
+          <p className="text-xs text-[var(--text-secondary)] mt-1">
+            Performed by cannot be changed after creation
+          </p>
+        )}
+      </div>
       </div>
 
       <div>
@@ -170,6 +206,22 @@ export function MaintenanceRecordForm({ onSubmit, disabled = false }: Maintenanc
 
       <div>
         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+          Cost (optional)
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={formData.cost !== undefined ? formData.cost : ''}
+          onChange={(e) => setFormData({ ...formData, cost: e.target.value ? parseFloat(e.target.value) : undefined })}
+          className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2"
+          placeholder="0.00"
+          disabled={disabled || isSubmitting}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
           Notes (optional)
         </label>
         <textarea
@@ -181,27 +233,41 @@ export function MaintenanceRecordForm({ onSubmit, disabled = false }: Maintenanc
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={disabled || isSubmitting || !formData.description || !formData.performedBy || (isRepairType && !formData.estimatedReturnDate)}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isSubmitting ? (
-          <>
-            <RefreshCcw className="h-4 w-4 animate-spin" />
-            <span>Adding Record...</span>
-          </>
-        ) : (
-          <>
-            <Wrench className="h-4 w-4" />
-            <span>Add Maintenance Record</span>
-          </>
+      <div className="flex gap-3">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={disabled || isSubmitting}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[var(--bg-secondary)] hover:bg-[var(--bg-secondary)]/80 text-[var(--text-primary)] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--border-color)]"
+          >
+            Cancel
+          </button>
         )}
-      </button>
+        <button
+          type="submit"
+          disabled={disabled || isSubmitting || !formData.description || !formData.performedBy || (isRepairType && !formData.estimatedReturnDate)}
+          className={`${onCancel ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {isSubmitting ? (
+            <>
+              <RefreshCcw className="h-4 w-4 animate-spin" />
+              <span>{isEditMode ? 'Updating...' : 'Adding Record...'}</span>
+            </>
+          ) : (
+            <>
+              {isEditMode ? <Edit2 className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+              <span>{isEditMode ? 'Update Maintenance Record' : 'Add Maintenance Record'}</span>
+            </>
+          )}
+        </button>
+      </div>
       
-      <p className="text-xs text-center text-[var(--text-secondary)]">
-        The submission will be automatically timestamped with today's date.
-      </p>
+      {!isEditMode && (
+        <p className="text-xs text-center text-[var(--text-secondary)]">
+          The submission will be automatically timestamped with today's date.
+        </p>
+      )}
     </form>
   );
 } 

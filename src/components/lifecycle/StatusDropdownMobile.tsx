@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList, Alert, TextInput } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { PropLifecycleStatus, lifecycleStatusLabels, lifecycleStatusPriority } from '../../types/lifecycle';
 
 interface StatusDropdownMobileProps {
   currentStatus: PropLifecycleStatus;
-  onStatusChange: (newStatus: PropLifecycleStatus) => Promise<void>;
+  propId?: string; // Optional propId for updating additional fields
+  onStatusChange: (newStatus: PropLifecycleStatus, additionalData?: { cutPropsStorageContainer?: string; estimatedDeliveryDate?: string; notes?: string }) => Promise<void>;
   disabled?: boolean;
 }
 
 export const StatusDropdownMobile: React.FC<StatusDropdownMobileProps> = ({
   currentStatus,
+  propId,
   onStatusChange,
   disabled = false,
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showMissingModal, setShowMissingModal] = useState(false);
+  const [showCutContainerModal, setShowCutContainerModal] = useState(false);
+  const [showDeliveryDateModal, setShowDeliveryDateModal] = useState(false);
+  const [showReplacementReasonModal, setShowReplacementReasonModal] = useState(false);
+  const [cutContainerInput, setCutContainerInput] = useState('');
+  const [deliveryDateInput, setDeliveryDateInput] = useState('');
+  const [replacementReasonInput, setReplacementReasonInput] = useState('');
+  const [pendingStatus, setPendingStatus] = useState<PropLifecycleStatus | null>(null);
   const [localStatus, setLocalStatus] = useState<PropLifecycleStatus>(currentStatus);
 
   // Update local status when prop status changes externally
@@ -29,13 +39,59 @@ export const StatusDropdownMobile: React.FC<StatusDropdownMobileProps> = ({
       return;
     }
 
+    // Handle missing prop - show modal first
+    if (newStatus === 'missing') {
+      setPendingStatus(newStatus);
+      setShowModal(false);
+      setShowMissingModal(true);
+      return;
+    }
+
+    // Handle cut status - prompt for storage container
+    if (newStatus === 'cut') {
+      setPendingStatus(newStatus);
+      setShowModal(false);
+      setShowCutContainerModal(true);
+      return;
+    }
+
+    // Handle on_order status - prompt for delivery date
+    if (newStatus === 'on_order') {
+      setPendingStatus(newStatus);
+      setShowModal(false);
+      setShowDeliveryDateModal(true);
+      return;
+    }
+
+    // For other statuses, proceed directly
+    await proceedWithStatusChange(newStatus);
+  };
+
+  const proceedWithStatusChange = async (newStatus: PropLifecycleStatus, additionalData?: { cutPropsStorageContainer?: string; estimatedDeliveryDate?: string; notes?: string }) => {
     setIsUpdating(true);
     try {
-      await onStatusChange(newStatus);
+      await onStatusChange(newStatus, additionalData);
       setLocalStatus(newStatus);
       setShowModal(false);
+      setShowMissingModal(false);
+      setShowCutContainerModal(false);
+      setShowDeliveryDateModal(false);
+      setShowReplacementReasonModal(false);
+      setCutContainerInput('');
+      setDeliveryDateInput('');
+      setReplacementReasonInput('');
+      setPendingStatus(null);
     } catch (error: any) {
-      Alert.alert('Error', `Failed to update status: ${error.message || 'Unknown error'}`);
+      // Check if it's a validation error (user-friendly message) or other error
+      const errorMessage = error.message || 'Unknown error';
+      const isValidationError = errorMessage.includes('Cannot change status from') || 
+                                 errorMessage.includes('Valid options from');
+      
+      Alert.alert(
+        isValidationError ? 'Invalid Status Change' : 'Error',
+        errorMessage,
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsUpdating(false);
     }
@@ -59,7 +115,9 @@ export const StatusDropdownMobile: React.FC<StatusDropdownMobileProps> = ({
     }
   };
 
-  const statusOptions = Object.keys(lifecycleStatusLabels) as PropLifecycleStatus[];
+  // Filter out system statuses that shouldn't be shown in the dropdown
+  const statusOptions = Object.keys(lifecycleStatusLabels)
+    .filter((status) => status !== 'to_buy' && status !== 'checked_out') as PropLifecycleStatus[];
 
   return (
     <>
@@ -144,6 +202,265 @@ export const StatusDropdownMobile: React.FC<StatusDropdownMobileProps> = ({
           </View>
         </View>
       </Modal>
+
+      {/* Missing Prop Modal */}
+      <Modal
+        visible={showMissingModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowMissingModal(false);
+          setPendingStatus(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.actionModalContent}>
+            <Text style={styles.actionModalTitle}>Missing Prop - Action Required</Text>
+            <Text style={styles.actionModalText}>
+              This prop has been marked as missing. What action should be taken?
+            </Text>
+            <View style={styles.actionButtonContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cutButton]}
+                onPress={async () => {
+                  setShowMissingModal(false);
+                  setShowCutContainerModal(true);
+                }}
+                accessibilityLabel="Cut from show"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Cut from Show</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.replaceButton]}
+                onPress={() => {
+                  setShowMissingModal(false);
+                  setShowReplacementReasonModal(true);
+                }}
+                accessibilityLabel="Needs replacement"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Needs Replacement</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowMissingModal(false);
+                  setPendingStatus(null);
+                }}
+                accessibilityLabel="Cancel"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cut Props Storage Container Modal */}
+      <Modal
+        visible={showCutContainerModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowCutContainerModal(false);
+          setPendingStatus(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.actionModalContent}>
+            <Text style={styles.actionModalTitle}>Storage Container Location</Text>
+            <Text style={styles.actionModalText}>
+              Please enter the storage container location for this cut prop:
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              value={cutContainerInput}
+              onChangeText={setCutContainerInput}
+              placeholder="e.g., Container A, Box 3"
+              placeholderTextColor="#888"
+              autoFocus
+              maxLength={100}
+              accessibilityLabel="Storage container location input"
+              accessibilityHint="Enter the storage container location for this cut prop"
+            />
+            <View style={styles.actionButtonContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.confirmButton]}
+                onPress={() => {
+                  const trimmedContainer = cutContainerInput.trim();
+                  if (!trimmedContainer) {
+                    Alert.alert('Required', 'Storage container location is required for cut props.');
+                    return;
+                  }
+                  // Sanitize input: remove any potentially harmful characters
+                  const sanitized = trimmedContainer.replace(/[<>]/g, '');
+                  const status = pendingStatus || 'cut';
+                  proceedWithStatusChange(status, { cutPropsStorageContainer: sanitized });
+                }}
+                accessibilityLabel="Confirm storage container"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Confirm</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowCutContainerModal(false);
+                  setCutContainerInput('');
+                  setPendingStatus(null);
+                }}
+                accessibilityLabel="Cancel"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delivery Date Modal */}
+      <Modal
+        visible={showDeliveryDateModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowDeliveryDateModal(false);
+          setPendingStatus(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.actionModalContent}>
+            <Text style={styles.actionModalTitle}>Expected Delivery Date</Text>
+            <Text style={styles.actionModalText}>
+              Please enter the expected delivery date (YYYY-MM-DD):
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              value={deliveryDateInput}
+              onChangeText={setDeliveryDateInput}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="#888"
+              autoFocus
+              accessibilityLabel="Delivery date input"
+              accessibilityHint="Enter the expected delivery date in YYYY-MM-DD format"
+            />
+            <View style={styles.actionButtonContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.confirmButton]}
+                onPress={() => {
+                  const trimmedDate = deliveryDateInput.trim();
+                  if (!trimmedDate) {
+                    Alert.alert('Required', 'Delivery date is required for props on order.');
+                    return;
+                  }
+                  // Validate date format
+                  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+                  if (!dateRegex.test(trimmedDate)) {
+                    Alert.alert('Invalid Format', 'Please enter date in YYYY-MM-DD format.');
+                    return;
+                  }
+                  // Validate actual date validity
+                  const dateParts = trimmedDate.split('-');
+                  const year = parseInt(dateParts[0], 10);
+                  const month = parseInt(dateParts[1], 10);
+                  const day = parseInt(dateParts[2], 10);
+                  const dateObj = new Date(year, month - 1, day);
+                  if (
+                    dateObj.getFullYear() !== year ||
+                    dateObj.getMonth() !== month - 1 ||
+                    dateObj.getDate() !== day
+                  ) {
+                    Alert.alert('Invalid Date', 'Please enter a valid date.');
+                    return;
+                  }
+                  const status = pendingStatus || 'on_order';
+                  proceedWithStatusChange(status, { estimatedDeliveryDate: trimmedDate });
+                }}
+                accessibilityLabel="Confirm delivery date"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Confirm</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowDeliveryDateModal(false);
+                  setDeliveryDateInput('');
+                  setPendingStatus(null);
+                }}
+                accessibilityLabel="Cancel"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Replacement Reason Modal */}
+      <Modal
+        visible={showReplacementReasonModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowReplacementReasonModal(false);
+          setReplacementReasonInput('');
+          setPendingStatus(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.actionModalContent}>
+            <Text style={styles.actionModalTitle}>Reason for Replacement</Text>
+            <Text style={styles.actionModalText}>
+              Please provide the reason for replacement:
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              value={replacementReasonInput}
+              onChangeText={setReplacementReasonInput}
+              placeholder="Enter reason for replacement..."
+              placeholderTextColor="#888"
+              autoFocus
+              multiline
+              numberOfLines={3}
+              accessibilityLabel="Replacement reason input"
+              accessibilityHint="Enter the reason why this prop needs to be replaced"
+            />
+            <View style={styles.actionButtonContainer}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.confirmButton]}
+                onPress={() => {
+                  const trimmedReason = replacementReasonInput.trim();
+                  const notes = trimmedReason
+                    ? `Reason for replacement: ${trimmedReason}`
+                    : undefined;
+                  proceedWithStatusChange('damaged_awaiting_replacement', { notes });
+                }}
+                accessibilityLabel="Confirm replacement"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Confirm</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.cancelButton]}
+                onPress={() => {
+                  setShowReplacementReasonModal(false);
+                  setReplacementReasonInput('');
+                  setPendingStatus(null);
+                }}
+                accessibilityLabel="Cancel"
+                accessibilityRole="button"
+              >
+                <Text style={styles.actionButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 };
@@ -222,6 +539,61 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   statusOptionTextSelected: {
+    fontWeight: '600',
+  },
+  actionModalContent: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 20,
+    margin: 20,
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  actionModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 12,
+  },
+  actionModalText: {
+    fontSize: 14,
+    color: '#cccccc',
+    marginBottom: 16,
+  },
+  textInput: {
+    backgroundColor: '#2a2a2a',
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 8,
+    padding: 12,
+    color: '#ffffff',
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  actionButtonContainer: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  actionButton: {
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cutButton: {
+    backgroundColor: '#ea580c',
+  },
+  replaceButton: {
+    backgroundColor: '#dc2626',
+  },
+  confirmButton: {
+    backgroundColor: '#3b82f6',
+  },
+  cancelButton: {
+    backgroundColor: '#4b5563',
+  },
+  actionButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

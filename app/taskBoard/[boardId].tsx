@@ -518,23 +518,137 @@ const TaskBoardDetailScreen = () => {
     async (cardId: string, listId: string, updates: Partial<CardData>) => {
       if (!boardId) return;
       try {
-        // Check if task is being marked as completed and log to prop maintenance history
         const currentCard = cards[listId]?.find(card => card.id === cardId);
-        if (currentCard && (updates.completed === true || updates.status === 'done')) {
-          const wasCompleted = currentCard.completed || currentCard.status === 'done';
-          const isNowCompleted = updates.completed === true || updates.status === 'done';
+        
+        // Check if assignedTo is being updated and update prop status if assigned to maker
+        if (updates.assignedTo !== undefined && currentCard?.propId && board?.showId) {
+          const previousAssignedTo = currentCard.assignedTo || [];
+          const newAssignedTo = updates.assignedTo || [];
+          
+          try {
+            // Get show to check team roles
+            const showDoc = await firebaseService.getDocument('shows', board.showId);
+            if (showDoc?.data?.team) {
+              const team = showDoc.data.team;
+              // Check if any assigned user is a maker (prop_maker, props_carpenter, or similar)
+              const assignedMakers = newAssignedTo.filter((userId: string) => {
+                const role = team[userId];
+                return role === 'prop_maker' || role === 'props_carpenter' || role === 'propmaker' || 
+                       role === 'senior-propmaker' || role?.toLowerCase().includes('maker');
+              });
+              
+              if (assignedMakers.length > 0) {
+                // Get current prop status
+                const propDoc = await firebaseService.getDocument('props', currentCard.propId);
+                if (propDoc?.data) {
+                  const currentPropStatus = propDoc.data.status;
+                  let newStatus: string | null = null;
+                  
+                  // Update status based on current status
+                  // Note: Only transition if the transition is valid according to STATUS_TRANSITIONS
+                  // damaged_awaiting_repair cannot transition to out_for_repair (invalid transition)
+                  // needs_modifying can transition to being_modified (valid transition)
+                  if (currentPropStatus === 'needs_modifying') {
+                    newStatus = 'being_modified';
+                  }
+                  
+                  if (newStatus) {
+                    // Update prop status
+                    await firebaseService.updateDocument('props', currentCard.propId, {
+                      status: newStatus,
+                      lastStatusUpdate: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    });
+                    
+                    // Create status history entry
+                    await firebaseService.addDocument(`props/${currentCard.propId}/statusHistory`, {
+                      previousStatus: currentPropStatus,
+                      newStatus: newStatus,
+                      updatedBy: user?.uid || 'system',
+                      date: new Date().toISOString(),
+                      createdAt: new Date().toISOString(),
+                      notes: `Status automatically updated when task assigned to maker`,
+                      relatedTaskId: cardId,
+                    });
+                  }
+                }
+              }
+            }
+          } catch (statusUpdateError) {
+            // Log error but don't fail the card update
+            console.warn('Failed to update prop status when assigned to maker:', statusUpdateError);
+          }
+        }
+        
+        // Check if task is being marked as completed and log to prop maintenance history
+        // Check both completed field and status field (status: 'done') to match web app behavior
+        const hasStatusField = (updates as any).status !== undefined;
+        const statusIsDone = (updates as any).status === 'done';
+        const isCompleting = updates.completed === true || statusIsDone;
+        
+        if (currentCard && isCompleting) {
+          // Check if card was previously completed (check both completed field and status field)
+          const currentStatus = (currentCard as any).status;
+          const wasCompleted = currentCard.completed || currentStatus === 'done' || false;
+          const isNowCompleted = updates.completed === true || statusIsDone;
           
           // Only log when transitioning from incomplete to complete
           if (!wasCompleted && isNowCompleted && currentCard.propId) {
             try {
               // Create updated card data for logging
-              const updatedCard = { ...currentCard, ...updates, completed: true, status: 'done' as const };
-              if (TaskCompletionService.shouldLogTaskCompletion(updatedCard, true, false)) {
-                await TaskCompletionService.logCompletedTaskToProp({
-                  card: updatedCard,
-                  completedBy: user?.uid || 'unknown',
-                  firebaseService: firebaseService,
-                });
+              // Ensure both completed and status are set to match web app behavior
+              const updatedCard = { 
+                ...currentCard, 
+                ...updates, 
+                completed: true,
+                ...(hasStatusField ? { status: 'done' } : {})
+              } as CardData;
+              await TaskCompletionService.logCompletedTaskToProp({
+                card: updatedCard,
+                completedBy: user?.uid || 'unknown',
+                firebaseService: firebaseService,
+              });
+              
+              // Update prop status when repair/maintenance task is completed
+              // Use valid transitions according to STATUS_TRANSITIONS rules
+              if (TaskCompletionService.isRepairMaintenanceTask(updatedCard)) {
+                try {
+                  const propDoc = await firebaseService.getDocument('props', currentCard.propId);
+                  if (propDoc?.data) {
+                    const currentStatus = propDoc.data.status;
+                    let newStatus: string | null = null;
+                    
+                    // Determine the correct new status based on current status and valid transitions
+                    if (currentStatus === 'out_for_repair' || currentStatus === 'damaged_awaiting_repair') {
+                      // These can transition to repaired_back_in_show
+                      newStatus = 'repaired_back_in_show';
+                    } else if (currentStatus === 'under_maintenance' || currentStatus === 'being_modified') {
+                      // These must transition to available_in_storage (not repaired_back_in_show)
+                      newStatus = 'available_in_storage';
+                    }
+                    
+                    if (newStatus) {
+                      await firebaseService.updateDocument('props', currentCard.propId, {
+                        status: newStatus,
+                        lastStatusUpdate: new Date().toISOString(),
+                        updatedAt: new Date().toISOString(),
+                      });
+                      
+                      // Create status history entry
+                      await firebaseService.addDocument(`props/${currentCard.propId}/statusHistory`, {
+                        previousStatus: currentStatus,
+                        newStatus: newStatus,
+                        updatedBy: user?.uid || 'system',
+                        date: new Date().toISOString(),
+                        createdAt: new Date().toISOString(),
+                        notes: `Status automatically updated when repair/maintenance task completed`,
+                        relatedTaskId: cardId,
+                      });
+                    }
+                  }
+                } catch (statusError) {
+                  console.warn('Failed to update prop status when repair/maintenance task completed:', statusError);
+                }
               }
             } catch (logError) {
               // Log error but don't fail the card update
@@ -553,7 +667,7 @@ const TaskBoardDetailScreen = () => {
         Alert.alert('Error', 'Could not update card details.');
       }
     },
-    [boardId, firebaseService, offlineSyncManager, cards, user],
+    [boardId, firebaseService, offlineSyncManager, cards, user, board],
   );
 
   const handleDeleteCard = useCallback(
@@ -983,8 +1097,20 @@ const TaskBoardDetailScreen = () => {
                 lists={orderedLists}
                 cards={filteredCardsForShow}
                 onAddCard={handleAddCardFromList}
-                onUpdateCard={handleUpdateCard}
-                onDeleteCard={handleDeleteCard}
+                onUpdateCard={async (cardId: string, updates: Partial<CardData>) => {
+                  // Find the list containing this card
+                  const listId = Object.keys(cards).find(lid => cards[lid].some(card => card.id === cardId));
+                  if (listId) {
+                    await handleUpdateCard(cardId, listId, updates);
+                  }
+                }}
+                onDeleteCard={(cardId: string) => {
+                  // Find the list containing this card
+                  const listId = Object.keys(cards).find(lid => cards[lid].some(card => card.id === cardId));
+                  if (listId) {
+                    handleDeleteCard(listId, cardId);
+                  }
+                }}
                 selectedCardId={selectedCardId}
                 loading={loading}
                 error={error}

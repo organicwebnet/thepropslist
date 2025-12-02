@@ -1,13 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MaintenanceRecord } from '../../types/lifecycle.ts';
-import { Wrench, ClipboardList, Calendar, Clock, AlertTriangle } from 'lucide-react';
+import { Wrench, ClipboardList, Calendar, Clock, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
+import { MaintenanceRecordForm } from './MaintenanceRecordForm.tsx';
 
 interface MaintenanceHistoryProps {
   records: MaintenanceRecord[];
   maxItems?: number;
+  onEdit?: (recordId: string, record: Partial<Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>>) => Promise<void>;
+  onDelete?: (recordId: string) => Promise<void>;
+  currentUserId?: string;
 }
 
-export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistoryProps) {
+export function MaintenanceHistory({ records, maxItems = 5, onEdit, onDelete, currentUserId }: MaintenanceHistoryProps) {
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
+
   // Sort records by date descending (newest first)
   const sortedRecords = [...records].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
@@ -16,6 +23,38 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
   // Limit items if needed
   const displayItems = maxItems ? sortedRecords.slice(0, maxItems) : sortedRecords;
   const hasMoreItems = sortedRecords.length > maxItems;
+
+  const handleEdit = async (recordId: string, record: Partial<Omit<MaintenanceRecord, 'id' | 'createdAt' | 'createdBy'>>) => {
+    if (!onEdit) return;
+    try {
+      await onEdit(recordId, record);
+      setEditingRecordId(null);
+    } catch (error) {
+      console.error('Failed to update maintenance record:', error);
+      alert('Failed to update maintenance record. Please try again.');
+      // Don't clear editing state on error so user can try again
+    }
+  };
+
+  const handleDelete = async (recordId: string) => {
+    if (!onDelete) return;
+    if (!confirm('Are you sure you want to delete this maintenance record? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      await onDelete(recordId);
+      setDeletingRecordId(null);
+    } catch (error) {
+      console.error('Failed to delete maintenance record:', error);
+      alert('Failed to delete maintenance record. Please try again.');
+    }
+  };
+
+  // Check if user can edit/delete (only if they created it or if no currentUserId is provided)
+  const canModify = (record: MaintenanceRecord) => {
+    if (!currentUserId) return true; // If no userId provided, allow editing (for backwards compatibility)
+    return record.createdBy === currentUserId;
+  };
 
   // Get type icon and color
   const getTypeDetails = (type: MaintenanceRecord['type']) => {
@@ -75,11 +114,28 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
       <ul className="space-y-4">
         {displayItems.map((record) => {
           const typeDetails = getTypeDetails(record.type);
+          const isEditing = editingRecordId === record.id;
+          const isDeleting = deletingRecordId === record.id;
+          const canEdit = canModify(record) && onEdit;
+          const canDelete = canModify(record) && onDelete;
+          
+          if (isEditing) {
+            return (
+              <li key={record.id} className="p-4 bg-[var(--bg-secondary)] rounded-lg border-2 border-[var(--highlight-color)]">
+                <MaintenanceRecordForm
+                  initialData={record}
+                  onSubmit={async () => {}}
+                  onUpdate={(updateData) => handleEdit(record.id, updateData)}
+                  onCancel={() => setEditingRecordId(null)}
+                />
+              </li>
+            );
+          }
           
           return (
             <li key={record.id} className="p-4 bg-[var(--bg-secondary)] rounded-lg">
               <div className="flex items-start justify-between mb-3">
-                <div>
+                <div className="flex-1">
                   <p className="text-[var(--text-secondary)] text-sm">
                     Recorded on {new Date(record.date).toLocaleDateString()}
                   </p>
@@ -87,10 +143,36 @@ export function MaintenanceHistory({ records, maxItems = 5 }: MaintenanceHistory
                     <span className="font-medium text-[var(--text-primary)]">{record.performedBy}</span>
                   </div>
                 </div>
-                <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${typeDetails?.color}`}>
-                  {typeDetails?.icon}
-                  {typeDetails?.label}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${typeDetails?.color}`}>
+                    {typeDetails?.icon}
+                    {typeDetails?.label}
+                  </span>
+                  {(canEdit || canDelete) && (
+                    <div className="flex items-center gap-1">
+                      {canEdit && (
+                        <button
+                          onClick={() => setEditingRecordId(record.id)}
+                          disabled={isDeleting}
+                          className="p-1.5 hover:bg-[var(--bg-primary)] rounded transition-colors text-[var(--text-secondary)] hover:text-[var(--highlight-color)] disabled:opacity-50"
+                          title="Edit record"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDelete(record.id)}
+                          disabled={isEditing || isDeleting}
+                          className="p-1.5 hover:bg-red-500/10 rounded transition-colors text-[var(--text-secondary)] hover:text-red-500 disabled:opacity-50"
+                          title="Delete record"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {/* Show repair timeline information if this is a repair record */}

@@ -18,7 +18,8 @@ export type WidgetId =
   | 'cut-props-packing'
   | 'props-needing-work'
   | 'shopping-approval-needed'
-  | 'notifications';
+  | 'notifications'
+  | 'delivery-list';
 
 export interface WidgetConfig {
   id: WidgetId;
