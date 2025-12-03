@@ -202,7 +202,7 @@ const ShowsListPage: React.FC = () => {
         </div>
       )}
 
-      <div className="relative min-h-[70vh] flex flex-col justify-center items-center bg-gradient-to-br from-pb-primary/40 via-pb-darker/80 to-pb-accent/30 rounded-xl shadow-xl p-6">
+      <div className="relative min-h-[70vh] flex flex-col justify-start items-center bg-gradient-to-br from-pb-primary/40 via-pb-darker/80 to-pb-accent/30 rounded-xl shadow-xl p-6">
         <div className="flex w-full justify-between items-center mb-6">
           <h2 className="text-2xl font-bold self-start">Shows List</h2>
             <div className="flex items-center gap-3">

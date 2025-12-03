@@ -1,10 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PropLifecycleStatus, lifecycleStatusLabels, lifecycleStatusPriority, StatusPriority } from '../../../src/types/lifecycle';
 import { X } from 'lucide-react';
 
 interface StatusDropdownProps {
   currentStatus: PropLifecycleStatus;
-  onStatusChange: (newStatus: PropLifecycleStatus, notes?: string) => Promise<void>;
+  onStatusChange: (
+    newStatus: PropLifecycleStatus, 
+    notesOrData?: string | { notes?: string; cutPropsStorageContainer?: string; estimatedDeliveryDate?: string }
+  ) => Promise<void>;
   disabled?: boolean;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -35,11 +38,6 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       return;
     }
 
-    // Store the select element for later updates
-    if (!selectRef.current) {
-      selectRef.current = e.target;
-    }
-
     // Statuses that require details
     const statusesRequiringDetails: PropLifecycleStatus[] = [
       'damaged_awaiting_repair',
@@ -65,7 +63,9 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
         }
         return;
       }
-      await proceedWithStatusChange(newStatus, `Storage container: ${container.trim()}`);
+      // Sanitize input: remove any potentially harmful characters
+      const sanitized = container.trim().replace(/[<>]/g, '');
+      await proceedWithStatusChange(newStatus, { cutPropsStorageContainer: sanitized });
       return;
     }
 
@@ -80,7 +80,8 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       }
       // Validate date format
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(date.trim())) {
+      const trimmedDate = date.trim();
+      if (!dateRegex.test(trimmedDate)) {
         alert('Please enter date in YYYY-MM-DD format.');
         // Revert select on invalid date
         if (selectRef.current) {
@@ -88,7 +89,25 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
         }
         return;
       }
-      await proceedWithStatusChange(newStatus, `Expected delivery date: ${date.trim()}`);
+      // Validate actual date validity
+      const dateParts = trimmedDate.split('-');
+      const year = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10);
+      const day = parseInt(dateParts[2], 10);
+      const dateObj = new Date(year, month - 1, day);
+      if (
+        dateObj.getFullYear() !== year ||
+        dateObj.getMonth() !== month - 1 ||
+        dateObj.getDate() !== day
+      ) {
+        alert('Please enter a valid date.');
+        // Revert select on invalid date
+        if (selectRef.current) {
+          selectRef.current.value = localStatus;
+        }
+        return;
+      }
+      await proceedWithStatusChange(newStatus, { estimatedDeliveryDate: trimmedDate });
       return;
     }
 
@@ -104,11 +123,14 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
     await proceedWithStatusChange(newStatus);
   };
 
-  const proceedWithStatusChange = async (newStatus: PropLifecycleStatus, notes?: string) => {
+  const proceedWithStatusChange = async (
+    newStatus: PropLifecycleStatus, 
+    notesOrData?: string | { notes?: string; cutPropsStorageContainer?: string; estimatedDeliveryDate?: string }
+  ) => {
     console.log('StatusDropdown: Attempting to change status from', localStatus, 'to', newStatus);
     setIsUpdating(true);
     try {
-      await onStatusChange(newStatus, notes);
+      await onStatusChange(newStatus, notesOrData);
       setLocalStatus(newStatus);
       console.log('StatusDropdown: Successfully updated status to', newStatus);
     } catch (error: any) {
@@ -118,6 +140,10 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
         code: error?.code,
         stack: error?.stack
       });
+      // Revert select to previous status on error
+      if (selectRef.current) {
+        selectRef.current.value = localStatus;
+      }
       const errorMsg = error?.message || error?.code || 'Unknown error';
       alert(`Failed to update prop status: ${errorMsg}. Please check the browser console for more details.`);
     } finally {
@@ -183,6 +209,27 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
     setLocalStatus(currentStatus);
   }, [currentStatus]);
 
+  // Handle ESC key to close details modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showDetailsModal) {
+        // Revert select on cancel
+        if (selectRef.current) {
+          selectRef.current.value = localStatus;
+        }
+        setShowDetailsModal(false);
+        setDetailsNotes('');
+        setRepairDetails('');
+        setPendingStatus(null);
+      }
+    };
+
+    if (showDetailsModal) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [showDetailsModal, localStatus]);
+
   const statusPriority = lifecycleStatusPriority[localStatus] || 'info';
   const statusColor = getStatusColor(statusPriority);
 
@@ -207,6 +254,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
           focus:outline-none focus:ring-2 focus:ring-pb-primary focus:border-pb-primary
           hover:bg-pb-darker/90 transition-all
           disabled:opacity-50 disabled:cursor-not-allowed
+          min-h-[44px] md:min-h-0
         `}
       >
         {Object.entries(lifecycleStatusLabels).map(([value, label]) => (
@@ -242,14 +290,14 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
             }
           }}
         >
-          <div className="bg-pb-darker rounded-2xl border border-pb-primary/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-pb-primary/20">
-              <h2 id="status-details-title" className="text-xl font-bold text-white">
+          <div className="bg-pb-darker rounded-2xl border border-pb-primary/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
+            <div className="flex items-center justify-between p-4 md:p-6 border-b border-pb-primary/20">
+              <h2 id="status-details-title" className="text-base md:text-xl font-bold text-white break-words flex-1 min-w-0 pr-2">
                 {lifecycleStatusLabels[pendingStatus]} - Details Required
               </h2>
               <button
                 onClick={handleCancelDetails}
-                className="p-2 hover:bg-pb-primary/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-pb-primary/20 rounded-lg transition-colors flex-shrink-0 min-h-[44px] md:min-h-0 w-10 h-10 md:w-auto md:h-auto flex items-center justify-center"
                 aria-label="Close modal"
                 type="button"
               >
@@ -257,20 +305,20 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <p className="text-pb-gray text-sm">
+            <div className="p-4 md:p-6 space-y-4">
+              <p className="text-pb-gray text-xs md:text-sm break-words">
                 Please provide details about this status change. This information helps track the prop's condition and history.
               </p>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">
+                <label className="block text-xs md:text-sm font-medium text-white mb-2">
                   Notes (optional)
                 </label>
                 <textarea
                   value={detailsNotes}
                   onChange={(e) => setDetailsNotes(e.target.value)}
                   placeholder="Enter any notes about this status change..."
-                  className="w-full bg-pb-darker/50 border border-pb-primary/20 rounded-lg px-4 py-3 text-white placeholder-pb-gray focus:outline-none focus:ring-2 focus:ring-pb-primary min-h-[80px]"
+                  className="w-full bg-pb-darker/50 border border-pb-primary/20 rounded-lg px-3 md:px-4 py-2 md:py-3 text-white text-sm md:text-base placeholder-pb-gray focus:outline-none focus:ring-2 focus:ring-pb-primary min-h-[100px] md:min-h-[80px]"
                   rows={4}
                 />
               </div>
@@ -280,30 +328,30 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                 pendingStatus === 'under_maintenance' ||
                 pendingStatus === 'needs_modifying') && (
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
+                  <label className="block text-xs md:text-sm font-medium text-white mb-2">
                     Repair/Maintenance Details (recommended)
                   </label>
                   <textarea
                     value={repairDetails}
                     onChange={(e) => setRepairDetails(e.target.value)}
                     placeholder="Describe what needs to be repaired or maintained..."
-                    className="w-full bg-pb-darker/50 border border-pb-primary/20 rounded-lg px-4 py-3 text-white placeholder-pb-gray focus:outline-none focus:ring-2 focus:ring-pb-primary min-h-[100px]"
+                    className="w-full bg-pb-darker/50 border border-pb-primary/20 rounded-lg px-3 md:px-4 py-2 md:py-3 text-white text-sm md:text-base placeholder-pb-gray focus:outline-none focus:ring-2 focus:ring-pb-primary min-h-[120px] md:min-h-[100px]"
                     rows={5}
                   />
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-pb-primary/20">
+              <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 pt-4 border-t border-pb-primary/20">
                 <button
                   onClick={handleCancelDetails}
-                  className="px-4 py-2 bg-pb-darker/50 hover:bg-pb-darker text-white rounded-lg transition-colors"
+                  className="px-4 py-2.5 md:py-2 bg-pb-darker/50 hover:bg-pb-darker text-white rounded-lg transition-colors text-sm md:text-base min-h-[44px] md:min-h-0 flex items-center justify-center"
                   type="button"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmDetails}
-                  className="px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg transition-colors"
+                  className="px-4 py-2.5 md:py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg transition-colors text-sm md:text-base min-h-[44px] md:min-h-0 flex items-center justify-center"
                   type="button"
                 >
                   Confirm

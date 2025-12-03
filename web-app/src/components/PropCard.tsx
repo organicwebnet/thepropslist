@@ -45,7 +45,7 @@ export const PropCard: React.FC<PropCardProps> = ({
     return (
       <div className="bg-pb-darker/60 rounded-xl shadow-lg p-6 border border-pb-primary/20">
         {/* Image skeleton */}
-        <div className="w-full h-48 rounded-lg overflow-hidden bg-pb-gray/30 mb-4 flex items-center justify-center">
+        <div className="w-full h-32 md:h-40 lg:h-48 rounded-lg overflow-hidden bg-pb-gray/30 mb-4 flex items-center justify-center">
           <Skeleton width={60} height={60} rounded className="bg-pb-gray/50" />
         </div>
         
@@ -82,10 +82,10 @@ export const PropCard: React.FC<PropCardProps> = ({
   return (
     <Link
       to={`/props/${prop.id}`}
-      className="block bg-pb-darker/60 rounded-xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:bg-pb-darker/80 transition-all duration-200 border border-pb-primary/20 hover:border-pb-primary/40 group no-underline"
+      className="block bg-pb-darker/60 rounded-xl shadow-lg p-4 md:p-5 lg:p-6 cursor-pointer hover:shadow-xl hover:bg-pb-darker/80 transition-all duration-200 border border-pb-primary/20 hover:border-pb-primary/40 group no-underline"
     >
       {/* Prop Image */}
-      <div className="w-full h-48 rounded-lg overflow-hidden bg-pb-gray mb-4">
+      <div className="w-full h-32 md:h-40 lg:h-48 rounded-lg overflow-hidden bg-pb-gray mb-4">
         <PropImage
           prop={prop}
           className="w-full h-full"
@@ -112,7 +112,7 @@ export const PropCard: React.FC<PropCardProps> = ({
                 {checkbox}
               </div>
             )}
-            <h3 className="text-lg font-semibold text-white line-clamp-2 flex-1 group-hover:text-pb-primary transition-colors">
+            <h3 className="text-base md:text-lg font-semibold text-white line-clamp-2 flex-1 min-w-0 group-hover:text-pb-primary transition-colors">
               {prop.name}
             </h3>
           </div>
@@ -130,7 +130,7 @@ export const PropCard: React.FC<PropCardProps> = ({
         </div>
         
         {prop.description && (
-          <p className="text-pb-gray text-sm line-clamp-3 group-hover:text-pb-gray/80 transition-colors">
+          <p className="text-pb-gray text-xs md:text-sm line-clamp-3 group-hover:text-pb-gray/80 transition-colors break-words">
             {prop.description}
           </p>
         )}
@@ -160,7 +160,7 @@ export const PropCard: React.FC<PropCardProps> = ({
               
               return (
                 <>
-                  <span className="text-pb-gray text-sm group-hover:text-pb-gray/80 transition-colors">
+                  <span className="text-pb-gray text-xs md:text-sm group-hover:text-pb-gray/80 transition-colors break-words">
                     {hasSpares ? (
                       <>
                         {breakdown.required} req, {breakdown.ordered} ord
@@ -187,7 +187,7 @@ export const PropCard: React.FC<PropCardProps> = ({
             })()}
           </div>
           {prop.category && (
-            <span className="text-pb-primary text-sm font-medium group-hover:text-pb-primary/80 transition-colors">
+            <span className="text-pb-primary text-xs md:text-sm font-medium group-hover:text-pb-primary/80 transition-colors truncate">
               {prop.category}
             </span>
           )}

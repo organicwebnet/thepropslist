@@ -182,7 +182,6 @@ export const ShoppingApprovalWidget: React.FC<ShoppingApprovalWidgetProps> = ({
 
     return (
       <Link
-        key={item.id}
         to={`/shopping?itemId=${item.id}`}
         className="block p-3 rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 border border-pb-primary/20 transition-colors"
       >
@@ -269,7 +268,11 @@ export const ShoppingApprovalWidget: React.FC<ShoppingApprovalWidgetProps> = ({
       ) : (
         <div className="space-y-3">
           {/* Show items with pending options */}
-          {itemsWithPendingOptions.slice(0, 5).map(itemWithOptions => renderItem(itemWithOptions))}
+          {itemsWithPendingOptions.slice(0, 5).map(itemWithOptions => (
+            <React.Fragment key={itemWithOptions.item.id}>
+              {renderItem(itemWithOptions)}
+            </React.Fragment>
+          ))}
           
           {itemsWithPendingOptions.length > 5 && (
             <div className="text-xs text-pb-gray text-center pt-2">

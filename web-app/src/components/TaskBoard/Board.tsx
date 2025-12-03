@@ -806,7 +806,7 @@ const Board: React.FC<BoardProps> = ({ boardId, hideHeader, selectedCardId, view
                   if (card) break;
                 }
                 return card ? (
-                  <div className="block rounded-lg p-3 shadow-lg bg-pb-darker text-white min-w-[16rem] min-h-[4rem]">
+                  <div className="block rounded-lg p-3 md:p-4 shadow-lg bg-pb-darker text-white min-w-[14rem] md:min-w-[16rem] min-h-[4rem] break-words">
                     <div className="font-semibold">{card.title}</div>
                     {card.description && <div className="text-xs opacity-70 mt-1">{card.description}</div>}
                   </div>

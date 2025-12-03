@@ -122,7 +122,7 @@ const ShowDetailPage: React.FC = () => {
   return ( 
     <DashboardLayout>
       <div className="flex-1 flex flex-col min-h-screen">
-        <div className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-8">
+        <div className="w-full max-w-6xl mx-auto bg-pb-darker/60 rounded-xl shadow-lg p-8 my-4 md:my-6 lg:my-8">
           {/* Header Section - Title and Actions */}
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
             {/* Show Info */}

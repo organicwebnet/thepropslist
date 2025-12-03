@@ -258,7 +258,7 @@ const EditPropPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col min-h-screen w-full max-w-6xl mx-auto p-6">
+      <div className="flex flex-col min-h-screen w-full max-w-6xl mx-auto p-4 md:p-5 lg:p-6">
         <div className="mb-4 flex justify-end">
           <Link to="/props" className="inline-flex items-center px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-accent text-white font-semibold shadow transition">
             View Props List
@@ -271,7 +271,7 @@ const EditPropPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="bg-pb-darker/60 rounded-xl shadow-lg p-8 space-y-6"
+          className="bg-pb-darker/60 rounded-xl shadow-lg p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6"
         >
           <h1 className="text-2xl font-bold text-white mb-4">Edit Prop</h1>
           {error && <div className="text-red-500 mb-2">{error}</div>}
@@ -289,10 +289,10 @@ const EditPropPage: React.FC = () => {
                   disabled={saving}
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-pb-gray mb-1 font-medium">Name *</label>
-                  <input ref={nameInputRef} name="name" value={form.name} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
+                  <input ref={nameInputRef} name="name" value={form.name} onChange={handleChange} required className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base min-h-[44px] md:min-h-0" />
                 </div>
                 <div>
                   <label className="block text-pb-gray mb-1 font-medium">Color</label>
@@ -452,7 +452,7 @@ const EditPropPage: React.FC = () => {
             
               {/* Source-specific details */}
               {form.source === 'bought' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="md:col-span-2 flex items-center gap-4">
                     <label className="inline-flex items-center gap-2 text-pb-gray">
                       <input type="radio" name="retailerType" checked={!!(form as any).isOnlineRetailer} onChange={() => setForm(prev => prev ? { ...(prev as any), isOnlineRetailer: true } : prev)} />
@@ -480,7 +480,7 @@ const EditPropPage: React.FC = () => {
                 </div>
               )}
               {form.source === 'made' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-pb-gray mb-1 font-medium">Maker</label>
                     <select name="makerId" value={(form as any).makerId || ''} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white">
@@ -498,7 +498,7 @@ const EditPropPage: React.FC = () => {
                 </div>
               )}
               {form.source === 'hired' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-pb-gray mb-1 font-medium">Hire Company</label>
                     <select name="hireCompanyId" value={(form as any).hireCompanyId || ''} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white">
@@ -528,7 +528,7 @@ const EditPropPage: React.FC = () => {
                 </div>
               )}
               {form.source === 'borrowed' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-pb-gray mb-1 font-medium">Borrowed From</label>
                     <input name="borrowedFrom" value={(form as any).borrowedFrom || ''} onChange={handleChange} className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white" />
@@ -720,7 +720,7 @@ const EditPropPage: React.FC = () => {
           {form && (
             <fieldset className="border border-pb-primary/20 rounded-lg p-4">
               <legend className="px-2 text-sm text-pb-primary">Spare Storage</legend>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-pb-gray mb-1 font-medium">Spare Storage Location</label>
                   <input 

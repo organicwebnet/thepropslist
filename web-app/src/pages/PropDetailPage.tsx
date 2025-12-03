@@ -138,7 +138,11 @@ const PropDetailPage: React.FC = () => {
     }
   };
 
-  const handleStatusChange = async (newStatus: PropLifecycleStatus, notes?: string, reason?: string) => {
+  const handleStatusChange = async (
+    newStatus: PropLifecycleStatus, 
+    notesOrData?: string | { notes?: string; cutPropsStorageContainer?: string; estimatedDeliveryDate?: string }, 
+    reason?: string
+  ) => {
     if (!id || !service || !prop || !user) {
       throw new Error('Missing required data to update status');
     }
@@ -146,6 +150,32 @@ const PropDetailPage: React.FC = () => {
     const previousStatus = prop.status as PropLifecycleStatus;
     if (previousStatus === newStatus) {
       return; // No change needed
+    }
+
+    // Extract notes from either string or object format (supporting both web and mobile components)
+    let notes: string | undefined;
+    let additionalUpdates: Partial<Prop & { cutPropsStorageContainer?: string }> = {};
+    
+    if (typeof notesOrData === 'string') {
+      // Web StatusDropdown format: second parameter is a string
+      notes = notesOrData;
+    } else if (notesOrData && typeof notesOrData === 'object') {
+      // Mobile StatusDropdownMobile format: second parameter is an object
+      notes = notesOrData.notes;
+      
+      // Handle additional fields from mobile component
+      if (notesOrData.cutPropsStorageContainer) {
+        additionalUpdates.cutPropsStorageContainer = notesOrData.cutPropsStorageContainer;
+      }
+      if (notesOrData.estimatedDeliveryDate) {
+        // Validate and convert date
+        const dateObj = new Date(notesOrData.estimatedDeliveryDate);
+        if (!isNaN(dateObj.getTime())) {
+          additionalUpdates.estimatedDeliveryDate = dateObj.toISOString();
+        } else {
+          console.warn('Invalid delivery date provided:', notesOrData.estimatedDeliveryDate);
+        }
+      }
     }
 
     try {
@@ -163,12 +193,13 @@ const PropDetailPage: React.FC = () => {
       // Get data cleanup updates
       const cleanupUpdates = PropStatusService.getDataCleanupUpdates(newStatus);
 
-      // Update the prop status with cleanup
+      // Update the prop status with cleanup and additional fields
       await service.updateDocument('props', id, {
         status: newStatus,
         lastStatusUpdate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         ...cleanupUpdates,
+        ...additionalUpdates,
       });
 
       // Create enhanced status history entry (cast prop to shared type)
@@ -293,12 +324,13 @@ const PropDetailPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col min-h-screen w-full max-w-none p-6">
-      <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-pb-darker/80 backdrop-blur-sm border-b border-pb-primary/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <div className="text-2xl text-white font-bold">{prop.name}</div>
+      <div className="flex flex-col min-h-screen w-full max-w-none p-4 md:p-6">
+      <div className="sticky top-0 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-3 bg-pb-darker/80 backdrop-blur-sm border-b border-pb-primary/20">
+        <div className="flex flex-col gap-3 lg:gap-4">
+          {/* Top row: Prop name and tags */}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+            <div className="min-w-0 flex-1">
+              <div className="text-lg md:text-xl lg:text-2xl text-white font-bold truncate">{prop.name}</div>
               <div className="flex flex-wrap gap-2 mt-1">
                 <span className="px-2 py-0.5 rounded-full text-xs bg-pb-primary/30 text-white">
                   {prop.category}
@@ -311,7 +343,7 @@ const PropDetailPage: React.FC = () => {
                   
                   return (
                     <>
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-pb-accent/30 text-white">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-pb-accent/30 text-white truncate max-w-full">
                         {hasSpares ? (
                           `${breakdown.required} req, ${breakdown.ordered} ord${breakdown.spare > 0 ? ` (${breakdown.spare} spare${breakdown.spare !== 1 ? 's' : ''})` : ''}`
                         ) : (
@@ -333,37 +365,49 @@ const PropDetailPage: React.FC = () => {
                 })()}
               </div>
             </div>
+            {/* Location badge - only on larger screens */}
+            <span className="hidden lg:flex px-2 py-1 rounded-full text-xs bg-white/10 text-white items-center gap-1 flex-shrink-0">
+              <MapPin className="w-3 h-3 text-pb-primary flex-shrink-0" />
+              <span className="truncate">{prop.location || prop.currentLocation || 'No location'}</span>
+            </span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <span className="px-2 py-1 rounded-full text-xs bg-white/10 text-white flex items-center gap-1">
-              <MapPin className="w-3 h-3 text-pb-primary" />
-              {prop.location || prop.currentLocation || 'No location'}
+          
+          {/* Bottom row: Actions */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2">
+            {/* Location badge - shown on smaller screens */}
+            <span className="lg:hidden px-2 py-1 rounded-full text-xs bg-white/10 text-white flex items-center gap-1 max-w-full sm:max-w-[200px]">
+              <MapPin className="w-3 h-3 text-pb-primary flex-shrink-0" />
+              <span className="truncate">{prop.location || prop.currentLocation || 'No location'}</span>
             </span>
             {prop.status && (
-              <StatusDropdown
-                currentStatus={prop.status as PropLifecycleStatus}
-                onStatusChange={async (newStatus, notes) => {
-                  await handleStatusChange(newStatus, notes);
-                }}
-                size="sm"
-                disabled={false}
-              />
+              <div className="flex-shrink-0">
+                <StatusDropdown
+                  currentStatus={prop.status as PropLifecycleStatus}
+                  onStatusChange={async (newStatus, notes) => {
+                    await handleStatusChange(newStatus, notes);
+                  }}
+                  size="sm"
+                  disabled={false}
+                />
+              </div>
             )}
-            {missingFields.length > 0 && (
-              <a 
-                href="#gaps" 
-                onClick={handleNavClick('overview')} 
-                className="px-3 py-1.5 rounded-md bg-pb-warning text-black text-sm hover:opacity-90"
+            <div className="flex items-center gap-2 flex-wrap">
+              {missingFields.length > 0 && (
+                <a 
+                  href="#gaps" 
+                  onClick={handleNavClick('overview')} 
+                  className="px-2 md:px-3 py-1.5 rounded-md bg-pb-warning text-black text-xs md:text-sm hover:opacity-90 whitespace-nowrap"
+                >
+                  Complete ({missingFields.length})
+                </a>
+              )}
+              <Link 
+                to={`/props/${prop.id}/edit`}
+                className="px-2 md:px-3 py-1.5 rounded-md bg-pb-primary text-white text-xs md:text-sm hover:bg-pb-accent flex items-center gap-1 whitespace-nowrap"
               >
-                Complete details ({missingFields.length})
-              </a>
-            )}
-            <Link 
-              to={`/props/${prop.id}/edit`}
-              className="px-3 py-1.5 rounded-md bg-pb-primary text-white text-sm hover:bg-pb-accent flex items-center gap-1"
-            >
-              <Pencil className="w-4 h-4" /> Edit
-            </Link>
+                <Pencil className="w-3 h-3 md:w-4 md:h-4" /> <span className="hidden sm:inline">Edit</span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -374,24 +418,24 @@ const PropDetailPage: React.FC = () => {
         transition={{ duration: 0.25 }} 
         className="space-y-6"
       >
-        <div className="sticky top-[56px] z-10 -mx-6 px-6 bg-pb-darker/80 backdrop-blur-sm border-b border-pb-primary/10">
-          <nav className="flex flex-wrap gap-2 py-2 text-sm">
+        <div className="sticky top-[56px] z-10 -mx-4 md:-mx-6 px-4 md:px-6 bg-pb-darker/80 backdrop-blur-sm border-b border-pb-primary/10">
+          <nav className="flex flex-wrap gap-2 py-2 text-xs md:text-sm">
             <a 
               href="#overview" 
               onClick={handleNavClick('overview')} 
-              className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20"
+              className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 min-h-[44px] md:min-h-0 flex items-center justify-center"
             >
               Overview{missingBySection['overview'] ? <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs rounded-full bg-pb-warning text-black">{missingBySection['overview']}</span> : null}
             </a>
-            <a href="#dimensions" onClick={handleNavClick('dimensions')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Dimensions</a>
-            <a href="#identification" onClick={handleNavClick('identification')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Identification</a>
-            <a href="#usage" onClick={handleNavClick('usage')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Usage & Safety</a>
-            <a href="#purchase" onClick={handleNavClick('purchase')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Purchase & Rental</a>
-            <a href="#storage" onClick={handleNavClick('storage')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Storage</a>
-            <a href="#media" onClick={handleNavClick('media')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Media</a>
-            <a href="#notes" onClick={handleNavClick('notes')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20">Notes</a>
-            <a href="#statusHistory" onClick={handleNavClick('statusHistory')} className="px-3 py-1 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center gap-1">
-              <History className="w-3 h-3" /> Status History
+            <a href="#dimensions" onClick={handleNavClick('dimensions')} className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 min-h-[44px] md:min-h-0 flex items-center justify-center">Dimensions</a>
+            <a href="#identification" onClick={handleNavClick('identification')} className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 min-h-[44px] md:min-h-0 flex items-center justify-center">Identification</a>
+            <a href="#usage" onClick={handleNavClick('usage')} className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 min-h-[44px] md:min-h-0 flex items-center justify-center">Usage & Safety</a>
+            <a href="#purchase" onClick={handleNavClick('purchase')} className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 min-h-[44px] md:min-h-0 flex items-center justify-center">Purchase & Rental</a>
+            <a href="#storage" onClick={handleNavClick('storage')} className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 min-h-[44px] md:min-h-0 flex items-center justify-center">Storage</a>
+            <a href="#media" onClick={handleNavClick('media')} className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 min-h-[44px] md:min-h-0 flex items-center justify-center">Media</a>
+            <a href="#notes" onClick={handleNavClick('notes')} className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 min-h-[44px] md:min-h-0 flex items-center justify-center">Notes</a>
+            <a href="#statusHistory" onClick={handleNavClick('statusHistory')} className="px-3 md:px-4 py-2 md:py-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center gap-1 min-h-[44px] md:min-h-0 justify-center">
+              <History className="w-3 h-3 md:w-4 md:h-4" /> <span className="hidden sm:inline">Status History</span><span className="sm:hidden">History</span>
             </a>
           </nav>
         </div>
@@ -422,46 +466,54 @@ const PropDetailPage: React.FC = () => {
           onToggle={v => setOpenSections(s => ({ ...s, overview: v }))}
           missingCount={missingBySection['overview']}
         >
-          <div className="grid grid-cols-1 md:grid-cols-[200px,1fr] gap-4">
-            <div className="w-full rounded-lg overflow-hidden bg-black/30 aspect-square flex items-center justify-center">
+          <div className="flex flex-col lg:grid lg:grid-cols-[160px,1fr] xl:grid-cols-[200px,1fr] gap-4">
+            <div className="w-full lg:w-auto rounded-lg overflow-hidden bg-black/30 aspect-square flex items-center justify-center max-w-[200px] lg:max-w-none mx-auto lg:mx-0">
               {mainImage ? (
                 <img src={mainImage} alt={prop.name} className="object-cover w-full h-full" />
               ) : (
                 <ImageIcon className="w-8 h-8 text-white/50" />
               )}
             </div>
-            <div>
-              <div className="text-pb-gray mb-3 whitespace-pre-line">{prop.description}</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-pb-primary" />
-                  <span className="text-white">Location:</span>
-                  <span className="text-pb-gray">{prop.location || prop.currentLocation || 'Not set'}</span>
+            <div className="flex flex-col gap-4">
+              <div className="text-pb-gray whitespace-pre-line text-sm md:text-base break-words">{prop.description}</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-pb-primary flex-shrink-0" />
+                    <span className="text-white text-sm md:text-base flex-shrink-0">Location:</span>
+                  </div>
+                  <span className="text-pb-gray text-sm md:text-base truncate md:ml-0">{prop.location || prop.currentLocation || 'Not set'}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <BadgeInfo className="w-4 h-4 text-pb-primary" />
-                  <span className="text-white">Status:</span>
-                  <span className="text-pb-gray">{prop.status || 'Not set'}</span>
+                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <BadgeInfo className="w-4 h-4 text-pb-primary flex-shrink-0" />
+                    <span className="text-white text-sm md:text-base flex-shrink-0">Status:</span>
+                  </div>
+                  <span className="text-pb-gray text-sm md:text-base truncate md:ml-0">{prop.status || 'Not set'}</span>
                 </div>
                 {prop.act && (
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-pb-primary" />
-                    <span className="text-white">Act:</span>
-                    <span className="text-pb-gray">{prop.act}</span>
+                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-pb-primary flex-shrink-0" />
+                      <span className="text-white text-sm md:text-base flex-shrink-0">Act:</span>
+                    </div>
+                    <span className="text-pb-gray text-sm md:text-base truncate md:ml-0">{prop.act}</span>
                   </div>
                 )}
                 {(prop.scene || prop.sceneName) && (
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-pb-primary" />
-                    <span className="text-white">Scene:</span>
-                    <span className="text-pb-gray">{prop.sceneName || prop.scene}</span>
+                  <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-pb-primary flex-shrink-0" />
+                      <span className="text-white text-sm md:text-base flex-shrink-0">Scene:</span>
+                    </div>
+                    <span className="text-pb-gray text-sm md:text-base truncate md:ml-0">{prop.sceneName || prop.scene}</span>
                   </div>
                 )}
               </div>
               {otherImages.length > 0 && (
                 <div className="mt-3 flex gap-2 flex-wrap">
                   {otherImages.map(img => (
-                    <div key={img.id} className="w-16 h-16 rounded border border-pb-primary/30 overflow-hidden">
+                    <div key={img.id} className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded border border-pb-primary/30 overflow-hidden flex-shrink-0">
                       <img src={img.url} alt={img.caption || 'Prop image'} className="w-full h-full object-cover" />
                     </div>
                   ))}
@@ -634,7 +686,7 @@ const PropDetailPage: React.FC = () => {
             return (
               <div className="mt-4 pt-4 border-t border-pb-primary/20">
                 <h4 className="text-white font-semibold mb-3">Spare Storage</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-3">
                   {prop.spareStorage?.location && (
                     <div className="flex items-center gap-2">
                       <Package className="w-4 h-4 text-pb-primary" />

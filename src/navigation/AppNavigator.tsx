@@ -1,3 +1,14 @@
+/**
+ * LEGACY CODE - NOT CURRENTLY USED
+ * 
+ * This file contains an old navigation implementation that is no longer used.
+ * The app now uses Expo Router with a custom tab bar (see app/(tabs)/CustomTabBar.tsx
+ * and src/components/navigation/MainNavigationBar.tsx).
+ * 
+ * This file can be safely removed if confirmed that no other code depends on it.
+ * Last verified: Not imported anywhere in the codebase.
+ */
+
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackScreenProps } from '@react-navigation/native-stack';

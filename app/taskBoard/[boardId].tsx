@@ -34,6 +34,7 @@ import { OfflineSyncManager } from '../../src/platforms/mobile/features/offline/
 import type { Prop } from '../../src/shared/types/props';
 import { SyncStatusBar } from '../../src/components/SyncStatusBar';
 import { TaskCompletionService } from '../../src/shared/services/TaskCompletionService';
+import { StandaloneNavigationBar } from '../../src/components/navigation/MainNavigationBar';
 
 const LIST_WIDTH = 280;
 const LIST_SPACING = 16;
@@ -922,30 +923,6 @@ const TaskBoardDetailScreen = () => {
       alignItems: 'center',
       marginLeft: 10,
     },
-    bottomNavigation: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 60,
-      backgroundColor: '#18181b',
-      borderTopWidth: 1,
-      borderTopColor: '#c084fc',
-      flexDirection: 'row',
-      paddingBottom: 8,
-      paddingTop: 8,
-    },
-    navItem: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    navText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#c084fc',
-      marginTop: 4,
-    },
   });
 
   if (loading || !isFirebaseInitialized) {
@@ -1302,28 +1279,9 @@ const TaskBoardDetailScreen = () => {
         </DraxProvider>
         
         {/* Bottom navigation to mirror main tabs for this standalone screen */}
-        <View style={[styles.bottomNavigation, { borderTopColor: '#c084fc', backgroundColor: '#18181b' }]}>
-          <Pressable onPress={() => router.navigate('/(tabs)')} style={styles.navItem}>
-            <Ionicons name="home" size={24} color="#c084fc" />
-            <DefaultText style={[styles.navText, { color: '#c084fc' }]}>Home</DefaultText>
-          </Pressable>
-          <Pressable onPress={() => router.navigate('/(tabs)/props')} style={styles.navItem}>
-            <Ionicons name="cube" size={24} color="#a3a3a3" />
-            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Props</DefaultText>
-          </Pressable>
-          <Pressable onPress={() => router.navigate('/(tabs)/shows')} style={styles.navItem}>
-            <Ionicons name="film" size={24} color="#a3a3a3" />
-            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Shows</DefaultText>
-          </Pressable>
-          <Pressable onPress={() => router.navigate('/(tabs)/packing')} style={styles.navItem}>
-            <Ionicons name="cube-outline" size={24} color="#a3a3a3" />
-            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Packing</DefaultText>
-          </Pressable>
-          <Pressable onPress={() => router.navigate('/(tabs)/help')} style={styles.navItem}>
-            <Ionicons name="help-circle" size={24} color="#a3a3a3" />
-            <DefaultText style={[styles.navText, { color: '#a3a3a3' }]}>Help</DefaultText>
-          </Pressable>
-        </View>
+        <StandaloneNavigationBar 
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
+        />
       </LinearGradient>
     </View>
   );

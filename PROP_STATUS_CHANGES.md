@@ -513,3 +513,5 @@ A centralized service (`src/shared/services/PropStatusService.ts`) handles all s
 6. **Status Change Templates**: Pre-defined status change templates with common reasons
 
 
+
+

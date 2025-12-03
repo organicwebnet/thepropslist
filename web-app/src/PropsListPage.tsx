@@ -500,9 +500,9 @@ const PropsListPage: React.FC = () => {
           )}
 
           {/* Filters and Actions Row */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {/* Filters */}
-            <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap gap-2 md:gap-3 items-center">
               {filteredProps.length > 0 && (
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -518,7 +518,7 @@ const PropsListPage: React.FC = () => {
                 <select
                   value={category}
                   onChange={e => setCategory(e.target.value)}
-                  className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+                  className="appearance-none pr-10 px-3 md:px-4 py-2 md:py-2.5 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition min-h-[44px] md:min-h-0"
                 >
                   <option value="">All Categories</option>
                   {propCategories.map(cat => (
@@ -531,7 +531,7 @@ const PropsListPage: React.FC = () => {
                 <select
                   value={status}
                   onChange={e => setStatus(e.target.value)}
-                  className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+                  className="appearance-none pr-10 px-3 md:px-4 py-2 md:py-2.5 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition min-h-[44px] md:min-h-0"
                 >
                   <option value="">All Statuses</option>
                   <option value="in">In</option>
@@ -545,7 +545,7 @@ const PropsListPage: React.FC = () => {
                 <select
                   value={act}
                   onChange={e => setAct(e.target.value)}
-                  className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+                  className="appearance-none pr-10 px-3 md:px-4 py-2 md:py-2.5 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition min-h-[44px] md:min-h-0"
                 >
                   <option value="">All Acts</option>
                   {acts.map(a => (
@@ -558,7 +558,7 @@ const PropsListPage: React.FC = () => {
                 <select
                   value={scene}
                   onChange={e => setScene(e.target.value)}
-                  className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+                  className="appearance-none pr-10 px-3 md:px-4 py-2 md:py-2.5 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition min-h-[44px] md:min-h-0"
                 >
                   <option value="">All Scenes</option>
                   {scenes.map(s => (
@@ -571,7 +571,7 @@ const PropsListPage: React.FC = () => {
                 <select
                   value={spareFilter}
                   onChange={e => setSpareFilter(e.target.value as 'all' | 'hasSpares' | 'lowInventory')}
-                  className="appearance-none pr-10 px-4 py-2 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition"
+                  className="appearance-none pr-10 px-3 md:px-4 py-2 md:py-2.5 rounded-lg border border-pb-primary/30 bg-pb-darker/60 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary hover:bg-pb-darker/70 transition min-h-[44px] md:min-h-0"
                 >
                   <option value="all">All Props</option>
                   <option value="hasSpares">Has Spares</option>
@@ -750,7 +750,7 @@ const PropsListPage: React.FC = () => {
                 {/* Low Inventory Alerts */}
                 <SpareInventoryAlerts props={filteredProps} />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5 lg:gap-6 animate-fade-in">
                   {filteredProps.map((prop, index) => (
                   <div
                     key={prop.id}

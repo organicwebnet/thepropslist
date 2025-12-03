@@ -46,6 +46,20 @@ export const AddressModal: React.FC<AddressModalProps> = ({
     setError(null);
   }, [editingAddress, type, isOpen]);
 
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen && !saving) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, saving, onClose]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -105,15 +119,15 @@ export const AddressModal: React.FC<AddressModalProps> = ({
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
-          className="bg-pb-darker rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+          className="bg-pb-darker rounded-lg p-4 md:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
+            <h2 className="text-base md:text-lg font-semibold text-white break-words flex-1 min-w-0 pr-2">{title}</h2>
             <button
               type="button"
               onClick={onClose}
-              className="text-pb-gray hover:text-white transition-colors"
+              className="text-pb-gray hover:text-white transition-colors flex-shrink-0 min-h-[44px] md:min-h-0 w-10 h-10 md:w-auto md:h-auto flex items-center justify-center"
               aria-label="Close modal"
             >
               <X className="w-5 h-5" />
@@ -121,7 +135,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded text-red-400 text-sm">
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded text-red-400 text-xs md:text-sm break-words">
               {error}
             </div>
           )}
@@ -136,7 +150,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
                 required
                 aria-describedby={error ? "address-error" : undefined}
               />
@@ -150,7 +164,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 id="address-type"
                 value={formData.type}
                 onChange={(e) => handleChange('type', e.target.value as 'venue' | 'rehearsal' | 'storage')}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
                 required
               >
                 <option value="venue">Venue</option>
@@ -168,7 +182,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 type="text"
                 value={formData.companyName || ''}
                 onChange={(e) => handleChange('companyName', e.target.value)}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
               />
             </div>
 
@@ -181,7 +195,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 type="text"
                 value={formData.street1}
                 onChange={(e) => handleChange('street1', e.target.value)}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
                 required
               />
             </div>
@@ -195,7 +209,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 type="text"
                 value={formData.street2 || ''}
                 onChange={(e) => handleChange('street2', e.target.value)}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
               />
             </div>
 
@@ -208,7 +222,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 type="text"
                 value={formData.city}
                 onChange={(e) => handleChange('city', e.target.value)}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
                 required
               />
             </div>
@@ -222,7 +236,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 type="text"
                 value={formData.region}
                 onChange={(e) => handleChange('region', e.target.value)}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
                 required
               />
             </div>
@@ -236,7 +250,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 type="text"
                 value={formData.postalCode}
                 onChange={(e) => handleChange('postalCode', e.target.value)}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
                 required
               />
             </div>
@@ -250,7 +264,7 @@ export const AddressModal: React.FC<AddressModalProps> = ({
                 type="text"
                 value={formData.country}
                 onChange={(e) => handleChange('country', e.target.value)}
-                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                className="w-full rounded bg-pb-darker border border-pb-primary/30 p-2 md:p-2.5 text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[44px] md:min-h-0"
               />
             </div>
 
@@ -258,14 +272,14 @@ export const AddressModal: React.FC<AddressModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+                className="flex-1 px-4 py-2.5 md:py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm md:text-base min-h-[44px] md:min-h-0 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={saving}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-pb-primary text-white rounded hover:bg-pb-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 md:py-2 bg-pb-primary text-white rounded hover:bg-pb-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[44px] md:min-h-0 flex items-center justify-center"
                 disabled={saving}
               >
                 {saving ? 'Saving...' : (editingAddress ? 'Update' : 'Add')}

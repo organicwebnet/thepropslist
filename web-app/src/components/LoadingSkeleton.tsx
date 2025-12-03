@@ -71,7 +71,7 @@ export const PropCardSkeleton: React.FC = () => {
 
 export const PropsListSkeleton: React.FC<{ count?: number }> = ({ count = 6 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full max-w-6xl">
       {Array.from({ length: count }, (_, index) => (
         <PropCardSkeleton key={index} />
       ))}

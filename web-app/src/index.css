@@ -166,6 +166,35 @@
   }
 }
 
+/* Tablet-specific responsive improvements */
+@media (min-width: 768px) and (max-width: 1024px) {
+  /* Improve touch targets on tablets - only for interactive elements without explicit sizing */
+  button:not([class*="min-h"]):not([class*="h-"]),
+  a:not([class*="min-h"]):not([class*="h-"]):not([class*="inline"]),
+  [role="button"]:not([class*="min-h"]):not([class*="h-"]) {
+    min-height: 44px;
+  }
+  
+  /* Better text sizing for tablets */
+  body {
+    font-size: 16px;
+  }
+  
+  /* Improve form inputs for touch - font-size prevents iOS zoom */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    /* Note: min-height handled by component-level classes to avoid conflicts */
+    padding: 0.75rem 1rem;
+  }
+}
+
 /* Animations */
 @keyframes fadeInUp {
   from {

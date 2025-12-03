@@ -33,14 +33,33 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const [navCollapsed, setNavCollapsed] = React.useState(false);
   const location = useLocation();
   const isBoardsPage = location.pathname.startsWith('/boards');
+  const isInitialMount = React.useRef(true);
 
   React.useEffect(() => {
+    // Set initial state based on screen size
+    const w = window.innerWidth;
+    if (w < 768) {
+      setNavCollapsed(true);
+    } else if (w >= 768 && w < 1024) {
+      setNavCollapsed(true);
+    } else {
+      setNavCollapsed(false); // Desktop default to expanded
+    }
+    isInitialMount.current = false;
+    
     const onResize = () => {
       const w = window.innerWidth;
-      // Auto-collapse on tablet widths (<1024px)
-      setNavCollapsed(prev => (w < 1024 ? true : prev));
+      if (w < 768) {
+        // Mobile - always collapse
+        setNavCollapsed(true);
+      } else if (w >= 768 && w < 1024) {
+        // Tablet - always collapse (smaller screen space)
+        setNavCollapsed(true);
+      }
+      // Desktop (>= 1024px) - preserve user's manual preference
+      // Don't change state on resize - let user's toggle preference persist
     };
-    onResize();
+    
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -71,57 +90,61 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   // Build sidebar items and append god-only entries
   const navItems = [
-    { icon: Home, text: 'Home', subtext: 'Dashboard overview', link: '/', color: '#60a5fa' }, // Blue
-    { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', link: '/boards', color: '#10b981' }, // Green
-    { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', link: '/props', color: '#34d399' }, // Emerald
-    { icon: Theater, text: 'Show Management', subtext: 'Manage productions, venues, and team members', link: '/shows', color: '#ec4899' }, // Pink
-    { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', link: '/shopping', color: '#f59e0b' }, // Yellow
-    { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', link: '/packing-lists', color: '#a78bfa' }, // Violet
-    { icon: FileText, text: 'Import Props', subtext: 'CSV import', link: '/props?import=1', color: '#fbbf24' }, // Amber
-    { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', link: '/props/pdf-export', color: '#fb923c' }, // Orange
-    { icon: HelpCircle, text: 'Help', subtext: 'Documentation and support', link: '/help', color: '#8b5cf6' }, // Purple
-  ] as Array<{ icon: any; text: string; subtext: string; link?: string; color: string }>;
+    { icon: Home, text: 'Home', subtext: 'Dashboard overview', shortLabel: 'Home', link: '/', color: '#60a5fa' }, // Blue
+    { icon: Calendar, text: 'Task Boards', subtext: 'Kanban-style to-do boards', shortLabel: 'task', link: '/boards', color: '#10b981' }, // Green
+    { icon: Package, text: 'Props Inventory', subtext: 'Manage all production props', shortLabel: 'prop', link: '/props', color: '#34d399' }, // Emerald
+    { icon: Theater, text: 'Show Management', subtext: 'Manage productions, venues, and team members', shortLabel: 'show', link: '/shows', color: '#ec4899' }, // Pink
+    { icon: Zap, text: 'Shopping List', subtext: 'Track props and materials to buy', shortLabel: 'shop', link: '/shopping', color: '#f59e0b' }, // Yellow
+    { icon: Box, text: 'Packing Lists', subtext: 'packing & storage management', shortLabel: 'pack', link: '/packing-lists', color: '#a78bfa' }, // Violet
+    { icon: FileText, text: 'Import Props', subtext: 'CSV import', shortLabel: 'import', link: '/props?import=1', color: '#fbbf24' }, // Amber
+    { icon: FileText, text: 'Export Props PDF', subtext: 'Download props list as PDF', shortLabel: 'export', link: '/props/pdf-export', color: '#fb923c' }, // Orange
+    { icon: HelpCircle, text: 'Help', subtext: 'Documentation and support', shortLabel: 'help', link: '/help', color: '#8b5cf6' }, // Purple
+  ] as Array<{ icon: any; text: string; subtext: string; shortLabel: string; link?: string; color: string }>;
   if (userProfile?.role === 'god') {
-    navItems.push({ icon: Users, text: 'User Management', subtext: 'Manage all users and roles', link: '/admin/users', color: '#06b6d4' }); // Cyan
-    navItems.push({ icon: Shield, text: 'Role Management', subtext: 'Manage job roles and permissions', link: '/admin/roles', color: '#3b82f6' }); // Blue
-    navItems.push({ icon: TestTube, text: 'Permission Tests', subtext: 'Test permission system functionality', link: '/admin/permission-tests', color: '#ef4444' }); // Red
-    navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', link: '/admin/subscribers', color: '#14b8a6' }); // Teal
+    navItems.push({ icon: Users, text: 'User Management', subtext: 'Manage all users and roles', shortLabel: 'users', link: '/admin/users', color: '#06b6d4' }); // Cyan
+    navItems.push({ icon: Shield, text: 'Role Management', subtext: 'Manage job roles and permissions', shortLabel: 'roles', link: '/admin/roles', color: '#3b82f6' }); // Blue
+    navItems.push({ icon: TestTube, text: 'Permission Tests', subtext: 'Test permission system functionality', shortLabel: 'test', link: '/admin/permission-tests', color: '#ef4444' }); // Red
+    navItems.push({ icon: FileText, text: 'Subscriber Stats', subtext: 'Plans and status breakdown', shortLabel: 'stats', link: '/admin/subscribers', color: '#14b8a6' }); // Teal
   }
 
   return (
     <div className="min-h-screen bg-gradient-dark text-white overflow-x-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 bg-pb-darker/50 backdrop-blur-sm border-b border-pb-primary/20">
-        <div className="flex items-center space-x-4">
+      <header className="flex flex-col md:flex-row items-start md:items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-pb-darker/50 backdrop-blur-sm border-b border-pb-primary/20 gap-3 md:gap-0">
+        <div className="flex items-center space-x-2 md:space-x-4 w-full md:w-auto">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-pb-primary rounded-lg flex items-center justify-center">
-              <Theater className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-pb-primary rounded-lg flex items-center justify-center flex-shrink-0">
+              <Theater className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold text-white">The Props List</h1>
-              <p className="text-xs text-pb-gray">Theater Props Management</p>
+            <div className="min-w-0">
+              <h1 className="text-base md:text-lg lg:text-xl font-bold text-white truncate">The Props List</h1>
+              <p className="text-xs md:text-sm text-pb-gray hidden md:block">Theater Props Management</p>
             </div>
           </div>
           <Link
             to="/beta/"
-            className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-medium hover:bg-red-500/30"
+            className="bg-red-500/20 text-red-400 px-2 md:px-3 py-1 md:py-1.5 rounded-full text-xs md:text-sm font-medium hover:bg-red-500/30 whitespace-nowrap flex-shrink-0 min-h-[44px] md:min-h-0 flex items-center"
             title="Learn about our beta release"
           >
             Beta version
           </Link>
         </div>
-        <div className="flex-1 flex flex-col items-center">
-          <span className="text-white text-lg font-semibold">
+        <div className="flex-1 flex flex-col items-center justify-center md:justify-center min-w-0 px-2 md:px-0">
+          <span className="text-white text-sm md:text-base lg:text-lg font-semibold truncate w-full text-center">
             {showTitle || "No show selected"}
           </span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 md:space-x-4 w-full md:w-auto justify-end">
           {userProfile?.displayName && (
-            <span className="text-sm text-pb-gray">Welcome, {userProfile.displayName}</span>
+            <span className="text-xs md:text-sm text-pb-gray hidden lg:inline truncate max-w-[120px] md:max-w-none">
+              Welcome, {userProfile.displayName.split(' ')[0]}
+            </span>
           )}
-          <Link to="/feedback" className="text-xs text-pb-primary underline">Report a bug</Link>
-          <NotificationBell />
-          <Link to="/profile" className="relative block">
+          <Link to="/feedback" className="text-xs md:text-sm text-pb-primary underline hidden lg:inline whitespace-nowrap min-h-[44px] md:min-h-0 flex items-center">Report a bug</Link>
+          <div className="min-h-[44px] md:min-h-0 flex items-center">
+            <NotificationBell />
+          </div>
+          <Link to="/profile" className="relative block flex-shrink-0 min-h-[44px] md:min-h-0 flex items-center">
             <Avatar
               src={userProfile?.photoURL}
               alt="Profile"
@@ -145,11 +168,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </Link>
           <button
             onClick={handleSignOut}
-            className="ml-2 flex items-center px-2 py-1 rounded hover:bg-pb-primary/20 transition-colors text-pb-gray hover:text-white focus:outline-none"
+            className="flex items-center px-2 md:px-3 py-2 md:py-1 rounded hover:bg-pb-primary/20 transition-colors text-pb-gray hover:text-white focus:outline-none flex-shrink-0 min-h-[44px] md:min-h-0"
             title="Log out"
             aria-label="Log out"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-5 h-5 md:w-6 md:h-6" />
           </button>
         </div>
       </header>
@@ -160,7 +183,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className={`${navCollapsed ? 'w-16 p-2' : 'w-64 p-4'} hidden md:block bg-pb-darker/30 backdrop-blur-sm border-r border-pb-primary/20 space-y-4 transition-all duration-300`}
+          className={`${navCollapsed ? 'w-16 py-2' : 'w-56 md:w-60 lg:w-64 p-3 md:p-4'} hidden sm:block bg-pb-darker/30 backdrop-blur-sm border-r border-pb-primary/20 space-y-2 md:space-y-3 lg:space-y-4 transition-all duration-300 flex-shrink-0`}
         >
           {/* Collapse toggle */}
           <div className="flex items-center justify-between mb-2">
@@ -192,24 +215,28 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                       initial="hidden"
                       animate="visible"
                       transition={{ delay: index * 0.1 }}
-                      className={`${navCollapsed ? 'justify-center' : ''} flex items-center space-x-3 p-3 rounded-lg transition-colors cursor-pointer group ${
+                      className={`${navCollapsed ? 'flex-col justify-center items-center py-2' : 'space-x-2 md:space-x-3'} flex items-center ${navCollapsed ? '' : 'p-2 md:p-3'} rounded-lg transition-colors cursor-pointer group min-h-[44px] md:min-h-0 ${
                         isActive 
                           ? 'bg-pb-primary/30 border border-pb-primary/50' 
                           : 'bg-pb-primary/10 hover:bg-pb-primary/20'
                       }`}
                     >
                       <div 
-                        className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8'} rounded-lg flex items-center justify-center transition-colors`}
+                        className={`${navCollapsed ? 'w-10 h-10' : 'w-8 h-8 md:w-9 md:h-9'} rounded-lg flex items-center justify-center transition-colors flex-shrink-0`}
                         style={{ 
                           backgroundColor: `${item.color}20`,
                         }}
                       >
-                        <item.icon className="w-4 h-4" style={{ color: item.color }} />
+                        <item.icon className={`${navCollapsed ? 'w-5 h-5' : 'w-4 h-4 md:w-5 md:h-5'}`} style={{ color: item.color }} />
                       </div>
-                      {!navCollapsed && (
-                        <div>
-                          <p className="text-sm font-medium text-white">{item.text}</p>
-                          <p className="text-xs text-pb-gray">{item.subtext}</p>
+                      {navCollapsed ? (
+                        <span className="text-[10px] md:text-xs mt-1 text-center leading-tight !ml-0 !mr-0 block md:hidden lg:block" style={{ color: item.color, marginLeft: '0 !important', marginRight: '0 !important' }}>
+                          {item.shortLabel}
+                        </span>
+                      ) : (
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm md:text-base font-medium text-white truncate">{item.text}</p>
+                          <p className="text-xs md:text-sm text-pb-gray truncate">{item.subtext}</p>
                         </div>
                       )}
                     </motion.div>
@@ -221,7 +248,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     initial="hidden"
                     animate="visible"
                     transition={{ delay: index * 0.1 }}
-                    className={`${navCollapsed ? 'justify-center' : ''} flex items-center space-x-3 p-3 rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 transition-colors cursor-pointer group`}
+                    className={`${navCollapsed ? 'flex-col justify-center items-center py-2' : 'space-x-3'} flex items-center ${navCollapsed ? '' : 'p-3'} rounded-lg bg-pb-primary/10 hover:bg-pb-primary/20 transition-colors cursor-pointer group`}
                     title={item.text}
                     aria-label={item.text}
                   >
@@ -233,7 +260,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     >
                       <item.icon className="w-4 h-4" style={{ color: item.color }} />
                     </div>
-                    {!navCollapsed && (
+                    {navCollapsed ? (
+                      <span className="text-[10px] md:text-xs mt-1 text-center leading-tight !ml-0 !mr-0 block md:hidden lg:block" style={{ color: item.color, marginLeft: '0 !important', marginRight: '0 !important' }}>
+                        {item.shortLabel}
+                      </span>
+                    ) : (
                       <div>
                         <p className="text-sm font-medium text-white">{item.text}</p>
                         <p className="text-xs text-pb-gray">{item.subtext}</p>
@@ -247,7 +278,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         </motion.aside>
 
         {/* Main Content */}
-        <main className={`flex-1 ${isBoardsPage ? 'px-0 py-6 overflow-visible' : 'p-6 overflow-hidden'}`}>
+        <main className={`flex-1 min-w-0 ${isBoardsPage ? 'px-0 py-4 md:py-6 overflow-visible' : 'p-4 md:p-5 lg:p-6 overflow-hidden'}`}>
           {children}
         </main>
       </div>

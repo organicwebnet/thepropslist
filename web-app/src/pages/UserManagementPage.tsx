@@ -105,7 +105,7 @@ const UserManagementPage: React.FC = () => {
           <div className="text-center">
             <Shield className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
-            <p className="text-pb-gray/70">Only god users can access the user management dashboard.</p>
+            <p className="text-pb-gray/90">Only god users can access the user management dashboard.</p>
           </div>
         </div>
       </DashboardLayout>
@@ -233,7 +233,7 @@ const UserManagementPage: React.FC = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary mx-auto mb-4"></div>
-            <p className="text-pb-gray/70">Loading users...</p>
+            <p className="text-pb-gray/90">Loading users...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -249,7 +249,7 @@ const UserManagementPage: React.FC = () => {
             <Crown className="w-8 h-8 text-red-500" />
             <h1 className="text-3xl font-bold text-white">User Management</h1>
           </div>
-          <p className="text-pb-gray/70">Manage all users, roles, and permissions across the system</p>
+          <p className="text-pb-gray/90">Manage all users, roles, and permissions across the system</p>
         </div>
 
         {/* Role Management Info */}
@@ -258,27 +258,27 @@ const UserManagementPage: React.FC = () => {
             <Shield className="w-6 h-6 text-pb-primary" />
             <h2 className="text-lg font-semibold text-white">System Role Management</h2>
           </div>
-          <p className="text-pb-gray/70 text-sm mb-3">
+          <p className="text-pb-gray/90 text-base mb-3">
             Click "Change Role" next to any user's role to modify their system permissions. Role changes take effect immediately. 
             <span className="text-red-400 font-medium">Note: God role is immutable and cannot be changed.</span>
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
             {/* God Role - Special Display */}
-            <div className="p-2 rounded text-xs bg-red-500/20 border border-red-500/30">
+            <div className="p-2 rounded text-sm bg-red-500/20 border border-red-500/30">
               <div className="font-medium text-red-400">
                 God (Immutable)
               </div>
-              <div className="text-pb-gray/60 text-xs mt-1">
+              <div className="text-pb-gray/85 text-sm mt-1">
                 System administrator - cannot be changed
               </div>
             </div>
             {/* Other Roles */}
             {ROLE_OPTIONS.map(option => (
-              <div key={option.value} className={`p-2 rounded text-xs ${option.color}/20 border ${option.color}/30`}>
+              <div key={option.value} className={`p-2 rounded text-sm ${option.color}/20 border ${option.color}/30`}>
                 <div className={`font-medium ${option.color.replace('bg-', 'text-')}`}>
                   {option.label}
                 </div>
-                <div className="text-pb-gray/60 text-xs mt-1">
+                <div className="text-pb-gray/85 text-sm mt-1">
                   {option.description}
                 </div>
               </div>
@@ -292,7 +292,7 @@ const UserManagementPage: React.FC = () => {
             <Crown className="w-6 h-6 text-green-400" />
             <h2 className="text-lg font-semibold text-white">Job Role Management</h2>
           </div>
-          <p className="text-pb-gray/70 text-sm mb-3">
+          <p className="text-pb-gray/90 text-base mb-3">
             Job roles define specific responsibilities and fine-grained permissions for each user. 
             <span className="text-green-400 font-medium">Click any role below to edit its permissions.</span>
           </p>
@@ -309,17 +309,17 @@ const UserManagementPage: React.FC = () => {
             {getJobRolesByCategory('management').map(role => (
               <div 
                 key={role.id} 
-                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                className={`p-2 rounded text-sm ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
                 onClick={() => window.open('/admin/roles', '_blank')}
                 title="Click to edit role permissions"
               >
                 <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
                   {role.displayName}
                 </div>
-                <div className="text-pb-gray/60 text-xs mt-1">
+                <div className="text-pb-gray/85 text-sm mt-1">
                   {role.permissions.length} permissions
                 </div>
-                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-pb-gray/75 text-sm mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   Click to edit →
                 </div>
               </div>
@@ -327,17 +327,17 @@ const UserManagementPage: React.FC = () => {
             {getJobRolesByCategory('creative').map(role => (
               <div 
                 key={role.id} 
-                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                className={`p-2 rounded text-sm ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
                 onClick={() => window.open('/admin/roles', '_blank')}
                 title="Click to edit role permissions"
               >
                 <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
                   {role.displayName}
                 </div>
-                <div className="text-pb-gray/60 text-xs mt-1">
+                <div className="text-pb-gray/85 text-sm mt-1">
                   {role.permissions.length} permissions
                 </div>
-                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-pb-gray/75 text-sm mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   Click to edit →
                 </div>
               </div>
@@ -345,17 +345,17 @@ const UserManagementPage: React.FC = () => {
             {getJobRolesByCategory('technical').map(role => (
               <div 
                 key={role.id} 
-                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                className={`p-2 rounded text-sm ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
                 onClick={() => window.open('/admin/roles', '_blank')}
                 title="Click to edit role permissions"
               >
                 <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
                   {role.displayName}
                 </div>
-                <div className="text-pb-gray/60 text-xs mt-1">
+                <div className="text-pb-gray/85 text-sm mt-1">
                   {role.permissions.length} permissions
                 </div>
-                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-pb-gray/75 text-sm mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   Click to edit →
                 </div>
               </div>
@@ -363,17 +363,17 @@ const UserManagementPage: React.FC = () => {
             {getJobRolesByCategory('support').map(role => (
               <div 
                 key={role.id} 
-                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                className={`p-2 rounded text-sm ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
                 onClick={() => window.open('/admin/roles', '_blank')}
                 title="Click to edit role permissions"
               >
                 <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
                   {role.displayName}
                 </div>
-                <div className="text-pb-gray/60 text-xs mt-1">
+                <div className="text-pb-gray/85 text-sm mt-1">
                   {role.permissions.length} permissions
                 </div>
-                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-pb-gray/75 text-sm mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   Click to edit →
                 </div>
               </div>
@@ -381,17 +381,17 @@ const UserManagementPage: React.FC = () => {
             {getJobRolesByCategory('crew').map(role => (
               <div 
                 key={role.id} 
-                className={`p-2 rounded text-xs ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
+                className={`p-2 rounded text-sm ${role.color}/20 border ${role.color}/30 cursor-pointer hover:${role.color}/30 transition-colors group`}
                 onClick={() => window.open('/admin/roles', '_blank')}
                 title="Click to edit role permissions"
               >
                 <div className={`font-medium ${role.color.replace('bg-', 'text-')} group-hover:underline`}>
                   {role.displayName}
                 </div>
-                <div className="text-pb-gray/60 text-xs mt-1">
+                <div className="text-pb-gray/85 text-sm mt-1">
                   {role.permissions.length} permissions
                 </div>
-                <div className="text-pb-gray/50 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-pb-gray/75 text-sm mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   Click to edit →
                 </div>
               </div>
@@ -406,7 +406,7 @@ const UserManagementPage: React.FC = () => {
               <Users className="w-8 h-8 text-blue-500" />
               <div>
                 <p className="text-2xl font-bold text-white">{stats.totalUsers}</p>
-                <p className="text-pb-gray/70 text-sm">Total Users</p>
+                <p className="text-pb-gray/90 text-base">Total Users</p>
               </div>
             </div>
           </div>
@@ -415,7 +415,7 @@ const UserManagementPage: React.FC = () => {
               <Activity className="w-8 h-8 text-green-500" />
               <div>
                 <p className="text-2xl font-bold text-white">{stats.activeUsers}</p>
-                <p className="text-pb-gray/70 text-sm">Active (30 days)</p>
+                <p className="text-pb-gray/90 text-base">Active (30 days)</p>
               </div>
             </div>
           </div>
@@ -424,7 +424,7 @@ const UserManagementPage: React.FC = () => {
               <Crown className="w-8 h-8 text-red-500" />
               <div>
                 <p className="text-2xl font-bold text-white">{stats.godUsers}</p>
-                <p className="text-pb-gray/70 text-sm">God Users</p>
+                <p className="text-pb-gray/90 text-base">God Users</p>
               </div>
             </div>
           </div>
@@ -433,7 +433,7 @@ const UserManagementPage: React.FC = () => {
               <Shield className="w-8 h-8 text-purple-500" />
               <div>
                 <p className="text-2xl font-bold text-white">{stats.adminUsers}</p>
-                <p className="text-pb-gray/70 text-sm">Administrators</p>
+                <p className="text-pb-gray/90 text-base">Administrators</p>
               </div>
             </div>
           </div>
@@ -444,7 +444,7 @@ const UserManagementPage: React.FC = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pb-gray/50 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pb-gray/75 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search users by email or name..."
@@ -477,12 +477,12 @@ const UserManagementPage: React.FC = () => {
             <table className="w-full">
               <thead className="bg-pb-darker/60">
                 <tr>
-                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">User</th>
-                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">System Role</th>
-                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Job Role</th>
-                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Status</th>
-                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Last Login</th>
-                  <th className="px-6 py-4 text-left text-pb-gray/70 font-medium">Actions</th>
+                  <th className="px-6 py-4 text-left text-pb-gray/90 font-medium">User</th>
+                  <th className="px-6 py-4 text-left text-pb-gray/90 font-medium">System Role</th>
+                  <th className="px-6 py-4 text-left text-pb-gray/90 font-medium">Job Role</th>
+                  <th className="px-6 py-4 text-left text-pb-gray/90 font-medium">Status</th>
+                  <th className="px-6 py-4 text-left text-pb-gray/90 font-medium">Last Login</th>
+                  <th className="px-6 py-4 text-left text-pb-gray/90 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -504,7 +504,7 @@ const UserManagementPage: React.FC = () => {
                         </div>
                         <div>
                           <div className="text-white font-medium">{user.displayName}</div>
-                          <div className="text-pb-gray/70 text-sm">{user.email}</div>
+                          <div className="text-pb-gray/90 text-base">{user.email}</div>
                         </div>
                       </div>
                     </td>
@@ -612,14 +612,14 @@ const UserManagementPage: React.FC = () => {
                           user.subscriptionStatus === 'exempt' ? 'bg-red-500' :
                           'bg-gray-500'
                         }`}></div>
-                        <span className="text-pb-gray/70 text-sm">
+                        <span className="text-pb-gray/90 text-base">
                           {user.subscriptionStatus === 'active' ? 'Active' :
                            user.subscriptionStatus === 'exempt' ? 'Exempt' :
                            'Inactive'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-pb-gray/70 text-sm">
+                    <td className="px-6 py-4 text-pb-gray/90 text-base">
                       {user.lastLogin.toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
@@ -656,9 +656,9 @@ const UserManagementPage: React.FC = () => {
 
         {filteredUsers.length === 0 && (
           <div className="text-center py-12">
-            <Users className="w-16 h-16 text-pb-gray/50 mx-auto mb-4" />
-            <p className="text-pb-gray/70">No users found</p>
-            <p className="text-pb-gray/50 text-sm">Try adjusting your search or filter criteria</p>
+            <Users className="w-16 h-16 text-pb-gray/75 mx-auto mb-4" />
+            <p className="text-pb-gray/90 text-lg">No users found</p>
+            <p className="text-pb-gray/75 text-base">Try adjusting your search or filter criteria</p>
           </div>
         )}
       </div>

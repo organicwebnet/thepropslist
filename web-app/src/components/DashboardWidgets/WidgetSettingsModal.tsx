@@ -391,7 +391,7 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
               <div className="flex items-center justify-between pt-4 border-t border-pb-primary/20">
                 <button
                   onClick={handleReset}
-                  className="flex items-center gap-2 px-4 py-2 text-pb-gray hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-4 py-2.5 md:py-2 text-pb-gray hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[44px] md:min-h-0"
                   disabled={loading}
                   type="button"
                   aria-label="Reset widget preferences to role-based defaults"
@@ -402,7 +402,7 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
                 <div className="flex gap-3">
                   <button
                     onClick={onClose}
-                    className="px-4 py-2 text-pb-gray hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2.5 md:py-2 text-pb-gray hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[44px] md:min-h-0 flex items-center justify-center"
                     disabled={loading}
                     type="button"
                   >
@@ -410,7 +410,7 @@ export const WidgetSettingsModal: React.FC<WidgetSettingsModalProps> = ({
                   </button>
                   <button
                     onClick={handleSave}
-                    className="px-6 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-2.5 md:py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[44px] md:min-h-0 flex items-center justify-center"
                     disabled={loading || !hasChanges}
                     type="button"
                     aria-label="Save widget preference changes"

@@ -9,7 +9,7 @@ export default defineConfig({
     port: 3000,
     headers: {
       'X-Frame-Options': 'SAMEORIGIN',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://www.google.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob: https://api.qrserver.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com; frame-src 'self' https://*.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';"
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://www.google.com https://apis.google.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob: https://api.qrserver.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://*.google-analytics.com wss://*.firebaseio.com; frame-src 'self' https://*.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self';"
     },
     fs: {
       allow: [
@@ -69,7 +69,28 @@ export default defineConfig({
       '@types': path.resolve(__dirname, '../src/types'),
       '@root': path.resolve(__dirname, '../src'),
       'firebase/storage': path.resolve(__dirname, './node_modules/firebase/storage/dist'),
+      // Resolve react-native to a stub for web compatibility
+      'react-native': path.resolve(__dirname, './src/stubs/react-native-stub.js'),
+      // Stub out React Native Firebase packages that aren't available on web
+      '@react-native-firebase/firestore': path.resolve(__dirname, './src/stubs/react-native-firebase-stub.js'),
+      '@react-native-firebase/auth': path.resolve(__dirname, './src/stubs/react-native-firebase-stub.js'),
+      '@react-native-firebase/storage': path.resolve(__dirname, './src/stubs/react-native-firebase-stub.js'),
+      '@react-native-firebase/app': path.resolve(__dirname, './src/stubs/react-native-firebase-stub.js'),
+      '@react-native-picker/picker': path.resolve(__dirname, './src/stubs/react-native-picker-stub.js'),
+      // Stub out expo-notifications (not available on web)
+      'expo-notifications': path.resolve(__dirname, './src/stubs/expo-notifications-stub.js'),
     },
     dedupe: ['react', 'react-dom'], // ensure only one copy of React for Fast Refresh
+  },
+  optimizeDeps: {
+    exclude: ['react-native', '@react-native-firebase/firestore', '@react-native-firebase/auth', '@react-native-firebase/storage', '@react-native-firebase/app', 'expo-notifications'],
+  },
+  define: {
+    // Define __DEV__ global for Expo modules compatibility
+    '__DEV__': JSON.stringify(process.env.NODE_ENV !== 'production'),
+    // Define global for Node.js-style modules (used by Expo)
+    'global': 'globalThis',
+    // Define process.env.NODE_ENV for compatibility (used in some components)
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
   },
 }) 

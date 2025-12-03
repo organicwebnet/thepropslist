@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Archive, Trash2, AlertTriangle, X } from 'lucide-react';
 import { ArchiveService } from '../services/ArchiveService';
 import { useFirebase } from '../contexts/FirebaseContext';
@@ -32,6 +32,20 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [archiveService] = useState(() => new ArchiveService(firebaseService));
+
+  // Handle ESC key to close modal
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen && !loading) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, loading, onClose]);
 
   if (!isOpen) return null;
 
@@ -82,20 +96,21 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-pb-darker/90 border border-pb-primary/30 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-pb-primary/20">
-          <h2 className="text-xl font-bold text-white">Show Actions</h2>
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-pb-primary/20">
+          <h2 className="text-lg md:text-xl font-bold text-white break-words flex-1 min-w-0 pr-2">Show Actions</h2>
           <button
             onClick={onClose}
-            className="text-pb-gray hover:text-white transition-colors"
+            className="text-pb-gray hover:text-white transition-colors flex-shrink-0 min-h-[44px] md:min-h-0 w-10 h-10 md:w-auto md:h-auto flex items-center justify-center"
+            aria-label="Close"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Show Info */}
-        <div className="p-6 border-b border-pb-primary/20">
-          <h3 className="text-lg font-semibold text-white mb-2">{showName}</h3>
-          <p className="text-pb-gray text-sm">
+        <div className="p-4 md:p-6 border-b border-pb-primary/20">
+          <h3 className="text-base md:text-lg font-semibold text-white mb-2 break-words">{showName}</h3>
+          <p className="text-pb-gray text-sm md:text-base break-words">
             Choose an action for this show. Archived shows can be restored, but deleted shows cannot be recovered.
           </p>
         </div>
@@ -104,52 +119,52 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
         <div className="flex border-b border-pb-primary/20">
           <button
             onClick={() => setActiveTab('archive')}
-            className={`flex-1 px-6 py-4 text-left transition-colors ${
+            className={`flex-1 px-3 md:px-6 py-3 md:py-4 text-left transition-colors min-h-[44px] md:min-h-0 ${
               activeTab === 'archive'
                 ? 'bg-pb-primary/20 text-pb-primary border-b-2 border-pb-primary'
                 : 'text-pb-gray hover:text-white hover:bg-pb-primary/10'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Archive className="w-5 h-5" />
-              <span className="font-medium">Archive Show</span>
+              <Archive className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+              <span className="font-medium text-sm md:text-base">Archive Show</span>
             </div>
           </button>
           <button
             onClick={() => setActiveTab('delete')}
-            className={`flex-1 px-6 py-4 text-left transition-colors ${
+            className={`flex-1 px-3 md:px-6 py-3 md:py-4 text-left transition-colors min-h-[44px] md:min-h-0 ${
               activeTab === 'delete'
                 ? 'bg-red-500/20 text-red-400 border-b-2 border-red-500'
                 : 'text-pb-gray hover:text-white hover:bg-red-500/10'
             }`}
           >
             <div className="flex items-center gap-2">
-              <Trash2 className="w-5 h-5" />
-              <span className="font-medium">Delete Show</span>
+              <Trash2 className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+              <span className="font-medium text-sm md:text-base">Delete Show</span>
             </div>
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 md:p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
           {activeTab === 'archive' && (
             <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <div className="flex items-start gap-3 p-3 md:p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                 <Archive className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-blue-400 mb-2">Archive Show</h4>
-                  <p className="text-pb-gray text-sm mb-3">
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-semibold text-blue-400 mb-2 text-sm md:text-base break-words">Archive Show</h4>
+                  <p className="text-pb-gray text-xs md:text-sm mb-3 break-words">
                     Archiving will preserve all show data including props, tasks, packing lists, and collaborators. 
                     The show can be restored later if needed.
                   </p>
-                  <ul className="text-pb-gray text-sm space-y-1">
+                  <ul className="text-pb-gray text-xs md:text-sm space-y-1 break-words">
                     <li>• All props and their images will be preserved</li>
                     <li>• Task boards and cards will be archived</li>
                     <li>• Packing lists and boxes will be saved</li>
                     <li>• Collaborator information will be maintained</li>
                     <li>• Show can be restored at any time</li>
                   </ul>
-                  <div className="mt-3 p-2 bg-pb-darker/60 rounded text-xs text-pb-gray">
+                  <div className="mt-3 p-2 bg-pb-darker/60 rounded text-xs text-pb-gray break-words">
                     <strong>Archive Limit:</strong> {limits.archivedShows === 0 ? 'No archived shows allowed on free plan' : `Up to ${limits.archivedShows} archived shows`}
                   </div>
                 </div>
@@ -158,7 +173,7 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
               <button
                 onClick={handleArchive}
                 disabled={loading}
-                className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 md:py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[44px] md:min-h-0"
               >
                 {loading ? 'Archiving...' : 'Archive Show'}
               </button>
@@ -167,14 +182,14 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
 
           {activeTab === 'delete' && (
             <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <div className="flex items-start gap-3 p-3 md:p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
                 <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-red-400 mb-2">Permanently Delete Show</h4>
-                  <p className="text-pb-gray text-sm mb-3">
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-semibold text-red-400 mb-2 text-sm md:text-base break-words">Permanently Delete Show</h4>
+                  <p className="text-pb-gray text-xs md:text-sm mb-3 break-words">
                     <strong className="text-red-400">This action cannot be undone.</strong> All show data will be permanently deleted including:
                   </p>
-                  <ul className="text-pb-gray text-sm space-y-1">
+                  <ul className="text-pb-gray text-xs md:text-sm space-y-1 break-words">
                     <li>• All props and their images</li>
                     <li>• Task boards and cards</li>
                     <li>• Packing lists and boxes</li>
@@ -187,15 +202,15 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
 
               <div className="space-y-3">
                 <label className="block">
-                  <span className="text-pb-gray text-sm mb-2 block">
-                    To confirm deletion, type <code className="bg-pb-darker px-2 py-1 rounded text-red-400">delete show</code> below:
+                  <span className="text-pb-gray text-xs md:text-sm mb-2 block break-words">
+                    To confirm deletion, type <code className="bg-pb-darker px-2 py-1 rounded text-red-400 text-xs md:text-sm">delete show</code> below:
                   </span>
                   <input
                     type="text"
                     value={deleteConfirmation}
                     onChange={(e) => setDeleteConfirmation(e.target.value)}
                     placeholder="delete show"
-                    className="w-full px-3 py-2 bg-pb-darker border border-red-500/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                    className="w-full px-3 py-2 bg-pb-darker border border-red-500/30 rounded-lg text-white text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-red-500/50 min-h-[44px] md:min-h-0"
                   />
                 </label>
 
@@ -203,7 +218,7 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
                   <button
                     onClick={handleDelete}
                     disabled={loading || deleteConfirmation !== 'delete show'}
-                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2.5 md:py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base min-h-[44px] md:min-h-0"
                   >
                     {loading ? 'Deleting...' : 'Permanently Delete Show'}
                   </button>
@@ -214,7 +229,7 @@ const ShowActionsModal: React.FC<ShowActionsModalProps> = ({
 
           {error && (
             <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+              <p className="text-red-400 text-xs md:text-sm break-words">{error}</p>
             </div>
           )}
         </div>

@@ -238,21 +238,21 @@ const DashboardHome: React.FC = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-7xl mx-auto space-y-6"
+        className="max-w-7xl mx-auto space-y-4 md:space-y-6 px-2 sm:px-4 md:px-0"
       >
         {/* Show Banner */}
         <motion.div
           variants={cardVariants}
-          className="bg-gradient-to-r from-pb-primary to-pb-secondary rounded-2xl p-6 relative overflow-hidden"
+          className="bg-gradient-to-r from-pb-primary to-pb-secondary rounded-2xl p-4 md:p-6 relative overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-pb-primary/20 to-pb-secondary/20 backdrop-blur-sm"></div>
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-white">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4 sm:gap-0">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-white truncate">
                   {show?.name || 'Select a Show'}
                 </h2>
-                <p className="text-pb-light/80">{nextShowDateLabel}</p>
+                <p className="text-pb-light/80 text-sm sm:text-base">{nextShowDateLabel}</p>
                 {/* Gentle prompt for missing show dates */}
                 {show && !hasAnyDates && (
                   <div className="mt-3 p-3 bg-pb-light/10 rounded-lg border border-pb-light/20">
@@ -268,9 +268,9 @@ const DashboardHome: React.FC = () => {
                   </div>
                 )}
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-white">{daysLeft !== null ? `${daysLeft} days` : '--'}</div>
-                <div className="text-pb-light/80 text-sm">until first performance</div>
+              <div className="text-left sm:text-right flex-shrink-0">
+                <div className="text-2xl sm:text-3xl font-bold text-white">{daysLeft !== null ? `${daysLeft} days` : '--'}</div>
+                <div className="text-pb-light/80 text-xs sm:text-sm">until first performance</div>
               </div>
             </div>
             <div className="w-full bg-pb-light/20 rounded-full h-2">
