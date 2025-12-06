@@ -24,7 +24,7 @@ module.exports = ({ config }) => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.propsbible",
-      buildNumber: "1",
+      buildNumber: "2",
       infoPlist: {
         NSCameraUsageDescription: "This app needs access to camera to take photos of props and scan QR codes.",
         NSPhotoLibraryUsageDescription: "This app needs access to photo library to select and save prop images.",

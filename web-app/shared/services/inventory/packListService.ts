@@ -89,6 +89,12 @@ export interface PackList {
     toAddress?: string;
     fromAddress?: string;
     tourLabel?: string; // used when mode === 'tour'
+    dispatchDate?: string; // ISO date string
+    shippedDate?: string; // ISO date string
+    expectedDeliveryDate?: string; // ISO date string
+    arrivedDate?: string; // ISO date string
+    courierName?: string;
+    trackingNumber?: string;
   };
   containers: PackingContainer[];
   status: 'draft' | 'in_progress' | 'completed';

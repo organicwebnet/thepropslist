@@ -50,3 +50,5 @@ export const modalTextClasses = 'text-sm md:text-base break-words';
  */
 export const modalCloseButtonClasses = 'p-2 hover:bg-pb-primary/20 rounded-lg transition-colors flex-shrink-0 min-h-[44px] md:min-h-0 w-10 h-10 md:w-auto md:h-auto flex items-center justify-center';
 
+
+

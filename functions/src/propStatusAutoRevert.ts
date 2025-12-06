@@ -15,10 +15,9 @@ const db = admin.firestore();
  * Props with status "repaired_back_in_show" that haven't been updated in 48 hours
  * will be automatically changed to "confirmed"
  */
-export const autoRevertRepairedProps = functions.pubsub
-  .schedule('every 1 hours')
-  .timeZone('UTC')
-  .onRun(async (context) => {
+export const autoRevertRepairedProps = functions.scheduler.onSchedule(
+  'every 1 hours',
+  async (event) => {
     const now = admin.firestore.Timestamp.now();
     const fortyEightHoursAgo = admin.firestore.Timestamp.fromMillis(
       now.toMillis() - (48 * 60 * 60 * 1000)
@@ -34,7 +33,7 @@ export const autoRevertRepairedProps = functions.pubsub
 
       if (propsQuery.empty) {
         functions.logger.info('No props found that need status reversion');
-        return null;
+        return;
       }
 
       const batch = db.batch();
@@ -75,13 +74,13 @@ export const autoRevertRepairedProps = functions.pubsub
       } else {
         functions.logger.info('No props needed status reversion');
       }
-
-      return null;
     } catch (error) {
       functions.logger.error('Error in autoRevertRepairedProps:', error);
       throw error;
     }
-  });
+  }
+);
+
 
 
 

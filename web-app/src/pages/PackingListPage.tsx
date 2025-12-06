@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useFirebase } from '../contexts/FirebaseContext';
 import { DigitalPackListService, PackList } from '../../shared/services/inventory/packListService';
 import { useShowSelection } from '../contexts/ShowSelectionContext';
@@ -8,6 +8,8 @@ import { useWebAuth } from '../contexts/WebAuthContext';
 import { useLimitChecker } from '../hooks/useLimitChecker';
 import { usePermissions } from '../hooks/usePermissions';
 import SubFootnote from '../components/SubFootnote';
+import { Trash2, AlertTriangle, X } from 'lucide-react';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const PackingListPage: React.FC = () => {
   const { service } = useFirebase();
@@ -22,6 +24,39 @@ const PackingListPage: React.FC = () => {
   const { checkPackingBoxesLimit, checkPackingBoxesLimitForShow } = useLimitChecker();
   const { isGod } = usePermissions();
   const [limitWarning, setLimitWarning] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState<Set<string>>(new Set());
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; listId: string | null; listName: string }>({
+    isOpen: false,
+    listId: null,
+    listName: '',
+  });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Helper function to set error message with timeout management
+  const setErrorMessageWithTimeout = (message: string) => {
+    // Clear any existing timeout
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = null;
+    }
+    setErrorMessage(message);
+    // Set new timeout
+    errorTimeoutRef.current = setTimeout(() => {
+      setErrorMessage(null);
+      errorTimeoutRef.current = null;
+    }, 5000);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Check limits on page load and when packing lists change
   // Skip limit checks for god users
@@ -167,6 +202,73 @@ const PackingListPage: React.FC = () => {
     }
   };
 
+  const handleStatusChange = async (listId: string, newStatus: PackList['status']) => {
+    if (!user) return;
+    
+    setUpdatingStatus(prev => new Set(prev).add(listId));
+    const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+    
+    try {
+      await packListService.updatePackList(listId, {
+        status: newStatus,
+      });
+      
+      // Refresh the list
+      const filters = currentShowId ? { showId: currentShowId } : { ownerId: user.uid };
+      const lists = await packListService.listPackLists(filters as any);
+      setPackingLists(lists);
+    } catch (error: any) {
+      console.error('Error updating status:', error);
+      setErrorMessageWithTimeout('Failed to update status. Please try again.');
+    } finally {
+      setUpdatingStatus(prev => {
+        const next = new Set(prev);
+        next.delete(listId);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteClick = (listId: string, listName: string) => {
+    setDeleteModal({
+      isOpen: true,
+      listId,
+      listName,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!user || !deleteModal.listId) return;
+    
+    const listId = deleteModal.listId;
+    setDeleting(prev => new Set(prev).add(listId));
+    setDeleteModal({ isOpen: false, listId: null, listName: '' });
+    
+    const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+    
+    try {
+      await packListService.deletePackList(listId);
+      
+      // Refresh the list
+      const filters = currentShowId ? { showId: currentShowId } : { ownerId: user.uid };
+      const lists = await packListService.listPackLists(filters as any);
+      setPackingLists(lists);
+    } catch (error: any) {
+      console.error('Error deleting packing list:', error);
+      setErrorMessageWithTimeout('Failed to delete packing list. Please try again.');
+    } finally {
+      setDeleting(prev => {
+        const next = new Set(prev);
+        next.delete(listId);
+        return next;
+      });
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteModal({ isOpen: false, listId: null, listName: '' });
+  };
+
   if (webAuthLoading) {
     return (
       <DashboardLayout>
@@ -200,6 +302,36 @@ const PackingListPage: React.FC = () => {
 
   return (
     <DashboardLayout>
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-red-400 text-sm">{errorMessage}</p>
+          </div>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="text-red-400 hover:text-red-300 transition-colors"
+            aria-label="Dismiss error"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Packing List"
+        message={`Are you sure you want to delete "${deleteModal.listName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        variant="danger"
+        isLoading={deleteModal.listId ? deleting.has(deleteModal.listId) : false}
+      />
+
       {/* Limit Warning Banner - Hidden for god users */}
       {limitWarning && !isGod() && (
         <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
@@ -293,19 +425,37 @@ const PackingListPage: React.FC = () => {
                     </a>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-pb-gray/70 text-sm">Status:</span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${
-                        list.status === 'active' ? 'bg-green-500/20 text-green-400' :
-                        list.status === 'completed' ? 'bg-blue-500/20 text-blue-400' :
-                        list.status === 'draft' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        {list.status}
-                      </span>
+                      <select
+                        value={list.status}
+                        onChange={(e) => handleStatusChange(list.id, e.target.value as PackList['status'])}
+                        disabled={updatingStatus.has(list.id)}
+                        className={`px-2 py-1 rounded text-xs font-medium capitalize border border-white/10 bg-pb-darker/60 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-pb-primary/50 ${
+                          list.status === 'in_progress' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
+                          list.status === 'completed' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                          list.status === 'draft' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}
+                      >
+                        <option value="draft" className="bg-pb-darker text-white">Draft</option>
+                        <option value="in_progress" className="bg-pb-darker text-white">In Progress</option>
+                        <option value="completed" className="bg-pb-darker text-white">Completed</option>
+                      </select>
+                      {updatingStatus.has(list.id) && (
+                        <span className="text-pb-gray/50 text-xs">Updating...</span>
+                      )}
                     </div>
                     <p className="text-pb-gray/50 text-sm">
                       Created: {new Date(list.metadata.createdAt).toLocaleDateString()}
                     </p>
                   </div>
+                  <button
+                    onClick={() => handleDeleteClick(list.id, list.name)}
+                    disabled={deleting.has(list.id)}
+                    className="ml-2 p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Delete packing list"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="text-pb-gray/70 text-sm">

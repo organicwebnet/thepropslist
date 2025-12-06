@@ -1,28 +1,54 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
-import { DigitalPackListService, PackList } from '../../shared/services/inventory/packListService';
+import { DigitalPackListService, PackList, PackingContainer } from '../../shared/services/inventory/packListService';
 import { DigitalInventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService';
 import DashboardLayout from '../PropsBibleHomepage';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable, useDroppable } from '@dnd-kit/core';
-import { ArrowLeft, Package, Box, Search, Plus, AlertCircle } from 'lucide-react';
-// import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable } from '@dnd-kit/core';
+import { ArrowLeft, Package, Search, AlertCircle, AlertTriangle, X, Image as ImageIcon, Copy, Truck, Tag } from 'lucide-react';
+import ContainerTree from '../components/packing/ContainerTree';
+import QuickContainerForm from '../components/packing/QuickContainerForm';
+import { DEFAULT_DIMENSIONS } from '../constants/containerConstants';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const PackingListDetailPage: React.FC = () => {
   const { service } = useFirebase();
   const { packListId } = useParams<{ packListId: string }>();
   const navigate = useNavigate();
   const [packList, setPackList] = useState<PackList | null>(null);
-  const [containers, setContainers] = useState<Array<{ id: string; name: string; type?: string; parentId?: string | null; description?: string; location?: string; props: { propId: string; quantity: number }[]; dimensions?: { width: number; height: number; depth: number; unit: 'cm' | 'in' } }>>([]);
+  const [containers, setContainers] = useState<PackingContainer[]>([]);
   const [propsList, setPropsList] = useState<InventoryProp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [containerForm, setContainerForm] = useState<{ description?: string; type?: string; length?: string; width?: string; height?: string; unit?: 'cm' | 'in'; location?: string }>({ description: '', type: '', length: '', width: '', height: '', unit: 'cm', location: '' });
-  const [_formError, setFormError] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [bulkPlaceOpen, setBulkPlaceOpen] = useState(false);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [isCreatingContainer, setIsCreatingContainer] = useState(false);
+  const [addChildContainerId, setAddChildContainerId] = useState<string | null>(null);
+  const [selectedPropContainer, setSelectedPropContainer] = useState<Record<string, string>>({});
+  const [movingContainerId, setMovingContainerId] = useState<string | null>(null);
+  const [removingContainerId, setRemovingContainerId] = useState<string | null>(null);
+  const [recentlyDroppedContainer, setRecentlyDroppedContainer] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'props' | 'containers' | 'delivery' | 'labels'>('props');
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copying, setCopying] = useState(false);
+
+  // Initialize prop container assignments (memoised to avoid unnecessary re-renders)
+  const propContainerAssignments = useMemo(() => {
+    const assignments: Record<string, string> = {};
+    containers.forEach(container => {
+      container.props.forEach(prop => {
+        assignments[prop.propId] = container.id;
+      });
+    });
+    return assignments;
+  }, [containers]);
+
+  useEffect(() => {
+    setSelectedPropContainer(propContainerAssignments);
+  }, [propContainerAssignments]);
 
   useEffect(() => {
     if (!packListId) return;
@@ -49,55 +75,23 @@ const PackingListDetailPage: React.FC = () => {
       });
   }, [packListId, service]);
 
-  const DEFAULT_DIMENSIONS: Record<string, { length: number; width: number; height: number; unit: 'cm' | 'in' }> = {
-    'Cardboard Box': { length: 60, width: 40, height: 40, unit: 'cm' },
-    'Pallet': { length: 120, width: 100, height: 150, unit: 'cm' },
-    'Flight Case': { length: 80, width: 60, height: 50, unit: 'cm' },
-    'Custom Case': { length: 100, width: 60, height: 60, unit: 'cm' },
-    'Crate': { length: 100, width: 80, height: 80, unit: 'cm' },
-    'Tote': { length: 60, width: 40, height: 30, unit: 'cm' },
-    'Trunk': { length: 90, width: 50, height: 50, unit: 'cm' },
-  };
-
   // Calculate total weight for a container
-  const calculateContainerWeight = (container: any) => {
+  const calculateContainerWeight = (container: PackingContainer) => {
     let totalWeight = 0;
     let weightUnit = 'kg';
     
     container.props.forEach((packedProp: any) => {
       const prop = propsList.find(p => p.id === packedProp.propId);
       if (prop && prop.weight) {
-        // Convert to kg for consistent calculation
         let weightInKg = prop.weight.value;
         if (prop.weight.unit === 'lb') {
           weightInKg = prop.weight.value * 0.453592;
         }
-        // InventoryProp only supports 'kg' and 'lb', so no need for 'g' and 'oz' conversions
-        
         totalWeight += weightInKg * packedProp.quantity;
       }
     });
     
     return { totalWeight, weightUnit };
-  };
-
-  const handleContainerFormChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
-    if (name === 'type') {
-      const defaults = DEFAULT_DIMENSIONS[value as keyof typeof DEFAULT_DIMENSIONS];
-      if (defaults) {
-        setContainerForm({
-          ...containerForm,
-          type: value,
-          length: String(defaults.length),
-          width: String(defaults.width),
-          height: String(defaults.height),
-          unit: defaults.unit,
-        });
-        return;
-      }
-    }
-    setContainerForm({ ...containerForm, [name]: value });
   };
 
   function generateAlphaCode(length = 6) {
@@ -109,28 +103,142 @@ const PackingListDetailPage: React.FC = () => {
     return code;
   }
 
-  const handleAddContainer = (e: React.FormEvent) => {
-    e.preventDefault();
-    const refCode = generateAlphaCode();
-    const parsedLength = containerForm.length ? parseFloat(containerForm.length) : undefined;
-    const parsedWidth = containerForm.width ? parseFloat(containerForm.width) : undefined;
-    const parsedHeight = containerForm.height ? parseFloat(containerForm.height) : undefined;
-    setContainers([
-      ...containers,
-      {
-        id: refCode,
+  const handleAddContainer = async (form: { description?: string; type?: string; length?: string; width?: string; height?: string; unit?: 'cm' | 'in'; location?: string }, parentId: string | null = null) => {
+    if (!packListId) {
+      setErrorMessage('Cannot create container: packing list ID is missing');
+      return;
+    }
+
+    setIsCreatingContainer(true);
+    setErrorMessage(null);
+    
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      const refCode = generateAlphaCode();
+      const parsedLength = form.length ? parseFloat(form.length) : undefined;
+      const parsedWidth = form.width ? parseFloat(form.width) : undefined;
+      const parsedHeight = form.height ? parseFloat(form.height) : undefined;
+      
+      const containerToCreate: Omit<PackingContainer, 'id' | 'metadata'> = {
         name: refCode,
-        type: containerForm.type || '',
-        parentId: null,
-        description: containerForm.description || '',
-        location: containerForm.location || '',
+        type: form.type || undefined,
+        parentId: parentId || null,
+        description: form.description || undefined,
+        location: form.location || undefined,
         dimensions: (parsedWidth && parsedHeight && parsedLength)
-          ? { width: parsedWidth, height: parsedHeight, depth: parsedLength, unit: containerForm.unit || 'cm' }
+          ? { width: parsedWidth, height: parsedHeight, depth: parsedLength, unit: form.unit || 'cm' }
           : undefined,
         props: [],
-      },
-    ]);
-    setContainerForm({ description: '', type: '', length: '', width: '', height: '', unit: 'cm', location: '' });
+        labels: [],
+        status: 'empty',
+      };
+
+      // Save to Firestore immediately
+      await packListService.addContainer(packListId, containerToCreate);
+      
+      // Refresh from Firestore to get the complete container with metadata
+      const refreshed = await packListService.getPackList(packListId);
+      setPackList(refreshed);
+      setContainers(refreshed.containers || []);
+      setAddChildContainerId(null);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create container';
+      setErrorMessage(errorMsg);
+      console.error('Failed to create container:', err);
+    } finally {
+      setIsCreatingContainer(false);
+    }
+  };
+
+  const handleTemplateClick = async (type: string) => {
+    const defaults = DEFAULT_DIMENSIONS[type];
+    if (defaults) {
+      await handleAddContainer({
+        type,
+        length: String(defaults.length),
+        width: String(defaults.width),
+        height: String(defaults.height),
+        unit: defaults.unit,
+        description: '',
+        location: '',
+      });
+    }
+  };
+
+  const handleAddChildContainer = (parentId: string) => {
+    setAddChildContainerId(parentId);
+  };
+
+  const handleRemoveFromParent = async (containerId: string) => {
+    if (!packListId) return;
+    setRemovingContainerId(containerId);
+    setErrorMessage(null);
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      await packListService.updateContainer(packListId, containerId, { parentId: null } as any);
+      const refreshed = await packListService.getPackList(packListId);
+      setPackList(refreshed);
+      setContainers(refreshed.containers || []);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to remove container from parent';
+      setErrorMessage(errorMsg);
+      console.error('Failed to remove from parent:', err);
+    } finally {
+      setRemovingContainerId(null);
+    }
+  };
+
+  const handleMoveContainer = async (containerId: string, newParentId: string | null) => {
+    if (!packListId) return;
+    setMovingContainerId(containerId);
+    setErrorMessage(null);
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      await packListService.updateContainer(packListId, containerId, { parentId: newParentId } as any);
+      const refreshed = await packListService.getPackList(packListId);
+      setPackList(refreshed);
+      setContainers(refreshed.containers || []);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to move container';
+      setErrorMessage(errorMsg);
+      console.error('Failed to move container:', err);
+    } finally {
+      setMovingContainerId(null);
+    }
+  };
+
+  const handleSaveContainer = async (container: PackingContainer) => {
+    if (!packListId) return;
+    setErrorMessage(null);
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      const existsRemotely = (packList?.containers || []).some((c) => c.id === container.id);
+      if (existsRemotely) {
+        await packListService.updateContainer(packListId, container.id, {
+          name: container.name,
+          type: container.type,
+          description: container.description,
+          location: container.location,
+          props: container.props,
+          dimensions: container.dimensions,
+          parentId: container.parentId || null,
+        } as any);
+      } else {
+        const { id: _ignore, metadata: _meta, ...toCreate } = container;
+        await packListService.addContainer(packListId, toCreate);
+      }
+      const refreshed = await packListService.getPackList(packListId);
+      setPackList(refreshed);
+      setContainers(refreshed.containers || []);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to save container';
+      setErrorMessage(errorMsg);
+      console.error('Failed to save container:', err);
+    }
+  };
+
+  const handleSelectChange = (containerId: string, checked: boolean) => {
+    setSelected(prev => ({ ...prev, [containerId]: checked }));
   };
 
   // Compute unpacked props (not in any container)
@@ -145,10 +253,75 @@ const PackingListDetailPage: React.FC = () => {
     );
   });
 
+  // Build hierarchical container list for dropdown
+  const buildContainerOptions = (parentId: string | null = null, level: number = 0): Array<{ id: string; name: string; level: number }> => {
+    const result: Array<{ id: string; name: string; level: number }> = [];
+    containers
+      .filter(c => c.parentId === parentId)
+      .forEach(container => {
+        result.push({ id: container.id, name: container.name, level });
+        result.push(...buildContainerOptions(container.id, level + 1));
+      });
+    return result;
+  };
+
+  const containerOptions = buildContainerOptions();
+
+  const handleAddPropToContainer = async (propId: string, containerId: string) => {
+    if (!packListId) return;
+    
+    // Clear any previous error messages
+    setErrorMessage(null);
+    
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      const inventoryService = new DigitalInventoryService(service, null as any, null as any);
+      
+      // Find the container to get its name
+      const container = containers.find(c => c.id === containerId);
+      if (!container) return;
+      
+      // Add prop to container via service (adds 1 to quantity if already exists)
+      await packListService.addPropToContainer(packListId, containerId, propId, 1);
+      
+      // Update prop location to reflect container assignment
+      try {
+        await inventoryService.updateLocation(propId, {
+          type: 'storage',
+          name: container.name,
+          details: `Container ${container.name} in packing list ${packList?.name || packListId}`,
+        });
+        
+        // Update prop assignment field
+        await service.updateDocument('props', propId, {
+          assignment: {
+            type: 'box',
+            id: containerId,
+            name: container.name,
+            assignedAt: new Date().toISOString(),
+          },
+        });
+      } catch (locationError) {
+        console.warn('Failed to update prop location:', locationError);
+        // Don't fail the whole operation if location update fails
+      }
+      
+      // Refresh containers from Firestore
+      const refreshed = await packListService.getPackList(packListId);
+      setPackList(refreshed);
+      setContainers(refreshed.containers || []);
+      setSelectedPropContainer(prev => ({ ...prev, [propId]: containerId }));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to add prop to container';
+      setErrorMessage(errorMsg);
+      console.error('Failed to add prop to container:', err);
+    }
+  };
+
   // Drag-and-drop sensors
   const sensors = useSensors(useSensor(PointerSensor));
 
-  // Drag-and-drop logic for multiple containers
+  // Drag-and-drop logic for props
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || !active) return;
@@ -156,56 +329,147 @@ const PackingListDetailPage: React.FC = () => {
     const containerId = over.id as string;
     const containerIdx = containers.findIndex((c) => c.id === containerId);
     if (containerIdx === -1) return;
-    // Remove prop from any container it's in
-    const newContainers = containers.map((c) => ({ ...c, props: c.props.filter((p) => p.propId !== propId) }));
-    // Add prop to the target container
-    newContainers[containerIdx].props.push({ propId, quantity: 1 });
-    setContainers(newContainers);
-  };
-  // Remove prop from container
-  const handleRemoveProp = (containerId: string, propId: string) => {
-    setContainers(containers.map((c) =>
-      c.id === containerId
-        ? { ...c, props: c.props.filter((p) => p.propId !== propId) }
-        : c
-    ));
+    
+    // Trigger animation
+    setRecentlyDroppedContainer(containerId);
+    handleAddPropToContainer(propId, containerId);
+    
+    // Clear animation after 1 second
+    setTimeout(() => {
+      setRecentlyDroppedContainer(null);
+    }, 1000);
   };
 
   // Draggable prop card component
   function DraggablePropCard({ prop }: { prop: InventoryProp }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: prop.id });
+    const currentContainerId = selectedPropContainer[prop.id];
+    const currentContainer = currentContainerId ? containers.find(c => c.id === currentContainerId) : null;
+    const [imageError, setImageError] = useState(false);
+    const imageUrl = prop.images && prop.images.length > 0 ? prop.images[0] : null;
+    
     return (
       <div
         ref={setNodeRef}
-        {...attributes}
-        {...listeners}
-        className={`bg-white/5 hover:bg-white/10 rounded-lg p-4 text-white shadow-sm cursor-grab transition-colors duration-200 border border-white/10 hover:border-pb-primary/30 ${isDragging ? 'opacity-50' : ''}`}
+        {...(isReadOnly ? {} : { ...attributes, ...listeners })}
+        className={`bg-white/5 hover:bg-white/10 rounded-lg p-4 text-white shadow-sm transition-colors duration-200 border border-white/10 hover:border-pb-primary/30 ${isDragging ? 'opacity-50' : ''} ${isReadOnly ? 'cursor-default' : 'cursor-grab'}`}
         style={{ userSelect: 'none' }}
       >
-        <div className="font-semibold text-base text-white mb-1">{prop.name}</div>
-        <div className="text-sm text-pb-gray/70 mb-2">{prop.category}</div>
-        {prop.description && <div className="text-sm text-pb-gray/60 mb-2 line-clamp-2">{prop.description}</div>}
-        {prop.tags && prop.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {prop.tags.map((tag) => (
-              <span key={tag} className="bg-pb-primary/20 text-pb-primary text-xs px-2 py-1 rounded-full border border-pb-primary/30">{tag}</span>
-            ))}
+        <div className="flex items-start gap-3 mb-2">
+          {/* Prop Thumbnail */}
+          <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-pb-darker/60 border border-white/10 flex items-center justify-center">
+            {imageUrl && !imageError ? (
+              <img
+                src={imageUrl}
+                alt={prop.name}
+                className="w-full h-full object-cover"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <ImageIcon className="w-6 h-6 text-pb-gray/50" />
+            )}
           </div>
-        )}
-      </div>
-    );
-  }
-
-  // Droppable container drop zone
-  function DroppableContainer({ container, children }: { container: any; children: React.ReactNode }) {
-    const { setNodeRef, isOver } = useDroppable({ id: container.id });
-    return (
-      <div
-        ref={setNodeRef}
-        id={container.id}
-        className={`border-2 border-dashed rounded-lg p-4 min-h-[120px] flex flex-col justify-start items-start transition-all duration-200 mt-3 ${isOver ? 'border-pb-primary bg-pb-primary/10' : 'border-pb-gray/30 bg-white/5'}`}
-      >
-        {children}
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-base text-white mb-1 truncate">{prop.name}</div>
+                <div className="text-sm text-pb-gray/70 mb-2">{prop.category}</div>
+                {currentContainer && (
+                  <div className="text-xs text-pb-primary mb-2">
+                    In: {currentContainer.name}
+                  </div>
+                )}
+              </div>
+              <select
+                value={currentContainerId || ''}
+                onChange={async (e) => {
+                  e.stopPropagation();
+                  if (e.target.value) {
+                    await handleAddPropToContainer(prop.id, e.target.value);
+                  } else {
+                    // Remove from container
+                    if (!packListId) return;
+                    
+                    // Clear any previous error messages
+                    setErrorMessage(null);
+                    
+                    try {
+                      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                      const inventoryService = new DigitalInventoryService(service, null as any, null as any);
+                      
+                      // Find which container the prop is currently in
+                      const currentContainer = containers.find(c => 
+                        c.props.some(p => p.propId === prop.id)
+                      );
+                      
+                      if (currentContainer) {
+                        // Remove prop from container via service
+                        // Note: The service might not have a remove method, so we'll need to update the container
+                        // by setting the prop quantity to 0 or removing it from the props array
+                        const updatedProps = currentContainer.props
+                          .filter(p => p.propId !== prop.id)
+                          .map(p => ({ propId: p.propId, quantity: p.quantity }));
+                        
+                        await packListService.updateContainer(packListId, currentContainer.id, {
+                          props: updatedProps,
+                        } as any);
+                        
+                        // Clear prop location/assignment
+                        try {
+                          await inventoryService.updateLocation(prop.id, {
+                            type: 'storage',
+                            name: 'Unassigned',
+                            details: 'Not assigned to any container',
+                          });
+                          
+                          await service.updateDocument('props', prop.id, {
+                            assignment: null,
+                          });
+                        } catch (locationError) {
+                          console.warn('Failed to clear prop location:', locationError);
+                        }
+                      }
+                      
+                      // Refresh containers
+                      const refreshed = await packListService.getPackList(packListId);
+                      setPackList(refreshed);
+                      setContainers(refreshed.containers || []);
+                      setSelectedPropContainer(prev => {
+                        const next = { ...prev };
+                        delete next[prop.id];
+                        return next;
+                      });
+                    } catch (err) {
+                      const errorMsg = err instanceof Error ? err.message : 'Failed to remove prop from container';
+                      setErrorMessage(errorMsg);
+                      console.error('Failed to remove prop from container:', err);
+                    }
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+                disabled={isReadOnly}
+                className="ml-2 px-2 py-1 text-xs rounded-lg border border-white/10 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Assign to container"
+              >
+                <option value="">Unassigned</option>
+                {containerOptions.map(opt => (
+                  <option key={opt.id} value={opt.id}>
+                    {'  '.repeat(opt.level)}{opt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {prop.description && <div className="text-sm text-pb-gray/60 mb-2 line-clamp-2">{prop.description}</div>}
+            {prop.tags && prop.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {prop.tags.map((tag) => (
+                  <span key={tag} className="bg-pb-primary/20 text-pb-primary text-xs px-2 py-1 rounded-full border border-pb-primary/30">{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -263,72 +527,386 @@ const PackingListDetailPage: React.FC = () => {
     );
   }
 
+  // Check if list is read-only (shipped or arrived)
+  const isReadOnly = useMemo(() => {
+    return !!(packList?.shipping?.shippedDate || packList?.shipping?.arrivedDate);
+  }, [packList]);
+
+  // Delivery details form state
+  const [deliveryForm, setDeliveryForm] = useState({
+    mode: packList?.shipping?.mode || 'courier' as 'courier' | 'tour',
+    toAddress: packList?.shipping?.toAddress || '',
+    fromAddress: packList?.shipping?.fromAddress || '',
+    tourLabel: packList?.shipping?.tourLabel || '',
+    dispatchDate: packList?.shipping?.dispatchDate ? packList.shipping.dispatchDate.split('T')[0] : '',
+    shippedDate: packList?.shipping?.shippedDate ? packList.shipping.shippedDate.split('T')[0] : '',
+    expectedDeliveryDate: packList?.shipping?.expectedDeliveryDate ? packList.shipping.expectedDeliveryDate.split('T')[0] : '',
+    arrivedDate: packList?.shipping?.arrivedDate ? packList.shipping.arrivedDate.split('T')[0] : '',
+    courierName: packList?.shipping?.courierName || '',
+    trackingNumber: packList?.shipping?.trackingNumber || '',
+  });
+  const [savingDelivery, setSavingDelivery] = useState(false);
+
+  // Labels state
+  const [labels, setLabels] = useState<any[]>([]);
+  const [loadingLabels, setLoadingLabels] = useState(false);
+
+  // Update delivery form when packList changes
+  useEffect(() => {
+    if (packList?.shipping) {
+      setDeliveryForm({
+        mode: packList.shipping.mode || 'courier',
+        toAddress: packList.shipping.toAddress || '',
+        fromAddress: packList.shipping.fromAddress || '',
+        tourLabel: packList.shipping.tourLabel || '',
+        dispatchDate: packList.shipping.dispatchDate ? packList.shipping.dispatchDate.split('T')[0] : '',
+        shippedDate: packList.shipping.shippedDate ? packList.shipping.shippedDate.split('T')[0] : '',
+        expectedDeliveryDate: packList.shipping.expectedDeliveryDate ? packList.shipping.expectedDeliveryDate.split('T')[0] : '',
+        arrivedDate: packList.shipping.arrivedDate ? packList.shipping.arrivedDate.split('T')[0] : '',
+        courierName: packList.shipping.courierName || '',
+        trackingNumber: packList.shipping.trackingNumber || '',
+      });
+    }
+  }, [packList]);
+
+  // Load labels when labels tab is active
+  useEffect(() => {
+    if (activeTab === 'labels' && packListId && labels.length === 0 && !loadingLabels) {
+      loadLabels();
+    }
+  }, [activeTab, packListId]);
+
+  const loadLabels = async () => {
+    if (!packListId) return;
+    setLoadingLabels(true);
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      const generatedLabels = await packListService.generatePackingLabels(packListId);
+      setLabels(generatedLabels);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to generate labels';
+      setErrorMessage(errorMsg);
+      console.error('Failed to generate labels:', err);
+    } finally {
+      setLoadingLabels(false);
+    }
+  };
+
+  const handlePrintLabels = async () => {
+    if (labels.length === 0) {
+      await loadLabels();
+    }
+    try {
+      const { LabelPrintService } = await import('../../shared/services/pdf/labelPrintService');
+      const printer = new LabelPrintService();
+      await printer.printLabels(labels);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to print labels';
+      setErrorMessage(errorMsg);
+      console.error('Failed to print labels:', err);
+    }
+  };
+
+  const handleSaveDeliveryDetails = async () => {
+    if (!packListId) return;
+    setSavingDelivery(true);
+    setErrorMessage(null);
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      const inventoryService = new DigitalInventoryService(service, null as any, null as any);
+      
+      // Check if shippedDate is being set (wasn't set before, but is now)
+      const wasShipped = !!packList?.shipping?.shippedDate;
+      const isNowShipped = !!deliveryForm.shippedDate;
+      const isNewlyShipped = !wasShipped && isNowShipped;
+      
+      // Check if arrivedDate is being set (wasn't set before, but is now)
+      const wasArrived = !!packList?.shipping?.arrivedDate;
+      const isNowArrived = !!deliveryForm.arrivedDate;
+      const isNewlyArrived = !wasArrived && isNowArrived;
+      
+      // Convert date strings to ISO format
+      const shipping = {
+        mode: deliveryForm.mode,
+        toAddress: deliveryForm.toAddress || undefined,
+        fromAddress: deliveryForm.fromAddress || undefined,
+        tourLabel: deliveryForm.tourLabel || undefined,
+        dispatchDate: deliveryForm.dispatchDate ? new Date(deliveryForm.dispatchDate).toISOString() : undefined,
+        shippedDate: deliveryForm.shippedDate ? new Date(deliveryForm.shippedDate).toISOString() : undefined,
+        expectedDeliveryDate: deliveryForm.expectedDeliveryDate ? new Date(deliveryForm.expectedDeliveryDate).toISOString() : undefined,
+        arrivedDate: deliveryForm.arrivedDate ? new Date(deliveryForm.arrivedDate).toISOString() : undefined,
+        courierName: deliveryForm.courierName || undefined,
+        trackingNumber: deliveryForm.trackingNumber || undefined,
+      };
+
+      await packListService.updatePackList(packListId, { shipping } as any);
+      const refreshed = await packListService.getPackList(packListId);
+      setPackList(refreshed);
+      
+      // Update prop statuses if container was just shipped or arrived
+      if (isNewlyShipped || isNewlyArrived) {
+        // Get all props in all containers
+        const allPropIds = new Set<string>();
+        refreshed.containers.forEach(container => {
+          container.props.forEach(prop => {
+            allPropIds.add(prop.propId);
+          });
+        });
+        
+        // Update each prop's status
+        for (const propId of allPropIds) {
+          try {
+            if (isNewlyShipped) {
+              // Update to in_transit when shipped
+              const propDoc = await service.getDocument('props', propId);
+              if (propDoc?.data) {
+                const currentStatus = propDoc.data.status;
+                // Only update if current status allows transition to in_transit
+                // Valid transitions: 'available_in_storage' or 'checked_out' -> 'in_transit'
+                if (currentStatus === 'available_in_storage' || currentStatus === 'checked_out') {
+                  await service.updateDocument('props', propId, {
+                    status: 'in_transit',
+                    lastStatusUpdate: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  });
+                  
+                  // Update location to transit
+                  await inventoryService.updateLocation(propId, {
+                    type: 'transit',
+                    name: `In transit - ${refreshed.name}`,
+                    details: `Shipped on ${deliveryForm.shippedDate}`,
+                  });
+                }
+              }
+            } else if (isNewlyArrived) {
+              // Update to available_in_storage when arrived
+              await service.updateDocument('props', propId, {
+                status: 'available_in_storage',
+                lastStatusUpdate: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+              
+              // Update location back to storage (container)
+              const container = refreshed.containers.find(c => 
+                c.props.some(p => p.propId === propId)
+              );
+              if (container) {
+                await inventoryService.updateLocation(propId, {
+                  type: 'storage',
+                  name: container.name,
+                  details: `Arrived - Container ${container.name} in packing list ${refreshed.name}`,
+                });
+              }
+            }
+          } catch (propError) {
+            console.warn(`Failed to update prop ${propId} status:`, propError);
+            // Continue with other props even if one fails
+          }
+        }
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to save delivery details';
+      setErrorMessage(errorMsg);
+      console.error('Failed to save delivery details:', err);
+    } finally {
+      setSavingDelivery(false);
+    }
+  };
+
+  const handleCopyList = async () => {
+    if (!packList || !packListId) return;
+    setCopying(true);
+    setErrorMessage(null);
+    try {
+      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+      
+      // Create new list with copied data
+      const newListData = {
+        name: `${packList.name} (Copy)`,
+        description: packList.description,
+        showId: packList.showId,
+        ownerId: packList.ownerId,
+        containers: packList.containers.map(c => {
+          const { id, metadata, ...containerData } = c;
+          return containerData as Omit<PackingContainer, 'id' | 'metadata'>;
+        }),
+        status: 'draft',
+        labels: [],
+        shipping: packList.shipping ? {
+          mode: packList.shipping.mode,
+          toAddress: packList.shipping.toAddress,
+          fromAddress: packList.shipping.fromAddress,
+          tourLabel: packList.shipping.tourLabel,
+          // Clear dates but keep addresses
+          dispatchDate: undefined,
+          shippedDate: undefined,
+          expectedDeliveryDate: undefined,
+          arrivedDate: undefined,
+          courierName: undefined,
+          trackingNumber: undefined,
+        } : undefined,
+      };
+
+      const newListId = await packListService.createPackList(newListData as any);
+      setCopyModalOpen(false);
+      navigate(`/packing-lists/${newListId}`);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to copy packing list';
+      setErrorMessage(errorMsg);
+      console.error('Failed to copy packing list:', err);
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  // Calculate statistics
+  const rootContainers = containers.filter(c => !c.parentId);
+  const nestedContainers = containers.filter(c => c.parentId);
+  const totalPropsPacked = containers.reduce((sum, c) => sum + c.props.length, 0);
+  const emptyContainers = containers.filter(c => c.props.length === 0);
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <button
-              onClick={() => navigate('/packing-lists')}
-              className="p-2 hover:bg-pb-darker/40 rounded-lg transition-colors"
-              title="Back to Packing Lists"
-            >
-              <ArrowLeft className="w-5 h-5 text-pb-gray/70 hover:text-white" />
-            </button>
-            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-              <Package className="w-5 h-5 text-white" />
+        {/* Error Message Banner */}
+        {errorMessage && (
+          <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-400 text-sm">{errorMessage}</p>
             </div>
-            <h1 className="text-3xl font-bold text-white">Packing List: {packList.name}</h1>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="text-red-400 hover:text-red-300 transition-colors"
+              aria-label="Dismiss error"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/packing-lists')}
+                className="p-2 hover:bg-pb-darker/40 rounded-lg transition-colors"
+                title="Back to Packing Lists"
+              >
+                <ArrowLeft className="w-5 h-5 text-pb-gray/70 hover:text-white" />
+              </button>
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold text-white">Packing List: {packList.name}</h1>
+            </div>
+            {isReadOnly && (
+              <button
+                onClick={() => setCopyModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-pb-primary hover:bg-pb-secondary text-white rounded-lg transition-colors"
+                title="Copy this packing list to create an editable version"
+              >
+                <Copy className="w-4 h-4" />
+                Copy List
+              </button>
+            )}
           </div>
           <p className="text-pb-gray/70">Organize props into containers for efficient packing and shipping</p>
-        </div>
-        {/* Bulk Actions */}
-        <div className="bg-pb-darker/40 rounded-lg p-6 border border-white/10 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-1">Bulk Actions</h3>
-              <p className="text-pb-gray/70 text-sm">
-                {Object.values(selected).filter(Boolean).length} items selected
-              </p>
+          
+          {/* Read-only Banner */}
+          {isReadOnly && (
+            <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-lg flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-yellow-400 text-sm font-medium">This packing list is read-only</p>
+                <p className="text-yellow-300/70 text-xs mt-1">
+                  {packList.shipping?.arrivedDate 
+                    ? 'This list has arrived and cannot be edited. Copy it to create an editable version.'
+                    : 'This list has been shipped and cannot be edited. Copy it to create an editable version.'}
+                </p>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                className="px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={Object.values(selected).filter(Boolean).length === 0}
-                onClick={() => setBulkPlaceOpen(true)}
-              >
-                Place Selected Items
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={Object.values(selected).filter(Boolean).length === 0 || bulkSaving}
-                onClick={async () => {
-                  if (!packListId) return;
-                  setBulkSaving(true);
-                  try {
-                    const svc = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                    const ids = Object.keys(selected).filter(id => selected[id]);
-                    for (const id of ids) {
-                      await svc.updateContainer(packListId, id, { parentId: null } as any);
-                    }
-                    const refreshed = await svc.getPackList(packListId);
-                    setPackList(refreshed);
-                    setContainers(refreshed.containers || []);
-                  } finally {
-                    setBulkSaving(false);
-                  }
-                }}
-              >
-                {bulkSaving ? 'Processing...' : 'Clear Parent'}
-              </button>
+          )}
+          
+          {/* Statistics */}
+          <div className="mt-4 flex flex-wrap gap-4 text-sm">
+            <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              {containers.length} total container{containers.length !== 1 ? 's' : ''} ({rootContainers.length} root, {nestedContainers.length} nested)
+            </div>
+            <div className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+              {totalPropsPacked} prop{totalPropsPacked !== 1 ? 's' : ''} packed
+            </div>
+            <div className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+              {emptyContainers.length} empty container{emptyContainers.length !== 1 ? 's' : ''}
             </div>
           </div>
         </div>
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <div className="flex gap-6 items-start">
-            {/* Left Panel: Props List */}
-            <div className="w-1/2 bg-pb-darker/40 rounded-lg border border-white/10 p-6 flex flex-col max-h-[75vh]">
+
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b border-white/10">
+          <nav className="flex space-x-1" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('props')}
+              className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === 'props'
+                  ? 'bg-pb-darker/60 text-white border-b-2 border-pb-primary'
+                  : 'text-pb-gray/70 hover:text-white hover:bg-pb-darker/40'
+              }`}
+              disabled={isReadOnly && activeTab !== 'props'}
+            >
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Props
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('containers')}
+              className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === 'containers'
+                  ? 'bg-pb-darker/60 text-white border-b-2 border-pb-primary'
+                  : 'text-pb-gray/70 hover:text-white hover:bg-pb-darker/40'
+              }`}
+              disabled={isReadOnly && activeTab !== 'containers'}
+            >
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Containers
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('delivery')}
+              className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === 'delivery'
+                  ? 'bg-pb-darker/60 text-white border-b-2 border-pb-primary'
+                  : 'text-pb-gray/70 hover:text-white hover:bg-pb-darker/40'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Truck className="w-4 h-4" />
+                Delivery Details
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('labels')}
+              className={`px-4 py-3 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === 'labels'
+                  ? 'bg-pb-darker/60 text-white border-b-2 border-pb-primary'
+                  : 'text-pb-gray/70 hover:text-white hover:bg-pb-darker/40'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Labels
+              </div>
+            </button>
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'props' && (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center">
                   <Package className="w-4 h-4 text-green-400" />
@@ -342,309 +920,432 @@ const PackingListDetailPage: React.FC = () => {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search props by name, category, or tag..."
-                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
+                  disabled={isReadOnly}
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
-              <div className="overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto">
                 {filteredProps.length === 0 ? (
-                  <div className="text-center py-8">
+                  <div className="col-span-full text-center py-8">
                     <Package className="w-12 h-12 text-pb-gray/50 mx-auto mb-3" />
                     <p className="text-pb-gray/70">No props found</p>
                     <p className="text-pb-gray/50 text-sm">Try adjusting your search terms</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-3">
-                    {filteredProps.map((prop) => (
-                      <DraggablePropCard key={prop.id} prop={prop} />
-                    ))}
-                  </div>
+                  filteredProps.map((prop) => (
+                    <DraggablePropCard key={prop.id} prop={prop} />
+                  ))
                 )}
               </div>
             </div>
-            {/* Right Panel: Add Container Form and Containers List */}
-            <div className="w-1/2 flex flex-col gap-6">
-            {/* Add Container Form */}
-            <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                  <Plus className="w-4 h-4 text-blue-400" />
-                </div>
-                <h2 className="text-lg font-semibold text-white">Add Package/Lift</h2>
-              </div>
-              <form onSubmit={handleAddContainer} className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Container Type</label>
-                  <select
-                    name="type"
-                    value={containerForm.type}
-                    onChange={handleContainerFormChange}
-                    className="w-full px-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-                  >
-                    <option value="">Select type...</option>
-                    <option value="Cardboard Box">Cardboard Box</option>
-                    <option value="Pallet">Pallet</option>
-                    <option value="Flight Case">Flight Case</option>
-                    <option value="Custom Case">Custom Case</option>
-                    <option value="Crate">Crate</option>
-                    <option value="Tote">Tote</option>
-                    <option value="Trunk">Trunk</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Dimensions</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="length"
-                      value={containerForm.length || ''}
-                      onChange={handleContainerFormChange}
-                      placeholder="Length"
-                      className="px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="width"
-                      value={containerForm.width || ''}
-                      onChange={handleContainerFormChange}
-                      placeholder="Width"
-                      className="px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      name="height"
-                      value={containerForm.height || ''}
-                      onChange={handleContainerFormChange}
-                      placeholder="Height"
-                      className="px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-                    />
+          </DndContext>
+        )}
+
+        {activeTab === 'containers' && (
+          <div className="space-y-6">
+            {/* Bulk Actions */}
+            {Object.values(selected).filter(Boolean).length > 0 && !isReadOnly && (
+              <div className="bg-pb-darker/40 rounded-lg p-6 border border-white/10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white mb-1">Bulk Actions</h3>
+                    <p className="text-pb-gray/70 text-sm">
+                      {Object.values(selected).filter(Boolean).length} item{Object.values(selected).filter(Boolean).length !== 1 ? 's' : ''} selected
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      className="px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      onClick={() => setBulkPlaceOpen(true)}
+                    >
+                      Place Selected Items
+                    </button>
+                    <button
+                      className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={bulkSaving}
+                      onClick={async () => {
+                        if (!packListId) return;
+                        setBulkSaving(true);
+                        try {
+                          const svc = new DigitalPackListService(service, null as any, null as any, window.location.origin);
+                          const ids = Object.keys(selected).filter(id => selected[id]);
+                          for (const id of ids) {
+                            await svc.updateContainer(packListId, id, { parentId: null } as any);
+                          }
+                          const refreshed = await svc.getPackList(packListId);
+                          setPackList(refreshed);
+                          setContainers(refreshed.containers || []);
+                        } finally {
+                          setBulkSaving(false);
+                        }
+                      }}
+                    >
+                      {bulkSaving ? 'Processing...' : 'Clear Parent'}
+                    </button>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Unit</label>
-                  <select
-                    name="unit"
-                    value={containerForm.unit || 'cm'}
-                    onChange={handleContainerFormChange}
-                    className="w-full px-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-                  >
-                    <option value="cm">cm</option>
-                    <option value="in">in</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Description (optional)</label>
-                  <textarea
-                    name="description"
-                    value={containerForm.description}
-                    onChange={handleContainerFormChange}
-                    placeholder="Enter container description..."
-                    className="w-full px-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 min-h-[80px] resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-2">Location (optional)</label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={containerForm.location || ''}
-                    onChange={handleContainerFormChange}
-                    placeholder="e.g., Warehouse A, Room 101, Storage Unit 5"
-                    className="w-full px-4 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50"
-                  />
-                </div>
-                <button 
-                  type="submit" 
-                  className="w-full px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white font-medium transition-colors"
-                >
-                  Add Container
-                </button>
-              </form>
-            </div>
-            {/* Containers List */}
-            <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6 flex-1 overflow-y-auto">
+              </div>
+            )}
+
+            {/* Container Creation Zone */}
+            {!isReadOnly && (
+              <>
+                <QuickContainerForm
+                  onSubmit={(form) => handleAddContainer(form, addChildContainerId)}
+                  onTemplateClick={handleTemplateClick}
+                  containerCount={containers.length}
+                  isCreating={isCreatingContainer}
+                />
+
+                {/* Add Child Container Form (if active) */}
+                {addChildContainerId && (
+                  <div className="bg-pb-darker/40 rounded-lg border border-pb-primary/30 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold text-white">Add Child Container</h3>
+                        <span className="text-sm text-pb-gray/70">
+                          (Inside: {containers.find(c => c.id === addChildContainerId)?.name || addChildContainerId})
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setAddChildContainerId(null)}
+                        className="px-3 py-1 text-sm bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <QuickContainerForm
+                      onSubmit={(form) => handleAddContainer(form, addChildContainerId)}
+                      onTemplateClick={async (type) => {
+                        const defaults = DEFAULT_DIMENSIONS[type];
+                        if (defaults) {
+                          await handleAddContainer({
+                            type,
+                            length: String(defaults.length),
+                            width: String(defaults.width),
+                            height: String(defaults.height),
+                            unit: defaults.unit,
+                            description: '',
+                            location: '',
+                          }, addChildContainerId);
+                        }
+                      }}
+                      containerCount={containers.length}
+                      isCreating={isCreatingContainer}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Container Hierarchy View */}
+            <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-6 h-6 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                  <Box className="w-4 h-4 text-purple-400" />
+                  <Package className="w-4 h-4 text-purple-400" />
                 </div>
-                <h2 className="text-lg font-semibold text-white">Containers</h2>
+                <h2 className="text-lg font-semibold text-white">Container Hierarchy</h2>
               </div>
-              {containers.length === 0 ? (
-                <div className="text-center py-8">
-                  <Box className="w-12 h-12 text-pb-gray/50 mx-auto mb-3" />
-                  <p className="text-pb-gray/70">No containers yet</p>
-                  <p className="text-pb-gray/50 text-sm">Add your first container above</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {containers.map((container) => (
-                    <div key={container.id} className="bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 hover:border-white/20 p-4 transition-colors duration-200">
-                      <div className="flex items-center gap-3 mb-3">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-white/20 bg-pb-darker/60 text-pb-primary focus:ring-pb-primary/50"
-                          checked={!!selected[container.id]}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            setSelected(prev => ({ ...prev, [container.id]: e.target.checked }));
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                          title="Select for bulk actions"
-                        />
-                        <Link
-                          to={`/packing-lists/${packListId}/containers/${container.id}`}
-                          className="flex-1 cursor-pointer"
-                          onClick={(e) => {
-                            // Don't navigate if clicking on child elements
-                            if ((e.target as HTMLElement).closest('button, input, a[href]')) {
-                              e.preventDefault();
-                            }
-                          }}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-white hover:text-pb-primary transition-colors">{container.name}</span>
-                            {container.type && <span className="text-sm text-pb-gray/70">({container.type})</span>}
-                          </div>
-                          {container.parentId && (
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                on: {(() => {
-                                  const p = containers.find(c => c.id === container.parentId);
-                                  return p ? (p.name + (p.type ? ` (${p.type})` : '')) : container.parentId;
-                                })()}
-                              </span>
-                            </div>
-                          )}
-                          {container.location && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
-                                📍 {container.location}
-                              </span>
-                            </div>
-                          )}
-                        </Link>
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Link
-                            to={`/packing-lists/${packListId}/containers/${container.id}`}
-                            className="px-3 py-1 text-xs bg-pb-primary/20 text-pb-primary rounded-lg border border-pb-primary/30 hover:bg-pb-primary/30 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Details & Label
-                          </Link>
-                          <button
-                            className="px-3 py-1 text-xs bg-green-500/20 text-green-400 rounded-lg border border-green-500/30 hover:bg-green-500/30 transition-colors"
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (!packListId) return;
-                              try {
-                                const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-                                const existsRemotely = (packList?.containers || []).some((c) => c.id === container.id);
-                                if (existsRemotely) {
-                                  await packListService.updateContainer(packListId, container.id, {
-                                    name: container.name,
-                                    type: container.type,
-                                    description: container.description,
-                                    location: container.location,
-                                    props: container.props,
-                                    dimensions: container.dimensions,
-                                    parentId: container.parentId || null,
-                                  });
-                                } else {
-                                  const { id: _ignore, ...toCreate } = container as any;
-                                  await packListService.addContainer(packListId, toCreate);
-                                }
-                                const refreshed = await packListService.getPackList(packListId);
-                                setPackList(refreshed);
-                                setContainers(refreshed.containers || []);
-                              } catch (err) {
-                                console.error('Failed to save container:', err);
-                              }
-                            }}
-                          >
-                            Save Container
-                          </button>
-                        </div>
-                      </div>
-                      {container.description && (
-                        <div className="text-sm text-pb-gray/70 mb-2 p-2 bg-white/5 rounded border border-white/10">
-                          {container.description}
-                        </div>
-                      )}
-                      {container.dimensions && (
-                        <div className="text-sm text-pb-gray/70 mb-3">
-                          <span className="font-medium">Dimensions:</span> {container.dimensions.width} × {container.dimensions.height} × {container.dimensions.depth} {container.dimensions.unit}
-                        </div>
-                      )}
-                      <div className="bg-white/5 rounded-lg border border-white/10 p-3">
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="font-medium text-sm text-white">Props in this container</div>
-                          {container.props.length > 0 && (
-                            <div className="text-sm text-pb-primary font-medium">
-                              Total Weight: {(() => {
-                                const { totalWeight } = calculateContainerWeight(container);
-                                return totalWeight > 0 ? `${totalWeight.toFixed(1)} kg` : 'No weight data';
-                              })()}
-                            </div>
-                          )}
-                        </div>
-                        <DroppableContainer container={container}>
-                        {container.props.length === 0 ? (
-                          <div className="text-center py-4">
-                            <Package className="w-8 h-8 text-pb-gray/50 mx-auto mb-2" />
-                            <div className="text-sm text-pb-gray/70">Drag props here to add them to the container</div>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {container.props.map((p) => {
-                              const prop = propsList.find((pr) => pr.id === p.propId);
-                              const propWeight = prop && prop.weight ? `${prop.weight.value} ${prop.weight.unit}` : 'No weight';
-                              return (
-                                <div key={p.propId} className="bg-white/5 rounded-lg p-3 border border-white/10">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="font-medium text-white text-sm">
-                                        {prop ? prop.name : 'Unknown prop'} (Qty: {p.quantity})
-                                      </div>
-                                      <div className="text-xs text-pb-gray/70 mt-1">
-                                        <div>Weight: {propWeight}</div>
-                                        {prop && prop.dimensions && (
-                                          <div>
-                                            Size: {prop.dimensions.width || '?'} × {prop.dimensions.height || '?'} × {prop.dimensions.depth || '?'} {prop.dimensions.unit || 'cm'}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <button
-                                      className="ml-3 px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded border border-red-500/30 hover:bg-red-500/30 transition-colors"
-                                      onClick={() => handleRemoveProp(container.id, p.propId)}
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                        </DroppableContainer>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <ContainerTree
+                containers={containers}
+                packListId={packListId!}
+                propsList={propsList}
+                calculateContainerWeight={calculateContainerWeight}
+                onAddChildContainer={handleAddChildContainer}
+                onRemoveFromParent={handleRemoveFromParent}
+                onMoveContainer={handleMoveContainer}
+                selected={selected}
+                onSelectChange={handleSelectChange}
+                onSaveContainer={handleSaveContainer}
+                service={service}
+                packList={packList}
+                movingContainerId={movingContainerId}
+                removingContainerId={removingContainerId}
+                recentlyDroppedContainer={recentlyDroppedContainer}
+              />
             </div>
           </div>
+        )}
+
+        {activeTab === 'delivery' && (
+          <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <Truck className="w-4 h-4 text-blue-400" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">Delivery Details</h2>
+            </div>
+            
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveDeliveryDetails(); }} className="space-y-6">
+              {/* Shipping Mode */}
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Shipping Mode</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="courier"
+                      checked={deliveryForm.mode === 'courier'}
+                      onChange={(e) => setDeliveryForm({ ...deliveryForm, mode: e.target.value as 'courier' | 'tour' })}
+                      disabled={isReadOnly}
+                      className="w-4 h-4 text-pb-primary focus:ring-pb-primary disabled:opacity-50"
+                    />
+                    <span className="text-white">Courier</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="tour"
+                      checked={deliveryForm.mode === 'tour'}
+                      onChange={(e) => setDeliveryForm({ ...deliveryForm, mode: e.target.value as 'courier' | 'tour' })}
+                      disabled={isReadOnly}
+                      className="w-4 h-4 text-pb-primary focus:ring-pb-primary disabled:opacity-50"
+                    />
+                    <span className="text-white">Tour</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Courier-specific fields */}
+              {deliveryForm.mode === 'courier' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">From Address</label>
+                    <textarea
+                      value={deliveryForm.fromAddress}
+                      onChange={(e) => setDeliveryForm({ ...deliveryForm, fromAddress: e.target.value })}
+                      disabled={isReadOnly}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="Enter sender address..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">To Address</label>
+                    <textarea
+                      value={deliveryForm.toAddress}
+                      onChange={(e) => setDeliveryForm({ ...deliveryForm, toAddress: e.target.value })}
+                      disabled={isReadOnly}
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="Enter recipient address..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">Courier Name</label>
+                    <input
+                      type="text"
+                      value={deliveryForm.courierName}
+                      onChange={(e) => setDeliveryForm({ ...deliveryForm, courierName: e.target.value })}
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="e.g., DHL, FedEx, UPS"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">Tracking Number</label>
+                    <input
+                      type="text"
+                      value={deliveryForm.trackingNumber}
+                      onChange={(e) => setDeliveryForm({ ...deliveryForm, trackingNumber: e.target.value })}
+                      disabled={isReadOnly}
+                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      placeholder="Enter tracking number"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Tour-specific fields */}
+              {deliveryForm.mode === 'tour' && (
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Tour Label</label>
+                  <input
+                    type="text"
+                    value={deliveryForm.tourLabel}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, tourLabel: e.target.value })}
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="e.g., Tour 2024, UK Tour"
+                  />
+                </div>
+              )}
+
+              {/* Date fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Dispatch Date</label>
+                  <input
+                    type="date"
+                    value={deliveryForm.dispatchDate}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, dispatchDate: e.target.value })}
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Shipped Date</label>
+                  <input
+                    type="date"
+                    value={deliveryForm.shippedDate}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, shippedDate: e.target.value })}
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Expected Delivery Date</label>
+                  <input
+                    type="date"
+                    value={deliveryForm.expectedDeliveryDate}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, expectedDeliveryDate: e.target.value })}
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">Arrived Date</label>
+                  <input
+                    type="date"
+                    value={deliveryForm.arrivedDate}
+                    onChange={(e) => setDeliveryForm({ ...deliveryForm, arrivedDate: e.target.value })}
+                    disabled={isReadOnly}
+                    className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              {!isReadOnly && (
+                <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (packList?.shipping) {
+                        setDeliveryForm({
+                          mode: packList.shipping.mode || 'courier',
+                          toAddress: packList.shipping.toAddress || '',
+                          fromAddress: packList.shipping.fromAddress || '',
+                          tourLabel: packList.shipping.tourLabel || '',
+                          dispatchDate: packList.shipping.dispatchDate ? packList.shipping.dispatchDate.split('T')[0] : '',
+                          shippedDate: packList.shipping.shippedDate ? packList.shipping.shippedDate.split('T')[0] : '',
+                          expectedDeliveryDate: packList.shipping.expectedDeliveryDate ? packList.shipping.expectedDeliveryDate.split('T')[0] : '',
+                          arrivedDate: packList.shipping.arrivedDate ? packList.shipping.arrivedDate.split('T')[0] : '',
+                          courierName: packList.shipping.courierName || '',
+                          trackingNumber: packList.shipping.trackingNumber || '',
+                        });
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-700 text-white transition-colors"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingDelivery}
+                    className="px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingDelivery ? 'Saving...' : 'Save Delivery Details'}
+                  </button>
+                </div>
+              )}
+            </form>
           </div>
-        </DndContext>
+        )}
+
+        {activeTab === 'labels' && (
+          <div className="bg-pb-darker/40 rounded-lg border border-white/10 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                  <Tag className="w-4 h-4 text-purple-400" />
+                </div>
+                <h2 className="text-lg font-semibold text-white">Packing Labels</h2>
+              </div>
+              <button
+                onClick={handlePrintLabels}
+                disabled={loadingLabels || labels.length === 0}
+                className="px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Tag className="w-4 h-4" />
+                Print Labels
+              </button>
+            </div>
+
+            {loadingLabels ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pb-primary mx-auto mb-4"></div>
+                  <p className="text-pb-gray/70">Generating labels...</p>
+                </div>
+              </div>
+            ) : labels.length === 0 ? (
+              <div className="text-center py-12">
+                <Tag className="w-12 h-12 text-pb-gray/50 mx-auto mb-3" />
+                <p className="text-pb-gray/70 mb-2">No labels generated yet</p>
+                <button
+                  onClick={loadLabels}
+                  className="px-4 py-2 rounded-lg bg-pb-primary hover:bg-pb-secondary text-white transition-colors"
+                >
+                  Generate Labels
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {labels.map((label) => (
+                  <div
+                    key={label.id}
+                    className="bg-white/5 rounded-lg p-4 border border-white/10"
+                  >
+                    <div className="text-center">
+                      <div className="font-semibold text-white mb-2">{label.containerName}</div>
+                      <div className="text-sm text-pb-gray/70 mb-3">
+                        {label.propCount} prop{label.propCount !== 1 ? 's' : ''} · {label.containerStatus}
+                      </div>
+                      {label.qrCode && (
+                        <div className="mb-3 flex justify-center">
+                          <img src={label.qrCode} alt="QR Code" className="w-32 h-32 bg-white p-2 rounded" />
+                        </div>
+                      )}
+                      {label.labels && label.labels.length > 0 && (
+                        <div className="flex flex-wrap gap-1 justify-center mb-2">
+                          {label.labels.map((tag: string, idx: number) => (
+                            <span key={idx} className="bg-pb-primary/20 text-pb-primary text-xs px-2 py-1 rounded-full border border-pb-primary/30">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {label.url && (
+                        <div className="text-xs text-pb-gray/50 break-all">{label.url}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Copy Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={copyModalOpen}
+          title="Copy Packing List"
+          message={`Create a copy of "${packList.name}"? The copy will be editable and all shipping dates will be cleared.`}
+          confirmText="Copy"
+          cancelText="Cancel"
+          onConfirm={handleCopyList}
+          onCancel={() => setCopyModalOpen(false)}
+          isLoading={copying}
+        />
+
         {/* Bulk Place modal */}
         {bulkPlaceOpen && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center">
-            <div className="bg-gray-900 text-white rounded-xl shadow-xl w-full max-w-lg p-5 border border-pb-primary/30">
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setBulkPlaceOpen(false)}>
+            <div className="bg-pb-darker/90 border border-pb-primary/30 rounded-xl shadow-xl w-full max-w-lg p-5" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-3">
-                <div className="font-semibold text-lg">Place selected on…</div>
+                <div className="font-semibold text-lg text-white">Place selected on…</div>
                 <button className="text-gray-300 hover:text-white" onClick={() => setBulkPlaceOpen(false)}>✕</button>
               </div>
               <div className="space-y-3 max-h-[60vh] overflow-y-auto">
@@ -652,13 +1353,13 @@ const PackingListDetailPage: React.FC = () => {
                   <div className="text-gray-400">No other containers available.</div>
                 )}
                 {containers.filter(c => !selected[c.id]).map(p => (
-                  <div key={p.id} className="flex items-center justify-between bg-gray-800/70 rounded-lg px-3 py-2 border border-gray-700">
+                  <div key={p.id} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2 border border-white/10">
                     <div>
-                      <div className="font-medium">{p.name}</div>
+                      <div className="font-medium text-white">{p.name}</div>
                       <div className="text-xs text-gray-400">{p.type || 'container'} · {p.id}</div>
                     </div>
                     <button
-                      className="px-3 py-1.5 rounded-lg bg-pb-primary text-white hover:bg-pb-accent transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="px-3 py-1.5 rounded-lg bg-pb-primary text-white hover:bg-pb-secondary transition disabled:opacity-60 disabled:cursor-not-allowed"
                       disabled={bulkSaving}
                       onClick={async () => {
                         if (!packListId) return;
@@ -684,7 +1385,7 @@ const PackingListDetailPage: React.FC = () => {
                 ))}
               </div>
               <div className="mt-4 pt-3 border-t border-white/10">
-                <div className="text-sm mb-2">Quick create parent:</div>
+                <div className="text-sm mb-2 text-white">Quick create parent:</div>
                 <div className="flex gap-2">
                   {['pallet','skip','crate'].map(t => (
                     <button
@@ -729,4 +1430,4 @@ const PackingListDetailPage: React.FC = () => {
   );
 };
 
-export default PackingListDetailPage; 
+export default PackingListDetailPage;

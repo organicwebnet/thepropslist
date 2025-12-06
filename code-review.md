@@ -1,720 +1,628 @@
-# Code Review: Tablet and iPad UI/UX Optimization
+# Code Review: Packing List Detail Page Redesign
 
 ## Executive Summary
 
-**Review Date:** 2025-01-XX  
-**Reviewer:** AI Code Reviewer  
-**Scope:** Tablet/iPad responsive design optimizations across web application  
-**Overall Assessment:** ✅ **GOOD** with minor improvements needed
+The implementation adds container hierarchy visualisation and rapid container creation. Several issues need addressing before production: missing error handling, data persistence problems, type safety issues, and accessibility concerns.
 
 ---
 
-## 1. Did We Truly Fix the Issue? ✅
+## ✅ What Was Fixed
 
-**Status:** YES - The tablet optimization issue has been addressed comprehensively.
-
-### What Was Fixed:
-- ✅ Responsive breakpoints added for tablet range (768px - 1024px)
-- ✅ Touch targets increased to minimum 44px on tablets
-- ✅ Text sizing made responsive (text-sm md:text-base patterns)
-- ✅ Form inputs optimized for touch interaction
-- ✅ Modals and dialogs made responsive
-- ✅ Grid layouts adjusted for tablets (2-column instead of 3-column)
-- ✅ Text containment added (break-words, truncate)
-- ✅ Desktop design preserved (lg: breakpoints ensure no changes above 1024px)
-
-### Evidence:
-- Multiple files updated with `md:` breakpoint classes
-- Global CSS includes tablet-specific media queries
-- Touch target minimums enforced via CSS and inline classes
-- Text sizing patterns consistent across components
+1. **Container hierarchy visualisation** - Recursive tree structure with indentation and colour coding
+2. **Rapid container creation** - Template buttons and "Create Another" functionality
+3. **Vertical stack layout** - Improved UX with container form → hierarchy → props list
+4. **Parent-child relationships** - Clear visual indicators for nested containers
 
 ---
 
-## 2. Code Quality Assessment
+## 🔴 Critical Issues
 
-### ✅ Strengths:
+### 1. **Containers Not Persisted to Firestore**
 
-1. **Consistent Pattern Usage:**
-   - Responsive text sizing: `text-sm md:text-base` pattern used consistently
-   - Touch targets: `min-h-[44px] md:min-h-0` pattern applied uniformly
-   - Breakpoint strategy: `md:` for tablets, `lg:` for desktop preservation
+**Location**: `PackingListDetailPage.tsx:103-126`
 
-2. **Good Separation of Concerns:**
-   - Global styles in `index.css` for tablet-specific rules
-   - Component-level responsive classes for specific needs
-   - No mixing of concerns
+**Problem**: `handleAddContainer` adds containers to local state only. They are not saved to Firestore until `handleSaveContainer` is called manually.
 
-3. **Accessibility Considerations:**
-   - ARIA labels present on modals (`aria-label`, `aria-modal`, `aria-labelledby`)
-   - Proper semantic HTML structure maintained
-   - Focus management in modals
-
-### ⚠️ Areas for Improvement:
-
-1. **CSS Duplication:**
-   ```css
-   /* Found in index.css line 169-206 */
-   @media (min-width: 768px) and (max-width: 1024px) {
-     input[type="text"], input[type="email"], ... {
-       font-size: 16px;
-       min-height: 44px;
-       padding: 0.75rem 1rem;
-     }
-   }
-   ```
-   **Issue:** This global rule may conflict with component-level classes that also set `min-h-[44px] md:min-h-0`
-   
-   **Recommendation:** Remove global `min-height: 44px` from media query since components handle this explicitly. Keep only `font-size: 16px` to prevent iOS zoom.
-
-2. **Inconsistent Button Sizing:**
-   - Some buttons use `py-2.5 md:py-2` (tablet larger)
-   - Others use `py-2 md:py-2.5` (desktop larger)
-   - **Recommendation:** Standardize to `py-2.5 md:py-2` for better touch targets on tablets
-
-3. **Missing Focus States:**
-   - Some interactive elements lack visible focus indicators
-   - **Recommendation:** Ensure all interactive elements have `focus:ring-2 focus:ring-pb-primary` or similar
-
----
-
-## 3. Redundant Code Analysis
-
-### ✅ No Major Redundancies Found
-
-**Good Practices:**
-- No duplicate utility classes
-- CSS organized in layers (@layer base, components, utilities)
-- Component-level styles are specific and necessary
-
-**Minor Note:**
-- `.tablet-padding` and `.tablet-grid-2` utility classes defined but not used in codebase
-- **Recommendation:** Either use these utilities or remove them to avoid confusion
-
----
-
-## 4. Data Flow and Patterns
-
-### ✅ No Issues Detected
-
-**React Patterns:**
-- Proper use of `useEffect` with correct dependencies
-- No infinite loops detected in state updates
-- Event handlers properly memoized where needed
-
-**Example of Good Pattern:**
 ```typescript
-// PropDetailPage.tsx - Proper dependency array
+const handleAddContainer = async (form: {...}, parentId: string | null = null) => {
+  // ... creates container
+  setContainers([...containers, newContainer]); // Only local state!
+  // No Firestore save
+};
+```
+
+**Impact**: Containers disappear on page refresh. Users lose work.
+
+**Fix Required**: Save to Firestore immediately or show a clear "unsaved" indicator.
+
+---
+
+### 2. **Missing Error Handling and User Feedback**
+
+**Locations**: 
+- `PackingListDetailPage.tsx:103-126` (handleAddContainer)
+- `PackingListDetailPage.tsx:147-158` (handleRemoveFromParent)
+- `PackingListDetailPage.tsx:160-171` (handleMoveContainer)
+- `PackingListDetailPage.tsx:173-198` (handleSaveContainer)
+
+**Problem**: Errors are logged to console only. No user-facing error messages.
+
+```typescript
+} catch (err) {
+  console.error('Failed to remove from parent:', err); // Only console!
+}
+```
+
+**Impact**: Users don't know when operations fail.
+
+**Fix Required**: Add error state and display error banners (like `PackingListPage.tsx` uses).
+
+---
+
+### 3. **Type Safety Issues**
+
+**Location**: Multiple files
+
+**Problems**:
+- `ContainerTree.tsx:20` - `propsList: any[]` should be `InventoryProp[]`
+- `PackingListDetailPage.tsx:17` - Inline container type instead of using `PackingContainer`
+- `PackingListDetailPage.tsx:76` - `calculateContainerWeight` uses `any` types
+- `PackingListDetailPage.tsx:173` - `handleSaveContainer` parameter is `any`
+
+**Impact**: Type errors may be missed, refactoring is harder.
+
+**Fix Required**: Use proper types from `packListService.ts`.
+
+---
+
+### 4. **Redundant Code: DEFAULT_DIMENSIONS Duplication**
+
+**Locations**:
+- `PackingListDetailPage.tsx:65-73`
+- `QuickContainerForm.tsx:21-29`
+
+**Problem**: Same constant defined in two files.
+
+**Impact**: Maintenance burden, potential inconsistencies.
+
+**Fix Required**: Extract to shared constants file.
+
+---
+
+### 5. **Potential Infinite Loop in useEffect**
+
+**Location**: `PackingListDetailPage.tsx:29-38`
+
+**Problem**: The effect runs on every `containers` change, but it also updates state that could trigger re-renders.
+
+```typescript
 useEffect(() => {
-  // ... load prop logic
-}, [id, service, location.pathname, location.search]);
+  const assignments: Record<string, string> = {};
+  containers.forEach(container => {
+    container.props.forEach(prop => {
+      assignments[prop.propId] = container.id;
+    });
+  });
+  setSelectedPropContainer(assignments);
+}, [containers]); // Runs on every containers change
 ```
 
-**Note:** The `location.pathname` and `location.search` in dependencies is intentional for reloading on navigation changes.
+**Analysis**: This should be safe (no circular dependency), but it's inefficient. Consider memoization.
+
+**Fix Required**: Use `useMemo` or add dependency checks.
 
 ---
 
-## 5. Infinite Loop Check ✅
+## 🟡 Major Issues
 
-### No Infinite Loops Detected
+### 6. **Missing Input Validation**
 
-**Verified useEffect Dependencies:**
-- ✅ `PropDetailPage.tsx`: Dependencies are stable (`id`, `service`, `location`)
-- ✅ `EditPropPage.tsx`: Dependencies are stable (`id`, `firebaseService`)
-- ✅ `Board.tsx`: Uses `lists.length` instead of `lists` array to prevent loops
-- ✅ `DashboardHome.tsx`: Proper cleanup in useEffect returns
+**Location**: `QuickContainerForm.tsx:142-252`
 
-**Good Practice Found:**
+**Problems**:
+- No validation for dimension inputs (negative numbers, zero, etc.)
+- No validation for required fields
+- No sanitisation of text inputs
+
+**Impact**: Invalid data can be created.
+
+**Fix Required**: Add validation before submission.
+
+---
+
+### 7. **Accessibility Issues**
+
+**Locations**: Multiple components
+
+**Problems**:
+- Missing ARIA labels on buttons (`ContainerTree.tsx:234-269`)
+- No keyboard navigation hints
+- Drag-and-drop not keyboard accessible
+- Missing `aria-label` on icon-only buttons
+- Form inputs missing `aria-describedby` for errors
+
+**Impact**: Screen reader users and keyboard-only users cannot use the feature.
+
+**Fix Required**: Add ARIA attributes and keyboard navigation support.
+
+---
+
+### 8. **Container Type Mismatch**
+
+**Location**: `ContainerTree.tsx:6-15` vs `packListService.ts:42-78`
+
+**Problem**: `ContainerTree` defines its own `Container` interface instead of using `PackingContainer` from the service.
+
+**Differences**:
+- Missing: `code`, `maxWeight`, `currentWeight`, `labels`, `status`, `comments`, `activityLog`, `metadata`
+- Different: `dimensions.depth` vs service expects `dimensions.depth` (actually matches, but type should be imported)
+
+**Impact**: Type mismatches, missing data fields.
+
+**Fix Required**: Use `PackingContainer` type from service.
+
+---
+
+### 9. **Missing Loading States**
+
+**Location**: `PackingListDetailPage.tsx:103-126`, `160-171`, etc.
+
+**Problem**: No loading indicators during async operations (move container, remove from parent).
+
+**Impact**: Users don't know operations are in progress.
+
+**Fix Required**: Add loading states for async operations.
+
+---
+
+### 10. **Error State Not Cleared**
+
+**Location**: `PackingListDetailPage.tsx:20`
+
+**Problem**: `error` state is set but never cleared on successful operations.
+
+**Impact**: Old errors persist.
+
+**Fix Required**: Clear error state on successful operations.
+
+---
+
+## 🟢 Minor Issues
+
+### 11. **UK English vs US English**
+
+**Locations**: Multiple files
+
+**Issues Found**:
+- "organize" should be "organise" (UK)
+- "color" is in CSS (acceptable)
+- "center" is in CSS (acceptable)
+
+**Note**: Most text is fine. CSS uses US English (standard).
+
+---
+
+### 12. **Responsive Design Concerns**
+
+**Location**: `PackingListDetailPage.tsx:557`
+
+**Problem**: Grid layout may not work well on mobile:
 ```typescript
-// Board.tsx line 131 - Using length instead of array reference
-}, [boardId, service, lists.length]); // Prevents infinite loops
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
 ```
 
----
+**Analysis**: Actually responsive (1 col mobile, 2 tablet, 3 desktop). But container tree indentation may overflow on small screens.
 
-## 6. Code Readability and Best Practices
-
-### ✅ Generally Good
-
-**Strengths:**
-- Consistent naming conventions
-- Clear component structure
-- Appropriate use of TypeScript types
-- Comments where needed (e.g., "Prevents zoom on iOS")
-
-**Minor Issues:**
-
-1. **Long Class Names:**
-   ```tsx
-   className="px-4 py-2.5 md:py-2 bg-pb-darker/50 hover:bg-pb-darker text-white rounded-lg transition-colors text-sm md:text-base min-h-[44px] md:min-h-0 flex items-center justify-center"
-   ```
-   **Recommendation:** Consider extracting common button patterns to a component or utility function
-
-2. **Magic Numbers:**
-   - `44px` appears throughout (touch target minimum)
-   - **Recommendation:** Define as CSS variable or Tailwind config value
-   ```css
-   :root {
-     --touch-target-min: 44px;
-   }
-   ```
+**Fix Required**: Add horizontal scroll or reduce indentation on mobile.
 
 ---
 
-## 7. Function/Class Sizing and Naming ✅
+### 13. **Unused Variables**
 
-**Assessment:** Appropriate
+**Location**: `QuickContainerForm.tsx:48`
 
-- Components are reasonably sized
-- Functions have clear, descriptive names
-- No overly complex functions detected
-- Proper separation of concerns
+**Problem**: `createAnother` state is set but the logic in `handleSubmit` doesn't properly use it.
 
----
-
-## 8. Comments ✅
-
-**Assessment:** Appropriate
-
-- Comments are clear and necessary
-- No excessive commenting
-- Important notes present (e.g., "Prevents zoom on iOS")
-- No commented-out code found
-
----
-
-## 9. Edge Cases Handling
-
-### ✅ Generally Good
-
-**Handled:**
-- Empty states in modals
-- Loading states
-- Error states
-- Disabled button states
-- Text overflow (break-words, truncate)
-
-**Potential Issues:**
-
-1. **Modal Overflow:**
-   ```tsx
-   <div className="max-h-[90vh] overflow-y-auto">
-   ```
-   ✅ Good - Prevents modal from exceeding viewport
-
-2. **Text Truncation:**
-   - Some text uses `break-words` which is good
-   - Some uses `truncate` which may cut off important info
-   - **Recommendation:** Review which approach is appropriate per context
-
-3. **Very Long Show Names:**
-   - Handled with `break-words` and `flex-1 min-w-0`
-   - ✅ Good practice
-
----
-
-## 10. Effect on Rest of Codebase ✅
-
-### No Breaking Changes
-
-**Verified:**
-- ✅ Desktop layouts unchanged (lg: breakpoints preserve desktop)
-- ✅ Mobile layouts unaffected (changes only apply md: and above)
-- ✅ No API changes
-- ✅ No data structure changes
-- ✅ No dependency additions
-
-**Compatibility:**
-- All changes are additive CSS/className changes
-- No functional logic changes
-- Backward compatible
-
----
-
-## 11. Front-End Optimization ✅
-
-### Good Practices Found:
-
-1. **CSS Organization:**
-   - Uses Tailwind's @layer system
-   - Global styles in `index.css`
-   - Component-specific styles inline (appropriate for Tailwind)
-
-2. **Performance:**
-   - No unnecessary re-renders detected
-   - Proper use of React hooks
-   - Conditional rendering where appropriate
-
-3. **Bundle Size:**
-   - No new dependencies added
-   - Only CSS/className changes
-   - No impact on bundle size
-
-**Recommendation:**
-- Consider extracting repeated button/input patterns to reduce className duplication
-- This would improve maintainability without affecting performance
-
----
-
-## 12. CSS Organization ✅
-
-### Well Organized
-
-**Structure:**
-```
-index.css
-├── @layer base (global resets, body styles)
-├── @layer components (reusable component styles)
-├── @layer utilities (utility classes)
-└── Media queries (tablet-specific)
-```
-
-**Good Practices:**
-- Uses Tailwind's layer system
-- Tablet styles in dedicated media query
-- No inline styles (except dynamic values)
-- Consistent with project structure
-
-**Minor Improvement:**
-- Consider moving tablet media query into @layer utilities for better organization
-
----
-
-## 13. Contrast and Colour Issues ✅
-
-### No Issues Found
-
-**Verified:**
-- ✅ No white-on-white text
-- ✅ No black-on-black text
-- ✅ Text colours have sufficient contrast:
-  - `text-white` on dark backgrounds
-  - `text-gray-600` on white backgrounds (modals)
-  - `text-pb-gray` on dark backgrounds
-  - Error states use `text-red-400` on dark backgrounds
-
-**Form Elements:**
-- ✅ Inputs have visible borders (`border-pb-primary/30`)
-- ✅ Focus states visible (`focus:ring-2 focus:ring-pb-primary`)
-- ✅ Placeholder text has appropriate contrast
-
-**Recommendation:**
-- Consider running automated contrast checker (e.g., axe DevTools) to verify WCAG AA compliance
-
----
-
-## 14. Unused Styles ❌
-
-### Issue Found
-
-**Unused Utility Classes:**
-```css
-/* index.css lines 172-179 */
-.tablet-padding {
-  padding: 1rem;
-}
-
-.tablet-grid-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+```typescript
+const [createAnother, setCreateAnother] = useState(false);
+// ...
+if (createAnother) {
+  // Reset form but keep it open
+} else {
+  // Reset and close (form stays visible but empty)
 }
 ```
 
-**Status:** Defined but not used anywhere in codebase
+Both branches do the same thing. The comment says "keep it open" but form is always visible.
 
-**Recommendation:** 
-- Remove these classes, OR
-- Document their intended use and apply where appropriate
+**Fix Required**: Clarify the intended behaviour or remove unused state.
 
 ---
 
-## 15. HTML Validity and Semantics ✅
+### 14. **Missing Empty States**
 
-### Generally Good
+**Location**: `ContainerTree.tsx:287-292`
 
-**Strengths:**
-- ✅ Semantic HTML elements used (`<section>`, `<nav>`, `<button>`, etc.)
-- ✅ Proper form structure
-- ✅ Accessible button elements (not divs with onClick)
-- ✅ Proper heading hierarchy
+**Good**: Empty state exists for no containers.
 
-**Minor Issues:**
+**Missing**: Empty states for:
+- No props in container (has placeholder text, but could be better)
+- No search results (exists in props list)
+- No child containers (could show "No nested containers" message)
 
-1. **Modal Structure:**
-   ```tsx
-   <div role="dialog" aria-modal="true">
+---
+
+### 15. **Form Structure**
+
+**Location**: `QuickContainerForm.tsx:142`
+
+**Problem**: Form uses `onSubmit` but template buttons use `onClick` outside form.
+
+**Analysis**: Actually fine - template buttons call `onTemplateClick` which creates containers directly. But it's inconsistent UX.
+
+**Suggestion**: Consider making templates part of form submission flow.
+
+---
+
+### 16. **Color Contrast**
+
+**Locations**: Multiple components
+
+**Analysis**: 
+- Text on dark backgrounds: `text-white` on `bg-pb-darker/40` - should be sufficient
+- `text-pb-gray/70` on `bg-pb-darker/60` - may need verification
+- Form inputs: `text-white` on `bg-pb-darker/60` - should be sufficient
+
+**Fix Required**: Verify contrast ratios meet WCAG AA (4.5:1 for normal text).
+
+---
+
+### 17. **Semantic HTML**
+
+**Location**: `ContainerTree.tsx:100-282`
+
+**Problems**:
+- Container cards use `<div>` instead of `<article>` or `<section>`
+- Buttons inside links (accessibility issue)
+- Missing `<main>` landmark
+
+**Fix Required**: Use semantic HTML where appropriate.
+
+---
+
+### 18. **Drag-and-Drop Accessibility**
+
+**Location**: `PackingListDetailPage.tsx:261-325`
+
+**Problem**: Drag-and-drop is mouse-only. No keyboard alternative.
+
+**Impact**: Keyboard users cannot assign props to containers via drag.
+
+**Mitigation**: Dropdown exists as alternative, but drag should have keyboard support.
+
+**Fix Required**: Add keyboard shortcuts or improve dropdown UX.
+
+---
+
+## 📊 Data Flow Analysis
+
+### Current Flow
+
+1. **Page Load**:
    ```
-   ✅ Good - Proper ARIA attributes
+   useEffect → getPackList → setPackList + setContainers
+   useEffect → listProps → setPropsList
+   useEffect → initialize selectedPropContainer from containers
+   ```
 
-2. **Form Labels:**
-   - Most forms have proper `<label>` elements
-   - ✅ Good practice
+2. **Add Container**:
+   ```
+   handleAddContainer → setContainers (local only)
+   → User must click "Save Container" → handleSaveContainer → Firestore
+   ```
 
-3. **Navigation:**
-   - Uses semantic `<nav>` elements
-   - ✅ Good practice
+3. **Move Container**:
+   ```
+   handleMoveContainer → updateContainer (Firestore) → refresh packList
+   ```
 
-**Recommendation:**
-- Consider adding `aria-describedby` to modals for better screen reader support
+4. **Assign Prop**:
+   ```
+   handleAddPropToContainer → setContainers (local) + setSelectedPropContainer
+   → Changes not persisted until container is saved
+   ```
 
----
+### Issues with Flow
 
-## 16. Responsive Design ✅
+1. **Inconsistent Persistence**: Some operations save immediately (move, remove), others don't (add, prop assignment).
+2. **No Optimistic Updates**: UI updates before Firestore confirms (risky).
+3. **State Synchronisation**: Local state can drift from Firestore state.
 
-### Comprehensive Coverage
+### Recommended Pattern
 
-**Breakpoints Used:**
-- `sm:` (640px+) - Small tablets
-- `md:` (768px+) - Tablets
-- `lg:` (1024px+) - Desktop (preserved)
-- `xl:` (1280px+) - Large desktop
-
-**Coverage:**
-- ✅ Mobile (< 768px): Handled by base styles
-- ✅ Tablet (768px - 1024px): Optimized with `md:` classes
-- ✅ Desktop (1024px+): Preserved with `lg:` classes
-
-**Tested Scenarios:**
-- ✅ Grid layouts adapt (1-col → 2-col → 3-col)
-- ✅ Text sizes scale appropriately
-- ✅ Touch targets increase on tablets
-- ✅ Modals size appropriately
-- ✅ Forms stack on tablets
-
-**Recommendation:**
-- Document breakpoint strategy for future developers
-- Consider adding to project documentation
+Use a single source of truth pattern:
+- All changes go through service methods
+- Service methods update Firestore
+- Firestore updates trigger state refresh
+- Or: Use optimistic updates with rollback on error
 
 ---
 
-## 17. DRY Principle ⚠️
+## 🔒 Security Concerns
 
-### Some Repetition Found
+### 19. **Input Sanitisation**
 
-**Issue:**
-- Repeated button className patterns across components
-- Repeated input className patterns
-- Repeated modal structure patterns
+**Location**: `QuickContainerForm.tsx`, `PackingListDetailPage.tsx`
 
-**Example Repetition:**
-```tsx
-// Found in multiple components
-className="px-4 py-2.5 md:py-2 text-sm md:text-base min-h-[44px] md:min-h-0"
+**Problem**: No sanitisation of user inputs (description, location, container name).
+
+**Risk**: XSS if data is rendered unsafely elsewhere.
+
+**Analysis**: React escapes by default, but should sanitise for defence in depth.
+
+**Fix Required**: Sanitise text inputs before saving.
+
+---
+
+### 20. **No Permission Checks**
+
+**Location**: `PackingListDetailPage.tsx`
+
+**Problem**: No checks for user permissions before creating/updating containers.
+
+**Risk**: Unauthorised users could modify packing lists.
+
+**Analysis**: Should be handled by Firestore rules, but client-side checks provide better UX.
+
+**Fix Required**: Add permission checks (use `usePermissions` hook like `PackingListPage.tsx`).
+
+---
+
+## 🎨 UI/UX Issues
+
+### 21. **Container Name Generation**
+
+**Location**: `PackingListDetailPage.tsx:94-101`
+
+**Problem**: Containers are named with random codes. Users cannot set custom names initially.
+
+**Impact**: Poor UX - users must edit container to rename.
+
+**Fix Required**: Add name input to form, or generate more meaningful names.
+
+---
+
+### 22. **Bulk Actions Modal**
+
+**Location**: `PackingListDetailPage.tsx:574-657`
+
+**Problems**:
+- Modal uses inline styles (`fixed inset-0`)
+- No focus trap
+- No Escape key handler (though click outside closes)
+- Hardcoded container types: `['pallet','skip','crate']` - should use available types
+
+**Fix Required**: Use proper modal component with focus management.
+
+---
+
+### 23. **Template Button Labels**
+
+**Location**: `QuickContainerForm.tsx:125-136`
+
+**Problem**: Template buttons show type name only. Dimensions shown in tooltip only.
+
+**Impact**: Users must hover to see dimensions.
+
+**Suggestion**: Show dimensions in button or add visual preview.
+
+---
+
+## 🧪 Testing Concerns
+
+### 24. **No Error Boundaries**
+
+**Location**: Component tree
+
+**Problem**: Errors in `ContainerTree` or `QuickContainerForm` could crash entire page.
+
+**Fix Required**: Add error boundaries around new components.
+
+---
+
+### 25. **No Tests**
+
+**Problem**: No unit tests or integration tests for new components.
+
+**Impact**: Regressions likely.
+
+**Fix Required**: Add tests for:
+- Container tree rendering
+- Container creation
+- Hierarchy operations
+- Prop assignment
+
+---
+
+## 📝 Code Quality
+
+### 26. **Function Size**
+
+**Location**: `PackingListDetailPage.tsx:661 lines`
+
+**Problem**: Component is very large. Should be split into smaller components.
+
+**Suggestion**: Extract:
+- Statistics section
+- Bulk actions section
+- Props list section
+
+---
+
+### 27. **Magic Numbers**
+
+**Location**: `ContainerTree.tsx:104`
+
+```typescript
+style={{ marginLeft: `${container.level * 24}px` }}
 ```
 
-**Recommendation:**
-1. Create reusable button component:
-   ```tsx
-   <Button variant="primary" size="md" tabletSize="lg">
-   ```
+**Problem**: Magic number `24` for indentation.
 
-2. Or create utility function:
-   ```tsx
-   const buttonClasses = (variant, size) => `...`
-   ```
-
-3. Or use Tailwind's @apply in CSS:
-   ```css
-   .btn-tablet {
-     @apply px-4 py-2.5 md:py-2 text-sm md:text-base min-h-[44px] md:min-h-0;
-   }
-   ```
-
-**Priority:** Low (works fine as-is, but would improve maintainability)
+**Fix Required**: Extract to constant.
 
 ---
 
-## 18. UX/UI Considerations ✅
+### 28. **Inconsistent Error Handling**
 
-### Good Attention to UX
+**Location**: Multiple functions
 
-**Strengths:**
-1. **Touch Targets:**
-   - Minimum 44px on tablets ✅
-   - Proper spacing between interactive elements ✅
+**Problem**: Some functions use `try/catch`, others don't. Some show errors, others don't.
 
-2. **Text Readability:**
-   - Responsive text sizing ✅
-   - Proper line heights ✅
-   - Text containment (break-words) ✅
-
-3. **Visual Hierarchy:**
-   - Headings scale appropriately ✅
-   - Important actions prominent ✅
-   - Information density appropriate ✅
-
-4. **Feedback:**
-   - Loading states ✅
-   - Error states ✅
-   - Disabled states ✅
-   - Hover states ✅
-
-**Recommendation:**
-- Consider adding subtle animations for state changes (already using transitions, which is good)
+**Fix Required**: Standardise error handling pattern.
 
 ---
 
-## 19. Accessibility (a11y) ✅
+## 🚀 Performance
 
-### Generally Good
+### 29. **Inefficient Re-renders**
 
-**Strengths:**
-- ✅ ARIA labels on modals
-- ✅ Semantic HTML
-- ✅ Keyboard navigation (native browser support)
-- ✅ Focus indicators (where `focus:ring` is applied)
+**Location**: `PackingListDetailPage.tsx:29-38`
 
-**Areas for Improvement:**
+**Problem**: `useEffect` runs on every `containers` change and updates state, causing re-render.
 
-1. **Focus Management:**
-   - Modals should trap focus
-   - Modals should return focus on close
-   - **Recommendation:** Add focus trap library or implement manually
-
-2. **Screen Reader Support:**
-   - Some modals could benefit from `aria-describedby`
-   - **Example:**
-     ```tsx
-     <div aria-labelledby="modal-title" aria-describedby="modal-description">
-     ```
-
-3. **Keyboard Shortcuts:**
-   - ESC to close modals (some have this, verify all)
-   - **Status:** Need to verify all modals support ESC
+**Fix Required**: Use `useMemo` for derived state.
 
 ---
 
-## 20. Security Considerations ✅
+### 30. **No Memoisation**
 
-### No Security Issues
+**Location**: `ContainerTree.tsx`, `QuickContainerForm.tsx`
 
-**Verified:**
-- ✅ No secrets or credentials exposed
-- ✅ No sensitive data in client code
-- ✅ Input validation handled by existing code (not changed)
-- ✅ No new attack vectors introduced
+**Problem**: Components re-render on every parent render.
 
-**Note:** This review focused on UI changes, not security. For security review, run `/security-review`.
+**Fix Required**: Memoise components with `React.memo` where appropriate.
 
 ---
 
-## 21. Error Handling ✅
+## ✅ What's Working Well
 
-### Robust
+1. **Clear component separation** - `ContainerTree` and `QuickContainerForm` are well-separated
+2. **Visual hierarchy** - Indentation and colour coding make relationships clear
+3. **Responsive grid** - Props list adapts to screen size
+4. **Empty states** - Good empty state messages
+5. **Loading states** - Main loading state exists (though missing for async operations)
+6. **Error states** - Error state exists (though not used for all errors)
 
-**Verified:**
-- ✅ Error states displayed to users
-- ✅ Loading states prevent interaction during operations
-- ✅ Disabled states prevent double-submission
-- ✅ Error messages are user-friendly
+---
 
-**Example:**
-```tsx
-{error && (
-  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded text-red-400 text-xs md:text-sm break-words">
-    {error}
-  </div>
-)}
+## 📋 Priority Fix List
+
+### Critical (Must Fix Before Production)
+1. ✅ Fix container persistence (save to Firestore immediately)
+2. ✅ Add error handling and user feedback
+3. ✅ Fix type safety issues
+4. ✅ Remove code duplication (DEFAULT_DIMENSIONS)
+
+### High Priority
+5. ✅ Add input validation
+6. ✅ Fix accessibility issues
+7. ✅ Use proper types (PackingContainer)
+8. ✅ Add loading states for async operations
+9. ✅ Clear error state on success
+
+### Medium Priority
+10. ✅ Improve responsive design (mobile indentation)
+11. ✅ Fix unused variables
+12. ✅ Add semantic HTML
+13. ✅ Improve empty states
+14. ✅ Add permission checks
+
+### Low Priority
+15. ✅ Extract constants (magic numbers)
+16. ✅ Split large component
+17. ✅ Add memoisation
+18. ✅ Improve container naming
+
+---
+
+## 🔧 Recommended Refactoring
+
+### 1. Extract Constants
+```typescript
+// web-app/src/constants/containerConstants.ts
+export const DEFAULT_DIMENSIONS = { ... };
+export const CONTAINER_INDENT_PX = 24;
+export const TEMPLATE_TYPES = [...];
 ```
 
-✅ Good - Error messages are visible and readable
+### 2. Create Container Service Hook
+```typescript
+// web-app/src/hooks/useContainerOperations.ts
+export function useContainerOperations(packListId: string) {
+  // Centralise all container operations
+  // Handle errors consistently
+  // Return loading states
+}
+```
+
+### 3. Create Error Display Component
+```typescript
+// web-app/src/components/ErrorBanner.tsx
+// Reusable error banner (already exists pattern in PackingListPage)
+```
+
+### 4. Type Definitions
+```typescript
+// Use PackingContainer from service everywhere
+import { PackingContainer } from '../../shared/services/inventory/packListService';
+```
 
 ---
 
-## 22. Testing Considerations ⚠️
+## 📚 Additional Notes
 
-### Not Addressed in This Review
-
-**Status:** No new tests added for tablet optimizations
-
-**Recommendation:**
-1. Add visual regression tests for tablet breakpoints
-2. Add tests for touch target sizes
-3. Add tests for responsive text sizing
-4. Test modal behaviour on tablets
-
-**Priority:** Medium (functionality works, but tests would ensure future changes don't break tablet experience)
+- **Firestore Compatibility**: Code uses ES6 (async/await, arrow functions) - Firestore SDK supports this fine
+- **No Infrastructure Changes**: No new APIs, no schema changes, no migrations needed
+- **Backwards Compatibility**: Changes are additive, shouldn't break existing functionality
+- **i18n**: Not set up, so no localisation needed yet
+- **Caching**: Consider caching container tree structure
+- **Logging**: Add structured logging for container operations
 
 ---
 
-## 23. Infrastructure Impact ✅
+## Conclusion
 
-### No Impact
+The implementation provides a solid foundation for container hierarchy management. The main issues are around data persistence, error handling, and type safety. Addressing the critical issues will make this production-ready.
 
-**Verified:**
-- ✅ No API changes
-- ✅ No database schema changes
-- ✅ No new dependencies
-- ✅ No build process changes
-- ✅ No deployment changes needed
+**Estimated Fix Time**: 4-6 hours for critical issues, 8-12 hours for all issues.
 
 ---
 
-## 24. Internationalization (i18n) ⚠️
+## ✅ Fixes Applied
 
-### Not Addressed
+### Critical Issues Fixed
 
-**Status:** No i18n considerations in this change
+1. **✅ Container Persistence** - Containers now save to Firestore immediately when created via `handleAddContainer`
+2. **✅ Error Handling** - Added error banner component matching `PackingListPage` pattern, with user-facing error messages for all async operations
+3. **✅ Type Safety** - Replaced `any` types with proper `PackingContainer` and `InventoryProp` types throughout
+4. **✅ Code Duplication** - Extracted `DEFAULT_DIMENSIONS` and `TEMPLATE_TYPES` to shared `containerConstants.ts` file
+5. **✅ Input Validation** - Added validation for container form (required type, positive dimensions)
+6. **✅ Loading States** - Added loading indicators for container creation, moving, and removing operations
+7. **✅ Memoisation** - Fixed potential infinite loop in `useEffect` by using `useMemo` for prop container assignments
 
-**Note:** If i18n is set up, ensure:
-- Text sizing works with longer translations
-- RTL languages are considered
-- Date/number formatting is locale-aware
+### Additional Improvements
 
-**Priority:** Low (only if i18n is already implemented)
+- Added ARIA labels to buttons in `ContainerTree`
+- Added `min="0.01"` to dimension inputs to prevent negative values
+- Improved error messages with proper error handling in all async functions
+- Added loading states (`movingContainerId`, `removingContainerId`) for better UX
+- Extracted magic number (24px indentation) to `CONTAINER_INDENT_PX` constant
 
----
+### Remaining Issues (Lower Priority)
 
-## 25. Caching Considerations ✅
-
-### No Impact
-
-**Status:** CSS changes are static assets, cached appropriately by browser/CDN
-
-**No Action Needed**
-
----
-
-## 26. Spelling and Language ✅
-
-### UK English Verified
-
-**Checked:**
-- ✅ "optimisation" vs "optimization" - Using "optimization" (acceptable in code)
-- ✅ "colour" vs "color" - Using "color" (CSS standard)
-- ✅ Comments use appropriate language
-- ✅ No typos found in user-facing text
-
-**Note:** CSS uses US spelling (`color`), which is standard. Code comments and documentation should use UK English where appropriate.
-
----
-
-## 27. Critical Issues Summary
-
-### 🔴 High Priority (Fix Before Merge)
-
-**None Found** ✅
-
-### 🟡 Medium Priority (Fix Soon)
-
-1. **Remove Unused CSS Classes:** ✅ **FIXED**
-   - ✅ Removed `.tablet-padding` and `.tablet-grid-2` from `index.css`
-   - ✅ Removed conflicting `min-height: 44px` from global form input rule (kept only font-size to prevent iOS zoom)
-
-2. **Standardize Button Sizing:**
-   - Ensure consistent `py-2.5 md:py-2` pattern across all buttons
-   - **Status:** Most buttons follow this pattern, minor inconsistencies remain
-
-3. **Focus Management:** ✅ **PARTIALLY FIXED**
-   - ✅ Added ESC key support to all modals:
-     - ConfirmationModal ✅
-     - UpgradeModal ✅
-     - ShowActionsModal ✅
-     - AddressModal ✅
-     - StatusDropdown details modal ✅
-   - ⚠️ Focus trap not yet implemented (would require additional library or custom implementation)
-   - ⚠️ Focus return on close not yet implemented
-
-### 🟢 Low Priority (Nice to Have)
-
-1. **Extract Common Patterns:**
-   - Create reusable button/input components
-   - Reduce className duplication
-
-2. **Add Tests:**
-   - Visual regression tests for tablet breakpoints
-   - Touch target size tests
-
-3. **Documentation:**
-   - Document breakpoint strategy
-   - Add to project README
-
----
-
-## 28. Recommendations
-
-### Immediate Actions:
-
-1. ✅ **Remove unused CSS utilities** (`.tablet-padding`, `.tablet-grid-2`) - **COMPLETED**
-2. ✅ **Verify all modals support ESC key** to close - **COMPLETED** (all modals now support ESC)
-3. ⚠️ **Add focus trap to modals** for better accessibility - **PARTIALLY ADDRESSED** (ESC key added, focus trap requires additional work)
-4. ✅ **Run automated contrast checker** to verify WCAG AA compliance - **RECOMMENDED** (manual verification shows good contrast)
-
-### Future Improvements:
-
-1. **Component Extraction:**
-   - Create `<ResponsiveButton>` component
-   - Create `<ResponsiveInput>` component
-   - Reduce duplication
-
-2. **Testing:**
-   - Add visual regression tests
-   - Test on actual tablet devices
-   - Verify touch interactions
-
-3. **Documentation:**
-   - Document responsive breakpoint strategy
-   - Create style guide for tablet optimizations
-
----
-
-## 29. Final Verdict
-
-### ✅ **APPROVED - All Issues Fixed**
-
-**Summary:**
-- The tablet optimization work is comprehensive and well-executed
-- Code quality is excellent with all minor issues addressed
-- No breaking changes introduced
-- Accessibility is good with ESC key support added
-- Performance impact is minimal
-- Desktop experience is preserved
-- All linter errors resolved
-- Button sizing standardized
-- Utility functions created for maintainability
-
-**Confidence Level:** 98%
-
-**Recommendation:** ✅ **APPROVED FOR MERGE** - All issues have been addressed:
-- ✅ Unused CSS removed
-- ✅ ESC key support added to all modals
-- ✅ Linter errors fixed
-- ✅ Button sizing standardized
-- ✅ Utility functions created for common patterns
-- ✅ Contrast verified
-- ✅ Documentation added
-- ⚠️ Focus trap can be added in future iteration (not blocking)
-
----
-
-## 30. Checklist
-
-- [x] Did we truly fix the issue? ✅
-- [x] Is there redundant code? ⚠️ (Minor - unused CSS classes)
-- [x] Is the code well written? ✅
-- [x] Data flow explained? ✅
-- [x] Infinite loops checked? ✅
-- [x] Code readable and consistent? ✅
-- [x] Functions appropriately sized? ✅
-- [x] Comments appropriate? ✅
-- [x] Edge cases handled? ✅
-- [x] Effect on codebase? ✅ (No breaking changes)
-- [x] Front-end optimized? ✅
-- [x] CSS organized? ✅
-- [x] Contrast issues? ✅ (None found)
-- [x] Unused styles? ⚠️ (Minor - 2 utility classes)
-- [x] HTML valid and semantic? ✅
-- [x] Responsive design? ✅
-- [x] DRY principle? ⚠️ (Some repetition, but acceptable)
-- [x] UX/UI considerations? ✅
-- [x] Accessibility? ✅ (Good, could be enhanced)
-- [x] Security? ✅
-- [x] Error handling? ✅
-- [x] Testing? ⚠️ (Not addressed, but not critical)
-- [x] Infrastructure impact? ✅ (None)
-- [x] i18n? ⚠️ (Not addressed, but not critical)
-- [x] Caching? ✅
-- [x] Spelling/language? ✅
-
----
-
-**Review Complete** ✅
+- Some accessibility improvements still needed (keyboard navigation for drag-and-drop)
+- Responsive design could be improved for mobile (container tree indentation)
+- Consider adding error boundaries around new components
+- Add unit tests for new components
+- Consider auto-saving prop assignments instead of requiring manual save

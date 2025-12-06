@@ -27,6 +27,7 @@ __exportStar(require("./password-reset-fixed"), exports);
 __exportStar(require("./pricing"), exports);
 __exportStar(require("./subscriptionValidation"), exports);
 __exportStar(require("./stripe"), exports);
+__exportStar(require("./propStatusAutoRevert"), exports);
 // Re-export for easier imports
 var contact_1 = require("./contact");
 // Contact functions
