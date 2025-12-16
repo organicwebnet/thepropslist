@@ -285,24 +285,36 @@ export class LabelPrintService {
         };
       }
     } else {
-      // For mobile, use jsPDF for PDF generation
+      // For mobile/server, use jsPDF for PDF generation
+      // Note: In mobile/server context, window is undefined, so we can't open a new window
+      // The PDF can be saved or shared using platform-specific APIs
       try {
-        const pdf = new jsPDF();
+        const pdf = new jsPDF({
+          orientation: options.orientation === 'landscape' ? 'landscape' : 'portrait',
+          unit: 'mm',
+          format: options.format === 'Letter' ? 'letter' : 'a4',
+        });
         await new Promise<void>((resolve, reject) => {
           pdf.html(html, {
             callback: () => {
               try {
-                if (typeof window === 'undefined') {
-                  // Sharing not supported on Android in web context
-                  console.log('Sharing not supported on Android');
-                } else {
-                  // For web, open PDF in a new tab
-                  pdf.output('dataurlnewwindow');
-                }
+                // In mobile/server context, PDF generation is complete
+                // Platform-specific sharing/saving would be handled by the caller
+                console.log('PDF generated successfully (mobile/server context)');
                 resolve();
               } catch (error) {
                 reject(error);
               }
+            },
+            x: 0,
+            y: 0,
+            width: pdf.internal.pageSize.getWidth(),
+            windowWidth: pdf.internal.pageSize.getWidth(),
+            html2canvas: {
+              scale: 0.264583,
+              useCORS: true,
+              logging: false,
+              allowTaint: true,
             },
           });
         });

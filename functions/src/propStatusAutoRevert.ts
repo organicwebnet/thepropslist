@@ -33,7 +33,7 @@ export const autoRevertRepairedProps = functions.scheduler.onSchedule(
 
       if (propsQuery.empty) {
         functions.logger.info('No props found that need status reversion');
-        return null;
+        return;
       }
 
       const batch = db.batch();

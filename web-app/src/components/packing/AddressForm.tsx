@@ -92,7 +92,8 @@ const AddressForm: React.FC<AddressFormProps> = ({
         });
       }
     }
-  }, [selectedAddressId, useSavedAddress, savedAddresses, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAddressId, useSavedAddress, savedAddresses]);
 
   const handleFormChange = (field: keyof AddressFormData, fieldValue: string) => {
     const updated = { ...formData, [field]: fieldValue };

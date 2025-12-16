@@ -26,7 +26,8 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="float beta-banner">
+    <a href="#main-content" class="sr-only" style="position: absolute; top: 0; left: 0; z-index: 100; padding: 8px 16px; background: var(--primary); color: var(--bg); text-decoration: none; border-radius: 0 0 4px 0;">Skip to main content</a>
+    <div class="float beta-banner" role="banner" aria-label="Beta status">
       Beta: The Props List is in closed beta — things may change.
     </div>
     <div class="top-gradient"></div>
@@ -41,7 +42,7 @@
             <span>List</span>
           </div>
         </div>
-        <nav class="header-nav">
+        <nav class="header-nav" aria-label="Main navigation">
           <a href="/news/">News</a>
           <a href="/contact/">Contact</a>
           <a href="https://app.thepropslist.uk/login">Login</a>
@@ -49,20 +50,37 @@
         </nav>
       </header>
 
+      <main id="main-content">
       <section class="hero">
         <div class="hero-card">
           <div class="hero-content">
             <div class="hero-text">
               <h1>Streamline theatre props management — from shopping to packing, all in one place</h1>
-              <p>We're in closed beta. If you want to join, drop us an email.</p>
-              <form id="waitlistForm" class="waitlist-form">
-                <input id="wlEmail" type="email" placeholder="you@example.com" required class="form-input" />
-                <input id="wlName" type="text" placeholder="Name (optional)" class="form-input form-input--name" />
-                <button class="cta" type="submit">Request Access</button>
-                <span id="wlMsg" class="muted form-message"></span>
+              <p>We're in closed beta. Limited spots available — request access to join the beta program.</p>
+              <form id="waitlistForm" class="waitlist-form" aria-label="Request beta access">
+                <label for="wlEmail" class="sr-only">Email address</label>
+                <input id="wlEmail" type="email" placeholder="your.email@example.com" required class="form-input" aria-required="true" aria-describedby="wlEmailDesc" />
+                <label for="wlName" class="sr-only">Your name (optional)</label>
+                <input id="wlName" type="text" placeholder="Your name (optional)" class="form-input form-input--name" aria-describedby="wlNameDesc" />
+                <button class="cta" type="submit" aria-describedby="wlMsg">Request Access</button>
+                <span id="wlMsg" class="muted form-message" role="status" aria-live="polite" aria-atomic="true"></span>
+                <p id="wlEmailDesc" class="muted" style="font-size: 12px; margin-top: 8px;">We'll never spam you. We'll only contact you about beta access.</p>
+                <span id="wlNameDesc" class="sr-only">Optional: Provide your name to personalize our communication</span>
               </form>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+          <h2>Why The Props List?</h2>
+          <p class="muted" style="font-size: 18px; line-height: 1.8; margin-bottom: 24px;">
+            Managing theatre props shouldn't be a nightmare. We built The Props List because we've seen too many productions struggle with lost props, disorganized shopping lists, and chaotic handovers. Our platform brings everything together—from initial shopping to final packing—so you can focus on what matters: creating great theatre.
+          </p>
+          <p class="muted" style="font-size: 18px; line-height: 1.8;">
+            Whether you're managing a small community production or a large-scale touring show, The Props List gives you the tools to stay organized, collaborate effectively, and never lose track of a prop again.
+          </p>
         </div>
       </section>
 
@@ -94,40 +112,62 @@
         <div class="grid">
           <div class="card">
             <h2>Shopping List</h2>
-            <p class="muted">Create shopping lists with photos and links. Your team can suggest options, and you approve the best ones—all from your phone.</p>
+            <p class="muted">Create shopping lists with photos and links directly from your phone. Your team can suggest options, and you approve the best ones—no more back-and-forth emails or lost links.</p>
             <h3>Designer Sign‑off</h3>
-            <p class="muted">Submit items for approval. Designers and supervisors approve or request changes in one tap.</p>
+            <p class="muted">Streamline approvals. Designers and supervisors approve or request changes in one tap, keeping your production moving forward.</p>
             <h3>Auto‑create Props</h3>
-            <p class="muted">Approved items become new props automatically with images, notes, and cost details.</p>
+            <p class="muted">Save time on data entry. Approved items automatically become new props with images, notes, and cost details already attached.</p>
           </div>
           <div class="card">
             <h2>Todo List</h2>
-            <p class="muted">Create a list of tasks to be done and track progress across your production.</p>
+            <p class="muted">Never miss a task. Create and organize tasks across your entire production, with clear visibility of what's done and what's next.</p>
             <h3>Assign Tasks to Team Members</h3>
-            <p class="muted">Assign tasks to team members and track their progress in real-time.</p>
+            <p class="muted">Delegate with confidence. Assign tasks to team members and track their progress in real-time, so everyone knows who's doing what.</p>
             <h3>Set Deadlines</h3>
-            <p class="muted">Set deadlines for tasks and track their progress to keep your production on schedule.</p>
+            <p class="muted">Stay on schedule. Set deadlines for tasks and get automatic reminders to keep your production timeline on track.</p>
           </div>
         </div>
       </section>
+
+      <!-- Testimonials Section - Add user quotes here when available -->
+      <!--
+      <section class="section">
+        <h2>Trusted by Theatre Teams</h2>
+        <div class="grid">
+          <div class="card">
+            <p>"Quote from user about how The Props List helped their production..."</p>
+            <p class="muted">— Name, Role, Theatre Company</p>
+          </div>
+          <div class="card">
+            <p>"Another testimonial about the benefits..."</p>
+            <p class="muted">— Name, Role, Theatre Company</p>
+          </div>
+        </div>
+      </section>
+      -->
+
       <section class="section section--small">
         <div class="grid">
           <div class="card">
             <h3>Props & Inventory</h3>
-            <p class="muted">Track every item with images, locations and status. Export clean PDFs.</p>
+            <p class="muted">Never lose a prop again. Track every item with images, locations, and status. Export professional PDFs for your production team.</p>
           </div>
           <div class="card">
             <h3>Packing, Labels & QR</h3>
-            <p class="muted">Generate labels and QR codes. Organize storage and transport with clear icons.</p>
+            <p class="muted">Organize like a pro. Generate labels and QR codes instantly. Organize storage and transport with clear icons that everyone understands.</p>
           </div>
           <div class="card">
             <h3>Props Bible</h3>
-            <p class="muted">One‑click PDF/print pack — your complete props bible for rehearsals and handover.</p>
+            <p class="muted">One‑click PDF/print pack — your complete props bible for rehearsals and handover. Everything your team needs in one document.</p>
           </div>
           <div class="card">
-            <h3>Invite your team</h3>
-            <p class="muted">Viewers, editors, supervisors and art directors — fine-grained access.</p>
+            <h3>Invite Your Team</h3>
+            <p class="muted">Collaborate securely. Invite viewers, editors, supervisors, and art directors with fine-grained access controls that match your team structure.</p>
           </div>
+        </div>
+        <div style="text-align: center; margin-top: 32px;">
+          <p class="muted" style="margin-bottom: 16px;">Ready to streamline your props management?</p>
+          <a href="#waitlistForm" class="cta" style="display: inline-block;">Request Beta Access</a>
         </div>
       </section>
 
@@ -168,6 +208,85 @@
             <a href="https://app.thepropslist.uk/login" class="cta" style="margin-top: 12px; display: inline-block; width: 100%; text-align: center;">Get Started</a>
           </div>
         </div>
+        <div style="text-align: center; margin-top: 32px;">
+          <p class="muted" style="margin-bottom: 16px;">Start managing your props today</p>
+          <a href="https://app.thepropslist.uk/login" class="cta" style="display: inline-block;">Get Started Free</a>
+        </div>
+      </section>
+
+      <section class="section section--small">
+        <h2>Compare Plans</h2>
+        <div style="overflow-x: auto; margin-top: 24px;">
+          <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--card-border);">
+                <th style="text-align: left; padding: 12px; color: var(--text); font-weight: 600;">Feature</th>
+                <th style="text-align: center; padding: 12px; color: var(--text); font-weight: 600;">Free</th>
+                <th style="text-align: center; padding: 12px; color: var(--text); font-weight: 600;">Starter</th>
+                <th style="text-align: center; padding: 12px; color: var(--text); font-weight: 600;">Standard</th>
+                <th style="text-align: center; padding: 12px; color: var(--text); font-weight: 600;">Pro</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--card-border);">
+                <td style="padding: 12px; color: var(--text);">Shows</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">1 (1 year)</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">3</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">10</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">100</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--card-border);">
+                <td style="padding: 12px; color: var(--text);">Props</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">10</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">50</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">100</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">1,000</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--card-border);">
+                <td style="padding: 12px; color: var(--text);">Task Boards</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">2</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">5</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">20</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">200</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--card-border);">
+                <td style="padding: 12px; color: var(--text);">Packing Boxes</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">20</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">200</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">1,000</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">10,000</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--card-border);">
+                <td style="padding: 12px; color: var(--text);">Team Members</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">3</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">5</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">15</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">100</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--card-border);">
+                <td style="padding: 12px; color: var(--text);">PDF Export</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">TPS Branded</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">TPS Branded</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">Unbranded</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">Unbranded</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--card-border);">
+                <td style="padding: 12px; color: var(--text);">CSV Export</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">—</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">—</td>
+                <td style="text-align: center; padding: 12px; color: var(--accent);">✓</td>
+                <td style="text-align: center; padding: 12px; color: var(--accent);">✓</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; color: var(--text);">Support</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">Community</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">Community</td>
+                <td style="text-align: center; padding: 12px; color: var(--muted);">Email</td>
+                <td style="text-align: center; padding: 12px; color: var(--accent);">Priority</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section class="section">
@@ -177,6 +296,64 @@
           <div class="muted">Loading add-ons...</div>
         </div>
       </section>
+
+      <section class="section section--small">
+        <div style="text-align: center; max-width: 600px; margin: 0 auto;">
+          <div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-top: 16px;">
+            <div style="padding: 12px;">
+              <p style="font-weight: 600; margin: 0; color: var(--text);">🔒 Secure & Private</p>
+              <p class="muted" style="font-size: 14px; margin: 4px 0 0 0;">Your data is encrypted and secure</p>
+            </div>
+            <div style="padding: 12px;">
+              <p style="font-weight: 600; margin: 0; color: var(--text);">📱 Works on Mobile</p>
+              <p class="muted" style="font-size: 14px; margin: 4px 0 0 0;">Access from your phone or tablet</p>
+            </div>
+            <div style="padding: 12px;">
+              <p style="font-weight: 600; margin: 0; color: var(--text);">🆓 Free Forever Tier</p>
+              <p class="muted" style="font-size: 14px; margin: 4px 0 0 0;">Start free, upgrade when ready</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Frequently Asked Questions</h2>
+        <div class="grid" style="grid-template-columns: 1fr; max-width: 800px; margin: 0 auto;">
+          <div class="card">
+            <h3>How does closed beta work?</h3>
+            <p class="muted">We're currently in closed beta, which means access is limited. Request access through the form above, and we'll review your request and get back to you. During beta, you'll get early access to all features and can help shape the product.</p>
+          </div>
+          <div class="card">
+            <h3>What's included in the free tier?</h3>
+            <p class="muted">The free tier includes 1 show (valid for 1 year), 10 props, 2 task boards, 20 packing boxes, TPS-branded PDFs, and up to 3 team members. Perfect for small productions or trying out the platform.</p>
+          </div>
+          <div class="card">
+            <h3>Can I export my data?</h3>
+            <p class="muted">Yes! Standard and Pro users can export data as CSV files. All users can export PDFs of their props lists and packing information. Your data is always yours.</p>
+          </div>
+          <div class="card">
+            <h3>Is my data secure?</h3>
+            <p class="muted">Absolutely. We use industry-standard encryption and security practices. Your data is stored securely and only accessible to you and the team members you invite. We never share your data with third parties.</p>
+          </div>
+          <div class="card">
+            <h3>How do I get access?</h3>
+            <p class="muted">Fill out the request form at the top of this page with your name and email. We'll review your request and send you an invitation if you're accepted into the beta program.</p>
+          </div>
+          <div class="card">
+            <h3>What happens after beta?</h3>
+            <p class="muted">After the beta period, The Props List will launch publicly. Beta users will get special early adopter benefits and pricing. Your data and account will seamlessly transition to the public launch.</p>
+          </div>
+          <div class="card">
+            <h3>Can I use this for multiple shows?</h3>
+            <p class="muted">Yes! Each pricing tier includes multiple shows. Free tier includes 1 show, Starter includes 3 shows, Standard includes 10 shows, and Pro includes 100 shows. You can manage all your productions from one account.</p>
+          </div>
+          <div class="card">
+            <h3>Do you offer discounts for theatres?</h3>
+            <p class="muted">We're always happy to discuss custom pricing for larger theatre organizations or multiple productions. Contact us through the contact page to discuss your needs.</p>
+          </div>
+        </div>
+      </section>
+      </main>
     </div>
 
     <script>
@@ -312,6 +489,21 @@
         }
       })();
       
+      // Smooth scroll to form when clicking anchor link
+      document.querySelectorAll('a[href="#waitlistForm"]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const form = document.getElementById('waitlistForm');
+          if (form) {
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Focus on email input after scroll
+            setTimeout(() => {
+              document.getElementById('wlEmail')?.focus();
+            }, 500);
+          }
+        });
+      });
+
       // Waitlist submit
       const form = document.getElementById('waitlistForm');
       form?.addEventListener('submit', async (e) => {
@@ -320,11 +512,17 @@
         const name = document.getElementById('wlName').value.trim();
         const msg = document.getElementById('wlMsg');
         const submitButton = form.querySelector('button[type="submit"]');
+        const emailInput = document.getElementById('wlEmail');
         
         // Disable form during submission
-        if (submitButton) submitButton.disabled = true;
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.setAttribute('aria-busy', 'true');
+        }
+        form.setAttribute('aria-busy', 'true');
         msg.textContent = 'Sending...';
         msg.style.display = 'block';
+        msg.setAttribute('aria-live', 'polite');
         
         try {
           const res = await fetch('https://us-central1-props-bible-app-1c1cb.cloudfunctions.net/joinWaitlist', {
@@ -340,16 +538,26 @@
             // Clear form on success
             document.getElementById('wlEmail').value = '';
             document.getElementById('wlName').value = '';
+            // Focus back on email input for better UX
+            emailInput?.focus();
           } else {
             msg.textContent = json.error || 'Error. Please try again.';
             msg.style.color = '#ef4444';
+            // Focus back on email input on error
+            emailInput?.focus();
           }
         } catch(err) {
           msg.textContent = 'Error. Please try again.';
           msg.style.color = '#ef4444';
+          // Focus back on email input on error
+          emailInput?.focus();
         } finally {
           // Re-enable form
-          if (submitButton) submitButton.disabled = false;
+          if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.removeAttribute('aria-busy');
+          }
+          form.removeAttribute('aria-busy');
         }
       });
     </script>

@@ -23,6 +23,11 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -217,6 +222,36 @@ header {
 
 .form-message {
   align-self: center;
+}
+
+/* Screen reader only - visually hidden but accessible to assistive technologies */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip to content link - visible when focused */
+a.sr-only:focus {
+  position: absolute;
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: var(--primary);
+  color: var(--bg);
+  z-index: 1000;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
 }
 
 /* Utility Classes */
@@ -434,6 +469,25 @@ header {
   }
 }
 
+/* Comparison Table */
+table {
+  background: var(--card);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+table th {
+  background: var(--card-border);
+}
+
+table td, table th {
+  padding: 12px;
+}
+
+table tbody tr:hover {
+  background: rgba(6, 182, 212, 0.05);
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 16px;
@@ -468,6 +522,14 @@ header {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+  
+  /* Make comparison table scrollable on mobile */
+  div[style*="overflow-x: auto"] {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 
