@@ -9,7 +9,7 @@
   </head>
   <body>
     <div class="float beta-banner">
-      Beta: The Props List is in open beta — things may change.
+      Beta: The Props List is in closed beta — things may change.
     </div>
     <div class="top-gradient"></div>
     <div class="backdrop"></div>
@@ -36,11 +36,11 @@
           <div class="hero-content">
             <div class="hero-text">
               <h1>Manage theatre props — share the load with our app</h1>
-              <p>Coming soon. Leave your email to be notified at launch.</p>
+              <p>We're in closed beta. If you want to join, drop us an email.</p>
               <form id="waitlistForm" class="waitlist-form">
                 <input id="wlEmail" type="email" placeholder="you@example.com" required class="form-input" />
                 <input id="wlName" type="text" placeholder="Name (optional)" class="form-input form-input--name" />
-                <button class="cta" type="submit">Notify me</button>
+                <button class="cta" type="submit">Request Access</button>
                 <span id="wlMsg" class="muted form-message"></span>
               </form>
             </div>
@@ -298,17 +298,37 @@
         const email = document.getElementById('wlEmail').value.trim();
         const name = document.getElementById('wlName').value.trim();
         const msg = document.getElementById('wlMsg');
+        const submitButton = form.querySelector('button[type="submit"]');
+        
+        // Disable form during submission
+        if (submitButton) submitButton.disabled = true;
         msg.textContent = 'Sending...';
+        msg.style.display = 'block';
+        
         try {
           const res = await fetch('https://us-central1-props-bible-app-1c1cb.cloudfunctions.net/joinWaitlist', {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ email, name })
+            body: JSON.stringify({ email, name: name || undefined })
           });
           const json = await res.json();
-          msg.textContent = json.ok ? 'Thanks! We will be in touch.' : 'Error. Please try again.';
+          
+          if (json.ok) {
+            msg.textContent = json.message || 'Thanks! We will be in touch.';
+            msg.style.color = 'var(--accent)';
+            // Clear form on success
+            document.getElementById('wlEmail').value = '';
+            document.getElementById('wlName').value = '';
+          } else {
+            msg.textContent = json.error || 'Error. Please try again.';
+            msg.style.color = '#ef4444';
+          }
         } catch(err) {
           msg.textContent = 'Error. Please try again.';
+          msg.style.color = '#ef4444';
+        } finally {
+          // Re-enable form
+          if (submitButton) submitButton.disabled = false;
         }
       });
     </script>

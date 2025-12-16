@@ -103,6 +103,31 @@ const QuickContainerForm: React.FC<QuickContainerFormProps> = ({
     });
   };
 
+  const handleAddAndCreateAnother = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const validationError = validateForm();
+    if (validationError) {
+      // Show error - could use a toast or error state
+      alert(validationError);
+      return;
+    }
+    
+    onSubmit(form);
+    
+    // Reset form but keep it open for another entry
+    setForm({
+      description: '',
+      type: form.type, // Keep the type for convenience
+      length: '',
+      width: '',
+      height: '',
+      unit: form.unit, // Keep the unit
+      location: '',
+    });
+  };
+
   const handleTemplateClick = (type: string) => {
     onTemplateClick(type);
   };
@@ -256,7 +281,7 @@ const QuickContainerForm: React.FC<QuickContainerFormProps> = ({
           <button
             type="button"
             disabled={isCreating || !form.type}
-            onClick={handleSubmit}
+            onClick={handleAddAndCreateAnother}
             className="px-4 py-2 rounded-lg bg-pb-primary/70 hover:bg-pb-primary text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Create container and keep form open for another"
           >

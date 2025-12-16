@@ -23,6 +23,7 @@ import { PropsNeedingWorkWidget } from './components/DashboardWidgets/PropsNeedi
 import { ShoppingApprovalWidget } from './components/DashboardWidgets/ShoppingApprovalWidget';
 import { NotificationsWidget } from './components/DashboardWidgets/NotificationsWidget';
 import { DeliveryListWidget } from './components/DashboardWidgets/DeliveryListWidget';
+import { PackageTrackingWidget } from './components/DashboardWidgets/PackageTrackingWidget';
 import { WidgetSettingsModal } from './components/DashboardWidgets/WidgetSettingsModal';
 import { useWidgetPreferences } from './hooks/useWidgetPreferences';
 
@@ -360,6 +361,14 @@ const DashboardHome: React.FC = () => {
                     props={props}
                   />
                 );
+              case 'package-tracking':
+                return (
+                  <PackageTrackingWidget
+                    key={widgetId}
+                    showId={currentShowId}
+                    show={show}
+                  />
+                );
               case 'props-needing-work':
                 return (
                   <PropsNeedingWorkWidget
@@ -400,6 +409,7 @@ const DashboardHome: React.FC = () => {
           !isWidgetEnabled('taskboard-activity-summary') &&
           !isWidgetEnabled('cut-props-packing') &&
           !isWidgetEnabled('delivery-list') &&
+          !isWidgetEnabled('package-tracking') &&
           !isWidgetEnabled('props-needing-work') &&
           !isWidgetEnabled('shopping-approval-needed') &&
           !isWidgetEnabled('notifications') && (

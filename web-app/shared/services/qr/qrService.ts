@@ -1,4 +1,5 @@
 import { FirebaseError } from '../firebase/types.ts';
+import QRCode from 'qrcode';
 
 export interface QRCodeData {
   type: 'container' | 'prop' | 'location';
@@ -90,14 +91,8 @@ export class PropQRCodeService implements QRCodeService {
   }
 
   validateQRCode(data: QRCodeData): boolean {
-    // Required fields validation
-    if (!data.id || !data.name || !data.category) {
-      return false;
-    }
-
-    // Validate id format (assuming UUID format)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(data.id)) {
+    // Required fields validation - id and url are required, name and category are optional
+    if (!data.id || !data.url) {
       return false;
     }
 
@@ -106,6 +101,12 @@ export class PropQRCodeService implements QRCodeService {
   }
 
   private formatQRData(data: QRCodeData): string {
+    // For container types, encode the URL directly for easy scanning
+    // For other types, encode JSON with metadata
+    if (data.type === 'container' && data.url) {
+      return data.url;
+    }
+    
     // Create a URL-safe format for the QR code data
     const urlSafeData = {
       ...data,
@@ -131,10 +132,28 @@ export class PropQRCodeService implements QRCodeService {
     }
   }
 
-  private async generateQRCodeImage(_data: string, _options: QRCodeOptions): Promise<string> {
-    // Placeholder for actual QR code generation
-    // You would implement this using your chosen QR code library
-    return 'data:image/png;base64,...';
+  private async generateQRCodeImage(data: string, options: QRCodeOptions): Promise<string> {
+    try {
+      const size = options.size || this.defaultOptions.size || 300;
+      const margin = options.margin !== undefined ? options.margin : (this.defaultOptions.margin || 4);
+      const errorCorrectionLevel = options.errorCorrectionLevel || this.defaultOptions.errorCorrectionLevel || 'M';
+      
+      // Generate QR code as data URL
+      const qrDataUrl = await QRCode.toDataURL(data, {
+        width: size,
+        margin: margin,
+        errorCorrectionLevel: errorCorrectionLevel,
+        color: options.color || this.defaultOptions.color,
+      });
+      
+      return qrDataUrl;
+    } catch (error) {
+      throw new FirebaseError(
+        'qr-code/image-generation-failed',
+        'Failed to generate QR code image',
+        error
+      );
+    }
   }
 
   private async decodeQRCode(_imageData: Blob): Promise<string> {

@@ -60,6 +60,10 @@ const WIDGET_DESCRIPTIONS: Record<WidgetId, { name: string; description: string 
     name: 'Delivery List',
     description: 'Props on order with expected delivery dates',
   },
+  'package-tracking': {
+    name: 'Package Tracking',
+    description: 'Track packages being shipped to/from venues, rehearsal rooms, suppliers, and makers',
+  },
 };
 
 // Sortable Widget Item Component

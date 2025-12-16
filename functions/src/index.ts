@@ -12,12 +12,18 @@ export * from './pricing';
 export * from './subscriptionValidation';
 export * from './stripe';
 export * from './propStatusAutoRevert';
+export * from './joinWaitlist';
 
 // Re-export for easier imports
 export {
   // Contact functions
   submitContactForm
 } from './contact';
+
+export {
+  // Waitlist functions
+  joinWaitlist
+} from './joinWaitlist';
 
 export {
   // Password reset functions

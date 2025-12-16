@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: string | ReactNode;
   confirmText?: string;
   cancelText?: string;
   onConfirm: () => void;
@@ -58,9 +58,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             {title}
           </h3>
           
-          <p className="text-sm md:text-base text-pb-gray/70 mb-4 md:mb-6 break-words">
+          <div className="text-sm md:text-base text-pb-gray/70 mb-4 md:mb-6 break-words">
             {message}
-          </p>
+          </div>
           
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 sm:space-x-0">
             <button

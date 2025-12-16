@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFirebase } from '../contexts/FirebaseContext';
+import { useWebAuth } from '../contexts/WebAuthContext';
 import { DigitalPackListService, PackList, PackingContainer } from '../../shared/services/inventory/packListService';
 import { DigitalInventoryService, InventoryProp } from '../../shared/services/inventory/inventoryService';
+import { PropQRCodeService } from '../../shared/services/qr/qrService';
 import DashboardLayout from '../PropsBibleHomepage';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent, useDraggable } from '@dnd-kit/core';
 import { ArrowLeft, Package, Search, AlertCircle, AlertTriangle, X, Image as ImageIcon, Copy, Truck, Tag } from 'lucide-react';
@@ -10,9 +12,12 @@ import ContainerTree from '../components/packing/ContainerTree';
 import QuickContainerForm from '../components/packing/QuickContainerForm';
 import { DEFAULT_DIMENSIONS } from '../constants/containerConstants';
 import ConfirmationModal from '../components/ConfirmationModal';
+import AddressForm from '../components/packing/AddressForm';
+import CourierSelector from '../components/packing/CourierSelector';
 
 const PackingListDetailPage: React.FC = () => {
   const { service } = useFirebase();
+  const { user } = useWebAuth();
   const { packListId } = useParams<{ packListId: string }>();
   const navigate = useNavigate();
   const [packList, setPackList] = useState<PackList | null>(null);
@@ -50,15 +55,83 @@ const PackingListDetailPage: React.FC = () => {
     setSelectedPropContainer(propContainerAssignments);
   }, [propContainerAssignments]);
 
+  // Check if list is read-only (shipped or arrived) - must be before early returns
+  const isReadOnly = useMemo(() => {
+    return !!(packList?.shipping?.shippedDate || packList?.shipping?.arrivedDate);
+  }, [packList]);
+
+  // Delivery details form state - must be before early returns
+  const [deliveryForm, setDeliveryForm] = useState({
+    mode: packList?.shipping?.mode || 'courier' as 'courier' | 'tour',
+    toAddress: packList?.shipping?.toAddress || '',
+    fromAddress: packList?.shipping?.fromAddress || '',
+    tourLabel: packList?.shipping?.tourLabel || '',
+    dispatchDate: packList?.shipping?.dispatchDate ? packList.shipping.dispatchDate.split('T')[0] : '',
+    shippedDate: packList?.shipping?.shippedDate ? packList.shipping.shippedDate.split('T')[0] : '',
+    expectedDeliveryDate: packList?.shipping?.expectedDeliveryDate ? packList.shipping.expectedDeliveryDate.split('T')[0] : '',
+    arrivedDate: packList?.shipping?.arrivedDate ? packList.shipping.arrivedDate.split('T')[0] : '',
+    courierName: packList?.shipping?.courierName || '',
+    trackingNumber: packList?.shipping?.trackingNumber || '',
+  });
+  const [savingDelivery, setSavingDelivery] = useState(false);
+
+  // Labels state - must be before early returns
+  const [labels, setLabels] = useState<any[]>([]);
+  const [loadingLabels, setLoadingLabels] = useState(false);
+  const [labelsLoadAttempted, setLabelsLoadAttempted] = useState(false);
+
+  // Load labels function - must be defined before useEffect that uses it
+  const loadLabels = useCallback(async () => {
+    if (!packListId || loadingLabels) return; // Prevent concurrent calls
+    setLoadingLabels(true);
+    setErrorMessage(null);
+    try {
+      const qrService = new PropQRCodeService();
+      const inventoryService = new DigitalInventoryService(service, null as any, qrService);
+      const packListService = new DigitalPackListService(service, qrService, inventoryService, window.location.origin);
+      const generatedLabels = await packListService.generatePackingLabels(packListId);
+      setLabels(generatedLabels);
+      setLabelsLoadAttempted(true);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to generate labels';
+      setErrorMessage(errorMsg);
+      console.error('Failed to generate labels:', err);
+      setLabelsLoadAttempted(true); // Mark as attempted even on error to prevent infinite loop
+    } finally {
+      setLoadingLabels(false);
+    }
+  }, [packListId, service]);
+
   useEffect(() => {
     if (!packListId) return;
     setLoading(true);
     const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
     const inventoryService = new DigitalInventoryService(service, null as any, null as any);
     packListService.getPackList(packListId)
-      .then((pl) => {
+      .then(async (pl) => {
         setPackList(pl);
         setContainers(pl.containers || []);
+        
+        // Load show details if showId exists
+        if (pl.showId) {
+          try {
+            const showDoc = await service.getDocument<any>('shows', pl.showId);
+            const showData = showDoc?.data || {};
+            const showName = showData?.name || '';
+            
+            // Auto-populate tour label with show name if mode is tour and tour label is empty
+            if (pl.shipping?.mode === 'tour' && !pl.shipping?.tourLabel && showName) {
+              setDeliveryForm(prev => ({
+                ...prev,
+                tourLabel: showName,
+              }));
+            }
+          } catch (err) {
+            console.error('Failed to load show details:', err);
+            // Continue even if show loading fails
+          }
+        }
+        
         return pl.showId;
       })
       .then((showId) => {
@@ -74,6 +147,60 @@ const PackingListDetailPage: React.FC = () => {
         setLoading(false);
       });
   }, [packListId, service]);
+
+  // Update delivery form when packList changes
+  useEffect(() => {
+    if (packList?.shipping) {
+      setDeliveryForm({
+        mode: packList.shipping.mode || 'courier',
+        toAddress: packList.shipping.toAddress || '',
+        fromAddress: packList.shipping.fromAddress || '',
+        tourLabel: packList.shipping.tourLabel || '',
+        dispatchDate: packList.shipping.dispatchDate ? packList.shipping.dispatchDate.split('T')[0] : '',
+        shippedDate: packList.shipping.shippedDate ? packList.shipping.shippedDate.split('T')[0] : '',
+        expectedDeliveryDate: packList.shipping.expectedDeliveryDate ? packList.shipping.expectedDeliveryDate.split('T')[0] : '',
+        arrivedDate: packList.shipping.arrivedDate ? packList.shipping.arrivedDate.split('T')[0] : '',
+        courierName: packList.shipping.courierName || '',
+        trackingNumber: packList.shipping.trackingNumber || '',
+      });
+    }
+  }, [packList]);
+
+  // Auto-populate tour label when switching to tour mode
+  useEffect(() => {
+    if (deliveryForm.mode === 'tour' && !deliveryForm.tourLabel && packList?.showId) {
+      // Load show name and populate tour label
+      service.getDocument<any>('shows', packList.showId)
+        .then((showDoc) => {
+          const showData = showDoc?.data || {};
+          const showName = showData?.name || '';
+          if (showName) {
+            setDeliveryForm(prev => ({
+              ...prev,
+              tourLabel: showName,
+            }));
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load show for tour label:', err);
+        });
+    }
+  }, [deliveryForm.mode, deliveryForm.tourLabel, packList?.showId, service]);
+
+  // Load labels when labels tab is active
+  useEffect(() => {
+    if (activeTab === 'labels' && packListId && !labelsLoadAttempted && !loadingLabels) {
+      loadLabels();
+    }
+  }, [activeTab, packListId, labelsLoadAttempted, loadingLabels, loadLabels]);
+  
+  // Reset labels load attempt when switching away from labels tab
+  useEffect(() => {
+    if (activeTab !== 'labels') {
+      setLabelsLoadAttempted(false);
+      setLabels([]);
+    }
+  }, [activeTab]);
 
   // Calculate total weight for a container
   const calculateContainerWeight = (container: PackingContainer) => {
@@ -527,74 +654,10 @@ const PackingListDetailPage: React.FC = () => {
     );
   }
 
-  // Check if list is read-only (shipped or arrived)
-  const isReadOnly = useMemo(() => {
-    return !!(packList?.shipping?.shippedDate || packList?.shipping?.arrivedDate);
-  }, [packList]);
-
-  // Delivery details form state
-  const [deliveryForm, setDeliveryForm] = useState({
-    mode: packList?.shipping?.mode || 'courier' as 'courier' | 'tour',
-    toAddress: packList?.shipping?.toAddress || '',
-    fromAddress: packList?.shipping?.fromAddress || '',
-    tourLabel: packList?.shipping?.tourLabel || '',
-    dispatchDate: packList?.shipping?.dispatchDate ? packList.shipping.dispatchDate.split('T')[0] : '',
-    shippedDate: packList?.shipping?.shippedDate ? packList.shipping.shippedDate.split('T')[0] : '',
-    expectedDeliveryDate: packList?.shipping?.expectedDeliveryDate ? packList.shipping.expectedDeliveryDate.split('T')[0] : '',
-    arrivedDate: packList?.shipping?.arrivedDate ? packList.shipping.arrivedDate.split('T')[0] : '',
-    courierName: packList?.shipping?.courierName || '',
-    trackingNumber: packList?.shipping?.trackingNumber || '',
-  });
-  const [savingDelivery, setSavingDelivery] = useState(false);
-
-  // Labels state
-  const [labels, setLabels] = useState<any[]>([]);
-  const [loadingLabels, setLoadingLabels] = useState(false);
-
-  // Update delivery form when packList changes
-  useEffect(() => {
-    if (packList?.shipping) {
-      setDeliveryForm({
-        mode: packList.shipping.mode || 'courier',
-        toAddress: packList.shipping.toAddress || '',
-        fromAddress: packList.shipping.fromAddress || '',
-        tourLabel: packList.shipping.tourLabel || '',
-        dispatchDate: packList.shipping.dispatchDate ? packList.shipping.dispatchDate.split('T')[0] : '',
-        shippedDate: packList.shipping.shippedDate ? packList.shipping.shippedDate.split('T')[0] : '',
-        expectedDeliveryDate: packList.shipping.expectedDeliveryDate ? packList.shipping.expectedDeliveryDate.split('T')[0] : '',
-        arrivedDate: packList.shipping.arrivedDate ? packList.shipping.arrivedDate.split('T')[0] : '',
-        courierName: packList.shipping.courierName || '',
-        trackingNumber: packList.shipping.trackingNumber || '',
-      });
-    }
-  }, [packList]);
-
-  // Load labels when labels tab is active
-  useEffect(() => {
-    if (activeTab === 'labels' && packListId && labels.length === 0 && !loadingLabels) {
-      loadLabels();
-    }
-  }, [activeTab, packListId]);
-
-  const loadLabels = async () => {
-    if (!packListId) return;
-    setLoadingLabels(true);
-    try {
-      const packListService = new DigitalPackListService(service, null as any, null as any, window.location.origin);
-      const generatedLabels = await packListService.generatePackingLabels(packListId);
-      setLabels(generatedLabels);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to generate labels';
-      setErrorMessage(errorMsg);
-      console.error('Failed to generate labels:', err);
-    } finally {
-      setLoadingLabels(false);
-    }
-  };
-
   const handlePrintLabels = async () => {
     if (labels.length === 0) {
       await loadLabels();
+      return;
     }
     try {
       const { LabelPrintService } = await import('../../shared/services/pdf/labelPrintService');
@@ -604,6 +667,18 @@ const PackingListDetailPage: React.FC = () => {
       const errorMsg = err instanceof Error ? err.message : 'Failed to print labels';
       setErrorMessage(errorMsg);
       console.error('Failed to print labels:', err);
+    }
+  };
+
+  const handlePreviewLabel = async (label: any) => {
+    try {
+      const { LabelPrintService } = await import('../../shared/services/pdf/labelPrintService');
+      const printer = new LabelPrintService();
+      await printer.previewLabelAsPdf(label);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to preview label';
+      setErrorMessage(errorMsg);
+      console.error('Failed to preview label:', err);
     }
   };
 
@@ -853,7 +928,6 @@ const PackingListDetailPage: React.FC = () => {
                   ? 'bg-pb-darker/60 text-white border-b-2 border-pb-primary'
                   : 'text-pb-gray/70 hover:text-white hover:bg-pb-darker/40'
               }`}
-              disabled={isReadOnly && activeTab !== 'props'}
             >
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4" />
@@ -867,7 +941,6 @@ const PackingListDetailPage: React.FC = () => {
                   ? 'bg-pb-darker/60 text-white border-b-2 border-pb-primary'
                   : 'text-pb-gray/70 hover:text-white hover:bg-pb-darker/40'
               }`}
-              disabled={isReadOnly && activeTab !== 'containers'}
             >
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4" />
@@ -1111,39 +1184,34 @@ const PackingListDetailPage: React.FC = () => {
               {/* Courier-specific fields */}
               {deliveryForm.mode === 'courier' && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">From Address</label>
-                    <textarea
+                  {/* Address Forms Side by Side */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <AddressForm
+                      label="From Address"
                       value={deliveryForm.fromAddress}
-                      onChange={(e) => setDeliveryForm({ ...deliveryForm, fromAddress: e.target.value })}
+                      onChange={(address) => setDeliveryForm({ ...deliveryForm, fromAddress: address })}
                       disabled={isReadOnly}
-                      rows={3}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      placeholder="Enter sender address..."
+                      showId={packList?.showId}
+                      service={service}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">To Address</label>
-                    <textarea
+                    <AddressForm
+                      label="To Address"
                       value={deliveryForm.toAddress}
-                      onChange={(e) => setDeliveryForm({ ...deliveryForm, toAddress: e.target.value })}
+                      onChange={(address) => setDeliveryForm({ ...deliveryForm, toAddress: address })}
                       disabled={isReadOnly}
-                      rows={3}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      placeholder="Enter recipient address..."
+                      showId={packList?.showId}
+                      service={service}
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">Courier Name</label>
-                    <input
-                      type="text"
-                      value={deliveryForm.courierName}
-                      onChange={(e) => setDeliveryForm({ ...deliveryForm, courierName: e.target.value })}
-                      disabled={isReadOnly}
-                      className="w-full px-3 py-2 rounded-lg border border-white/10 bg-pb-darker/60 text-white placeholder-pb-gray/50 focus:outline-none focus:ring-2 focus:ring-pb-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      placeholder="e.g., DHL, FedEx, UPS"
-                    />
-                  </div>
+                  
+                  <CourierSelector
+                    value={deliveryForm.courierName}
+                    onChange={(courierName) => setDeliveryForm({ ...deliveryForm, courierName })}
+                    disabled={isReadOnly}
+                    service={service}
+                    userId={user?.uid}
+                  />
+                  
                   <div>
                     <label className="block text-sm font-medium text-white mb-2">Tracking Number</label>
                     <input
@@ -1296,7 +1364,9 @@ const PackingListDetailPage: React.FC = () => {
                 {labels.map((label) => (
                   <div
                     key={label.id}
-                    className="bg-white/5 rounded-lg p-4 border border-white/10"
+                    onClick={() => handlePreviewLabel(label)}
+                    className="bg-white/5 rounded-lg p-4 border border-white/10 cursor-pointer hover:bg-white/10 hover:border-pb-primary/50 transition-all"
+                    title="Click to preview label as PDF"
                   >
                     <div className="text-center">
                       <div className="font-semibold text-white mb-2">{label.containerName}</div>
@@ -1320,6 +1390,9 @@ const PackingListDetailPage: React.FC = () => {
                       {label.url && (
                         <div className="text-xs text-pb-gray/50 break-all">{label.url}</div>
                       )}
+                      <div className="mt-3 text-xs text-pb-primary/70">
+                        Click to preview PDF
+                      </div>
                     </div>
                   </div>
                 ))}

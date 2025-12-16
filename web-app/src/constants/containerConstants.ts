@@ -16,3 +16,4 @@ export const TEMPLATE_TYPES = ['Cardboard Box', 'Pallet', 'Flight Case', 'Crate'
 
 export const CONTAINER_INDENT_PX = 24;
 
+

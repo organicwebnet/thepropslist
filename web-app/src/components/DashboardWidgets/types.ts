@@ -19,7 +19,8 @@ export type WidgetId =
   | 'props-needing-work'
   | 'shopping-approval-needed'
   | 'notifications'
-  | 'delivery-list';
+  | 'delivery-list'
+  | 'package-tracking';
 
 export interface WidgetConfig {
   id: WidgetId;
