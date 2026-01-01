@@ -152,7 +152,7 @@ export default function AuthScreen() {
       }
       setBiometricChecked(true);
     })();
-  }, [user, status, isInitialized, firebaseService]);
+  }, [user, status, isInitialized]); // Removed firebaseService from dependencies - check it inside the effect instead
 
   // If user is signed in and biometric check passed, redirect to main app
   if (user && status === 'in' && biometricChecked && biometricOk) {

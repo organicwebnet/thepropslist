@@ -108,3 +108,5 @@ firebase hosting:sites:get marketing-thepropslist
 3. ✅ Wait for SSL certificate (1-24 hours)
 4. ✅ Test the site
 5. ✅ Update any hardcoded URLs if needed (though most references use `thepropslist.uk` without www)
+
+

@@ -25,10 +25,13 @@ export const SyncStatusBar: React.FC = () => {
   const [showOfflineIndicator, setShowOfflineIndicator] = useState(false);
   const [justWentOffline, setJustWentOffline] = useState(false);
   const [showSyncedMessage, setShowSyncedMessage] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const previousConnectedRef = useRef(true);
   const previousPendingRef = useRef(0);
   const syncedMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSyncingStateRef = useRef<boolean>(false);
 
   // Track when we go offline to show indicator briefly
   useEffect(() => {
@@ -58,13 +61,17 @@ export const SyncStatusBar: React.FC = () => {
     }
 
     let timeoutId: NodeJS.Timeout | null = null;
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: NodeJS.Timeout | null = null; // Keep for backward compatibility during transition
 
-    const checkSyncStatus = async () => {
+    const checkSyncStatus = async (): Promise<void> => {
       try {
+        // Clear any previous error
+        setSyncError(null);
+        
         // Check if offline sync is available
         const offlineSync = service.offline();
         if (!offlineSync) {
+          setSyncError('Offline sync not available');
           return;
         }
         
@@ -101,31 +108,71 @@ export const SyncStatusBar: React.FC = () => {
           return pending;
         });
       } catch (error) {
-        // Silently fail - offline sync might not be available
+        // Log error and set error state for user feedback
+        const errorMessage = error instanceof Error ? error.message : 'Sync status unavailable';
         console.warn('Failed to get sync status:', error);
+        setSyncError(errorMessage);
+        
+        // Still show offline indicator if we can't check status and we're offline
+        if (!isConnected) {
+          setShowOfflineIndicator(true);
+        }
       }
     };
 
-    // Use a reasonable fixed interval - we'll check every 5 seconds
-    // This balances responsiveness with API call frequency
-    const CHECK_INTERVAL: number = TIMEOUTS.SYNC_CHECK_INTERVAL_SYNCING;
+    // Use adaptive interval - faster when syncing, slower when idle
+    // Function to start/restart interval with adaptive timing
+    const startAdaptiveInterval = () => {
+      // Clear existing interval if any
+      if (currentIntervalRef.current) {
+        clearInterval(currentIntervalRef.current);
+        currentIntervalRef.current = null;
+      }
+      
+      // Determine interval based on current syncing state
+      const isCurrentlySyncing = previousPendingRef.current > 0;
+      const interval = isCurrentlySyncing 
+        ? TIMEOUTS.SYNC_CHECK_INTERVAL_SYNCING 
+        : TIMEOUTS.SYNC_CHECK_INTERVAL_IDLE;
+      
+      // Store current state
+      lastSyncingStateRef.current = isCurrentlySyncing;
+      
+      // Create interval that checks and adapts
+      currentIntervalRef.current = setInterval(async () => {
+        await checkSyncStatus();
+        
+        // After check completes, see if we need to change interval
+        const newSyncingState = previousPendingRef.current > 0;
+        if (newSyncingState !== lastSyncingStateRef.current) {
+          // State changed - restart with new interval
+          startAdaptiveInterval();
+        }
+      }, interval);
+    };
 
     // If we just came online, wait a moment for sync to start, then check
     if (justCameOnline) {
-      timeoutId = setTimeout(() => {
-        checkSyncStatus();
-        // Start interval after initial check
-        intervalId = setInterval(checkSyncStatus, CHECK_INTERVAL);
+      timeoutId = setTimeout(async () => {
+        await checkSyncStatus();
+        // Start adaptive interval after initial check
+        startAdaptiveInterval();
       }, TIMEOUTS.SYNC_CHECK_DELAY);
     } else {
-      // Check immediately and start interval
-      checkSyncStatus();
-      intervalId = setInterval(checkSyncStatus, CHECK_INTERVAL);
+      // Check immediately and start adaptive interval
+      (async () => {
+        await checkSyncStatus();
+        startAdaptiveInterval();
+      })();
     }
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
+      if (currentIntervalRef.current) {
+        clearInterval(currentIntervalRef.current);
+        currentIntervalRef.current = null;
+      }
     };
   }, [service, isConnected, justCameOnline]);
 
@@ -178,7 +225,12 @@ export const SyncStatusBar: React.FC = () => {
   let message = "Offline: Changes will sync when you're back online.";
   let color = '#e57373';
 
-  if (showSyncedMessage) {
+  if (syncError && isConnected) {
+    // Show error state when sync status check fails
+    icon = 'cloud-off';
+    message = 'Unable to check sync status';
+    color = '#ff9800'; // Orange to indicate warning
+  } else if (showSyncedMessage) {
     icon = 'cloud-done';
     message = 'All changes synced with server';
     color = '#4caf50';
@@ -209,8 +261,8 @@ export const SyncStatusBar: React.FC = () => {
         { 
           backgroundColor: color,
           opacity: fadeAnim,
-          top: insets.top,
-          paddingTop: 4,
+          top: insets.top, // Position from top of safe area
+          paddingTop: 4, // Small padding for content
           transform: [{ translateY: fadeAnim.interpolate({
             inputRange: [0, 1],
             outputRange: [-50, 0]
